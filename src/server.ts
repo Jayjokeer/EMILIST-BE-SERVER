@@ -2,6 +2,7 @@ require("dotenv").config();
 import express, { Application, NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 import cors from 'cors';
+import { connectDB } from '../db/database';
 const PORT = 7000;
 const app: Application = express();
 
@@ -14,5 +15,6 @@ app.use(cors());
 
 
 app.listen(PORT, () => {
+    connectDB();
     console.log(`Server started on port ${PORT} 🔥🔥🔥`);
  });
