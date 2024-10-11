@@ -3,9 +3,9 @@ import express, { Application, Request, Response } from "express";
 import helmet from "helmet";
 import cors from 'cors';
 import { connectDB } from '../db/database';
-import { AuthRoute } from "./routes/user.routes";
+import { AuthRoute } from "./routes/auth.routes";
 
-const PORT = 7000;
+const PORT = process.env.PORT || 7000;
 const app: Application = express();
 
 // Middleware
