@@ -10,6 +10,7 @@ import { generateJWTwithExpiryDate } from "../utils/jwt";
 import { catchAsync } from "../errors/error-handler";
 import { otpMessage, passwordResetMessage } from "../utils/templates";
 import { sendEmail } from "../utils/send_email";
+import { JwtPayload } from "jsonwebtoken";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -28,7 +29,7 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
 
     const user: ICreateUser= {
       userName,
-      email,
+      email: email.toLowerCase(),
       password: encryptPwd,
       uniqueId:generateShortUUID()
     }
@@ -54,7 +55,7 @@ export const login = catchAsync(async (req: Request, res: Response) => {
 
   const pwdCompare = await comparePassword(password, foundUser.password);
   if(!pwdCompare) throw new NotFoundError("Invalid credentials!");
-  if(foundUser.verified == false){
+  if(foundUser.isEmailVerified == false){
     throw new BadRequestError("Kindly verify your email!");
   }
   const data = await generateJWTwithExpiryDate({
@@ -75,7 +76,7 @@ export const verifyEmailController = catchAsync(async (req: Request, res: Respon
   if(!tokenData) throw new BadRequestError("Otp expired!");
 
   if(foundUser.registrationOtp !== tokenData.registrationOtp) throw new BadRequestError("Otp expired!");
-  foundUser.verified = true;
+  foundUser.isEmailVerified = true;
   foundUser.registrationOtp = undefined;
   foundUser.otpExpiresAt = undefined;
   await foundUser.save();
@@ -120,7 +121,7 @@ export const resetPasswordController = catchAsync(async (req: Request, res: Resp
   return successResponse(res, StatusCodes.OK, "Password reset successfully!");
 });
 
-export const updateUserController = catchAsync(async (req: Request, res: Response) => {
+export const updateUserController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user.id;
   const {
     fullName,
@@ -149,4 +150,22 @@ export const updateUserController = catchAsync(async (req: Request, res: Respons
   await foundUser.save();
 
   return successResponse(res, StatusCodes.OK, foundUser);
+});
+
+export const changePasswordController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const userId  = req.user;
+  const { currentPassword, newPassword } = req.body;
+
+  const foundUser = await authService.findUserById(userId);
+  if (!foundUser) throw new NotFoundError("User not found!");
+
+  const isPasswordValid = await comparePassword(currentPassword, foundUser.password);
+  if (!isPasswordValid) throw new UnauthorizedError("Current password is incorrect!");
+
+  const hashedNewPassword = await hashPassword(newPassword);
+  foundUser.password = hashedNewPassword;
+
+  await foundUser.save();
+
+  return successResponse(res, StatusCodes.OK, "Password changed successfully!");
 });

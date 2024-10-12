@@ -5,10 +5,10 @@ export const findUserByEmail = async (email: string) => {
   };
 export const findUserById = async (id: string)=>{
     return await Users.findById(id);
-}
+};
 export const createUser = async (data:  ICreateUser) =>{
     return await Users.create(data);
-}
+};
 
 export const findTokenService = async (
     registrationOtp: string
@@ -28,4 +28,4 @@ export const findTokenService = async (
   };
   export const findUserByUserName = async (userName: string) =>{
     return await Users.findOne({userName: userName});
-  }
+  };

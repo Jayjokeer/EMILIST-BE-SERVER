@@ -12,7 +12,7 @@ export interface IUser {
     location?: string;
     bio?: string;
     membership?: object;
-    verified?: boolean;
+    isEmailVerified?: boolean;
     otpExpiresAt?: Date;
     registrationOtp?: string;
     passwordResetOtp?: String;

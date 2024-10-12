@@ -1,31 +1,51 @@
 import { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import jwt from "jsonwebtoken";
-import { ISignUser } from "../interfaces/user.interface";
 import { verifyJWT } from "../utils/jwt";
+import { UnauthorizedError } from "../errors/error";
+import * as authService from '../services/auth.service';
+import { JwtPayload } from "jsonwebtoken";
 
-export const currentUserMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
 
-  let token
 
-  if(req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1]
+export const userAuth = async (req: JwtPayload, res: Response, next: NextFunction): Promise<void> => {
+  let token: string | undefined;
+
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
   }
 
-  if(!token) {
-    return res.status(StatusCodes.UNAUTHORIZED).json({ Message: 'Not Logged In' });
+  if (!token) {
+    res.status(StatusCodes.UNAUTHORIZED).json({ message: "Kindly login" });
+    return;
   }
-  
+
   try {
-    const payload = verifyJWT(
-      token,
-    ) as ISignUser;
+    const decode = verifyJWT(token);
 
-    req.user = payload;
-  } catch (error) {}
-  next();
+    if (!decode || !decode.email) {
+      throw new UnauthorizedError("Authentication Failure");
+    }
+
+    const user = await authService.findUserByEmail(decode.email.toLowerCase());
+    
+    if (!user) {
+      throw new UnauthorizedError("No user found");
+    }
+
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedError("Access Denied! Your account is disabled, please contact admin.");
+    }
+
+    req.user = user;
+    
+    next();
+    
+  } catch (error) {
+    console.error("Auth Error:", error);
+
+    res.status(StatusCodes.UNAUTHORIZED).json({
+      message: error instanceof UnauthorizedError ? error.message : "Authentication Failure",
+    });
+    return;
+  }
 };
