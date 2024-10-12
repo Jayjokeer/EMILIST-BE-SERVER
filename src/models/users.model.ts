@@ -1,5 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { IUser } from '../interfaces/user.interface';
+import { UserStatus } from '../enums/user.enums';
 
 
 const userSchema: Schema = new mongoose.Schema(
@@ -20,6 +21,7 @@ const userSchema: Schema = new mongoose.Schema(
         type: mongoose.Schema.Types.Mixed,
       },
     verified: {type: Boolean, default: false},
+    status: {type: String, enum: UserStatus, default: UserStatus.active} 
   },
   { timestamps: true }
 );

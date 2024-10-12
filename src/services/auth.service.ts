@@ -1,6 +1,5 @@
 import { ICreateUser } from "../interfaces/user.interface";
-import Users from "../models/users.model";
-
+import Users from "../models/users.model"
 export const findUserByEmail = async (email: string) => {
     return await Users.findOne({email: email});
   };

@@ -1,12 +1,12 @@
 import { Router, Request, Response } from "express";
+import * as authController from "../controllers/auth.controller"; // Ensure the path is correct
 
 const router = Router();
 
-router
-  .route("/")
-  .get((req: Request,res: Response) =>{
-    res.json({message: "Welcome to Emlist"})
-  }
-  );
+router.route("/").get((req: Request, res: Response) => {
+  res.json({ message: "Welcome to Emlist" });
+});
 
-  export { router as AuthRoute};
+router.route("/sign-up").post(authController.registerUserController);
+
+export { router as AuthRoute };
