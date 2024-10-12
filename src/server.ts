@@ -3,9 +3,13 @@ import express, { Application, Request, Response } from "express";
 import helmet from "helmet";
 import cors from 'cors';
 import { connectDB } from '../db/database';
-import { AuthRoute } from "./routes/auth.routes";
+// import { AuthRoute } from "./routes/auth.routes";
+import { config } from "./utils/config";
+import  router  from "./routes";
+import  globalErrorHandler  from "./errors/error-handler";
+import AppError from "./errors/error";
 
-const PORT = process.env.PORT || 7000;
+const PORT = config.port || 7000;
 const app: Application = express();
 
 // Middleware
@@ -15,7 +19,13 @@ app.use(helmet());
 app.use(cors());
 
 // Routes
-app.use("/api/v1/", AuthRoute); 
+app.use("/api/v1/", router); 
+app.all('*', (req, res, next) => {
+  next(new AppError(`Cannot find ${req.originalUrl} on this server`, 404)); // Send a 404 error for any undefined routes
+});
+
+// Global Error Handler (MUST be placed after all routes)
+app.use(globalErrorHandler); 
 
 
 // Server initialization with DB connection

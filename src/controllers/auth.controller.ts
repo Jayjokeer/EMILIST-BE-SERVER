@@ -5,9 +5,11 @@ import { ICreateUser, ISignUser } from "../interfaces/user.interface";
 import { StatusCodes } from "http-status-codes";
 import {  hashPassword ,  comparePassword  } from "../utils/hashing";
 import { NotFoundError, BadRequestError, UnauthorizedError } from '../errors/error';
-import { generateShortUUID } from "../utils/utility";
+import { generateOTPData, generateShortUUID } from "../utils/utility";
 import { generateJWTwithExpiryDate } from "../utils/jwt";
 import { catchAsync } from "../errors/error-handler";
+import { otpMessage } from "../utils/templates";
+import { sendEmail } from "../utils/send_email";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -15,7 +17,13 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
       email,
       password,
     } = req.body;
+    const isEmailExists = await authService.findUserByEmail(email);
 
+    if(isEmailExists) throw new BadRequestError("User with email already exists!");
+
+    const isUserNameExists = await authService.findUserByUserName(userName);
+    console.log(isUserNameExists)
+    if(isUserNameExists) throw new BadRequestError("UserName already exists!");
     const encryptPwd = await hashPassword(password);
 
     const user: ICreateUser= {
@@ -25,7 +33,13 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
       uniqueId:generateShortUUID()
     }
     const data = await authService.createUser(user);
-
+    const userId = String(data._id);
+    const {otp, otpCreatedAt, otpExpiryTime} = await generateOTPData(userId);
+    data.otpExpiresAt = otpExpiryTime;
+    data.registrationOtp = otp;
+    await data.save();
+    const {html, subject} = otpMessage(userName, otp);
+    sendEmail(email, subject,html); 
     successResponse(res,StatusCodes.CREATED, data);
 })
 
@@ -47,4 +61,16 @@ export const login = catchAsync(async (req: Request, res: Response) => {
     userName: foundUser.userName
   })
   return successResponse(res, StatusCodes.OK, data)
+});
+
+export const verifyEmail = catchAsync(async (req: Request, res: Response) => {
+  const {
+    email,
+    password
+  } = req.body;
+
+  const foundUser = await authService.findUserByEmail(email);
+  if(!foundUser) throw new NotFoundError("Invalid credentials!");
+
+  // return successResponse(res, StatusCodes.OK, data)
 })

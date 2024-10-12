@@ -5,7 +5,7 @@ import { UserStatus } from '../enums/user.enums';
 
 const userSchema: Schema = new mongoose.Schema(
   {
-    fullName: { type: String, required: true },
+    fullName: { type: String},
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     userName: { type: String, required: true },
@@ -21,9 +21,12 @@ const userSchema: Schema = new mongoose.Schema(
         type: mongoose.Schema.Types.Mixed,
       },
     verified: {type: Boolean, default: false},
-    status: {type: String, enum: UserStatus, default: UserStatus.active} 
+    status: {type: String, enum: UserStatus, default: UserStatus.active}, 
+    registrationOtp: {type: String},
+    otpExpiresAt: {type: Date}
   },
   { timestamps: true }
+
 );
 
 export default mongoose.model<IUser>('Users', userSchema);

@@ -8,5 +8,6 @@ router.route("/").get((req: Request, res: Response) => {
 });
 
 router.route("/sign-up").post(authController.registerUserController);
+router.route("/login").post(authController.login);
 
 export { router as AuthRoute };
