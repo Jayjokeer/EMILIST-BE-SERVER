@@ -9,38 +9,20 @@ const handleMongoDBErrors = (err: any) => {
     return err;
   };
 
-// export const globalErrorHandler = (
-//   err: AppError,
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//     if (err.name === 'MongoError' || err.statusCode === 11000) {
-//         err = handleMongoDBErrors(err);
-//       }
-//   err.statusCode = err.statusCode || 500;
-//   err.status = err.status || 'error';
-
-//   console.error('Error 💥:', err);
-
-//   return res.status(err.statusCode).json({
-//     status: err.status,
-//     message: err.message,
-//     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-//   });
-// };
-
 export const catchAsync = (fn: any) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    fn(req, res, next).catch((err: any) => next(err)); // Forward error to global error handler
+    fn(req, res, next).catch((err: any) => next(err)); 
   };
 };
 const globalErrorHandler = (
   err: AppError, 
   req: Request, 
   res: Response, 
-  next: NextFunction // You need to have all four arguments for Express to recognize this as an error handler
+  next: NextFunction 
 ) => {
+      if (err.name === 'MongoError' || err.statusCode === 11000) {
+        err = handleMongoDBErrors(err);
+      }
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 

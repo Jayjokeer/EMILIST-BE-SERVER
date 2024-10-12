@@ -54,7 +54,9 @@ export const login = catchAsync(async (req: Request, res: Response) => {
 
   const pwdCompare = await comparePassword(password, foundUser.password);
   if(!pwdCompare) throw new NotFoundError("Invalid credentials!");
-
+  if(foundUser.verified == false){
+    throw new BadRequestError("Kindly verify your email!");
+  }
   const data = await generateJWTwithExpiryDate({
     email: foundUser.email,
     id: foundUser._id,
@@ -63,14 +65,20 @@ export const login = catchAsync(async (req: Request, res: Response) => {
   return successResponse(res, StatusCodes.OK, data)
 });
 
-export const verifyEmail = catchAsync(async (req: Request, res: Response) => {
-  const {
-    email,
-    password
-  } = req.body;
+export const verifyEmailController = catchAsync(async (req: Request, res: Response) => {
+  const { email, otp } = req.body;
 
   const foundUser = await authService.findUserByEmail(email);
-  if(!foundUser) throw new NotFoundError("Invalid credentials!");
+  if (!foundUser) throw new NotFoundError("User not found!");
 
-  // return successResponse(res, StatusCodes.OK, data)
-})
+  const tokenData = await authService.findTokenService(otp);
+  if(!tokenData) throw new BadRequestError("Otp expired!");
+
+  if(foundUser.registrationOtp !== tokenData.registrationOtp) throw new BadRequestError("Otp expired!");
+  foundUser.verified = true;
+  foundUser.registrationOtp = undefined;
+  foundUser.otpExpiresAt = undefined;
+  await foundUser.save();
+
+  return successResponse(res, StatusCodes.OK, "Email verified successfully!");
+});

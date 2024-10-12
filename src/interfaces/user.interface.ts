@@ -13,8 +13,8 @@ export interface IUser {
     bio?: string;
     membership?: object;
     verified?: boolean;
-    otpExpiresAt: Date;
-    registrationOtp: string;
+    otpExpiresAt?: Date;
+    registrationOtp?: string;
   }
   
 export interface ICreateUser {

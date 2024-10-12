@@ -4,10 +4,11 @@ import * as authController from "../controllers/auth.controller"; // Ensure the 
 const router = Router();
 
 router.route("/").get((req: Request, res: Response) => {
-  res.json({ message: "Welcome to Emlist" });
+  res.json({ message: "Welcome to Emilist" });
 });
 
 router.route("/sign-up").post(authController.registerUserController);
 router.route("/login").post(authController.login);
+router.route("/verify-email").post(authController.verifyEmailController);
 
 export { router as AuthRoute };

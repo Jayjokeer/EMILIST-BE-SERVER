@@ -17,7 +17,7 @@ export const findTokenService = async (
   
     if (!tokenData) return null;
     
-    if (tokenData.otpExpiresAt.getTime() < Date.now()) {
+    if (tokenData.otpExpiresAt && tokenData.otpExpiresAt.getTime() < Date.now()) {
         return null; 
       }  
     return tokenData;
