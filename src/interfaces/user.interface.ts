@@ -1,5 +1,5 @@
 export interface IUser {
-    name: string;
+    fullName: string;
     email: string;
     password: string;
     userName: string;
@@ -15,6 +15,7 @@ export interface IUser {
     verified?: boolean;
     otpExpiresAt?: Date;
     registrationOtp?: string;
+    passwordResetOtp?: String;
   }
   
 export interface ICreateUser {

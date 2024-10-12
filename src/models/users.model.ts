@@ -23,7 +23,8 @@ const userSchema: Schema = new mongoose.Schema(
     verified: {type: Boolean, default: false},
     status: {type: String, enum: UserStatus, default: UserStatus.active}, 
     registrationOtp: {type: String, default: null},
-    otpExpiresAt: {type: Date, default: null}
+    otpExpiresAt: {type: Date, default: null},
+    passwordResetOtp: {type: String},
   },
   { timestamps: true }
 

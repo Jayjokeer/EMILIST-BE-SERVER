@@ -10,5 +10,7 @@ router.route("/").get((req: Request, res: Response) => {
 router.route("/sign-up").post(authController.registerUserController);
 router.route("/login").post(authController.login);
 router.route("/verify-email").post(authController.verifyEmailController);
+router.route("/forgot-password").post(authController.forgetPasswordController);
+router.route("/reset-password").post(authController.resetPasswordController);
 
 export { router as AuthRoute };

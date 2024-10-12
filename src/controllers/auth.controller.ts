@@ -8,7 +8,7 @@ import { NotFoundError, BadRequestError, UnauthorizedError } from '../errors/err
 import { generateOTPData, generateShortUUID } from "../utils/utility";
 import { generateJWTwithExpiryDate } from "../utils/jwt";
 import { catchAsync } from "../errors/error-handler";
-import { otpMessage } from "../utils/templates";
+import { otpMessage, passwordResetMessage } from "../utils/templates";
 import { sendEmail } from "../utils/send_email";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
@@ -81,4 +81,72 @@ export const verifyEmailController = catchAsync(async (req: Request, res: Respon
   await foundUser.save();
 
   return successResponse(res, StatusCodes.OK, "Email verified successfully!");
+});
+
+export const forgetPasswordController = catchAsync(async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  const foundUser = await authService.findUserByEmail(email);
+  if (!foundUser) throw new NotFoundError("User not found!");
+
+  const { otp, otpExpiryTime } = await generateOTPData(String(foundUser._id));
+  foundUser.otpExpiresAt = otpExpiryTime;
+  foundUser.passwordResetOtp = otp;
+  await foundUser.save();
+
+  const { html, subject } = passwordResetMessage(foundUser.userName, otp);
+  await sendEmail(email, subject, html); 
+
+  return successResponse(res, StatusCodes.OK, "Password reset OTP sent to your email.");
+});
+
+export const resetPasswordController = catchAsync(async (req: Request, res: Response) => {
+  const { email, otp, newPassword } = req.body;
+
+  const foundUser = await authService.findUserByEmail(email);
+  if (!foundUser) throw new NotFoundError("User not found!");
+
+  if (foundUser.passwordResetOtp !== otp) throw new BadRequestError("Invalid OTP");
+  if (foundUser.otpExpiresAt && Date.now() > foundUser.otpExpiresAt.getTime()) {
+    throw new BadRequestError("OTP expired, request a new one.");
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+  foundUser.password = hashedPassword;
+  foundUser.passwordResetOtp = undefined;
+  foundUser.otpExpiresAt = undefined;
+  await foundUser.save();
+
+  return successResponse(res, StatusCodes.OK, "Password reset successfully!");
+});
+
+export const updateUserController = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user.id;
+  const {
+    fullName,
+    gender,
+    language,
+    number1,
+    number2,
+    whatsAppNo,
+    location,
+    bio,
+  } = req.body;
+
+  const foundUser = await authService.findUserById(userId);
+  if (!foundUser) throw new NotFoundError("User not found!");
+
+
+  foundUser.fullName = fullName || foundUser.fullName;
+  foundUser.gender = gender || foundUser.gender;
+  foundUser.language = language || foundUser.language;
+  foundUser.number1 = number1 || foundUser.number1;
+  foundUser.number2 = number2 || foundUser.number2;
+  foundUser.whatsAppNo = whatsAppNo || foundUser.whatsAppNo;
+  foundUser.location = location || foundUser.location;
+  foundUser.bio = bio || foundUser.bio;
+
+  await foundUser.save();
+
+  return successResponse(res, StatusCodes.OK, foundUser);
 });
