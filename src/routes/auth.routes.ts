@@ -16,6 +16,6 @@ router.route("/reset-password").post(authController.resetPasswordController);
 //Protected routes
 router.route("/update-profile").post(userAuth,authController.updateUserController);
 router.route("/change-password").post(userAuth,authController.changePasswordController);
-
+router.route("/current-user").get(userAuth,authController.currentUserController);
 
 export { router as AuthRoute };

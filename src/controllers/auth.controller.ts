@@ -169,3 +169,13 @@ export const changePasswordController = catchAsync(async (req: JwtPayload, res: 
 
   return successResponse(res, StatusCodes.OK, "Password changed successfully!");
 });
+
+export const currentUserController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const userId  = req.user;
+
+  const user = await authService.findUserById(userId);
+  if (!user) throw new NotFoundError("User not found!");
+
+
+  return successResponse(res, StatusCodes.OK, user);
+});
