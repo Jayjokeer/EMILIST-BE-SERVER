@@ -189,3 +189,29 @@ export const uploadImage = catchAsync( async(req: Request, res: Response) => {
 
   return successResponse(res, StatusCodes.OK, imageUrl);
 });
+
+export const resendVerificationOtpController = catchAsync(async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  if (!email) {
+    throw new BadRequestError("Email is required");
+  }
+
+    const user = await authService.findUserByEmail(email);
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestError("Email not verified!")
+    }
+    const userId = String(user._id);
+    const {otp, otpCreatedAt, otpExpiryTime} = await generateOTPData(userId);
+    user.otpExpiresAt = otpExpiryTime;
+    user.registrationOtp = otp;
+    await user.save();
+    const {html, subject} =await otpMessage(user.userName, otp);
+    await sendEmail(email, subject,html); 
+    return successResponse(res, StatusCodes.OK, "Otp sent successfully");
+});

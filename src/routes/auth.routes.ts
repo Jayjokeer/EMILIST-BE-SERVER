@@ -14,8 +14,8 @@ router.route("/login").post(authController.login);
 router.route("/verify-email").post(authController.verifyEmailController);
 router.route("/forgot-password").post(authController.forgetPasswordController);
 router.route("/reset-password").post(authController.resetPasswordController);
-router.post('/upload-image', upload.single('image'), authController.uploadImage);
-
+router.route("/upload-image").post(upload.single('image'), authController.uploadImage);
+router.route("/resend-otp").post(authController.resendVerificationOtpController);
 //Protected routes
 router.route("/update-profile").post(userAuth,authController.updateUserController);
 router.route("/change-password").post(userAuth,authController.changePasswordController);
