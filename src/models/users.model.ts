@@ -25,6 +25,7 @@ const userSchema: Schema = new mongoose.Schema(
     registrationOtp: {type: String, default: null},
     otpExpiresAt: {type: Date, default: null},
     passwordResetOtp: {type: String},
+    profileImage: {type: String},
   },
   { timestamps: true }
 

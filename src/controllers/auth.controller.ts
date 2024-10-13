@@ -132,6 +132,7 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
     whatsAppNo,
     location,
     bio,
+    profileImage,
   } = req.body;
 
   const foundUser = await authService.findUserById(userId);
@@ -146,7 +147,7 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
   foundUser.whatsAppNo = whatsAppNo || foundUser.whatsAppNo;
   foundUser.location = location || foundUser.location;
   foundUser.bio = bio || foundUser.bio;
-
+  foundUser.profileImage = profileImage || foundUser.profileImage;
   await foundUser.save();
 
   return successResponse(res, StatusCodes.OK, foundUser);
@@ -178,4 +179,13 @@ export const currentUserController = catchAsync(async (req: JwtPayload, res: Res
 
 
   return successResponse(res, StatusCodes.OK, user);
+});
+export const uploadImage = catchAsync( async(req: Request, res: Response) => {
+  if (!req.file) {
+    return res.status(400).json({ message: 'No file uploaded' });
+  }
+
+  const imageUrl = req.file.path;
+
+  return successResponse(res, StatusCodes.OK, imageUrl);
 });

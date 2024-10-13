@@ -13,4 +13,3 @@ export const config = {
   port: process.env.PORT,
   otpSecret: process.env.OTP_SECRET
 };
-

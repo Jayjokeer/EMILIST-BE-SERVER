@@ -16,6 +16,7 @@ export interface IUser {
     otpExpiresAt?: Date;
     registrationOtp?: string;
     passwordResetOtp?: String;
+    profileImage?: string;
   }
   
 export interface ICreateUser {
