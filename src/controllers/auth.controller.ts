@@ -58,12 +58,16 @@ export const login = catchAsync(async (req: Request, res: Response) => {
   if(foundUser.isEmailVerified == false){
     throw new BadRequestError("Kindly verify your email!");
   }
-  const data = await generateJWTwithExpiryDate({
+  const token = await generateJWTwithExpiryDate({
     email: foundUser.email,
     id: foundUser._id,
     userName: foundUser.userName
   });
-  const user = await authService.findUserById(String(foundUser._id));
+  const userData = await authService.findUserById(String(foundUser._id));
+const user = {
+  token,
+  userData
+};
   return successResponse(res, StatusCodes.OK, user)
 });
 
@@ -214,4 +218,21 @@ export const resendVerificationOtpController = catchAsync(async (req: Request, r
     const {html, subject} =await otpMessage(user.userName, otp);
     await sendEmail(email, subject,html); 
     return successResponse(res, StatusCodes.OK, "Otp sent successfully");
+});
+
+export const googleRedirectController = catchAsync(async (req: Request, res: Response) => {
+  const loggedIn = req.user as ISignUser;
+  
+  const token =  generateJWTwithExpiryDate({
+    email: loggedIn.email,
+    id: loggedIn.id,
+    userName: loggedIn.userName,
+  });
+const userData = await authService.findUserById(loggedIn.id);
+   const user = {
+    token,
+    userData
+  }
+  console.log(user)
+    return successResponse(res, StatusCodes.OK, user);
 });

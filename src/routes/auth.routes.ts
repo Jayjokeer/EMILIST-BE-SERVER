@@ -23,17 +23,7 @@ router.get('/google', passport.authenticate('google', {
   scope: ['profile', 'email'],
 }));
 
-router.get('/google/callback', passport.authenticate('google'), async (req, res) => {
-
-  const user = req.user as ISignUser;
-  const token = await generateJWTwithExpiryDate({
-    email: user.email,
-    id: user.id,
-    userName: user.userName
-  });  
-  console.log(token)  
-  const redirectUrl = `${process.env.GOOGLE_REDIRECT_URI}`;
- return res.redirect(redirectUrl);});
+router.route('/google/callback',).get( passport.authenticate('google'), authController.googleRedirectController);
 
 //Protected routes
 router.route("/update-profile").post(userAuth,authController.updateUserController);
