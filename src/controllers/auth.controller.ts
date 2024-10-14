@@ -62,8 +62,9 @@ export const login = catchAsync(async (req: Request, res: Response) => {
     email: foundUser.email,
     id: foundUser._id,
     userName: foundUser.userName
-  })
-  return successResponse(res, StatusCodes.OK, data)
+  });
+  const user = await authService.findUserById(String(foundUser._id));
+  return successResponse(res, StatusCodes.OK, user)
 });
 
 export const verifyEmailController = catchAsync(async (req: Request, res: Response) => {
