@@ -3,8 +3,7 @@ import * as authController from "../controllers/auth.controller";
 import { userAuth } from "../middlewares/current-user";
 import { upload } from "../utils/image-upload";
 import passport from "passport";
-import { generateJWTwithExpiryDate } from "../utils/jwt";
-import { ISignUser } from "../interfaces/user.interface";
+
 
 const router = Router();
 
