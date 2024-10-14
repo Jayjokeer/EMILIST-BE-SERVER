@@ -33,7 +33,6 @@ router.get('/google/callback', passport.authenticate('google'), async (req, res)
   });  
   console.log(token)  
   const redirectUrl = `${process.env.GOOGLE_REDIRECT_URI}`;
-  console.log(redirectUrl)
  return res.redirect(redirectUrl);});
 
 //Protected routes
