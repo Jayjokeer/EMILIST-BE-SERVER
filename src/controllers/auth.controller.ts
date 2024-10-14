@@ -156,8 +156,7 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
 export const changePasswordController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId  = req.user;
   const { currentPassword, newPassword } = req.body;
-
-  const foundUser = await authService.findUserById(userId);
+  const foundUser = await authService.findUserByIdWithPassword(userId);
   if (!foundUser) throw new NotFoundError("User not found!");
 
   const isPasswordValid = await comparePassword(currentPassword, foundUser.password);

@@ -29,3 +29,6 @@ export const findTokenService = async (
   export const findUserByUserName = async (userName: string) =>{
     return await Users.findOne({userName: userName});
   };
+  export const findUserByIdWithPassword = async (id: string)=>{
+    return await Users.findById(id);
+};
