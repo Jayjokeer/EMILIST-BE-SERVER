@@ -20,7 +20,7 @@ passport.use(
         {
             clientID: process.env.GOOGLE_CLIENT_ID as string,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-            callbackURL: `https://emilist-be-server.onrender.com/api/v1/auth/google/callback`,
+            callbackURL: "https://emilist-be-server.onrender.com/api/v1/auth/google/callback",
         },
         async (accessToken, refreshToken, profile, done) => {
                 const existingUserByGoogleId = await Users.findOne({ googleId: profile.id });
