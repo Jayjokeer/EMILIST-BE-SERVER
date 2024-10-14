@@ -233,6 +233,5 @@ const userData = await authService.findUserById(loggedIn.id);
     token,
     userData
   }
-  console.log(user)
     return successResponse(res, StatusCodes.OK, user);
 });
