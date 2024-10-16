@@ -159,7 +159,7 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
 });
 
 export const changePasswordController = catchAsync(async (req: JwtPayload, res: Response) => {
-  const userId  = req.user;
+  const userId  = req.user.id;
   const { currentPassword, newPassword } = req.body;
   const foundUser = await authService.findUserByIdWithPassword(userId);
   if (!foundUser) throw new NotFoundError("User not found!");
@@ -176,7 +176,7 @@ export const changePasswordController = catchAsync(async (req: JwtPayload, res: 
 });
 
 export const currentUserController = catchAsync(async (req: JwtPayload, res: Response) => {
-  const userId  = req.user;
+  const userId  = req.user.id;
 
   const user = await authService.findUserById(userId);
   if (!user) throw new NotFoundError("User not found!");
