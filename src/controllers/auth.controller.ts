@@ -11,6 +11,8 @@ import { catchAsync } from "../errors/error-handler";
 import { otpMessage, passwordResetMessage } from "../utils/templates";
 import { sendEmail } from "../utils/send_email";
 import { JwtPayload } from "jsonwebtoken";
+import { config } from "../utils/config";
+import { UserStatus } from "../enums/user.enums";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -23,7 +25,6 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     if(isEmailExists) throw new BadRequestError("User with email already exists!");
 
     const isUserNameExists = await authService.findUserByUserName(userName);
-    console.log(isUserNameExists)
     if(isUserNameExists) throw new BadRequestError("UserName already exists!");
     const encryptPwd = await hashPassword(password);
 
@@ -44,7 +45,7 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     successResponse(res,StatusCodes.CREATED, data);
 })
 
-export const login = catchAsync(async (req: Request, res: Response) => {
+export const loginController = catchAsync(async (req: Request, res: Response) => {
   const {
     email,
     password
@@ -55,6 +56,10 @@ export const login = catchAsync(async (req: Request, res: Response) => {
 
   const pwdCompare = await comparePassword(password, foundUser.password);
   if(!pwdCompare) throw new NotFoundError("Invalid credentials!");
+  
+  if(foundUser.status == UserStatus.deactivated){
+    throw new UnauthorizedError("Account Deactivated!!")
+  }
   if(foundUser.isEmailVerified == false){
     throw new BadRequestError("Kindly verify your email!");
   }
@@ -237,5 +242,16 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
     userName: userData!.userName,
   }).toString();
 
-  res.redirect(`https://emilist-tom.netlify.app/dashboard/job?${queryParams}`);
+  res.redirect(`${config.frontendUrl}?${queryParams}`);
+});
+
+export const logoutController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK,  "Successfully logged out.");
+});
+
+export const deactivateUserController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const loggedIn = req.user as ISignUser;
+  
+  const deactivateUser = await authService.updateUserById(loggedIn.id,{status: UserStatus.deactivated});
+  return successResponse(res, StatusCodes.OK,  "Successfully deactivated!");
 });

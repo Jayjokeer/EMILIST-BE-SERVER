@@ -17,6 +17,7 @@ export interface IUser {
     registrationOtp?: string;
     passwordResetOtp?: String;
     profileImage?: string;
+    status?: string; 
   }
   
 export interface ICreateUser {

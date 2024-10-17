@@ -23,9 +23,10 @@ export const findTokenService = async (
     return tokenData;
   };
 
-  export const updateUserById = async (id: string, data: any)=>{
-    return await Users.findByIdAndUpdate(id, {data});
+  export const updateUserById = async (id: string, data: any) => {
+    return await Users.findByIdAndUpdate(id, { $set: { ...data } }, { new: true });
   };
+  
   export const findUserByUserName = async (userName: string) =>{
     return await Users.findOne({userName: userName});
   };
