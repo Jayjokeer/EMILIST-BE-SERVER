@@ -21,10 +21,10 @@ router.route("/resend-otp").post(authController.resendVerificationOtpController)
 router.route('/google').get( passport.authenticate('google', {
   scope: ['profile', 'email'],
 }));
-router.route("/log-out").get(authController.logoutController);
 
 router.route('/google/callback',).get( passport.authenticate('google'), authController.googleRedirectController);
 //Protected routes
+router.route("/log-out").get(userAuth, authController.logoutController);
 router.route("/update-profile").patch(userAuth,authController.updateUserController);
 router.route("/change-password").patch(userAuth,authController.changePasswordController);
 router.route("/current-user").get(userAuth,authController.currentUserController);

@@ -13,6 +13,7 @@ import { sendEmail } from "../utils/send_email";
 import { JwtPayload } from "jsonwebtoken";
 import { config } from "../utils/config";
 import { UserStatus } from "../enums/user.enums";
+import axios from "axios";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -56,7 +57,7 @@ export const loginController = catchAsync(async (req: Request, res: Response) =>
 
   const pwdCompare = await comparePassword(password, foundUser.password);
   if(!pwdCompare) throw new NotFoundError("Invalid credentials!");
-  
+
   if(foundUser.status == UserStatus.deactivated){
     throw new UnauthorizedError("Account Deactivated!!")
   }
@@ -245,8 +246,16 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
   res.redirect(`${config.frontendUrl}?${queryParams}`);
 });
 
-export const logoutController = catchAsync(async (req: Request, res: Response) => {
-  return successResponse(res, StatusCodes.OK,  "Successfully logged out.");
+export const logoutController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const user = await authService.findUserById(req.user.id);
+console.log(user)
+console.log(req.user.accessToken)
+  if (user && user.accessToken) {
+    await axios.get(`https://accounts.google.com/o/oauth2/revoke?token=${user.accessToken}`);
+
+    user.accessToken = undefined;
+    await user.save();
+  }  return successResponse(res, StatusCodes.OK,  "Successfully logged out.");
 });
 
 export const deactivateUserController = catchAsync(async (req: JwtPayload, res: Response) => {

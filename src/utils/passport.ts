@@ -26,11 +26,15 @@ passport.use(
         async (accessToken, refreshToken, profile, done) => {
                 const existingUserByGoogleId = await Users.findOne({ googleId: profile.id });
                 if (existingUserByGoogleId) {
+                    existingUserByGoogleId.accessToken = accessToken;
+                   await existingUserByGoogleId.save()
                     return done(null, existingUserByGoogleId);
                 }
 
                 const existingUserByEmail = await Users.findOne({ email: profile.emails![0].value });
                 if (existingUserByEmail) {
+                    existingUserByEmail.accessToken = accessToken;
+                    await existingUserByEmail.save();
                     return done(null, existingUserByEmail);
                 }
 
@@ -40,6 +44,7 @@ passport.use(
                     email: profile.emails![0].value,
                     uniqueId: generateShortUUID(),
                     isEmailVerified: true,
+                    accessToken: accessToken
                 }).save();
 
                 done(null, newUser);

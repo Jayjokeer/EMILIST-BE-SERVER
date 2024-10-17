@@ -18,6 +18,7 @@ export interface IUser {
     passwordResetOtp?: String;
     profileImage?: string;
     status?: string; 
+    accessToken?: string;
   }
   
 export interface ICreateUser {

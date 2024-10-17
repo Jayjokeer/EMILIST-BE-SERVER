@@ -27,6 +27,7 @@ const userSchema: Schema = new mongoose.Schema(
     passwordResetOtp: {type: String},
     profileImage: {type: String},
     googleId: {type: String},
+    accessToken: {type: String},
   },
   { timestamps: true }
 
