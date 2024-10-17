@@ -228,10 +228,14 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
     id: loggedIn.id,
     userName: loggedIn.userName,
   });
-const userData = await authService.findUserById(loggedIn.id);
-   const user = {
+  const userData = await authService.findUserById(loggedIn.id);
+
+  const queryParams = new URLSearchParams({
     token,
-    userData
-  }
-    return successResponse(res, StatusCodes.OK, user);
+    id: userData!.id,
+    email: userData!.email,
+    userName: userData!.userName,
+  }).toString();
+
+  res.redirect(`https://emilist-tom.netlify.app/dashboard/job?${queryParams}`);
 });
