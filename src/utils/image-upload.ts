@@ -13,9 +13,9 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (req, file) => {
     return {
-      folder: 'images',
-      // allowed_formats: ['jpg', 'png', 'jpeg'], // Adjust allowed formats as needed
-      public_id: file.originalname.split('.')[0] + Date.now(), // Ensure unique public_id
+      folder: 'uploads',
+      allowed_formats: ['jpg', 'png', 'jpeg', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv'],
+      public_id: file.originalname.split('.')[0] + Date.now(), 
       // transformation: [{ width: 500, height: 500, crop: 'limit' }], // Optional
     };
   },
