@@ -5,6 +5,6 @@ import { userAuth } from "../middlewares/current-user";
 
 const router = Router();
 
-router.route("create-job").post(userAuth, validateJob,jobController.createJobController);
+router.route("/create-job").post(userAuth, validateJob,jobController.createJobController);
 
 export { router as JobsRoute };

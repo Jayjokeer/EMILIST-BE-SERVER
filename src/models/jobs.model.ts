@@ -4,7 +4,8 @@ import { IJob, IMilestone } from '../interfaces/jobs.interface';
 
 const MilestoneSchema = new Schema<IMilestone>({
     timeFrame: {
-      type: String,
+      number: {type: String},
+      period: {type: String},
     },
     achievement: {
       type: String,

@@ -4,18 +4,7 @@ import { JobExpertLevel, JobPeriod, JobType } from '../enums/jobs.enum';
 
 export const validateJob = (req: Request, res: Response, next: NextFunction) => {
 
-const milestoneValidation = Joi.object({
-  timeFrame: Joi.string().required().messages({
-    'string.empty': 'TimeFrame is required',
-  }),
-  achievement: Joi.string().required().messages({
-    'string.empty': 'Achievement is required',
-  }),
-  amount: Joi.number().required().min(0).messages({
-    'number.base': 'amount must be a number',
-    'number.min': 'amount must be greater than or equal to 0',
-  }),
-});
+
 
  const jobValidation = Joi.object({
   category: Joi.string().required().messages({
@@ -63,12 +52,14 @@ const milestoneValidation = Joi.object({
       'any.only': 'Invalid expert level, must be one of: ' + Object.values(JobExpertLevel).join(', '),
       'any.required': 'Expert level is required',
     }),
-  milestones: Joi.array()
-    .items(milestoneValidation)
-    .max(5)
-    .messages({
-      'array.max': 'Cannot have more than 5 milestones',
-    }),
+  milestones: Joi.array().items(Joi.object({
+    timeFrame: Joi.object({
+          number: Joi.number().required(),
+          period: Joi.string().valid(...Object.values(JobPeriod)).required(),
+        }).required(),
+    achievement: Joi.string().required(),
+    amount: Joi.number().required(),
+      })).max(5).required(),
   maximumPrice: Joi.when('type', {
     is: 'biddable',
     then: Joi.number().required().messages({

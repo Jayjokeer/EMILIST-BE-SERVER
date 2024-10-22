@@ -19,7 +19,7 @@ export interface IJob {
 }
 
 export interface IMilestone {
-    timeFrame: string; 
+    timeFrame: any; 
     achievement: string; 
     amount: number; 
   }
