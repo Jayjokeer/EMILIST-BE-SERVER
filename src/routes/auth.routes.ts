@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import * as authController from "../controllers/auth.controller";
 import { userAuth } from "../middlewares/current-user";
-import { upload } from "../utils/image-upload";
+import { multipleUpload, singleUpload } from "../utils/image-upload";
 import passport from "passport";
 
 
@@ -16,7 +16,10 @@ router.route("/login").post(authController.loginController);
 router.route("/verify-email").post(authController.verifyEmailController);
 router.route("/forgot-password").post(authController.forgetPasswordController);
 router.route("/reset-password").post(authController.resetPasswordController);
-router.route("/upload-image").post(upload.single('image'), authController.uploadImage);
+//file uploads
+router.route("/upload-image").post(singleUpload, authController.uploadImage);
+router.route("/upload-files").post(multipleUpload, authController.uploadMultipleFiles);
+
 router.route("/resend-otp").post(authController.resendVerificationOtpController);
 router.route('/google').get( passport.authenticate('google', {
   scope: ['profile', 'email'],

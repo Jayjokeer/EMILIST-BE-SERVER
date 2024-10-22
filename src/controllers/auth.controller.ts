@@ -44,7 +44,7 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     const {html, subject} = otpMessage(userName, otp);
     sendEmail(email, subject,html); 
     successResponse(res,StatusCodes.CREATED, data);
-})
+});
 
 export const loginController = catchAsync(async (req: Request, res: Response) => {
   const {
@@ -198,6 +198,19 @@ export const uploadImage = catchAsync( async(req: Request, res: Response) => {
   const imageUrl = req.file.path;
 
   return successResponse(res, StatusCodes.OK, imageUrl);
+});
+
+export const uploadMultipleFiles = catchAsync( async(req: Request, res: Response) => {
+  const files = req.files as Express.Multer.File[];
+
+  if (!files || files.length === 0) {
+    return res.status(400).json({ message: 'No files uploaded' });
+  }
+
+  const fileUrls = files.map(file => file.path);
+
+
+  return successResponse(res, StatusCodes.OK, fileUrls);
 });
 
 export const resendVerificationOtpController = catchAsync(async (req: Request, res: Response) => {

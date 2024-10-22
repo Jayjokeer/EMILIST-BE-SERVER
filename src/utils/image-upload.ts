@@ -10,18 +10,19 @@ cloudinary.config({
 
 
 const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: async (req, file) => {
-        console.log(file)
-      return {
-        folder: 'images', 
-        allowed_format: ['jpg', 'png', 'jpeg'], 
-        public_id: file.originalname.split('.')[0], 
-        transformation: [{ width: 500, height: 500, crop: 'limit' }], 
-      };
-    },
-  });
-  
-const upload = multer({ storage });
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    return {
+      folder: 'images',
+      // allowed_formats: ['jpg', 'png', 'jpeg'], // Adjust allowed formats as needed
+      public_id: file.originalname.split('.')[0] + Date.now(), // Ensure unique public_id
+      // transformation: [{ width: 500, height: 500, crop: 'limit' }], // Optional
+    };
+  },
+});
 
-export { cloudinary, upload };
+const singleUpload = multer({ storage }).single('image');
+
+const multipleUpload = multer({ storage }).array('files', 10);
+
+export { cloudinary, singleUpload, multipleUpload };
