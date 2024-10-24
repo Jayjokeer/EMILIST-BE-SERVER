@@ -28,7 +28,7 @@ router.route('/google').get( passport.authenticate('google', {
 router.route('/google/callback',).get( passport.authenticate('google'), authController.googleRedirectController);
 //Protected routes
 router.route("/log-out").get(userAuth, authController.logoutController);
-router.route("/update-profile").patch(userAuth,authController.updateUserController);
+router.route("/update-profile").patch(userAuth,singleUpload,authController.updateUserController);
 router.route("/change-password").patch(userAuth,authController.changePasswordController);
 router.route("/current-user").get(userAuth,authController.currentUserController);
 router.route("/deactivate-user").patch(userAuth,authController.deactivateUserController);

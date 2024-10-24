@@ -1,5 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
-import { JobExpertLevel, JobPeriod, JobType } from '../enums/jobs.enum';
+import { JobExpertLevel, JobPeriod, JobType, MilestoneEnum, MilestonePaymentStatus, JobStatusEnum  } from '../enums/jobs.enum';
 import { IJob, IMilestone } from '../interfaces/jobs.interface';
 
 const MilestoneSchema = new Schema<IMilestone>({
@@ -13,6 +13,16 @@ const MilestoneSchema = new Schema<IMilestone>({
     amount: {
       type: Number,
     },
+    status:{
+      type: String,
+      enum: MilestoneEnum,
+      default: MilestoneEnum.pending
+    },
+    paymentStatus: {
+      type: String,
+      enum: MilestonePaymentStatus,
+      default:  MilestonePaymentStatus.unpaid,
+    }
   });
 
 const jobSchema: Schema = new mongoose.Schema(
@@ -41,6 +51,11 @@ const jobSchema: Schema = new mongoose.Schema(
     bidRange: {type: Number},
     achievementDetails: {type: String},
     currency: {type: String},
+    status: {
+      type: String,
+      enum: JobStatusEnum,
+      default: JobStatusEnum.pending, 
+    },
   },
   { timestamps: true }
 

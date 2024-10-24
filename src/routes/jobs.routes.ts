@@ -2,9 +2,10 @@ import { Router, Request, Response } from "express";
 import * as jobController from "../controllers/jobs.controller";
 import { validateJob } from "../validations/job.validation";
 import { userAuth } from "../middlewares/current-user";
+import { multipleUpload } from "../utils/image-upload";
 
 const router = Router();
 
-router.route("/create-job").post(userAuth, validateJob,jobController.createJobController);
+router.route("/create-job").post(userAuth,multipleUpload,validateJob,jobController.createJobController);
 
 export { router as JobsRoute };

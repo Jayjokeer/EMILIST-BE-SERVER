@@ -1,4 +1,4 @@
-import { JobExpertLevel, JobType } from "../enums/jobs.enum";
+import { JobExpertLevel, JobStatusEnum, JobType, MilestoneEnum, MilestonePaymentStatus } from "../enums/jobs.enum";
 
 export interface IJob {
     category: string;
@@ -16,10 +16,14 @@ export interface IJob {
     bidRange?: number;
     achievementDetails: string;
     currency: string;
+    status: JobStatusEnum;
 }
 
 export interface IMilestone {
     timeFrame: any; 
     achievement: string; 
     amount: number; 
+    status: MilestoneEnum;
+    paymentStatus: MilestonePaymentStatus;
   }
+

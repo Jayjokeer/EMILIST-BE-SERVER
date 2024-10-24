@@ -134,6 +134,7 @@ export const resetPasswordController = catchAsync(async (req: Request, res: Resp
 
 export const updateUserController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user.id;
+  
   const {
     fullName,
     gender,
@@ -143,7 +144,6 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
     whatsAppNo,
     location,
     bio,
-    profileImage,
   } = req.body;
 
   const foundUser = await authService.findUserById(userId);
@@ -158,7 +158,10 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
   foundUser.whatsAppNo = whatsAppNo || foundUser.whatsAppNo;
   foundUser.location = location || foundUser.location;
   foundUser.bio = bio || foundUser.bio;
-  foundUser.profileImage = profileImage || foundUser.profileImage;
+  if (req.file) {
+     foundUser.profileImage = req.file.path;
+  }
+
   await foundUser.save();
 
   return successResponse(res, StatusCodes.OK, foundUser);
