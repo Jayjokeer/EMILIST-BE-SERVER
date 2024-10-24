@@ -22,7 +22,8 @@ const MilestoneSchema = new Schema<IMilestone>({
       type: String,
       enum: MilestonePaymentStatus,
       default:  MilestonePaymentStatus.unpaid,
-    }
+    },
+    paymentReciept: {type: String }
   });
 
 const jobSchema: Schema = new mongoose.Schema(
@@ -56,6 +57,8 @@ const jobSchema: Schema = new mongoose.Schema(
       enum: JobStatusEnum,
       default: JobStatusEnum.pending, 
     },
+    userId: {type: Schema.Types.ObjectId, ref: 'Users'},
+    applications: [ {type: Schema.Types.ObjectId, ref: 'Project'}  ]
   },
   { timestamps: true }
 

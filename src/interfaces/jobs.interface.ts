@@ -17,6 +17,8 @@ export interface IJob {
     achievementDetails: string;
     currency: string;
     status: JobStatusEnum;
+    userId: string;
+    applications?: string[];
 }
 
 export interface IMilestone {
@@ -25,5 +27,6 @@ export interface IMilestone {
     amount: number; 
     status: MilestoneEnum;
     paymentStatus: MilestonePaymentStatus;
+    paymentReciept: string;
   }
 
