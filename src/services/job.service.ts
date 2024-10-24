@@ -23,7 +23,7 @@ export const fetchAllUserJobs = async (userId: string, page: number, limit: numb
     const skip = (page - 1) * limit;
     const jobs = await Jobs.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
   
-    console.log(userId)
+    
     const totalJobs = await Jobs.countDocuments();
   
     let jobsWithLikeStatus;
@@ -37,7 +37,7 @@ export const fetchAllUserJobs = async (userId: string, page: number, limit: numb
         ...job.toObject(),
         liked: likedJobIds.includes(job._id.toString()),
       }));
-      console.log(jobsWithLikeStatus)
+     
     } else {
       
       jobsWithLikeStatus = jobs.map((job) => ({
@@ -66,3 +66,28 @@ export const ifLikedJob = async (jobId: string, userId: string)=>{
 export const createJobLike = async (data: any) =>{
     return await JobLike.create(data);
 };
+
+
+export const fetchLikedJobs = async (userId: string, page: number, limit: number) => {
+    const skip = (page - 1) * limit;
+  
+    
+    const likedJobs = await JobLike.find({ user: userId }).select('job').lean();
+    const likedJobIds = likedJobs.map((like) => like.job);
+  
+
+    const jobs = await Jobs.find({ _id: { $in: likedJobIds } })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+  
+    const totalLikedJobs = likedJobIds.length;
+  
+    return {
+      jobs,
+      totalPages: Math.ceil(totalLikedJobs / limit),
+      currentPage: page,
+      totalLikedJobs,
+    };
+  };
+  

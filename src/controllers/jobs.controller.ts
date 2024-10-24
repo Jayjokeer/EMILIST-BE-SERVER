@@ -31,7 +31,7 @@ export const allUserJobController = catchAsync(async (req: JwtPayload, res: Resp
 
 export const allJobsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const { page = 1, limit = 10 } = req.query; 
-    console.log(req.user)
+    
     const userId = req.query.userId ? req.query.userId : null; 
     const data = await jobService.fetchAllJobs(Number(page), Number(limit), userId);
     successResponse(res, StatusCodes.OK, data);
@@ -68,3 +68,12 @@ export const likeJobController = catchAsync(async (req: JwtPayload, res: Respons
 
     successResponse(res,StatusCodes.CREATED, data);
 });
+
+export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id; 
+    const { page = 1, limit = 10 } = req.query;
+  
+    const data = await jobService.fetchLikedJobs(userId, Number(page), Number(limit));
+    successResponse(res, StatusCodes.OK, data);
+  });
+  
