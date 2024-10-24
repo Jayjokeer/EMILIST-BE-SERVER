@@ -5,7 +5,7 @@ import { NextFunction, Request, Response } from "express";
 import * as jobService from "../services/job.service";
 import { IJob } from "../interfaces/jobs.interface";
 import { JwtPayload } from "jsonwebtoken";
-import { NotFoundError } from "../errors/error";
+import { BadRequestError, NotFoundError } from "../errors/error";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const job: IJob = req.body;
@@ -29,9 +29,11 @@ export const allUserJobController = catchAsync(async (req: JwtPayload, res: Resp
   });
   
 
-export const allJobsController = catchAsync(async (req: Request, res: Response) => {
+export const allJobsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const { page = 1, limit = 10 } = req.query; 
-    const data = await jobService.fetchAllJobs(Number(page), Number(limit));
+    console.log(req.user)
+    const userId = req.query.userId ? req.query.userId : null; 
+    const data = await jobService.fetchAllJobs(Number(page), Number(limit), userId);
     successResponse(res, StatusCodes.OK, data);
   });
 
@@ -42,4 +44,27 @@ export const fetchSinlgeJobController = catchAsync( async (req: Request, res: Re
     };
     const data = await jobService.fetchJobById(String(id));
     successResponse(res,StatusCodes.OK, data);
+});
+
+export const likeJobController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id;
+  const { jobId } = req.params;
+
+    
+    const job = await jobService.fetchJobById(String(jobId));
+    if (!job) {
+        throw new NotFoundError("Job not found!");
+    }
+
+
+    const existingLike = await jobService.ifLikedJob(jobId, userId);
+    if(existingLike) {
+        throw new BadRequestError("Job previously liked!");
+    }
+
+    
+    const data = await jobService.createJobLike({job: jobId, user: userId});
+ 
+
+    successResponse(res,StatusCodes.CREATED, data);
 });
