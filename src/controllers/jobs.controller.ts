@@ -23,17 +23,27 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
 });
 
 export const allUserJobController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const { page = 1, limit = 10 } = req.query; 
-    const data = await jobService.fetchAllUserJobs(req.user.id, Number(page), Number(limit));
-    successResponse(res, StatusCodes.OK, data);
-  });
-  
+  const { page = 1, limit = 10, search = null, fields = '' } = req.query;
+
+  const data = await jobService.fetchAllUserJobs(
+    req.user.id,
+    Number(page),
+    Number(limit),
+    search as string,
+    (fields as string).split(',').filter(Boolean)
+  );
+
+  successResponse(res, StatusCodes.OK, data);
+});
 
 export const allJobsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const { page = 1, limit = 10 } = req.query; 
     
     const userId = req.query.userId ? req.query.userId : null; 
-    const data = await jobService.fetchAllJobs(Number(page), Number(limit), userId);
+    const search = req.query.search as string || null;
+    const specificFields = req.query.fields ? (req.query.fields as string).split(',') : [];
+    
+    const data = await jobService.fetchAllJobs(Number(page), Number(limit), userId, search, specificFields );
     successResponse(res, StatusCodes.OK, data);
   });
 
@@ -74,6 +84,13 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const { page = 1, limit = 10 } = req.query;
   
     const data = await jobService.fetchLikedJobs(userId, Number(page), Number(limit));
+    successResponse(res, StatusCodes.OK, data);
+  });
+
+  export const unlikeJobController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id; 
+    const {jobId} = req.params;
+     const data = await jobService.unlikeJob(jobId, userId);
     successResponse(res, StatusCodes.OK, data);
   });
   
