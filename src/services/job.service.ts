@@ -103,7 +103,7 @@ export const fetchJobById = async (jobId: string)=>{
 };
 export const fetchJobByIdWithDetails = async (jobId: string)=>{
   const job = await Jobs.findById(jobId)
-  .populate('userId', 'name email location level profileImage') 
+  .populate('userId', 'fullName userName email location level profileImage') 
   .populate({
     path: 'applications',
     populate: { path: 'user', select: 'name email location level profileImage' } 
