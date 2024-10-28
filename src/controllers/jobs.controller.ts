@@ -54,7 +54,10 @@ export const fetchSinlgeJobController = catchAsync( async (req: Request, res: Re
     if(!id){
         throw new NotFoundError("Id required!");
     };
-    const data = await jobService.fetchJobById(String(id));
+    const data = await jobService.fetchJobByIdWithDetails(String(id));
+
+
+
     successResponse(res,StatusCodes.OK, data);
 });
 

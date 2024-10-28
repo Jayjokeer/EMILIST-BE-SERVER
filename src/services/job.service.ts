@@ -1,6 +1,9 @@
 import { IJob } from "../interfaces/jobs.interface";
 import Jobs from "../models/jobs.model";
 import  JobLike  from "../models/joblike.model";
+import Project from "../models/project.model";
+import { BadRequestError, NotFoundError } from "../errors/error";
+
 
 export const createJob = async (data:  IJob) =>{
     return await Jobs.create(data);
@@ -96,9 +99,30 @@ export const fetchAllUserJobs = async (
   
 
 export const fetchJobById = async (jobId: string)=>{
-    return await Jobs.findById(jobId);
-}
+  return await Jobs.findById(jobId)
+};
+export const fetchJobByIdWithDetails = async (jobId: string)=>{
+  const job = await Jobs.findById(jobId)
+  .populate('userId', 'name email location level profileImage') 
+  .populate({
+    path: 'applications',
+    populate: { path: 'user', select: 'name email location level profileImage' } 
+  });
+  if(!job) throw new NotFoundError("Job not found!");
+  const creatorId = job.userId;
 
+  const totalJobsPosted = await Jobs.countDocuments({ userId: creatorId });
+  const totalArtisansHired = await Project.countDocuments({
+    creator: creatorId,
+    status: 'accepted', 
+  });
+
+  return {
+    job,
+    totalJobsPosted,
+    totalArtisansHired
+  }
+}
 export const ifLikedJob = async (jobId: string, userId: string)=>{
     return await JobLike.findOne({ job: jobId, user: userId });
 };
