@@ -6,6 +6,8 @@ import * as jobService from "../services/job.service";
 import { IJob } from "../interfaces/jobs.interface";
 import { JwtPayload } from "jsonwebtoken";
 import { BadRequestError, NotFoundError } from "../errors/error";
+import { IProject } from "../interfaces/project.interface";
+import * as projectService from "../services/project.service";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const job: IJob = req.body;
@@ -94,3 +96,31 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     successResponse(res, StatusCodes.OK, data);
   });
   
+  export const applyForJobController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id; 
+    const {jobId} = req.body;
+    const job = await jobService.fetchJobById(String(jobId));
+    if (!job) {
+      throw new NotFoundError("Job not found!");
+    }
+    if(userId == job.userId) {
+      throw new BadRequestError("You cannot apply to your own job!");
+    }
+    const payload:any = {
+      job: jobId,
+      user: userId,
+      creator: job.userId
+    
+    };
+     const data = await projectService.createProject(payload);
+     job.applications!.push(String(data._id));
+     job.save();
+    successResponse(res, StatusCodes.CREATED, data);
+  });
+  
+  // export const getSingleJobController = catchAsync(async (req: JwtPayload, res: Response) => {
+  //   const userId = req.user.id; 
+  //   const {jobId} = req.body;
+
+  //   successResponse(res, StatusCodes.CREATED, data);
+  // });

@@ -7,8 +7,8 @@ export const createProject = async (data:  IProject) =>{
 
 export const fetchProjectById = async (projectId: string) =>{
     return await Project.findById(projectId);
-}
+};
 
 export const fetchAllUserProjects = async (userId: string) =>{
     return await Project.find({user: userId});
-}
+};

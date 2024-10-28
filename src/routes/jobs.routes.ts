@@ -13,4 +13,6 @@ router.route("/fetch-job-by-id").get(jobController.fetchSinlgeJobController);
 router.route("/like-job/:jobId").post(userAuth,jobController.likeJobController);
 router.route("/fetch-liked-jobs").get(userAuth, jobController.fetchLikedJobsController);
 router.route("/unlike-job/:jobId").post(userAuth, jobController.unlikeJobController);
+router.route("/apply-job").post(userAuth, jobController.applyForJobController);
+
 export { router as JobsRoute };
