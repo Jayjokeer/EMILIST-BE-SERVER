@@ -8,6 +8,7 @@ import { JwtPayload } from "jsonwebtoken";
 import { BadRequestError, NotFoundError } from "../errors/error";
 import { IProject } from "../interfaces/project.interface";
 import * as projectService from "../services/project.service";
+import { ProjectStatusEnum } from "../enums/project.enum";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const job: IJob = req.body;
@@ -121,9 +122,18 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     successResponse(res, StatusCodes.CREATED, data);
   });
   
-  // export const getSingleJobController = catchAsync(async (req: JwtPayload, res: Response) => {
-  //   const userId = req.user.id; 
-  //   const {jobId} = req.body;
+  export const deleteJobApplicationController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id; 
+    const {projectId} = req.params;
+    const project = await projectService.fetchProjectById(projectId);
 
-  //   successResponse(res, StatusCodes.CREATED, data);
-  // });
+    if(!project){
+      throw new NotFoundError("Application not found!");
+    }
+    if(project.status !== ProjectStatusEnum.pending){
+      throw new BadRequestError("You can only withdraw a pending application!");
+    }
+    await jobService.deleteJobApplication(project.job, projectId);
+    await projectService.deleteProject(projectId, userId);
+    successResponse(res, StatusCodes.OK, "Application withdrawn");
+  });

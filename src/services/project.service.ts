@@ -12,3 +12,10 @@ export const fetchProjectById = async (projectId: string) =>{
 export const fetchAllUserProjects = async (userId: string) =>{
     return await Project.find({user: userId});
 };
+
+export const deleteProject = async (projectId: string, userId: string ) =>{
+
+    return await Project.findOneAndDelete({user: userId, _id: projectId});
+
+    
+   };

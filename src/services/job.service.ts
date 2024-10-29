@@ -45,7 +45,7 @@ export const fetchAllUserJobs = async (
     limit: number,
     userId: string | null,
     search: string | null,
-    specificFields: string[] = [] 
+    fields: string[] = [] 
   ) => {
     const skip = (page - 1) * limit;
     const searchCriteria: any = {};
@@ -53,14 +53,14 @@ export const fetchAllUserJobs = async (
     if (search) {
       const searchRegex = new RegExp(search, 'i'); 
   
-      if (specificFields.length === 0) {
+      if (fields.length === 0) {
         const jobSchemaPaths = Jobs.schema.paths;
         const stringFields = Object.keys(jobSchemaPaths).filter(
           (field) => jobSchemaPaths[field].instance === 'String'
         );
         searchCriteria.$or = stringFields.map((field) => ({ [field]: searchRegex }));
       } else {
-        searchCriteria.$or = specificFields.map((field) => ({ [field]: searchRegex }));
+        searchCriteria.$or = fields.map((field) => ({ [field]: searchRegex }));
       }
     }
   
@@ -159,3 +159,11 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
     
    return await JobLike.findOneAndDelete({user: userId, job: jobId});
   };
+  export const deleteJobApplication = async (jobId: string, projectId: string ) =>{
+    
+    return  await Jobs.updateOne(
+      { _id: jobId }, 
+      { $pull: { applications: projectId } }
+    );
+   };
+ 

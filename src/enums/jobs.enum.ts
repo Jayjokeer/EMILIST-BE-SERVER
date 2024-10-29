@@ -14,7 +14,7 @@ export enum JobExpertLevel {
     days = "days",
     weeks= "weeks",
     months= "months",
-    four= "four",
+    years= "years"
   }
 
   export enum MilestoneEnum {
