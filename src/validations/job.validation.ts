@@ -3,9 +3,6 @@ import Joi from 'joi';
 import { JobExpertLevel, JobPeriod, JobType } from '../enums/jobs.enum';
 
 export const validateJob = (req: Request, res: Response, next: NextFunction) => {
-
-
-
  const jobValidation = Joi.object({
   category: Joi.string().required().messages({
     'string.empty': 'Category is required',
@@ -77,10 +74,10 @@ export const validateJob = (req: Request, res: Response, next: NextFunction) => 
     otherwise: Joi.forbidden(),
   }),
   budget: Joi.when('type', {
-    is: 'regular',
+    is: Joi.string().valid('regular', 'direct'),
     then: Joi.number().required().messages({
       'number.base': 'Budget must be a number',
-      'any.required': 'Budget is required for regular jobs',
+      'any.required': 'Budget is required for regular or direct jobs',
     }),
     otherwise: Joi.forbidden(),
   }),
@@ -88,6 +85,9 @@ export const validateJob = (req: Request, res: Response, next: NextFunction) => 
     'string.empty': 'Achievement details must be a string',
   }),
   currency: Joi.string().messages({
+    'string.empty': 'Currency must be a string',
+  }),
+  uniqueId: Joi.string().optional().messages({
     'string.empty': 'Currency must be a string',
   }),
 });
@@ -163,5 +163,50 @@ export const validateUpdateJob = (req: Request, res: Response, next: NextFunctio
    res.status(400).json({ errors: errorMessages });
   }
 
+  next();
+};
+export const validateProjectApplication = (req: Request, res: Response, next: NextFunction) => {
+  const projectValidation = Joi.object({
+    jobId: Joi.string().required().messages({
+      'string.empty': 'Job ID is required',
+    }),
+    type: Joi.string().valid('biddable', 'regular').required().messages({
+      'any.only': 'Invalid job type, must be "biddable" or "regular"',
+      'any.required': 'Job type is required',
+    }),
+    maximumPrice: Joi.when('type', {
+      is: 'biddable',
+      then: Joi.number().required().messages({
+        'number.base': 'Maximum price must be a number',
+        'any.required': 'Maximum price is required for biddable jobs',
+      }),
+      otherwise: Joi.forbidden(),
+    }),
+    milestones: Joi.when('type', {
+      is: 'biddable',
+      then: Joi.array().items(
+        Joi.object({
+          milestoneId: Joi.string().required().messages({
+            'string.empty': 'Milestone ID is required',
+          }),
+          amount: Joi.number().required().messages({
+            'number.base': 'Amount must be a number',
+            'any.required': 'Amount is required',
+          }),
+          achievement: Joi.string().required().messages({
+            'string.empty': 'Achievement is required',
+          }),
+        })
+      ).min(1).required().messages({
+        'array.min': 'At least one milestone is required',
+      }),
+      otherwise: Joi.forbidden(),
+    }),
+  });
+
+  const { error } = projectValidation.validate(req.body);
+  if (error) {
+     res.status(400).json({ message: error.details[0].message });
+  }
   next();
 };

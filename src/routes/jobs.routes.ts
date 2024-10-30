@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as jobController from "../controllers/jobs.controller";
-import { validateJob, validateUpdateJob } from "../validations/job.validation";
+import { validateJob, validateProjectApplication, validateUpdateJob } from "../validations/job.validation";
 import { userAuth } from "../middlewares/current-user";
 import { multipleUpload } from "../utils/image-upload";
 
@@ -13,9 +13,11 @@ router.route("/fetch-job-by-id").get(jobController.fetchSinlgeJobController);
 router.route("/like-job/:jobId").post(userAuth,jobController.likeJobController);
 router.route("/fetch-liked-jobs").get(userAuth, jobController.fetchLikedJobsController);
 router.route("/unlike-job/:jobId").post(userAuth, jobController.unlikeJobController);
-router.route("/apply-job").post(userAuth, jobController.applyForJobController);
+router.route("/apply-job").post(userAuth,validateProjectApplication, jobController.applyForJobController);
 router.route("/withdraw-job-application/:projectId").delete(userAuth, jobController.deleteJobApplicationController);
 router.route("/delete-job/:jobId").delete(userAuth, jobController.deleteJobController);
 router.route("/update-job/:jobId").put(userAuth, multipleUpload, validateUpdateJob, jobController.updateJobController);
+// router.route("/update-job/:jobId").put(userAuth, multipleUpload, validateUpdateJob, jobController.updateJobController);
 
 export { router as JobsRoute };
+

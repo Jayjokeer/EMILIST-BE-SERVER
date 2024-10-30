@@ -19,6 +19,7 @@ export interface IJob {
     status: JobStatusEnum;
     userId: string;
     applications?: string[];
+    uniqueId?: string;
 }
 
 export interface IMilestone {

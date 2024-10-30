@@ -9,21 +9,49 @@ import { BadRequestError, NotFoundError } from "../errors/error";
 import { IProject } from "../interfaces/project.interface";
 import * as projectService from "../services/project.service";
 import { ProjectStatusEnum } from "../enums/project.enum";
-import { JobStatusEnum } from "../enums/jobs.enum";
+import { JobStatusEnum, JobType } from "../enums/jobs.enum";
+import * as authService from "../services/auth.service";
+import { sendEmail } from "../utils/send_email";
+import { directJobApplicationMessage } from "../utils/templates";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const job: IJob = req.body;
     const files = req.files as Express.Multer.File[];
+    if (files && files.length > 0) {
+      const fileUrls = files.map(file => file.path);
+      job.jobFiles = fileUrls;
+    }
 
-  if (files && files.length > 0) {
-    const fileUrls = files.map(file => file.path);
-    job.jobFiles = fileUrls;
-  }
+  if(job.type == JobType.direct && job.uniqueId){
+
+    const user = await authService.findUserByUniqueId(job.uniqueId);
+    if(!user) throw new NotFoundError("User not found!");
+    
+      const userId = req.user.id;
+      job.userId = userId;
+      job.applications = [];
+      job.applications!.push(String(user._id));
+      const data = await jobService.createJob(job);
+
+      const payload:any = {
+        job: data._id,
+        user: user._id,
+        creator: userId,
+        directJobStatus: ProjectStatusEnum.pending,
+      };
+       await projectService.createProject(payload);
+
+       const { html, subject } = directJobApplicationMessage(user.userName, req.user.userName, String(data._id));
+       await sendEmail(req.user.email, subject, html); 
+      successResponse(res,StatusCodes.CREATED, data);
+
+  } else {
     const user = req.user._id;
     job.userId = user;
     const data = await jobService.createJob(job);
 
     successResponse(res,StatusCodes.CREATED, data);
+}
 });
 
 export const allUserJobController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -102,26 +130,52 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   });
   
   export const applyForJobController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const userId = req.user.id; 
-    const {jobId} = req.body;
+    const userId = req.user.id;
+    const { jobId, type, maximumPrice, milestones } = req.body;
+  
+   
     const job = await jobService.fetchJobById(String(jobId));
     if (!job) {
       throw new NotFoundError("Job not found!");
     }
-    if(userId == job.userId) {
+    if (userId === job.userId) {
       throw new BadRequestError("You cannot apply to your own job!");
     }
-    const payload:any = {
+  
+    
+    const payload: any = {
       job: jobId,
       user: userId,
-      creator: job.userId
-    
+      creator: job.userId,
     };
-     const data = await projectService.createProject(payload);
-     job.applications!.push(String(data._id));
-     job.save();
-    successResponse(res, StatusCodes.CREATED, data);
+  
+    
+    if (type === JobType.biddable) {
+      if (!maximumPrice || !milestones) {
+        throw new BadRequestError("Both maximumPrice and milestones are required for biddable jobs.");
+      }
+  
+      payload.biddableDetails = {
+        maximumPrice,
+        milestones: milestones.map((milestone: any) => ({
+          milestoneId: milestone.milestoneId,
+          amount: milestone.amount,
+          achievement: milestone.achievement,
+        })),
+      };
+    }
+  
+   
+    const projectData = await projectService.createProject(payload);
+  
+    
+    job.applications!.push(String(projectData._id));
+    await job.save();
+  
+    
+    successResponse(res, StatusCodes.CREATED, projectData);
   });
+  
   
   export const deleteJobApplicationController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user.id; 

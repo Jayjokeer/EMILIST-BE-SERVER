@@ -33,3 +33,6 @@ export const findTokenService = async (
   export const findUserByIdWithPassword = async (id: string)=>{
     return await Users.findById(id);
 };
+export const findUserByUniqueId = async (id: string)=>{
+  return await Users.findOne({uniqueId: id});
+};

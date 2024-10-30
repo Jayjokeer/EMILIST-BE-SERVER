@@ -1,6 +1,7 @@
 export enum JobType {
     biddable = "biddable",
     regular= "regular",
+    direct= "direct",
   }
 
 export enum JobExpertLevel {

@@ -18,4 +18,4 @@ export const deleteProject = async (projectId: string, userId: string ) =>{
     return await Project.findOneAndDelete({user: userId, _id: projectId});
 
     
-   };
+};

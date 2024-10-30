@@ -106,7 +106,7 @@ export const fetchJobByIdWithDetails = async (jobId: string)=>{
   .populate('userId', 'fullName userName email location level profileImage') 
   .populate({
     path: 'applications',
-    populate: { path: 'user', select: 'name email location level profileImage' } 
+    populate: { path: 'user', select: 'fullName userName email location level profileImage' } 
   });
   if(!job) throw new NotFoundError("Job not found!");
   const creatorId = job.userId;

@@ -58,7 +58,9 @@ const jobSchema: Schema = new mongoose.Schema(
       default: JobStatusEnum.pending, 
     },
     userId: {type: Schema.Types.ObjectId, ref: 'Users'},
-    applications: [ {type: Schema.Types.ObjectId, ref: 'Project'}  ]
+    applications: [ {type: Schema.Types.ObjectId, ref: 'Project'}  ],
+    acceptedApplicantId: {type: Schema.Types.ObjectId, ref: 'Project'},
+    additionalAmount: {type: Number},
   },
   { timestamps: true }
 
