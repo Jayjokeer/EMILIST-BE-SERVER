@@ -101,3 +101,67 @@ const { error } = jobValidation.validate(req.body, { abortEarly: false });
 
   next();
 }
+
+
+export const validateUpdateJob = (req: Request, res: Response, next: NextFunction) => {
+  const updateJobValidation = Joi.object({
+    category: Joi.string().optional(),
+    service: Joi.string().optional(),
+    title: Joi.string().optional(),
+    description: Joi.string().optional(),
+    jobFiles: Joi.array().items(Joi.string()).optional().messages({
+      'string.base': 'Each job file must be a string (URL or file path)',
+    }),
+    duration: Joi.object({
+      number: Joi.number().optional().messages({
+        'number.base': 'Duration number must be a number',
+      }),
+      period: Joi.string()
+        .valid(...Object.values(JobPeriod))
+        .optional()
+        .messages({
+          'any.only': 'Invalid period, must be one of: ' + Object.values(JobPeriod).join(', '),
+        }),
+    }).optional(),
+    type: Joi.string()
+      .valid(...Object.values(JobType))
+      .optional()
+      .messages({
+        'any.only': 'Invalid job type, must be one of: ' + Object.values(JobType).join(', '),
+      }),
+    location: Joi.string().optional(),
+    expertLevel: Joi.string()
+      .valid(...Object.values(JobExpertLevel))
+      .optional()
+      .messages({
+        'any.only': 'Invalid expert level, must be one of: ' + Object.values(JobExpertLevel).join(', '),
+      }),
+    milestones: Joi.array()
+      .items(
+        Joi.object({
+          timeFrame: Joi.object({
+            number: Joi.number().optional(),
+            period: Joi.string().valid(...Object.values(JobPeriod)).optional(),
+          }).optional(),
+          achievement: Joi.string().optional(),
+          amount: Joi.number().optional(),
+        })
+      )
+      .max(5)
+      .optional(),
+    maximumPrice: Joi.number().optional(),
+    bidRange: Joi.number().optional(),
+    budget: Joi.number().optional(),
+    achievementDetails: Joi.string().optional(),
+    currency: Joi.string().optional(),
+  });
+
+  const { error } = updateJobValidation.validate(req.body, { abortEarly: false });
+
+  if (error) {
+    const errorMessages = error.details.map((detail) => detail.message);
+   res.status(400).json({ errors: errorMessages });
+  }
+
+  next();
+};

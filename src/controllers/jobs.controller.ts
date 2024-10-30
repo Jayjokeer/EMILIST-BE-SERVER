@@ -3,7 +3,7 @@ import { catchAsync } from "../errors/error-handler";
 import { successResponse } from "../helpers/success-response";
 import { NextFunction, Request, Response } from "express";
 import * as jobService from "../services/job.service";
-import { IJob } from "../interfaces/jobs.interface";
+import { IJob, IUpdateJob } from "../interfaces/jobs.interface";
 import { JwtPayload } from "jsonwebtoken";
 import { BadRequestError, NotFoundError } from "../errors/error";
 import { IProject } from "../interfaces/project.interface";
@@ -148,4 +148,30 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     }
     await jobService.deleteJobById(jobId, userId);
     successResponse(res, StatusCodes.OK, "Job deleted successfully");
+  });
+
+  export const updateJobController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id; 
+    const {jobId} = req.params;
+    const files = req.files as Express.Multer.File[];
+    const updates: IUpdateJob = req.body;
+
+    const job = await jobService.fetchJobById(jobId);
+    if(!job) throw new NotFoundError("Job not found!");
+    if(job.status !== JobStatusEnum.pending){
+      throw new BadRequestError("You can only edit a pending job!");
+    }
+    if (files && files.length > 0) {
+      const filePaths = (files as Express.Multer.File[]).map((file) => file.path);
+      updates.jobFiles = [...(job.jobFiles || []), ...filePaths];
+
+    }    
+    Object.keys(updates).forEach((key) => {
+      (job as any)[key] = updates[key as keyof IUpdateJob];
+    });
+
+    await job.save();
+    const data = await jobService.fetchJobById(jobId);
+
+    successResponse(res, StatusCodes.OK, data);
   });

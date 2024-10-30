@@ -1,4 +1,4 @@
-import { JobExpertLevel, JobStatusEnum, JobType, MilestoneEnum, MilestonePaymentStatus } from "../enums/jobs.enum";
+import { JobExpertLevel, JobPeriod, JobStatusEnum, JobType, MilestoneEnum, MilestonePaymentStatus } from "../enums/jobs.enum";
 
 export interface IJob {
     category: string;
@@ -30,3 +30,26 @@ export interface IMilestone {
     paymentReciept: string;
   }
 
+
+export interface IUpdateJob {
+    category?: string;
+    service?: string;
+    title?: string;
+    description?: string;
+    jobFiles?: string[];
+    duration?: {
+      number?: number;
+      period?: JobPeriod;
+    };
+    type?: JobType;
+    location?: string;
+    expertLevel?: JobExpertLevel;
+    milestones?: IMilestone[];
+    maximumPrice?: number;
+    bidRange?: number;
+    budget?: number;
+    achievementDetails?: string;
+    currency?: string;
+    status?: JobStatusEnum;
+  }
+  
