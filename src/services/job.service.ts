@@ -166,4 +166,7 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
       { $pull: { applications: projectId } }
     );
    };
- 
+  
+   export const deleteJobById = async (jobId: string, userId: string ) =>{
+    return await Jobs.findOneAndDelete({userId: userId, _id: jobId});
+   };

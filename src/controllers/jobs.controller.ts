@@ -9,6 +9,7 @@ import { BadRequestError, NotFoundError } from "../errors/error";
 import { IProject } from "../interfaces/project.interface";
 import * as projectService from "../services/project.service";
 import { ProjectStatusEnum } from "../enums/project.enum";
+import { JobStatusEnum } from "../enums/jobs.enum";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const job: IJob = req.body;
@@ -136,4 +137,15 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     await jobService.deleteJobApplication(project.job, projectId);
     await projectService.deleteProject(projectId, userId);
     successResponse(res, StatusCodes.OK, "Application withdrawn");
+  });
+  export const deleteJobController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id; 
+    const {jobId} = req.params;
+    const job = await jobService.fetchJobById(jobId);
+    if(!job) throw new NotFoundError("Job not found!");
+    if(job.status !== JobStatusEnum.pending){
+      throw new BadRequestError("You can only delete a pending job!");
+    }
+    await jobService.deleteJobById(jobId, userId);
+    successResponse(res, StatusCodes.OK, "Job deleted successfully");
   });

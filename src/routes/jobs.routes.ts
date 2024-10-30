@@ -15,5 +15,6 @@ router.route("/fetch-liked-jobs").get(userAuth, jobController.fetchLikedJobsCont
 router.route("/unlike-job/:jobId").post(userAuth, jobController.unlikeJobController);
 router.route("/apply-job").post(userAuth, jobController.applyForJobController);
 router.route("/withdraw-job-application/:projectId").delete(userAuth, jobController.deleteJobApplicationController);
+router.route("/delete-job/:jobId").delete(userAuth, jobController.deleteJobController);
 
 export { router as JobsRoute };
