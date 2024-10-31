@@ -170,3 +170,7 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
    export const deleteJobById = async (jobId: string, userId: string ) =>{
     return await Jobs.findOneAndDelete({userId: userId, _id: jobId});
    };
+
+  //  export const findJobsForCron = async () =>{
+  //   return await Jobs.findOneAndDelete({userId: userId, _id: jobId});
+  //  };

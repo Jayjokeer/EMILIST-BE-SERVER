@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p .",
     "dev": "nodemon --legacy-watch --watch './src/**/*.ts' --exec 'ts-node' ./src/server.ts",
-    "start": "npm run build && node ./build/server.js"
+    "start": "npm run build && node  --max-old-space-size=1024 ./build/server.js"
   },
   "author": "",
   "license": "ISC",
