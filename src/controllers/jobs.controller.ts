@@ -254,7 +254,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
 
     }else if (status == ProjectStatusEnum.accepted){
       job.status = JobStatusEnum.active;
-      job.acceptedApplicantId = project.user;
+      job.acceptedApplicationId = projectId;
       project.acceptedAt = new Date();
       job.startDate = project.acceptedAt || new Date();
 
@@ -304,3 +304,19 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   //     }
   //   });
   // };
+  export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id; 
+    const {status} = req.query;
+    let data:any;
+    if(status == JobStatusEnum.pending){
+      const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status );
+      if(!jobs)  throw new NotFoundError("No jobs found!");
+      data = jobs;
+    }else if(status == JobStatusEnum.active){
+      const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status );
+      if(!jobs)  throw new NotFoundError("No jobs found!");
+      data = jobs;
+    }
+
+    successResponse(res, StatusCodes.OK, data);
+  });

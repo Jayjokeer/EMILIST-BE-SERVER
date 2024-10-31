@@ -3,6 +3,7 @@ import Jobs from "../models/jobs.model";
 import  JobLike  from "../models/joblike.model";
 import Project from "../models/project.model";
 import { BadRequestError, NotFoundError } from "../errors/error";
+import { JobStatusEnum } from "../enums/jobs.enum";
 
 
 export const createJob = async (data:  IJob) =>{
@@ -169,6 +170,9 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
   
    export const deleteJobById = async (jobId: string, userId: string ) =>{
     return await Jobs.findOneAndDelete({userId: userId, _id: jobId});
+   };
+   export const fetchJobByUserIdAndStatus = async ( userId: string, status: JobStatusEnum ) =>{
+    return await Jobs.find({userId: userId, status: status});
    };
 
   //  export const findJobsForCron = async () =>{

@@ -20,7 +20,7 @@ export interface IJob {
     userId: string;
     applications?: string[];
     uniqueId?: string;
-    acceptedApplicantId?: string;
+    acceptedApplicationId?: string;
     startDate?: Date;
 }
 
