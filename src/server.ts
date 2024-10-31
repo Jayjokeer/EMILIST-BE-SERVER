@@ -23,20 +23,14 @@ app.use(helmet());
 app.use(cors());
 
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'your_secret_key',
+    secret: process.env.SESSION_SECRET as string,
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
         mongoUrl: process.env.MONGO_URI,
         collectionName: 'sessions' 
     }),
-    cookie: { secure: false } // Set to true if using https
-}));
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your_secret_key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false } 
+    cookie: { secure: false } 
 }));
 
 app.use(passport.initialize());
