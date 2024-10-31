@@ -5,7 +5,7 @@ import { NextFunction, Request, Response } from "express";
 import * as jobService from "../services/job.service";
 import { IJob, IUpdateJob } from "../interfaces/jobs.interface";
 import { JwtPayload } from "jsonwebtoken";
-import { BadRequestError, NotFoundError } from "../errors/error";
+import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/error";
 import { IProject } from "../interfaces/project.interface";
 import * as projectService from "../services/project.service";
 import { ProjectStatusEnum } from "../enums/project.enum";
@@ -141,7 +141,9 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     if (userId === job.userId) {
       throw new BadRequestError("You cannot apply to your own job!");
     }
-  
+    if(job.status !== JobStatusEnum.pending){
+      throw new BadRequestError("You can only apply to a pending job!")
+    }
     
     const payload: any = {
       job: jobId,
@@ -227,5 +229,37 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     await job.save();
     const data = await jobService.fetchJobById(jobId);
 
+    successResponse(res, StatusCodes.OK, data);
+  });
+
+  export const jobStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id; 
+    const {projectId} = req.params;
+    const {status} = req.body;
+    const project = await projectService.fetchProjectById(projectId);
+
+    if(!project){
+      throw new NotFoundError("Application not found!");
+    }
+    if(project.creator != userId){
+      throw new UnauthorizedError("UnAuthorized!")
+    }
+    const job = await jobService.fetchJobById(String(project.job));
+    if(!job) throw new NotFoundError("Job not found!");
+
+    project.status = status;
+
+    if (status == ProjectStatusEnum.pending){
+    job.status = JobStatusEnum.pending;
+
+    }else if (status == ProjectStatusEnum.accepted){
+      job.status = JobStatusEnum.active;
+      job.acceptedApplicantId = project.user;
+      await projectService.updateRejectProject(projectId, String(job._id));
+    }
+
+    await project.save();
+    await job.save()
+    const data = await jobService.fetchJobById(String(job._id));
     successResponse(res, StatusCodes.OK, data);
   });

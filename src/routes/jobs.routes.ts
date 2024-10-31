@@ -17,7 +17,7 @@ router.route("/apply-job").post(userAuth,validateProjectApplication, jobControll
 router.route("/withdraw-job-application/:projectId").delete(userAuth, jobController.deleteJobApplicationController);
 router.route("/delete-job/:jobId").delete(userAuth, jobController.deleteJobController);
 router.route("/update-job/:jobId").put(userAuth, multipleUpload, validateUpdateJob, jobController.updateJobController);
-// router.route("/update-job/:jobId").put(userAuth, multipleUpload, validateUpdateJob, jobController.updateJobController);
+router.route("/update-application-status/:projectId").patch(userAuth, jobController.jobStatusController);
 
 export { router as JobsRoute };
 

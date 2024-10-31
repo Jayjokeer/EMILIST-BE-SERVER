@@ -1,3 +1,4 @@
+import { ProjectStatusEnum } from "../enums/project.enum";
 import { IProject } from "../interfaces/project.interface";
 import Project from "../models/project.model";
 
@@ -17,5 +18,13 @@ export const deleteProject = async (projectId: string, userId: string ) =>{
 
     return await Project.findOneAndDelete({user: userId, _id: projectId});
 
+    
+};
+export const updateRejectProject = async (projectId: string, jobId: string ) =>{
+
+    return await Project.updateMany(
+        { job: jobId, _id: { $ne: projectId } }, 
+        { status: ProjectStatusEnum.rejected }        
+      );
     
 };
