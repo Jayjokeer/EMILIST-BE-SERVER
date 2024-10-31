@@ -3,13 +3,13 @@ import { catchAsync } from "../errors/error-handler";
 import { successResponse } from "../helpers/success-response";
 import { NextFunction, Request, Response } from "express";
 import * as jobService from "../services/job.service";
-import { IJob, IUpdateJob } from "../interfaces/jobs.interface";
+import { IJob, IMilestone, IUpdateJob } from "../interfaces/jobs.interface";
 import { JwtPayload } from "jsonwebtoken";
 import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/error";
 import { IProject } from "../interfaces/project.interface";
 import * as projectService from "../services/project.service";
 import { ProjectStatusEnum } from "../enums/project.enum";
-import { JobStatusEnum, JobType } from "../enums/jobs.enum";
+import { JobStatusEnum, JobType, MilestoneEnum } from "../enums/jobs.enum";
 import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
 import { directJobApplicationMessage } from "../utils/templates";
@@ -255,7 +255,25 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     }else if (status == ProjectStatusEnum.accepted){
       job.status = JobStatusEnum.active;
       job.acceptedApplicantId = project.user;
+      project.acceptedAt = new Date();
+      job.startDate = project.acceptedAt || new Date();
+
+      if (job.type === JobType.biddable && project.biddableDetails) {
+        job.maximumPrice = project.biddableDetails.maximumPrice;
+  
+        project.biddableDetails.milestones.forEach((projectMilestone: { milestoneId: string; amount: number; achievement: string }) => {
+          const jobMilestone = job.milestones.find((m: any) => m._id.toString() === projectMilestone.milestoneId);
+  
+          if (jobMilestone) {
+            jobMilestone.amount = projectMilestone.amount;
+            jobMilestone.achievement = projectMilestone.achievement;
+
+          }
+        });
+      }
       await projectService.updateRejectProject(projectId, String(job._id));
+    }else if(status == ProjectStatusEnum.rejected){
+      project.rejectedAt = new Date();
     }
 
     await project.save();
@@ -263,3 +281,26 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const data = await jobService.fetchJobById(String(job._id));
     successResponse(res, StatusCodes.OK, data);
   });
+  // export const checkOverdueMilestones = async () => {
+  //   const job = await jobs.find({ 'milestones.status': MilestoneEnum.pending });
+  //   const now = new Date();
+  
+  //   job.forEach(async (job: IJob) => {
+  //     let milestonesUpdated = false;
+  
+  //     job.milestones.forEach((milestone: IMilestone) => {
+  //       if (milestone.status === MilestoneEnum.pending && milestone.timeFrame && job.startDate) {
+  //         const dueDate = new Date(job.startDate);
+  //         dueDate.setDate(dueDate.getDate() + Number(milestone.timeFrame.number));
+  //         if (dueDate < now) {
+  //           milestone.status = MilestoneEnum.overdue;
+  //           milestonesUpdated = true;
+  //         }
+  //       }
+  //     });
+  
+  //     if (milestonesUpdated) {
+  //       await job.save();
+  //     }
+  //   });
+  // };

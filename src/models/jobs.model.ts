@@ -61,9 +61,9 @@ const jobSchema: Schema = new mongoose.Schema(
     applications: [ {type: Schema.Types.ObjectId, ref: 'Project'}  ],
     acceptedApplicantId: {type: Schema.Types.ObjectId, ref: 'Project'},
     additionalAmount: {type: Number},
+    startDate: { type: Date }, 
   },
   { timestamps: true }
 
 );
-
 export default mongoose.model<IJob>('Jobs', jobSchema);

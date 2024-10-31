@@ -21,6 +21,7 @@ export interface IJob {
     applications?: string[];
     uniqueId?: string;
     acceptedApplicantId?: string;
+    startDate?: Date;
 }
 
 export interface IMilestone {
