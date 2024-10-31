@@ -20,6 +20,7 @@ export interface IJob {
     userId: string;
     applications?: string[];
     uniqueId?: string;
+    acceptedApplicantId?: string;
 }
 
 export interface IMilestone {
