@@ -49,11 +49,11 @@ const projectSchema: Schema = new mongoose.Schema(
       enum: ProjectStatusEnum,
     },
     biddableDetails: {
-      maximumPrice: { type: Number, required: true },
+      maximumPrice: { type: Number },
       milestones: [{
-        milestoneId: { type: String, required: true },
-        amount: { type: Number, required: true },
-        achievement: { type: String, required: true },
+        milestoneId: { type: String },
+        amount: { type: Number},
+        achievement: { type: String },
       }],
     },
   
