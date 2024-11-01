@@ -22,6 +22,7 @@ export enum JobExpertLevel {
     pending= "pending",
     overdue= "overdue",
     completed= "completed",
+    active= "active",
     paused= "paused",
   }
 

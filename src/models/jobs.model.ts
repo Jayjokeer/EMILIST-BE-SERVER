@@ -32,7 +32,12 @@ const jobSchema: Schema = new mongoose.Schema(
     service: { type: String},
     title: { type: String },
     description: { type: String },
-    jobFiles: [{ type: String }],
+    jobFiles:[
+      {
+        id: { type: Schema.Types.ObjectId, default: new mongoose.Types.ObjectId() },
+        url: { type: String },
+      }
+    ],
     duration: {
          number: {type: Number},
          period: {type: String, enum: JobPeriod},

@@ -5,7 +5,7 @@ export interface IJob {
     service: string;
     title: string;
     description: string;
-    jobFiles: string[];
+    jobFiles: any;
     duration: any;
     type: JobType;
     budget?: number;

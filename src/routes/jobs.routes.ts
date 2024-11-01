@@ -18,6 +18,8 @@ router.route("/withdraw-job-application/:projectId").delete(userAuth, jobControl
 router.route("/delete-job/:jobId").delete(userAuth, jobController.deleteJobController);
 router.route("/update-job/:jobId").put(userAuth, multipleUpload, validateUpdateJob, jobController.updateJobController);
 router.route("/update-application-status/:projectId").patch(userAuth, jobController.jobStatusController);
+router.route("/fetch-jobs-by-status").get(userAuth, jobController.fetchJobByStatusController);
+router.route("/remove-job/:jobId/file/:fileId").delete(userAuth, jobController.deleteFileController);
 
 export { router as JobsRoute };
 

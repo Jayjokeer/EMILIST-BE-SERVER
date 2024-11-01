@@ -13,13 +13,17 @@ import { JobStatusEnum, JobType, MilestoneEnum } from "../enums/jobs.enum";
 import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
 import { directJobApplicationMessage } from "../utils/templates";
+import mongoose from "mongoose";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const job: IJob = req.body;
     const files = req.files as Express.Multer.File[];
     if (files && files.length > 0) {
-      const fileUrls = files.map(file => file.path);
-      job.jobFiles = fileUrls;
+      const fileObjects = files.map((file) => ({
+        id: new mongoose.Types.ObjectId(),
+        url: file.path, 
+      }));
+      job.jobFiles = fileObjects;
     }
 
   if(job.type == JobType.direct && job.uniqueId){
@@ -218,10 +222,13 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       throw new BadRequestError("You can only edit a pending job!");
     }
     if (files && files.length > 0) {
-      const filePaths = (files as Express.Multer.File[]).map((file) => file.path);
-      updates.jobFiles = [...(job.jobFiles || []), ...filePaths];
-
-    }    
+      const fileObjects = files.map((file) => ({
+        id: new mongoose.Types.ObjectId(), 
+        url: file.path, 
+      }));
+      updates.jobFiles = [...(job.jobFiles || []), ...fileObjects];
+    }
+     
     Object.keys(updates).forEach((key) => {
       (job as any)[key] = updates[key as keyof IUpdateJob];
     });
@@ -313,10 +320,64 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       if(!jobs)  throw new NotFoundError("No jobs found!");
       data = jobs;
     }else if(status == JobStatusEnum.active){
-      const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status );
-      if(!jobs)  throw new NotFoundError("No jobs found!");
-      data = jobs;
+      const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status as JobStatusEnum );
+      if (!jobs || jobs.length === 0) throw new NotFoundError("No jobs found!");
+
+      data = jobs.map((job) => {
+        const totalMilestones = job.milestones.length;
+        let milestoneStartDate = new Date(job.startDate || new Date());
+        let milestoneEndDate = new Date(milestoneStartDate);
+  
+        let milestoneProgress = "0/0"; 
+  
+        for (let i = 0; i < totalMilestones; i++) {
+          const milestone = job.milestones[i];
+          const duration = parseInt(milestone.timeFrame.number, 10) || 0;
+  
+          switch (milestone.timeFrame.period) {
+            case "days":
+              milestoneEndDate.setDate(milestoneStartDate.getDate() + duration);
+              break;
+            case "weeks":
+              milestoneEndDate.setDate(milestoneStartDate.getDate() + duration * 7);
+              break;
+            case "months":
+              milestoneEndDate.setMonth(milestoneStartDate.getMonth() + duration);
+              break;
+            default:
+              break; 
+          }
+  
+          if (milestone.status === MilestoneEnum.active || milestone.status === MilestoneEnum.pending) {
+            milestoneProgress = `${i + 1}/${totalMilestones}`;
+            break;
+          }
+  
+          milestoneStartDate = new Date(milestoneEndDate);
+        }
+  
+        return {
+          ...job.toObject(),
+          milestoneProgress,
+          startDate: milestoneStartDate,
+          dueDate: milestoneEndDate,
+        };
+      });
+      
     }
 
     successResponse(res, StatusCodes.OK, data);
+  });
+  export const deleteFileController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const {jobId, fileId} = req.params;
+    const job = await jobService.fetchJobById(jobId);
+    if (!job) {
+      throw new NotFoundError('Job not found');
+    }
+
+    job.jobFiles = job.jobFiles.filter((file: any) => file.id.toString() !== fileId);
+
+    await job.save();
+
+    successResponse(res, StatusCodes.OK, "Image deleted successfully");
   });
