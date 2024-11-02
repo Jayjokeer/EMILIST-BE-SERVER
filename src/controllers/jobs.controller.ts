@@ -176,6 +176,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   
     
     job.applications!.push(String(projectData._id));
+    job.milestones
     await job.save();
   
     
@@ -264,6 +265,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       job.acceptedApplicationId = projectId;
       project.acceptedAt = new Date();
       job.startDate = project.acceptedAt || new Date();
+      job.milestones[0].status = MilestoneEnum.active;
 
       if (job.type === JobType.biddable && project.biddableDetails) {
         job.maximumPrice = project.biddableDetails.maximumPrice;
