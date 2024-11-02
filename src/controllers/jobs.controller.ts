@@ -26,9 +26,9 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
       job.jobFiles = fileObjects;
     }
 
-  if(job.type == JobType.direct && job.uniqueId){
+  if(job.type == JobType.direct && (job.email || job.userName)){
 
-    const user = await authService.findUserByUniqueId(job.uniqueId);
+    const user = await authService.findUserByEmailOrUserName(job.email, job.userName);
     if(!user) throw new NotFoundError("User not found!");
     
       const userId = req.user.id;
@@ -281,6 +281,16 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       await projectService.updateRejectProject(projectId, String(job._id));
     }else if(status == ProjectStatusEnum.rejected){
       project.rejectedAt = new Date();
+    }else if(status == "paused"){
+      job.status = JobStatusEnum.paused;
+      job.pausedDate= new Date();
+
+      job.milestones.forEach((milestone: IMilestone) => {
+        if (milestone.status !== MilestoneEnum.completed) {
+          milestone.status = MilestoneEnum.paused;
+        }
+      });
+    
     }
 
     await project.save();

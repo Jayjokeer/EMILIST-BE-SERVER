@@ -35,4 +35,5 @@ export enum JobStatusEnum {
   pending= "pending",
   complete= "completed",
   active= "active",
+  paused= "paused",
 }

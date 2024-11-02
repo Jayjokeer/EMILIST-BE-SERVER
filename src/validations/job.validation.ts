@@ -87,8 +87,11 @@ export const validateJob = (req: Request, res: Response, next: NextFunction) => 
   currency: Joi.string().messages({
     'string.empty': 'Currency must be a string',
   }),
-  uniqueId: Joi.string().optional().messages({
-    'string.empty': 'Currency must be a string',
+  userName: Joi.string().optional().messages({
+    'string.empty': 'UserName must be a string',
+  }),
+  email: Joi.string().optional().messages({
+    'string.empty': 'Email must be a string',
   }),
 });
 

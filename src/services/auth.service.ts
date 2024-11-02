@@ -36,3 +36,8 @@ export const findTokenService = async (
 export const findUserByUniqueId = async (id: string)=>{
   return await Users.findOne({uniqueId: id});
 };
+export const findUserByEmailOrUserName = async(email: string | undefined, userName: string | undefined)=>{
+
+  return await Users.findOne({ $or: [{ email }, { userName }] });
+}   
+ 

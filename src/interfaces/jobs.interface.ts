@@ -19,9 +19,11 @@ export interface IJob {
     status: JobStatusEnum;
     userId: string;
     applications?: string[];
-    uniqueId?: string;
     acceptedApplicationId?: string;
     startDate?: Date;
+    pausedDate?: Date;
+    email?: string;
+    userName?: string; 
 }
 
 export interface IMilestone {
