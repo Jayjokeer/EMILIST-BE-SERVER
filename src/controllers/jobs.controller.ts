@@ -393,3 +393,35 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
 
     successResponse(res, StatusCodes.OK, "Image deleted successfully");
   });
+
+  export const acceptDirectJobController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const {projectId} = req.params;
+    const {status} = req.body;
+
+    const project = await projectService.fetchProjectById(projectId);
+
+    if(!project){
+      throw new NotFoundError("Application not found!");
+    }
+
+    const job = await jobService.fetchJobById(String(project.job));
+    if(!job)  {
+      throw new NotFoundError("Job not found!")
+    }
+    if(status == ProjectStatusEnum.accepted){
+      job.status = JobStatusEnum.active;
+      job.milestones[0].status = MilestoneEnum.active;
+      project.status= ProjectStatusEnum.accepted;
+
+      project.directJobStatus= ProjectStatusEnum.accepted;
+    }else if(status == ProjectStatusEnum.rejected){
+      project.status= ProjectStatusEnum.rejected;
+      project.directJobStatus= ProjectStatusEnum.rejected;
+      job.acceptedApplicationId = undefined;
+    };
+
+    await project.save();
+    await job.save();
+
+    successResponse(res, StatusCodes.OK, "Image deleted successfully");
+  });

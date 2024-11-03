@@ -3,7 +3,7 @@ import Jobs from "../models/jobs.model";
 import  JobLike  from "../models/joblike.model";
 import Project from "../models/project.model";
 import { BadRequestError, NotFoundError } from "../errors/error";
-import { JobStatusEnum } from "../enums/jobs.enum";
+import { JobStatusEnum, JobType } from "../enums/jobs.enum";
 
 
 export const createJob = async (data:  IJob) =>{
@@ -49,7 +49,7 @@ export const fetchAllUserJobs = async (
     fields: string[] = [] 
   ) => {
     const skip = (page - 1) * limit;
-    const searchCriteria: any = {};
+    const searchCriteria: any = { type: { $ne: JobType.direct } }; 
   
     if (search) {
       const searchRegex = new RegExp(search, 'i'); 
