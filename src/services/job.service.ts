@@ -225,6 +225,7 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
       applications: userApplications,
     };
   }
+
   //  export const findJobsForCron = async () =>{
   //   return await Jobs.findOneAndDelete({userId: userId, _id: jobId});
   //  };

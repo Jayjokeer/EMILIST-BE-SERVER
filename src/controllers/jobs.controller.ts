@@ -448,3 +448,47 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
    const data = await jobService.fetchUserApplications(user.id, skip, limit,status, page)
     successResponse(res, StatusCodes.OK, data);
   });
+  export const updateMilestoneStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const user = req.user;
+    const {milestoneId, jobId} = req.params;
+    const {status} = req.body;
+    const job = await jobService.fetchJobById(String(jobId));
+    if(!job)  {
+      throw new NotFoundError("Job not found!")
+    }
+    if(job.status == JobStatusEnum.pending){
+      throw new BadRequestError("You cannot update a pending job milestone");
+    }
+    const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
+    if(!project){
+      throw new NotFoundError("Application not found!");
+    }
+    if(String(project.user) !== String(user.id)){
+      throw new UnauthorizedError("Unauthorized!");
+    }
+    const milestoneIndex = job.milestones.findIndex(
+      (milestone: any) => String(milestone._id) === String(milestoneId)
+    );
+  
+    if (milestoneIndex === -1) {
+      throw new NotFoundError("Milestone not found");
+    }
+  
+    const milestone = job.milestones[milestoneIndex];
+    
+    milestone.status = status as MilestoneEnum;
+  
+    if (status === MilestoneEnum.completed) {
+      const nextMilestone = job.milestones[milestoneIndex + 1];
+      if (nextMilestone && nextMilestone.status === MilestoneEnum.pending) {
+        nextMilestone.status = MilestoneEnum.active;
+      }
+    }
+    
+    if(!milestone) throw new NotFoundError("Milestone not found");
+    milestone.status = status as  MilestoneEnum;
+    await job.save();
+    const data = await jobService.fetchJobById(String(jobId));
+
+    successResponse(res, StatusCodes.OK, data);
+  });
