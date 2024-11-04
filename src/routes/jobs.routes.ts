@@ -21,6 +21,7 @@ router.route("/update-application-status/:projectId").patch(userAuth, jobControl
 router.route("/fetch-jobs-by-status").get(userAuth, jobController.fetchJobByStatusController);
 router.route("/remove-job/:jobId/file/:fileId").delete(userAuth, jobController.deleteFileController);
 router.route("/accept-direct-job/:projectId").get(userAuth, jobController.acceptDirectJobController);
+router.route("/fetch-applied-jobs-by-status").get(userAuth, jobController.fetchUserAppliedJobsController);
 
 export { router as JobsRoute };
 

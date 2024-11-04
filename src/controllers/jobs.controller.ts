@@ -329,12 +329,9 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     let data:any;
     if(status == JobStatusEnum.pending){
       const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status );
-      if(!jobs)  throw new NotFoundError("No jobs found!");
       data = jobs;
     }else if(status == JobStatusEnum.active){
       const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status as JobStatusEnum );
-      if (!jobs || jobs.length === 0) throw new NotFoundError("No jobs found!");
-
       data = jobs.map((job) => {
         const totalMilestones = job.milestones.length;
         let milestoneStartDate = new Date(job.startDate || new Date());
@@ -419,9 +416,19 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       project.directJobStatus= ProjectStatusEnum.rejected;
       job.acceptedApplicationId = undefined;
     };
-
     await project.save();
     await job.save();
 
-    successResponse(res, StatusCodes.OK, "Image deleted successfully");
+    successResponse(res, StatusCodes.OK, "Job accepted successfully");
+  });
+  export const fetchUserAppliedJobsController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const user = req.user;
+    const{status} = req.query;
+
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 10;
+    const skip = (page - 1) * limit;
+
+   const data = await jobService.fetchUserApplications(user.id, skip, limit,status, page)
+    successResponse(res, StatusCodes.OK, data);
   });

@@ -174,7 +174,22 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
    export const fetchJobByUserIdAndStatus = async ( userId: string, status: JobStatusEnum ) =>{
     return await Jobs.find({userId: userId, status: status});
    };
+   export const fetchUserApplications = async(userId: string, skip: number, limit: number, status: JobStatusEnum, page: number )=>{
+  const userApplications=  await Jobs.find({status: status, applications: { $in: [userId] } })
+    .populate('applications', 'title description status') 
+    .skip(skip)
+    .limit(limit)
+    .sort({ createdAt: -1 });
 
+  const totalApplications = await Jobs.countDocuments({status: status, applications: { $in: [userId] } });
+
+  return {
+    total: totalApplications,
+    page,
+    limit,
+    applications: userApplications
+   };
+  };
   //  export const findJobsForCron = async () =>{
   //   return await Jobs.findOneAndDelete({userId: userId, _id: jobId});
   //  };
