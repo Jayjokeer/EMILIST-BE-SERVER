@@ -175,14 +175,23 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
     return await Jobs.find({userId: userId, status: status});
    };
    export const fetchUserApplications = async(userId: string, skip: number, limit: number, status: JobStatusEnum, page: number )=>{
-  const userApplications=  await Jobs.find({status: status, applications: { $in: [userId] } })
-    .populate('applications', 'title description status') 
-    .skip(skip)
-    .limit(limit)
-    .sort({ createdAt: -1 });
+    const userProjects = await Project.find({ user: userId }).select('_id');
+    const projectIds = userProjects.map((project) => project._id);
+ 
 
-  const totalApplications = await Jobs.countDocuments({status: status, applications: { $in: [userId] } });
-
+    const userApplications = await Jobs.find({
+      status: status,
+      "applications": { $in: projectIds },
+    })
+      .populate('applications', 'title description status')
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+    const totalApplications = await Jobs.countDocuments({
+      status: status,
+      "applications": { $in: projectIds }, 
+    });
+  
   return {
     total: totalApplications,
     page,

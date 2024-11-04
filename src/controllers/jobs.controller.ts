@@ -33,8 +33,7 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
     
       const userId = req.user.id;
       job.userId = userId;
-      job.applications = [];
-      job.applications!.push(String(user._id));
+
       const data = await jobService.createJob(job);
 
       const payload:any = {
@@ -43,8 +42,11 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
         creator: userId,
         directJobStatus: ProjectStatusEnum.pending,
       };
-       await projectService.createProject(payload);
-
+       const project = await projectService.createProject(payload);
+       data.applications = [];
+       data.applications!.push(String(project._id));
+       data.acceptedApplicationId = String(project._id);
+       data.save();
        const { html, subject } = directJobApplicationMessage(user.userName, req.user.userName, String(data._id));
        await sendEmail(req.user.email, subject, html); 
       successResponse(res,StatusCodes.CREATED, data);
@@ -394,13 +396,15 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   export const acceptDirectJobController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {projectId} = req.params;
     const {status} = req.body;
-
+    const user = req.user;
     const project = await projectService.fetchProjectById(projectId);
-
+    console.log(user)
     if(!project){
       throw new NotFoundError("Application not found!");
     }
-
+    if(String(project.user) !== String(user.id) ){
+      throw new BadRequestError("Unauthorized!");
+    }
     const job = await jobService.fetchJobById(String(project.job));
     if(!job)  {
       throw new NotFoundError("Job not found!")
@@ -415,11 +419,12 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       project.status= ProjectStatusEnum.rejected;
       project.directJobStatus= ProjectStatusEnum.rejected;
       job.acceptedApplicationId = undefined;
+      job.status = JobStatusEnum.pending;
     };
     await project.save();
     await job.save();
 
-    successResponse(res, StatusCodes.OK, "Job accepted successfully");
+    successResponse(res, StatusCodes.OK, "Status changed successfully");
   });
   export const fetchUserAppliedJobsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const user = req.user;

@@ -2,7 +2,7 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import Users from "../models/users.model";
 import { generateShortUUID } from './utility';
-import { Strategy as FacebookStrategy, Profile } from 'passport-facebook';
+// import { Strategy as FacebookStrategy, Profile } from 'passport-facebook';
 import { config } from './config';
 
 
