@@ -4,6 +4,7 @@ import  JobLike  from "../models/joblike.model";
 import Project from "../models/project.model";
 import { BadRequestError, NotFoundError } from "../errors/error";
 import { JobStatusEnum, JobType } from "../enums/jobs.enum";
+import { ProjectStatusEnum } from "../enums/project.enum";
 
 
 export const createJob = async (data:  IJob) =>{
@@ -174,7 +175,7 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
    export const fetchJobByUserIdAndStatus = async ( userId: string, status: JobStatusEnum ) =>{
     return await Jobs.find({userId: userId, status: status});
    };
-   export const fetchUserApplications = async(userId: string, skip: number, limit: number, status: JobStatusEnum, page: number )=>{
+   export const fetchUserJobApplications = async(userId: string, skip: number, limit: number, status: JobStatusEnum, page: number )=>{
     const userProjects = await Project.find({ user: userId }).select('_id');
     const projectIds = userProjects.map((project) => project._id);
  
@@ -199,6 +200,31 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
     applications: userApplications
    };
   };
+  export const fetchUserApplications = async(userId: string, skip: number, limit: number, status: ProjectStatusEnum, page: number)=>{
+  const userProjects = await Project.find({ user: userId ,     
+    status: status as ProjectStatusEnum,
+  }).select('_id');
+    const projectIds = userProjects.map((project) => project._id);
+
+    const userApplications = await Jobs.find({
+      applications:   { $in: projectIds } ,
+    })
+      .populate('applications', 'title description status')
+      .skip(skip)
+      .limit(Number(limit))
+      .sort({ createdAt: -1 });
+
+    const totalApplications = await Jobs.countDocuments({
+      applications: { $in: projectIds  },
+    });
+
+    return {
+      total: totalApplications,
+      page: Number(page),
+      limit: Number(limit),
+      applications: userApplications,
+    };
+  }
   //  export const findJobsForCron = async () =>{
   //   return await Jobs.findOneAndDelete({userId: userId, _id: jobId});
   //  };

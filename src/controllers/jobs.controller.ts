@@ -434,6 +434,17 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const limit = parseInt(req.query.limit as string, 10) || 10;
     const skip = (page - 1) * limit;
 
+   const data = await jobService.fetchUserJobApplications(user.id, skip, limit,status, page)
+    successResponse(res, StatusCodes.OK, data);
+  });
+  export const fetchApplicationByStatusController  = catchAsync(async (req: JwtPayload, res: Response) => {
+    const user = req.user;
+    const{status} = req.query;
+
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 10;
+    const skip = (page - 1) * limit;
+
    const data = await jobService.fetchUserApplications(user.id, skip, limit,status, page)
     successResponse(res, StatusCodes.OK, data);
   });
