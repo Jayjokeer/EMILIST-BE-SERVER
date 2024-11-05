@@ -12,7 +12,7 @@ import { ProjectStatusEnum } from "../enums/project.enum";
 import { JobStatusEnum, JobType, MilestoneEnum } from "../enums/jobs.enum";
 import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
-import { directJobApplicationMessage } from "../utils/templates";
+import { directJobApplicationMessage, requestForQuoteMessage } from "../utils/templates";
 import mongoose from "mongoose";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
@@ -451,7 +451,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   export const updateMilestoneStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
     const user = req.user;
     const {milestoneId, jobId} = req.params;
-    const {status} = req.body;
+    const {status, bank, accountNumber, accountName} = req.body;
     const job = await jobService.fetchJobById(String(jobId));
     if(!job)  {
       throw new NotFoundError("Job not found!")
@@ -483,6 +483,12 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       if (nextMilestone && nextMilestone.status === MilestoneEnum.pending) {
         nextMilestone.status = MilestoneEnum.active;
       }
+
+      milestone.accountDetails = {
+        bank,
+        accountNumber,
+        accountName,
+      };
     }
     
     if(!milestone) throw new NotFoundError("Milestone not found");
@@ -491,4 +497,30 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const data = await jobService.fetchJobById(String(jobId));
 
     successResponse(res, StatusCodes.OK, data);
+  });
+  export const requestForQuoteController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const {jobId} = req.params;
+    const loggedInUser =  req.user;
+    const job = await jobService.fetchJobById(String(jobId));
+    if(!job)  {
+      throw new NotFoundError("Job not found!")
+    }
+    if(String(loggedInUser.id) !== String(job.userId)){
+      throw new UnauthorizedError("Unauthorized");
+
+    }
+    if (job.status !== JobStatusEnum.active && job.status !== JobStatusEnum.paused) {
+      throw new BadRequestError("You can only request for quote on an active or paused job!");
+    }
+    job.isRequestForQuote = true;
+
+    const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
+    const user = await authService.findUserById(String(project?.user));
+    if(!user) throw new NotFoundError("user not found!");
+    job.save();
+
+    const { html, subject } = requestForQuoteMessage(user.userName, req.user.userName, String(job._id));
+    await sendEmail(user.email, subject, html); 
+
+    successResponse(res, StatusCodes.OK, 'Request for quote sent successfully');
   });

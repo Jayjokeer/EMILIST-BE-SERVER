@@ -16,10 +16,17 @@ export const passwordResetMessage= (name: string, otp: string) => {
   return { html, subject };
 };
 
-export const directJobApplicationMessage= (name: string, creatorName: string, id: string) => {
+export const directJobApplicationMessage = (name: string, creatorName: string, id: string) => {
   const subject = "Job Assigned to you";
   const html = `
         Hi ${name}!, ${creatorName} created and assigned a job to you with ID: ${id}. kindly log into to your account to view and accept the job.`;
+
+  return { html, subject };
+};
+export const requestForQuoteMessage = (name: string, creatorName: string, id: string) => {
+  const subject = "Request For Quote!";
+  const html = `
+        Hi ${name}!, ${creatorName} requested for quote on job with ID: ${id}. kindly log into to your account to submit quote`;
 
   return { html, subject };
 };

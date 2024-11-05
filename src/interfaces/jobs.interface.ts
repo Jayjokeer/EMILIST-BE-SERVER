@@ -24,6 +24,7 @@ export interface IJob {
     pausedDate?: Date;
     email?: string;
     userName?: string; 
+    isRequestForQuote?: boolean; 
 }
 
 export interface IMilestone {
@@ -33,6 +34,7 @@ export interface IMilestone {
     status: MilestoneEnum;
     paymentStatus: MilestonePaymentStatus;
     paymentReciept: string;
+    accountDetails: any;
   }
 
 

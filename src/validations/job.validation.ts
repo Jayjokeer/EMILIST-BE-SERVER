@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
-import { JobExpertLevel, JobPeriod, JobType } from '../enums/jobs.enum';
+import { JobExpertLevel, JobPeriod, JobType, MilestoneEnum } from '../enums/jobs.enum';
 
 export const validateJob = (req: Request, res: Response, next: NextFunction) => {
  const jobValidation = Joi.object({
@@ -211,5 +211,47 @@ export const validateProjectApplication = (req: Request, res: Response, next: Ne
   if (error) {
      res.status(400).json({ message: error.details[0].message });
   }
+  next();
+};
+
+export const validateMilestoneStatusUpdate = (req: Request, res: Response, next: NextFunction) => {
+  const milestoneValidation = Joi.object({
+    status: Joi.string()
+      .valid(...Object.values(MilestoneEnum))
+      .required()
+      .messages({
+        'any.only': `Invalid status, must be one of: ${Object.values(MilestoneEnum).join(', ')}`,
+        'any.required': 'Status is required',
+      }),
+    bank: Joi.string().when('status', {
+      is: MilestoneEnum.completed,
+      then: Joi.required().messages({
+        'string.empty': 'Bank is required when status is completed',
+      }),
+      otherwise: Joi.forbidden(),
+    }),
+    accountNumber: Joi.string().when('status', {
+      is: MilestoneEnum.completed,
+      then: Joi.required().messages({
+        'string.empty': 'Account number is required when status is completed',
+      }),
+      otherwise: Joi.forbidden(),
+    }),
+    accountName: Joi.string().when('status', {
+      is: MilestoneEnum.completed,
+      then: Joi.required().messages({
+        'string.empty': 'Account name is required when status is completed',
+      }),
+      otherwise: Joi.forbidden(),
+    }),
+  });
+
+  const { error } = milestoneValidation.validate(req.body, { abortEarly: false });
+
+  if (error) {
+    const errorMessages = error.details.map((detail) => detail.message);
+    res.status(400).json({ errors: errorMessages });
+  }
+
   next();
 };
