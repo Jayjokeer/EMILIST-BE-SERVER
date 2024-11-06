@@ -257,15 +257,19 @@ export const validateMilestoneStatusUpdate = (req: Request, res: Response, next:
 };
 export const validatePostQuote = (req: Request, res: Response, next: NextFunction) => {
   const quoteValidation = Joi.object({
+    totalAmount: Joi.number().required().messages({
+      'number.empty': 'Total amount must be a number',
+      'any.required': 'Total amount is required',
+    }),
     jobId: Joi.string().required().messages({
-      'string.empty': 'Job ID is required',
+      'string.empty': 'Job ID must be a string',
       'any.required': 'Job ID is required',
     }),
     milestones: Joi.array()
       .items(
         Joi.object({
           milestoneId: Joi.string().required().messages({
-            'string.empty': 'Milestone ID is required',
+            'string.empty': 'Milestone ID must be a string',
             'any.required': 'Milestone ID is required',
           }),
           amount: Joi.number().required().messages({
@@ -273,7 +277,7 @@ export const validatePostQuote = (req: Request, res: Response, next: NextFunctio
             'any.required': 'Amount is required',
           }),
           achievement: Joi.string().required().messages({
-            'string.empty': 'Achievement is required',
+            'string.empty': 'Achievement must be a string',
             'any.required': 'Achievement is required',
           }),
         })

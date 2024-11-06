@@ -8,6 +8,7 @@ const MilestoneSchema = new mongoose.Schema({
 });
 
 const QuoteSchema = new mongoose.Schema({
+  totalAmount: {type: Number},
   milestones: { type: [MilestoneSchema] },
   status: {type: String,enum: QuoteStatusEnum, default: QuoteStatusEnum.pending }
 });

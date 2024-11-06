@@ -526,7 +526,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   });
   export const postQuoteController = catchAsync(async (req: JwtPayload, res: Response) => {
     const loggedInUser =  req.user;
-    const {milestones, jobId} = req.body;
+    const {milestones, jobId, totalAmount} = req.body;
     const job = await jobService.fetchJobById(String(jobId));
     if(!job)  {
       throw new NotFoundError("Job not found!")
@@ -551,6 +551,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
         amount: milestone.amount,
         achievement: milestone.achievement,
       })),
+      totalAmount: totalAmount,
     }
      await project.save();
     const user = await authService.findUserById(String(job.userId));
