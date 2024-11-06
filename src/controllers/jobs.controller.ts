@@ -285,7 +285,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       await projectService.updateRejectProject(projectId, String(job._id));
     }else if(status == ProjectStatusEnum.rejected){
       project.rejectedAt = new Date();
-    }else if(status == "paused"){
+    }else if(status == ProjectStatusEnum.pause){
       job.status = JobStatusEnum.paused;
       job.pausedDate= new Date();
 
