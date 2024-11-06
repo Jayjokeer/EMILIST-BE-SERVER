@@ -26,6 +26,7 @@ router.route("/fetch-applications-by-status").get(userAuth, jobController.fetchA
 router.route("/update-milestone-status/:jobId/milestone/:milestoneId").patch(userAuth,validateMilestoneStatusUpdate, jobController.updateMilestoneStatusController);
 router.route("/request-for-quote/:jobId").patch(userAuth, jobController.requestForQuoteController);
 router.route("/post-quote").patch(userAuth, validatePostQuote, jobController.postQuoteController);
+router.route("/update-quote-status/:projectId").patch(userAuth, jobController.acceptQuoteController);
 
 export { router as JobsRoute };
 

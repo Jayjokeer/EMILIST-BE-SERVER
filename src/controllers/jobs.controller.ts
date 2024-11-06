@@ -9,7 +9,7 @@ import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/err
 import { IProject } from "../interfaces/project.interface";
 import * as projectService from "../services/project.service";
 import { ProjectStatusEnum } from "../enums/project.enum";
-import { JobStatusEnum, JobType, MilestoneEnum } from "../enums/jobs.enum";
+import { JobStatusEnum, JobType, MilestoneEnum, QuoteStatusEnum } from "../enums/jobs.enum";
 import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
 import { directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage } from "../utils/templates";
@@ -552,7 +552,9 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
         achievement: milestone.achievement,
       })),
       totalAmount: totalAmount,
+      postedAt: new Date()
     }
+    
      await project.save();
     const user = await authService.findUserById(String(job.userId));
     if(!user) throw new NotFoundError("user not found!");
@@ -562,4 +564,49 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     await sendEmail(user.email, subject, html); 
 
     successResponse(res, StatusCodes.OK, 'Quote sent successfully');
+  });
+
+  export const acceptQuoteController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id; 
+    const {projectId} = req.params;
+    const {status} = req.body;
+    const project = await projectService.fetchProjectById(projectId);
+
+    if(!project){
+      throw new NotFoundError("Application not found!");
+    }
+    if(project.creator != userId){
+      throw new UnauthorizedError("UnAuthorized!")
+    }
+    const job = await jobService.fetchJobById(String(project.job));
+    if(!job) throw new NotFoundError("Job not found!");
+
+    project.quote.status = status as QuoteStatusEnum;
+    if (status == QuoteStatusEnum.accepted){
+      job.status = JobStatusEnum.active;
+      project.quote.acceptedAt = new Date();
+
+      if (job.type === JobType.biddable) {
+        job.maximumPrice = project.quote.totalAmount;
+      } else {
+        job.budget = project.quote.totalAmount;
+      };
+
+        project.quote.milestones.forEach((projectMilestone: { milestoneId: string; amount: number; achievement: string }) => {
+          const jobMilestone = job.milestones.find((m: any) => m._id.toString() === projectMilestone.milestoneId);
+  
+          if (jobMilestone) {
+            jobMilestone.amount = projectMilestone.amount;
+            jobMilestone.achievement = projectMilestone.achievement;
+
+          }
+        });
+      }else if(status == QuoteStatusEnum.rejected){
+      project.quote.rejectedAt = new Date();
+    }
+
+    await project.save();
+    await job.save()
+    const data = await jobService.fetchJobById(String(job._id));
+    successResponse(res, StatusCodes.OK, data);
   });
