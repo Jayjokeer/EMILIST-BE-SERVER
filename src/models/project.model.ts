@@ -1,5 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
-import { ProjectStatusEnum } from '../enums/project.enum';
+import { ProjectStatusEnum, QuoteStatusEnum } from '../enums/project.enum';
 import { IProject } from '../interfaces/project.interface';
 const MilestoneSchema = new mongoose.Schema({
   milestoneId: { type: String, required: true },
@@ -7,9 +7,9 @@ const MilestoneSchema = new mongoose.Schema({
   achievement: { type: String, required: true },
 });
 
-const BiddableDetailsSchema = new mongoose.Schema({
-  maximumPrice: { type: Number, required: true },
-  milestones: { type: [MilestoneSchema], required: true },
+const QuoteSchema = new mongoose.Schema({
+  milestones: { type: [MilestoneSchema] },
+  status: {type: String,enum: QuoteStatusEnum, default: QuoteStatusEnum.pending }
 });
 
 const projectSchema: Schema = new mongoose.Schema(
@@ -56,6 +56,10 @@ const projectSchema: Schema = new mongoose.Schema(
         achievement: { type: String },
       }],
     },
+    quote: {
+      type: QuoteSchema,
+    }
+
   
   },
   { timestamps: true }

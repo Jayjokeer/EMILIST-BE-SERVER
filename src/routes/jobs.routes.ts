@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as jobController from "../controllers/jobs.controller";
-import { validateJob, validateMilestoneStatusUpdate, validateProjectApplication, validateUpdateJob } from "../validations/job.validation";
+import { validateJob, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateUpdateJob } from "../validations/job.validation";
 import { userAuth } from "../middlewares/current-user";
 import { multipleUpload } from "../utils/image-upload";
 
@@ -25,6 +25,7 @@ router.route("/fetch-applied-jobs-by-status").get(userAuth, jobController.fetchU
 router.route("/fetch-applications-by-status").get(userAuth, jobController.fetchApplicationByStatusController);
 router.route("/update-milestone-status/:jobId/milestone/:milestoneId").patch(userAuth,validateMilestoneStatusUpdate, jobController.updateMilestoneStatusController);
 router.route("/request-for-quote/:jobId").patch(userAuth, jobController.requestForQuoteController);
+router.route("/post-quote").patch(userAuth, validatePostQuote, jobController.postQuoteController);
 
 export { router as JobsRoute };
 

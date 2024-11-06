@@ -37,3 +37,9 @@ export enum JobStatusEnum {
   active= "active",
   paused= "paused",
 }
+
+export enum QuoteStatusEnum {
+  pending= "pending",
+  accepted= "accepted",
+  rejected= "rejected"
+}

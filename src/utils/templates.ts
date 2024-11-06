@@ -30,3 +30,11 @@ export const requestForQuoteMessage = (name: string, creatorName: string, id: st
 
   return { html, subject };
 };
+
+export const postQuoteMessage = (name: string, posterName: string, id: string) => {
+  const subject = "Quote Posted!";
+  const html = `
+        Hi ${name}!, ${posterName} posted quote for job with ID: ${id}. kindly log into to your account to accept or reject quote`;
+
+  return { html, subject };
+};

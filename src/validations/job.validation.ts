@@ -255,3 +255,41 @@ export const validateMilestoneStatusUpdate = (req: Request, res: Response, next:
 
   next();
 };
+export const validatePostQuote = (req: Request, res: Response, next: NextFunction) => {
+  const quoteValidation = Joi.object({
+    jobId: Joi.string().required().messages({
+      'string.empty': 'Job ID is required',
+      'any.required': 'Job ID is required',
+    }),
+    milestones: Joi.array()
+      .items(
+        Joi.object({
+          milestoneId: Joi.string().required().messages({
+            'string.empty': 'Milestone ID is required',
+            'any.required': 'Milestone ID is required',
+          }),
+          amount: Joi.number().required().messages({
+            'number.base': 'Amount must be a number',
+            'any.required': 'Amount is required',
+          }),
+          achievement: Joi.string().required().messages({
+            'string.empty': 'Achievement is required',
+            'any.required': 'Achievement is required',
+          }),
+        })
+      )
+      .min(1)
+      .required()
+      .messages({
+        'array.min': 'At least one milestone is required',
+        'any.required': 'Milestones are required',
+      }),
+  });
+
+  const { error } = quoteValidation.validate(req.body, { abortEarly: false });
+  if (error) {
+    res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+  }
+
+  next();
+};

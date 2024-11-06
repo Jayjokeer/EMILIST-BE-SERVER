@@ -5,3 +5,8 @@ export enum ProjectStatusEnum {
     completed = 'completed'
   }
   
+export enum QuoteStatusEnum {
+  pending = 'pending',
+  accepted = 'accepted',
+  rejected = 'rejected',
+}

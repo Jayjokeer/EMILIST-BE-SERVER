@@ -12,7 +12,7 @@ import { ProjectStatusEnum } from "../enums/project.enum";
 import { JobStatusEnum, JobType, MilestoneEnum } from "../enums/jobs.enum";
 import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
-import { directJobApplicationMessage, requestForQuoteMessage } from "../utils/templates";
+import { directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage } from "../utils/templates";
 import mongoose from "mongoose";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
@@ -523,4 +523,42 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     await sendEmail(user.email, subject, html); 
 
     successResponse(res, StatusCodes.OK, 'Request for quote sent successfully');
+  });
+  export const postQuoteController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const loggedInUser =  req.user;
+    const {milestones, jobId} = req.body;
+    const job = await jobService.fetchJobById(String(jobId));
+    if(!job)  {
+      throw new NotFoundError("Job not found!")
+    }
+    if(String(loggedInUser.id) === String(job.userId)){
+      throw new UnauthorizedError("You cannot post a quote on your own job!");
+
+    }
+    if (job.status !== JobStatusEnum.active && job.status !== JobStatusEnum.paused) {
+      throw new BadRequestError("You can only post quote on an active or paused job!");
+    }
+    if(!job.isRequestForQuote){
+      throw new BadRequestError("You cannot post a quote on this job");
+    }
+    const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
+    if(!project){
+      throw new NotFoundError("Project not found!");
+    }
+    project.quote = {
+      milestones: milestones.map((milestone: any) => ({
+        milestoneId: milestone.milestoneId,
+        amount: milestone.amount,
+        achievement: milestone.achievement,
+      })),
+    }
+     await project.save();
+    const user = await authService.findUserById(String(job.userId));
+    if(!user) throw new NotFoundError("user not found!");
+   await job.save();
+
+    const { html, subject } = postQuoteMessage(user.userName, req.user.userName, String(job._id));
+    await sendEmail(user.email, subject, html); 
+
+    successResponse(res, StatusCodes.OK, 'Quote sent successfully');
   });

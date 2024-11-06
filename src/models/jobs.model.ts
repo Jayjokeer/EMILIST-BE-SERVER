@@ -30,7 +30,6 @@ const MilestoneSchema = new Schema<IMilestone>({
       accountName: {type: String}
     },
   });
-
 const jobSchema: Schema = new mongoose.Schema(
   {
     category: { type: String},
