@@ -441,8 +441,9 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const page = parseInt(req.query.page as string, 10) || 1;
     const limit = parseInt(req.query.limit as string, 10) || 10;
     const skip = (page - 1) * limit;
+    const statusEnum = status ? (status as JobStatusEnum) : null;
 
-   const data = await jobService.fetchUserJobApplications(user.id, skip, limit,status, page)
+   const data = await jobService.fetchUserJobApplications(user.id, skip, limit,statusEnum, page)
     successResponse(res, StatusCodes.OK, data);
   });
   export const fetchApplicationByStatusController  = catchAsync(async (req: JwtPayload, res: Response) => {
