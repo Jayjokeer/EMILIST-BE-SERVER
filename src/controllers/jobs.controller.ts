@@ -295,6 +295,14 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
         }
       });
     
+    } else if (status == ProjectStatusEnum.unpause){
+      job.status = JobStatusEnum.active;
+      job.milestones.forEach((milestone: IMilestone) => {
+        if (milestone.status === MilestoneEnum.paused) {
+          milestone.status = MilestoneEnum.active; 
+        }
+      });
+    
     }
 
     await project.save();

@@ -2,7 +2,8 @@ export enum ProjectStatusEnum {
     pending = 'pending',
     accepted = 'accepted',
     rejected = 'rejected',
-    completed = 'completed'
+    completed = 'completed',
+    unpause = "unpause",
   }
   
 export enum QuoteStatusEnum {

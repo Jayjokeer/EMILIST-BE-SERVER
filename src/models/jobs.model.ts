@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { JobExpertLevel, JobPeriod, JobType, MilestoneEnum, MilestonePaymentStatus, JobStatusEnum  } from '../enums/jobs.enum';
 import { IJob, IMilestone } from '../interfaces/jobs.interface';
+import { date } from 'joi';
 
 const MilestoneSchema = new Schema<IMilestone>({
     timeFrame: {
@@ -71,7 +72,8 @@ const jobSchema: Schema = new mongoose.Schema(
     acceptedApplicationId: {type: Schema.Types.ObjectId, ref: 'Project'},
     additionalAmount: {type: Number},
     startDate: { type: Date }, 
-    isRequestForQuote: {type: Boolean, default: false }
+    isRequestForQuote: {type: Boolean, default: false },
+    pausedDate: {type: Date},
   },
   { timestamps: true }
 
