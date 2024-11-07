@@ -9,7 +9,7 @@ const router = Router();
 router.route("/create-job").post(userAuth,multipleUpload,validateJob,jobController.createJobController);
 router.route("/fetch-all-jobs").get(jobController.allJobsController);
 router.route("/fetch-listed-jobs").get(userAuth,jobController.allUserJobController);
-router.route("/fetch-job-by-id").get(jobController.fetchSinlgeJobController);
+router.route("/fetch-job-by-id").get(jobController.fetchSingleJobController);
 router.route("/like-job/:jobId").post(userAuth,jobController.likeJobController);
 router.route("/fetch-liked-jobs").get(userAuth, jobController.fetchLikedJobsController);
 router.route("/unlike-job/:jobId").post(userAuth, jobController.unlikeJobController);

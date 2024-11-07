@@ -1,10 +1,11 @@
-import { IJob } from "../interfaces/jobs.interface";
+import { IJob, IMilestone } from "../interfaces/jobs.interface";
 import Jobs from "../models/jobs.model";
 import  JobLike  from "../models/joblike.model";
 import Project from "../models/project.model";
 import { BadRequestError, NotFoundError } from "../errors/error";
 import { JobStatusEnum, JobType } from "../enums/jobs.enum";
 import { ProjectStatusEnum } from "../enums/project.enum";
+import { add } from 'date-fns';
 
 
 export const createJob = async (data:  IJob) =>{
@@ -103,28 +104,48 @@ export const fetchAllUserJobs = async (
 export const fetchJobById = async (jobId: string)=>{
   return await Jobs.findById(jobId)
 };
-export const fetchJobByIdWithDetails = async (jobId: string)=>{
+export const fetchJobByIdWithDetails = async (jobId: string) => {
   const job = await Jobs.findById(jobId)
-  .populate('userId', 'fullName userName email location level profileImage') 
-  .populate({
-    path: 'applications',
-    populate: { path: 'user', select: 'fullName userName email location level profileImage' } 
-  });
-  if(!job) throw new NotFoundError("Job not found!");
-  const creatorId = job.userId;
+    .populate('userId', 'fullName userName email location level profileImage')
+    .populate({
+      path: 'applications',
+      populate: { path: 'user', select: 'fullName userName email location level profileImage' },
+    });
 
+  if (!job) throw new NotFoundError("Job not found!");
+
+  const creatorId = job.userId;
   const totalJobsPosted = await Jobs.countDocuments({ userId: creatorId });
   const totalArtisansHired = await Project.countDocuments({
     creator: creatorId,
-    status: 'accepted', 
+    status: 'accepted',
+  });
+
+  const jobDueDate = job.startDate
+    ? add(job.startDate, { [job.duration.period]: job.duration.number })
+    : null;
+
+  const milestonesWithDueDates = job.milestones.map((milestone: any) => {
+    const milestoneDueDate = job.startDate
+      ? add(job.startDate, { [milestone.timeFrame.period]: milestone.timeFrame.number })
+      : null;
+
+    return {
+      ...milestone.toObject(),
+      dueDate: milestoneDueDate,
+    };
   });
 
   return {
-    job,
+    job: {
+      ...job.toObject(),
+      dueDate: jobDueDate,
+      milestones: milestonesWithDueDates,
+    },
     totalJobsPosted,
-    totalArtisansHired
-  }
-}
+    totalArtisansHired,
+  };
+};
 export const ifLikedJob = async (jobId: string, userId: string)=>{
     return await JobLike.findOne({ job: jobId, user: userId });
 };

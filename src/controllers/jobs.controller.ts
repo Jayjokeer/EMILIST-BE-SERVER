@@ -85,7 +85,7 @@ export const allJobsController = catchAsync(async (req: JwtPayload, res: Respons
     successResponse(res, StatusCodes.OK, data);
   });
 
-export const fetchSinlgeJobController = catchAsync( async (req: Request, res: Response) => {
+export const fetchSingleJobController = catchAsync( async (req: Request, res: Response) => {
     const { id } = req.query;
     if(!id){
         throw new NotFoundError("Id required!");
@@ -257,10 +257,10 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const job = await jobService.fetchJobById(String(project.job));
     if(!job) throw new NotFoundError("Job not found!");
 
-    project.status = status;
 
     if (status == ProjectStatusEnum.pending){
     job.status = JobStatusEnum.pending;
+    project.status = status;
 
     }else if (status == ProjectStatusEnum.accepted){
       job.status = JobStatusEnum.active;
@@ -268,6 +268,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       project.acceptedAt = new Date();
       job.startDate = project.acceptedAt || new Date();
       job.milestones[0].status = MilestoneEnum.active;
+      project.status = status;
 
       if (job.type === JobType.biddable && project.biddableDetails) {
         job.maximumPrice = project.biddableDetails.maximumPrice;
@@ -282,15 +283,18 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
           }
         });
       }
+
       await projectService.updateRejectProject(projectId, String(job._id));
     }else if(status == ProjectStatusEnum.rejected){
       project.rejectedAt = new Date();
+      project.status = status;
+
     }else if(status == ProjectStatusEnum.pause){
       job.status = JobStatusEnum.paused;
       job.pausedDate= new Date();
 
       job.milestones.forEach((milestone: IMilestone) => {
-        if (milestone.status !== MilestoneEnum.completed) {
+        if (milestone.status !== MilestoneEnum.completed && milestone.status !== MilestoneEnum.pending) {
           milestone.status = MilestoneEnum.paused;
         }
       });
@@ -302,7 +306,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
           milestone.status = MilestoneEnum.active; 
         }
       });
-    
+
     }
 
     await project.save();
