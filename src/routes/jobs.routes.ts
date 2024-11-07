@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as jobController from "../controllers/jobs.controller";
-import { validateJob, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateUpdateJob } from "../validations/job.validation";
+import { validateJob, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
 import { userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload } from "../utils/image-upload";
 
@@ -27,7 +27,7 @@ router.route("/update-milestone-status/:jobId/milestone/:milestoneId").patch(use
 router.route("/request-for-quote/:jobId").patch(userAuth, jobController.requestForQuoteController);
 router.route("/post-quote").patch(userAuth, validatePostQuote, jobController.postQuoteController);
 router.route("/update-quote-status/:projectId").patch(userAuth, jobController.acceptQuoteController);
-router.route("/update-milestone-payment").patch(userAuth,singleUpload, jobController.updateMilestonePaymentController );
+router.route("/update-milestone-payment").patch(userAuth,singleUpload,validateUpdateMilestonePayment, jobController.updateMilestonePaymentController );
 
 
 export { router as JobsRoute };

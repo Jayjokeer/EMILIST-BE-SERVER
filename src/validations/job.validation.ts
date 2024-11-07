@@ -297,3 +297,35 @@ export const validatePostQuote = (req: Request, res: Response, next: NextFunctio
 
   next();
 };
+export const validateUpdateMilestonePayment= (req: Request, res: Response, next: NextFunction) => {
+  const milestoneValidation = Joi.object({
+    amountPaid: Joi.number().required().messages({
+      'number.empty': 'Amount Paid must be a number',
+      'any.required': 'Amount Paid is required',
+    }),
+    jobId: Joi.string().required().messages({
+      'string.empty': 'Job ID must be a string',
+      'any.required': 'Job ID is required',
+    }),
+    milestoneId: Joi.string().required().messages({
+      'string.empty': 'Milestone ID must be a string',
+      'any.required': 'Milestone ID  ID is required',
+    }),
+    paymentMethod: Joi.string().required().messages({
+      'string.empty': 'Payment Method must be a string',
+      'any.required': 'Payment Method   is required',
+    }),
+   date: Joi.string().required().messages({
+      'string.empty': 'Payment Date must be a string ',
+      'any.required': 'Payment Date   is required',
+    }),
+    
+  });
+
+  const { error } = milestoneValidation.validate(req.body, { abortEarly: false });
+  if (error) {
+    res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+  }
+
+  next();
+};
