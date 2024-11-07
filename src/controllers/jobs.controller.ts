@@ -9,7 +9,7 @@ import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/err
 import { IProject } from "../interfaces/project.interface";
 import * as projectService from "../services/project.service";
 import { ProjectStatusEnum } from "../enums/project.enum";
-import { JobStatusEnum, JobType, MilestoneEnum, QuoteStatusEnum } from "../enums/jobs.enum";
+import { JobStatusEnum, JobType, MilestoneEnum, MilestonePaymentStatus, QuoteStatusEnum } from "../enums/jobs.enum";
 import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
 import { directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage } from "../utils/templates";
@@ -623,18 +623,32 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const data = await jobService.fetchJobById(String(job._id));
     successResponse(res, StatusCodes.OK, data);
   });
-  export const updateMilestonePaymentController = catchAsync( async (req: Request, res: Response) => {
-    const { jobId, milestoneId } = req.params;
-    const {amountPaid, paymentMethod, date} = req.body;
-    
+  export const updateMilestonePaymentController = catchAsync( async (req:JwtPayload, res: Response) => {
+    const {amountPaid, paymentMethod, date, jobId, milestoneId} = req.body;
+
     if(!jobId && !milestoneId){
         throw new NotFoundError("Ids required!");
     };
+    const job = await jobService.fetchJobById(String(jobId));
+    if(!job) throw new NotFoundError("Job not found!");
+    if(String(job.userId) !== String(req.user.id)) throw new BadRequestError("Unauthorized!");
+    const milestone = job.milestones.find((milestone: any) => String(milestone._id) === milestoneId);
+    if (!milestone) {
+        throw new NotFoundError("Milestone not found within this job!");
+    }
 
+    milestone.paymentInfo = {
+        amountPaid,
+        paymentMethod,
+        date,
+    };
+    if(req.file){
+      milestone.paymentInfo.paymentReciept = req.file.path;
+    }
+    milestone.paymentStatus = MilestonePaymentStatus.paid;
+
+    await job.save();
     const data = await jobService.fetchJobById(String(jobId));
-
-
-
 
     successResponse(res,StatusCodes.OK, data);
 });
