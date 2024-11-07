@@ -104,6 +104,8 @@ export const fetchAllUserJobs = async (
 export const fetchJobById = async (jobId: string)=>{
   return await Jobs.findById(jobId)
 };
+
+
 export const fetchJobByIdWithDetails = async (jobId: string) => {
   const job = await Jobs.findById(jobId)
     .populate('userId', 'fullName userName email location level profileImage')
@@ -121,20 +123,28 @@ export const fetchJobByIdWithDetails = async (jobId: string) => {
     status: 'accepted',
   });
 
-  const jobDueDate = job.startDate
-    ? add(job.startDate, { [job.duration.period]: job.duration.number })
-    : null;
+  let jobDueDate = null;
+  const milestonesWithDueDates = [];
+  let previousEndDate = job.startDate;
 
-  const milestonesWithDueDates = job.milestones.map((milestone: any) => {
-    const milestoneDueDate = job.startDate
-      ? add(job.startDate, { [milestone.timeFrame.period]: milestone.timeFrame.number })
-      : null;
+  if (job.status === JobStatusEnum.active && job.startDate) {
+    for (const milestone of job.milestones) {
+      if (!previousEndDate) break;
 
-    return {
-      ...milestone.toObject(),
-      dueDate: milestoneDueDate,
-    };
-  });
+      const milestoneDueDate = add(previousEndDate, {
+        [milestone.timeFrame.period]: milestone.timeFrame.number,
+      });
+
+      milestonesWithDueDates.push({
+        ...milestone.toObject(),
+        dueDate: milestoneDueDate,
+      });
+
+      previousEndDate = milestoneDueDate;
+    }
+
+    jobDueDate = previousEndDate;
+  }
 
   return {
     job: {
@@ -146,6 +156,8 @@ export const fetchJobByIdWithDetails = async (jobId: string) => {
     totalArtisansHired,
   };
 };
+
+
 export const ifLikedJob = async (jobId: string, userId: string)=>{
     return await JobLike.findOne({ job: jobId, user: userId });
 };
