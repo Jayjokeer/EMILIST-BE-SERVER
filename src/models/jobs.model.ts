@@ -27,7 +27,9 @@ const MilestoneSchema = new Schema<IMilestone>({
     accountDetails: {
       bank: {type: String},
       accountNumber: {type: String},
-      accountName: {type: String}
+      accountName: {type: String},
+      paymentMethod: {type: String},
+      note: {type: String},
     },
     paymentInfo: {
       amountPaid:{type: Number},

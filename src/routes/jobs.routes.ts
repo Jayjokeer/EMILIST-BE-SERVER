@@ -28,6 +28,7 @@ router.route("/request-for-quote/:jobId").patch(userAuth, jobController.requestF
 router.route("/post-quote").patch(userAuth, validatePostQuote, jobController.postQuoteController);
 router.route("/update-quote-status/:projectId").patch(userAuth, jobController.acceptQuoteController);
 router.route("/update-milestone-payment").patch(userAuth,singleUpload,validateUpdateMilestonePayment, jobController.updateMilestonePaymentController );
+router.route("/user-job-analytics").get(userAuth, jobController.jobAnalyticsController);
 
 
 export { router as JobsRoute };

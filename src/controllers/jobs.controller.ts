@@ -14,6 +14,7 @@ import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
 import { directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage } from "../utils/templates";
 import mongoose from "mongoose";
+import moment from "moment";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const job: IJob = req.body;
@@ -464,7 +465,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   export const updateMilestoneStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
     const user = req.user;
     const {milestoneId, jobId} = req.params;
-    const {status, bank, accountNumber, accountName} = req.body;
+    const {status, bank, accountNumber, accountName, paymentMethod, note} = req.body;
     const job = await jobService.fetchJobById(String(jobId));
     if(!job)  {
       throw new NotFoundError("Job not found!")
@@ -501,6 +502,8 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
         bank,
         accountNumber,
         accountName,
+        paymentMethod,
+        note
       };
     }
     
@@ -652,3 +655,12 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
 
     successResponse(res,StatusCodes.OK, data);
 });
+
+export const jobAnalyticsController = catchAsync( async(req:JwtPayload, res: Response) =>{
+  const { filterBy = 'day', date = new Date().toISOString() } = req.query;
+  const userId = req.user.id;
+  const data = await jobService.jobAnalytics(filterBy, date, userId);
+
+  successResponse(res,StatusCodes.OK, data);
+
+})

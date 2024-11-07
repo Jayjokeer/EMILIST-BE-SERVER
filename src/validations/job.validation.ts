@@ -244,6 +244,12 @@ export const validateMilestoneStatusUpdate = (req: Request, res: Response, next:
       }),
       otherwise: Joi.forbidden(),
     }),
+    paymentMethod: Joi.string().optional().messages({
+      'string.empty': 'Payment Method must be a string',
+    }),
+    note: Joi.string().optional().messages({
+      'string.empty': 'Note must be a string',
+    }),
   });
 
   const { error } = milestoneValidation.validate(req.body, { abortEarly: false });
