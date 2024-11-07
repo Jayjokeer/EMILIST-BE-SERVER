@@ -24,11 +24,16 @@ const MilestoneSchema = new Schema<IMilestone>({
       enum: MilestonePaymentStatus,
       default:  MilestonePaymentStatus.unpaid,
     },
-    paymentReciept: {type: String },
     accountDetails: {
       bank: {type: String},
       accountNumber: {type: String},
       accountName: {type: String}
+    },
+    paymentInfo: {
+      amountPaid:{type: Number},
+      paymentMethod: {type: String},
+      date: {type: Date},
+      paymentReciept: {type: String },
     },
   });
 const jobSchema: Schema = new mongoose.Schema(

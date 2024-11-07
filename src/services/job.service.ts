@@ -212,9 +212,13 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
     const userProjects = await Project.find({ user: userId }).select('_id');
     const projectIds = userProjects.map((project) => project._id);
  
-    const query: any = { applications: { $in: projectIds } };
+    let query: any = { applications: { $in: projectIds } };
     if (status) {
       query.status = status;
+      if(status == JobStatusEnum.active){
+        query = { acceptedApplicationId: { $in: projectIds } }
+        query.status = status;
+      }
     }
     const userApplications = await Jobs.find(query)
     .populate('applications', 'title description status')
