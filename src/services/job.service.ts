@@ -113,8 +113,8 @@ export const fetchJobByIdWithDetails = async (jobId: string) => {
     .populate({
       path: 'applications',
       populate: { path: 'user', select: 'fullName userName email location level profileImage' },
-    });
-
+    });    
+console.log(job)
   if (!job) throw new NotFoundError("Job not found!");
 
   const creatorId = job.userId;
@@ -123,12 +123,12 @@ export const fetchJobByIdWithDetails = async (jobId: string) => {
     creator: creatorId,
     status: 'accepted',
   });
-
+let milestones;
   let jobDueDate = null;
   const milestonesWithDueDates = [];
   let previousEndDate = job.startDate;
 
-  if (job.status === JobStatusEnum.active && job.startDate) {
+  if (job.startDate) {
     for (const milestone of job.milestones) {
       if (!previousEndDate) break;
 
@@ -145,19 +145,20 @@ export const fetchJobByIdWithDetails = async (jobId: string) => {
     }
 
     jobDueDate = previousEndDate;
+    milestones = milestonesWithDueDates;
   }
+  milestones = job.milestones;
 
   return {
     job: {
       ...job.toObject(),
       dueDate: jobDueDate,
-      milestones: milestonesWithDueDates,
+      milestones: milestones,
     },
     totalJobsPosted,
     totalArtisansHired,
   };
 };
-
 
 export const ifLikedJob = async (jobId: string, userId: string)=>{
     return await JobLike.findOne({ job: jobId, user: userId });
