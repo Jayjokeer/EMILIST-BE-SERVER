@@ -18,22 +18,28 @@ export const fetchAllUserJobs = async (
   page: number,
   limit: number,
   search: string | null = null,
-  fields: string[] = []
+  filters: { title?: string, location?: string, category?: string, service?: string } = {}
 ) => {
   const skip = (page - 1) * limit;
   
-  const filter: any = { userId };
+  const searchCriteria: any = { userId };
 
   if (search) {
-    const searchConditions = fields.length > 0 
-      ? fields.map(field => ({ [field]: { $regex: search, $options: 'i' } }))  // Search within specific fields
-      : [{ $text: { $search: search } }]; 
-    
-    filter.$or = searchConditions;
-  }
+    const searchRegex = new RegExp(search, 'i');
+    const jobSchemaPaths = Jobs.schema.paths;
+    const stringFields = Object.keys(jobSchemaPaths).filter(
+      (field) => jobSchemaPaths[field].instance === 'String'
+    );
 
-  const jobs = await Jobs.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit);
-  const totalJobs = await Jobs.countDocuments(filter);
+    searchCriteria.$or = stringFields.map((field) => ({ [field]: { $regex: searchRegex } }));
+  } else {
+    if (filters.title) searchCriteria.title = { $regex: new RegExp(filters.title, 'i') };
+    if (filters.location) searchCriteria.location = { $regex: new RegExp(filters.location, 'i') };
+    if (filters.category) searchCriteria.category = { $regex: new RegExp(filters.category, 'i') };
+    if (filters.service) searchCriteria.service = { $regex: new RegExp(filters.service, 'i') };
+  }
+  const jobs = await Jobs.find(searchCriteria).sort({ createdAt: -1 }).skip(skip).limit(limit);
+  const totalJobs = await Jobs.countDocuments(searchCriteria);
 
   return {
     jobs,
@@ -49,31 +55,32 @@ export const fetchAllUserJobs = async (
     limit: number,
     userId: string | null,
     search: string | null,
-    fields: string[] = [] 
+    filters: { title?: string, location?: string, category?: string, service?: string } = {}
   ) => {
     const skip = (page - 1) * limit;
     const searchCriteria: any = { type: { $ne: JobType.direct },
     status: JobStatusEnum.pending}; 
   
+
     if (search) {
-      const searchRegex = new RegExp(search, 'i'); 
+      const searchRegex = new RegExp(search, 'i');
+      const jobSchemaPaths = Jobs.schema.paths;
+      const stringFields = Object.keys(jobSchemaPaths).filter(
+        (field) => jobSchemaPaths[field].instance === 'String'
+      );
   
-      if (fields.length === 0) {
-        const jobSchemaPaths = Jobs.schema.paths;
-        const stringFields = Object.keys(jobSchemaPaths).filter(
-          (field) => jobSchemaPaths[field].instance === 'String'
-        );
-        searchCriteria.$or = stringFields.map((field) => ({ [field]: searchRegex }));
-      } else {
-        searchCriteria.$or = fields.map((field) => ({ [field]: searchRegex }));
-      }
+      searchCriteria.$or = stringFields.map((field) => ({ [field]: { $regex: searchRegex } }));
+    } else {
+      if (filters.title) searchCriteria.title = { $regex: new RegExp(filters.title, 'i') };
+      if (filters.location) searchCriteria.location = { $regex: new RegExp(filters.location, 'i') };
+      if (filters.category) searchCriteria.category = { $regex: new RegExp(filters.category, 'i') };
+      if (filters.service) searchCriteria.service = { $regex: new RegExp(filters.service, 'i') };
     }
   
     const jobs = await Jobs.find(searchCriteria)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-  
     const totalJobs = await Jobs.countDocuments(searchCriteria);
   
     let jobsWithLikeStatus;
@@ -115,7 +122,6 @@ export const fetchJobByIdWithDetails = async (jobId: string) => {
       path: 'applications',
       populate: { path: 'user', select: 'fullName userName email location level profileImage' },
     });    
-console.log(job)
   if (!job) throw new NotFoundError("Job not found!");
 
   const creatorId = job.userId;

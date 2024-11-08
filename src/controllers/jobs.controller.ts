@@ -62,27 +62,36 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
 });
 
 export const allUserJobController = catchAsync(async (req: JwtPayload, res: Response) => {
-  const { page = 1, limit = 10, search = null, fields = '' } = req.query;
-
+  const { page = 1, limit = 10, search = null, title, location, category, service } = req.query;
+  const filters = {
+    title, 
+    location, 
+    category, 
+    service
+  };  
   const data = await jobService.fetchAllUserJobs(
     req.user.id,
     Number(page),
     Number(limit),
     search as string,
-    (fields as string).split(',').filter(Boolean)
+    filters,
   );
 
   successResponse(res, StatusCodes.OK, data);
 });
 
 export const allJobsController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const { page = 1, limit = 10 } = req.query; 
+    const { page = 1, limit = 10, title, location, category, service } = req.query; 
     
     const userId = req.query.userId ? req.query.userId : null; 
     const search = req.query.search as string || null;
-    const specificFields = req.query.fields ? (req.query.fields as string).split(',') : [];
-    
-    const data = await jobService.fetchAllJobs(Number(page), Number(limit), userId, search, specificFields );
+    const filters = {
+      title, 
+      location, 
+      category, 
+      service
+    };    
+    const data = await jobService.fetchAllJobs(Number(page), Number(limit), userId, search, filters );
     successResponse(res, StatusCodes.OK, data);
   });
 
