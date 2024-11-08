@@ -52,7 +52,8 @@ export const fetchAllUserJobs = async (
     fields: string[] = [] 
   ) => {
     const skip = (page - 1) * limit;
-    const searchCriteria: any = { type: { $ne: JobType.direct } }; 
+    const searchCriteria: any = { type: { $ne: JobType.direct },
+    status: JobStatusEnum.pending}; 
   
     if (search) {
       const searchRegex = new RegExp(search, 'i'); 
