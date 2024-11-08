@@ -432,6 +432,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       project.directJobStatus= ProjectStatusEnum.rejected;
       job.acceptedApplicationId = undefined;
       job.status = JobStatusEnum.pending;
+      job.type = JobType.regular;
     };
     await project.save();
     await job.save();
