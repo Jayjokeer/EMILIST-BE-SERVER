@@ -705,12 +705,18 @@ export const closeContractController = catchAsync( async(req:JwtPayload, res: Re
   if(job.status !== JobStatusEnum.complete){
     job.status = JobStatusEnum.complete;
   }
+  const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
+  if(!project){
+    throw new NotFoundError("Project not foound!");
+  }
+  project.status = ProjectStatusEnum.completed;
   job.isClosed = true;
   job.review.rating = rating;
   job.review.note = note; 
   job.review.rateCommunication = rateCommunication;
   job.review.isRecommendVendor= isRecommendVendor;
   await job.save();
+  await project.save();
 
   successResponse(res,StatusCodes.OK, "Job closed successfully");
 
