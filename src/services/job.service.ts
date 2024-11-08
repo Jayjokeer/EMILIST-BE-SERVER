@@ -210,33 +210,72 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
    export const fetchJobByUserIdAndStatus = async ( userId: string, status: JobStatusEnum ) =>{
     return await Jobs.find({userId: userId, status: status});
    };
-   export const fetchUserJobApplications = async(userId: string, skip: number, limit: number, status: JobStatusEnum | null, page: number )=>{
+   export const fetchUserJobApplications = async (
+    userId: string,
+    skip: number,
+    limit: number,
+    status: JobStatusEnum | null,
+    page: number
+  ) => {
     const userProjects = await Project.find({ user: userId }).select('_id');
     const projectIds = userProjects.map((project) => project._id);
- 
+  
+    // Build query to filter jobs by applications or accepted application ID
     let query: any = { applications: { $in: projectIds } };
     if (status) {
       query.status = status;
-      if(status == JobStatusEnum.active){
-        query = { acceptedApplicationId: { $in: projectIds } }
+      if (status === JobStatusEnum.active) {
+        query = { acceptedApplicationId: { $in: projectIds } };
         query.status = status;
       }
     }
+  
     const userApplications = await Jobs.find(query)
-    .populate('applications', 'title description status')
-    .skip(skip)
-    .limit(limit)
-    .sort({ createdAt: -1 });
-
-  const totalApplications = await Jobs.countDocuments(query);
-
-  return {
-    total: totalApplications,
-    page,
-    limit,
-    applications: userApplications
-   };
+      .populate('applications', 'title description status')
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+  
+    const applicationsWithDueDates = await Promise.all(
+      userApplications.map(async (job) => {
+        if (job.status !== JobStatusEnum.active) {
+          return job.toObject(); 
+        }
+  
+        let accumulatedTime = job.startDate!.getTime();
+        let activeMilestoneDueDate: any = null;
+  
+        job.milestones.forEach((milestone: any) => {
+          const timeMultiplier = milestone.timeFrame.period === 'days' ? 86400000 : 604800000;
+          const milestoneDuration = milestone.timeFrame.number * timeMultiplier;
+  
+          accumulatedTime += milestoneDuration;
+  
+          if (milestone.status === 'active' && !activeMilestoneDueDate) {
+            activeMilestoneDueDate = new Date(accumulatedTime);
+          }
+        });
+  
+        const overallDueDate = new Date(accumulatedTime);
+  
+        return {
+          ...job.toObject(),
+          activeMilestoneDueDate,
+          overallDueDate,
+        };
+      })
+    );
+  
+    const totalApplications = await Jobs.countDocuments(query);
+  
+    return {
+      total: totalApplications,
+      page,
+      limit,
+      applications: applicationsWithDueDates,
+    };
   };
+  
   export const fetchUserApplications = async(userId: string, skip: number, limit: number, status: ProjectStatusEnum, page: number)=>{
   const userProjects = await Project.find({ user: userId ,     
     status: status as ProjectStatusEnum,
