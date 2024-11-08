@@ -115,6 +115,8 @@ export const fetchJobById = async (jobId: string)=>{
 };
 
 
+
+
 export const fetchJobByIdWithDetails = async (jobId: string) => {
   const job = await Jobs.findById(jobId)
     .populate('userId', 'fullName userName email location level profileImage')
@@ -122,6 +124,7 @@ export const fetchJobByIdWithDetails = async (jobId: string) => {
       path: 'applications',
       populate: { path: 'user', select: 'fullName userName email location level profileImage' },
     });    
+
   if (!job) throw new NotFoundError("Job not found!");
 
   const creatorId = job.userId;
@@ -130,31 +133,27 @@ export const fetchJobByIdWithDetails = async (jobId: string) => {
     creator: creatorId,
     status: 'accepted',
   });
-let milestones;
+
+  let milestones = [];
   let jobDueDate = null;
-  const milestonesWithDueDates = [];
-  let previousEndDate = job.startDate;
 
-  if (job.startDate) {
+  if (job.startDate && (job.status === 'active' || job.status === 'paused')) {
+    let cumulativeDays = 0;
+
     for (const milestone of job.milestones) {
-      if (!previousEndDate) break;
-
-      const milestoneDueDate = add(previousEndDate, {
-        [milestone.timeFrame.period]: milestone.timeFrame.number,
-      });
-
-      milestonesWithDueDates.push({
-        ...milestone.toObject(),
-        dueDate: milestoneDueDate,
-      });
-
-      previousEndDate = milestoneDueDate;
+      if (milestone.timeFrame.period === 'days') {
+        cumulativeDays += parseInt(milestone.timeFrame.number, 10);
+      }
     }
 
-    jobDueDate = previousEndDate;
-    milestones = milestonesWithDueDates;
+    jobDueDate = add(job.startDate, { days: cumulativeDays });
+    milestones = job.milestones.map((milestone: any) => ({
+      ...milestone.toObject(),
+      dueDate: add(job.startDate!, { days: cumulativeDays }), 
+    }));
+  } else {
+    milestones = job.milestones;
   }
-  milestones = job.milestones;
 
   return {
     job: {
