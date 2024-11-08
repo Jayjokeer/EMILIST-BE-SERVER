@@ -677,7 +677,7 @@ export const jobAnalyticsController = catchAsync( async(req:JwtPayload, res: Res
 export const closeContractController = catchAsync( async(req:JwtPayload, res: Response) =>{
   const userId = req.user._id;
   const {jobId} = req.params;
-  const {rating, note} = req.body;
+  const {rating, note, rateCommunication, isRecommendVendor} = req.body;
 
   const job = await jobService.fetchJobById(String(jobId));
   if (!job) throw new NotFoundError('Job not found!');
@@ -697,6 +697,8 @@ export const closeContractController = catchAsync( async(req:JwtPayload, res: Re
   job.isClosed = true;
   job.review.rating = rating;
   job.review.note = note; 
+  job.review.rateCommunication = rateCommunication;
+  job.review.isRecommendVendor= isRecommendVendor;
   await job.save();
 
   successResponse(res,StatusCodes.OK, "Job closed successfully");
