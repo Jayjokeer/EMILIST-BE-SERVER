@@ -393,7 +393,29 @@ export const jobAnalytics = async(filterBy: any, startDate: string,endDate: stri
 
 return analyticsData;
 };
+export const fetchJobCount = async( userId: string)=>{
+  const totalPendingJobs = await Jobs.countDocuments({ userId, status: JobStatusEnum.pending });
+  const totalActiveJobs = await Jobs.countDocuments({ userId, status: JobStatusEnum.active });
+  const totalPausedJobs = await Jobs.countDocuments({ userId, status: JobStatusEnum.paused });
+  const totalCompletedJobs = await Jobs.countDocuments({ userId, status: JobStatusEnum.complete });
 
+  const totalOverdueJobs = await Jobs.countDocuments({
+    userId,
+    status: JobStatusEnum.active,
+    dueDate: { $lt: new Date() },
+  });
+
+
+   return {
+      totalPendingJobs,
+      totalActiveJobs,
+      totalOverdueJobs,
+      totalPausedJobs,
+      totalCompletedJobs,
+    }
+
+
+};
   //  export const findJobsForCron = async () =>{
   //   return await Jobs.findOneAndDelete({userId: userId, _id: jobId});
   //  };

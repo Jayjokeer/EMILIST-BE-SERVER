@@ -702,3 +702,9 @@ export const closeContractController = catchAsync( async(req:JwtPayload, res: Re
   successResponse(res,StatusCodes.OK, "Job closed successfully");
 
 })
+export const fetchJobCountsController = catchAsync( async(req:JwtPayload, res: Response) =>{
+  const userId = req.user._id;
+  const data = await jobService.fetchJobCount( String(userId));
+
+  successResponse(res,StatusCodes.OK, data);
+});

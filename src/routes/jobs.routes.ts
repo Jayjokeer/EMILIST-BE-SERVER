@@ -30,6 +30,7 @@ router.route("/update-quote-status/:projectId").patch(userAuth, jobController.ac
 router.route("/update-milestone-payment").patch(userAuth,singleUpload,validateUpdateMilestonePayment, jobController.updateMilestonePaymentController );
 router.route("/user-job-analytics").get(userAuth, jobController.jobAnalyticsController);
 router.route("/close-contract/:jobId").patch(userAuth, jobController.closeContractController );
+router.route("/fetch-job-count-creator").get(userAuth, jobController.fetchJobCountsController);
 
 
 export { router as JobsRoute };
