@@ -1,5 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
-import { JobExpertLevel, JobPeriod, JobType, MilestoneEnum, MilestonePaymentStatus, JobStatusEnum  } from '../enums/jobs.enum';
+import { JobExpertLevel, JobPeriod, JobType, MilestoneEnum, MilestonePaymentStatus, JobStatusEnum, RatingEnum  } from '../enums/jobs.enum';
 import { IJob, IMilestone } from '../interfaces/jobs.interface';
 import { date } from 'joi';
 
@@ -81,6 +81,11 @@ const jobSchema: Schema = new mongoose.Schema(
     startDate: { type: Date }, 
     isRequestForQuote: {type: Boolean, default: false },
     pausedDate: {type: Date},
+    isClosed: {type: Boolean, default: false },
+    review: {
+      rating: {type: String, enum: RatingEnum},
+      note: {type: String},
+    }
   },
   { timestamps: true }
 

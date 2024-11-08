@@ -25,6 +25,9 @@ export interface IJob {
     email?: string;
     userName?: string; 
     isRequestForQuote?: boolean; 
+    isClosed?: boolean;
+    review?: any;
+    
 }
 
 export interface IMilestone {

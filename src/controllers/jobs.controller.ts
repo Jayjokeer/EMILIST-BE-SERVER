@@ -673,3 +673,32 @@ export const jobAnalyticsController = catchAsync( async(req:JwtPayload, res: Res
   successResponse(res,StatusCodes.OK, data);
 
 })
+
+export const closeContractController = catchAsync( async(req:JwtPayload, res: Response) =>{
+  const userId = req.user._id;
+  const {jobId} = req.params;
+  const {rating, note} = req.body;
+
+  const job = await jobService.fetchJobById(String(jobId));
+  if (!job) throw new NotFoundError('Job not found!');
+  if(String(userId) !== String(job.userId)){
+    throw new UnauthorizedError("Unauthorized!");
+  }
+  if (job.isClosed) throw new BadRequestError('Contract is already closed!');
+
+  const allMilestonesCompletedAndPaid = job.milestones.every(
+    (milestone: any) => milestone.status === MilestoneEnum.completed && milestone.paymentStatus === MilestonePaymentStatus.paid
+  );
+
+  if (!allMilestonesCompletedAndPaid) {
+    throw new BadRequestError('All milestones must be completed and paid before closing the contract.');
+  }
+
+  job.isClosed = true;
+  job.review.rating = rating;
+  job.review.note = note; 
+  await job.save();
+
+  successResponse(res,StatusCodes.OK, "Job closed successfully");
+
+})
