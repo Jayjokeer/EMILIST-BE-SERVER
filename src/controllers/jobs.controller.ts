@@ -702,7 +702,9 @@ export const closeContractController = catchAsync( async(req:JwtPayload, res: Re
   if (!allMilestonesCompletedAndPaid) {
     throw new BadRequestError('All milestones must be completed and paid before closing the contract.');
   }
-
+  if(job.status !== JobStatusEnum.complete){
+    job.status = JobStatusEnum.complete;
+  }
   job.isClosed = true;
   job.review.rating = rating;
   job.review.note = note; 
