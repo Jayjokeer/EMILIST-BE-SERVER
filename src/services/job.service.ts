@@ -3,7 +3,7 @@ import Jobs from "../models/jobs.model";
 import  JobLike  from "../models/joblike.model";
 import Project from "../models/project.model";
 import { BadRequestError, NotFoundError } from "../errors/error";
-import { JobStatusEnum, JobType } from "../enums/jobs.enum";
+import { JobStatusEnum, JobType, MilestoneEnum } from "../enums/jobs.enum";
 import { ProjectStatusEnum } from "../enums/project.enum";
 import { add } from 'date-fns';
 import moment from "moment";
@@ -220,7 +220,6 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
     const userProjects = await Project.find({ user: userId }).select('_id');
     const projectIds = userProjects.map((project) => project._id);
   
-    // Build query to filter jobs by applications or accepted application ID
     let query: any = { applications: { $in: projectIds } };
     if (status) {
       query.status = status;
@@ -238,30 +237,37 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
   
     const applicationsWithDueDates = await Promise.all(
       userApplications.map(async (job) => {
-        if (job.status !== JobStatusEnum.active) {
-          return job.toObject(); 
+        if (job.status !== JobStatusEnum.active && job.status !== JobStatusEnum.paused) {
+          return job.toObject();
         }
   
         let accumulatedTime = job.startDate!.getTime();
-        let activeMilestoneDueDate: any = null;
-  
+        let milestoneDueDate: any = null;
+        const totalMilestones = job.milestones.length;
+        let completedMilestones = 0;
+
         job.milestones.forEach((milestone: any) => {
           const timeMultiplier = milestone.timeFrame.period === 'days' ? 86400000 : 604800000;
           const milestoneDuration = milestone.timeFrame.number * timeMultiplier;
   
           accumulatedTime += milestoneDuration;
-  
-          if (milestone.status === 'active' && !activeMilestoneDueDate) {
-            activeMilestoneDueDate = new Date(accumulatedTime);
+          
+          if (milestone.status ===  MilestoneEnum.active || milestone.status ===  MilestoneEnum.completed) {
+            completedMilestones += 1;
+          }
+          if ((milestone.status === MilestoneEnum.active || milestone.status === MilestoneEnum.paused) && !milestoneDueDate) {
+            milestoneDueDate = new Date(accumulatedTime);
           }
         });
-  
+        const milestoneProgress = `${completedMilestones}/${totalMilestones}`;
+
         const overallDueDate = new Date(accumulatedTime);
   
         return {
           ...job.toObject(),
-          activeMilestoneDueDate,
+          milestoneDueDate,
           overallDueDate,
+          milestoneProgress,
         };
       })
     );
@@ -275,6 +281,7 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
       applications: applicationsWithDueDates,
     };
   };
+  
   
   export const fetchUserApplications = async(userId: string, skip: number, limit: number, status: ProjectStatusEnum, page: number)=>{
   const userProjects = await Project.find({ user: userId ,     
