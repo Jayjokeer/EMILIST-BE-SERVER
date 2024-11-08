@@ -513,6 +513,16 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
         paymentMethod,
         note
       };
+      const allMilestonesCompleted = job.milestones.every(
+        (m: any) => m.status === MilestoneEnum.completed
+      );
+  
+      if (allMilestonesCompleted) {
+        job.status = JobStatusEnum.complete;
+        project.status = ProjectStatusEnum.completed;
+        await project.save();
+      }
+  
     }
     
     if(!milestone) throw new NotFoundError("Milestone not found");
