@@ -343,7 +343,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const { status } = req.query;
     let data: any;
   
-    if (status === JobStatusEnum.pending) {
+    if (status === JobStatusEnum.pending || status === JobStatusEnum.complete) {
       const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status);
       data = jobs;
     } else if (status === JobStatusEnum.active || status === JobStatusEnum.paused) {
