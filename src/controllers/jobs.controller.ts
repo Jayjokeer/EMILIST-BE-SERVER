@@ -390,7 +390,6 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
         return {
           ...job.toObject(),
           milestoneProgress,
-          startDate: milestoneStartDate,
           currentMilestoneDueDate,
           overallDueDate, 
         };
