@@ -416,6 +416,54 @@ export const fetchJobCount = async( userId: string)=>{
 
 
 };
+export const fetchProjectCounts = async(userId: string)=>{
+  const userProjects = await Project.find({ user: userId });
+
+  let totalPendingProjects = 0;
+  let totalActiveProjects = 0;
+  let totalPausedProjects = 0;
+  let totalCompletedProjects = 0;
+  let totalOverdueProjects = 0;
+
+  const currentDate = new Date();
+  const userProjectIds = userProjects.map((project) => project._id);
+
+
+  const totalActiveJobs = await Jobs.countDocuments({
+    acceptedApplicationId: { $in: userProjectIds },
+    status: JobStatusEnum.active,
+  });
+
+  userProjects.forEach((project) => {
+    switch (project.status) {
+      case ProjectStatusEnum.pending:
+        totalPendingProjects++;
+        break;
+      case ProjectStatusEnum.accepted:
+        totalActiveProjects++;
+        if (project.quote?.acceptedAt && project.quote.acceptedAt < currentDate) {
+          totalOverdueProjects++;
+        }
+        break;
+      case ProjectStatusEnum.pause:
+        totalPausedProjects++;
+        break;
+      case ProjectStatusEnum.completed:
+        totalCompletedProjects++;
+        break;
+      default:
+        break;
+    }
+  });
+
+  return {
+    totalPendingProjects,
+    totalActiveProjects,
+    totalPausedProjects,
+    totalCompletedProjects,
+    totalOverdueProjects,
+  };
+}
   //  export const findJobsForCron = async () =>{
   //   return await Jobs.findOneAndDelete({userId: userId, _id: jobId});
   //  };

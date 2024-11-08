@@ -709,3 +709,9 @@ export const fetchJobCountsController = catchAsync( async(req:JwtPayload, res: R
 
   successResponse(res,StatusCodes.OK, data);
 });
+export const fetchProjectCountsController = catchAsync( async(req:JwtPayload, res: Response) =>{
+  const userId = req.user._id;
+  const data = await jobService.fetchProjectCounts( String(userId));
+
+  successResponse(res,StatusCodes.OK, data);
+});

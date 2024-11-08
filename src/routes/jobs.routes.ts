@@ -31,6 +31,7 @@ router.route("/update-milestone-payment").patch(userAuth,singleUpload,validateUp
 router.route("/user-job-analytics").get(userAuth, jobController.jobAnalyticsController);
 router.route("/close-contract/:jobId").patch(userAuth, jobController.closeContractController );
 router.route("/fetch-job-count-creator").get(userAuth, jobController.fetchJobCountsController);
+router.route("/fetch-project-count").get(userAuth, jobController.fetchProjectCountsController);
 
 
 export { router as JobsRoute };

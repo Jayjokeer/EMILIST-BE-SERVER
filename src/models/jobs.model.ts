@@ -86,7 +86,7 @@ const jobSchema: Schema = new mongoose.Schema(
       rating: {type: String, enum: RatingEnum},
       note: {type: String},
       rateCommunication: {type: String, enum: RatingEnum},
-      isRecommendVendor:{type: Boolean, default: true },
+      isRecommendVendor:{type: String },
     }
   },
   { timestamps: true }
