@@ -340,17 +340,19 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   // };
   export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user.id; 
-    const {status} = req.query;
-    let data:any;
-    if(status == JobStatusEnum.pending){
-      const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status );
+    const { status } = req.query;
+    let data: any;
+  
+    if (status === JobStatusEnum.pending) {
+      const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status);
       data = jobs;
-    }else if(status == JobStatusEnum.active){
-      const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status as JobStatusEnum );
+    } else if (status === JobStatusEnum.active || status === JobStatusEnum.paused) {
+      const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status as JobStatusEnum);
       data = jobs.map((job) => {
         const totalMilestones = job.milestones.length;
         let milestoneStartDate = new Date(job.startDate || new Date());
-        let milestoneEndDate = new Date(milestoneStartDate);
+        let currentMilestoneDueDate = new Date(milestoneStartDate);
+        let overallDueDate = new Date(milestoneStartDate); 
   
         let milestoneProgress = "0/0"; 
   
@@ -358,40 +360,37 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
           const milestone = job.milestones[i];
           const duration = parseInt(milestone.timeFrame.number, 10) || 0;
   
-          switch (milestone.timeFrame.period) {
-            case "days":
-              milestoneEndDate.setDate(milestoneStartDate.getDate() + duration);
-              break;
-            case "weeks":
-              milestoneEndDate.setDate(milestoneStartDate.getDate() + duration * 7);
-              break;
-            case "months":
-              milestoneEndDate.setMonth(milestoneStartDate.getMonth() + duration);
-              break;
-            default:
-              break; 
-          }
+          const durationMs =
+            milestone.timeFrame.period === 'days'
+              ? duration * 86400000 
+              : milestone.timeFrame.period === 'weeks'
+              ? duration * 604800000 
+              : duration * 2629800000; 
   
-          if (milestone.status === MilestoneEnum.active || milestone.status === MilestoneEnum.pending) {
+          overallDueDate = new Date(overallDueDate.getTime() + durationMs);
+  
+          if (milestone.status === MilestoneEnum.active || milestone.status === MilestoneEnum.paused) {
             milestoneProgress = `${i + 1}/${totalMilestones}`;
+            currentMilestoneDueDate = new Date(overallDueDate); 
             break;
           }
   
-          milestoneStartDate = new Date(milestoneEndDate);
+          milestoneStartDate = new Date(overallDueDate);
         }
   
         return {
           ...job.toObject(),
           milestoneProgress,
           startDate: milestoneStartDate,
-          dueDate: milestoneEndDate,
+          currentMilestoneDueDate,
+          overallDueDate, 
         };
       });
-      
     }
-
+  
     successResponse(res, StatusCodes.OK, data);
   });
+  
   export const deleteFileController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {jobId, fileId} = req.params;
     const job = await jobService.fetchJobById(jobId);
