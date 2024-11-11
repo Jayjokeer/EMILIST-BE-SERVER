@@ -420,42 +420,59 @@ export const fetchProjectCounts = async(userId: string)=>{
   const userProjects = await Project.find({ user: userId });
 
   let totalPendingProjects = 0;
-  let totalActiveProjects = 0;
-  let totalPausedProjects = 0;
-  let totalCompletedProjects = 0;
   let totalOverdueProjects = 0;
+  let totalDueProjects = 0;
 
   const currentDate = new Date();
   const userProjectIds = userProjects.map((project) => project._id);
 
 
-  const totalActiveJobs = await Jobs.countDocuments({
+  const totalActiveProjects = await Jobs.countDocuments({
+    acceptedApplicationId: { $in: userProjectIds },
+    status: JobStatusEnum.active,
+  });
+  const totalPausedProjects = await Jobs.countDocuments({
+    acceptedApplicationId: { $in: userProjectIds },
+    status: JobStatusEnum.paused,
+  });
+  const totalCompletedProjects = await Jobs.countDocuments({
+    acceptedApplicationId: { $in: userProjectIds },
+    status: JobStatusEnum.complete,
+  });
+  userProjects.forEach((project) => {
+
+   if (project.status == ProjectStatusEnum.pending) {
+        totalPendingProjects++;
+    }
+  });
+  const jobs = await Jobs.find({
     acceptedApplicationId: { $in: userProjectIds },
     status: JobStatusEnum.active,
   });
 
-  userProjects.forEach((project) => {
-    switch (project.status) {
-      case ProjectStatusEnum.pending:
-        totalPendingProjects++;
-        break;
-      case ProjectStatusEnum.accepted:
-        totalActiveProjects++;
-        if (project.quote?.acceptedAt && project.quote.acceptedAt < currentDate) {
-          totalOverdueProjects++;
+
+  jobs.forEach((job) => {
+    let isProjectDue = false; 
+
+    job.milestones.forEach((milestone: any) => {
+      if (milestone.status === MilestoneEnum.overdue) {
+        totalOverdueProjects++;
+      } else if (milestone.status === MilestoneEnum.active || milestone.status === MilestoneEnum.pending) {
+        const milestoneDueDate = new Date(
+          (job.startDate?.getTime() ?? currentDate.getTime()) +
+          (milestone.timeFrame.number ?? 0) * 24 * 60 * 60 * 1000 // assuming timeFrame is in days
+        );
+
+        if (milestoneDueDate <= currentDate) {
+          isProjectDue = true;
         }
-        break;
-      case ProjectStatusEnum.pause:
-        totalPausedProjects++;
-        break;
-      case ProjectStatusEnum.completed:
-        totalCompletedProjects++;
-        break;
-      default:
-        break;
+      }
+    });
+
+    if (isProjectDue) {
+      totalDueProjects++;
     }
   });
-
   return {
     totalPendingProjects,
     totalActiveProjects,
