@@ -99,3 +99,9 @@ export const updateBusiness = async (  businessId: string, businessData: any, fi
     await business.save();
     return business;
 };
+export const fetchUserBusiness = async (userId: string)=>{
+    return await Business.findOne({userId});
+}
+export const fetchSingleBusiness = async (businessId: string)=>{
+    return await Business.findById(businessId);
+}

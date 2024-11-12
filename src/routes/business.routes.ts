@@ -8,6 +8,8 @@ const router = Router();
 
 router.route("/register-business").post(userAuth,uploadBusinessImages,validateBusinessRegistration,businesController.createBusinessController);
 router.route("/update-business/:businessId").patch(userAuth,uploadBusinessImages,validateBusinessUpdate,businesController.updateBusinessController);
+router.route("/fetch-single-business/:businessId").get(userAuth,businesController.fetchSingleBusinessController);
+router.route("/fetch-user-business").get(userAuth,businesController.fetchUserBusinessController);
 
 
 export { router as BusinessRoute };

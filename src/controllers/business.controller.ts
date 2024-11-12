@@ -42,3 +42,15 @@ export const updateBusinessController = catchAsync( async (req: JwtPayload, res:
 
     successResponse(res,StatusCodes.OK, data);
 });
+
+export const fetchUserBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
+    const userId = req.user._id;
+    const data = await businessService.fetchUserBusiness( userId);
+
+    successResponse(res,StatusCodes.OK, data);
+});
+export const fetchSingleBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
+    const {businessId} = req.params;
+    const data = await businessService.fetchSingleBusiness(String(businessId));
+    successResponse(res,StatusCodes.OK, data);
+});
