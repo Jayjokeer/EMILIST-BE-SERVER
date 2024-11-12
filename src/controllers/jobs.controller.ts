@@ -14,7 +14,6 @@ import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
 import { directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage } from "../utils/templates";
 import mongoose from "mongoose";
-import moment from "moment";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const job: IJob = req.body;

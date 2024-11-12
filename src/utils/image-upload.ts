@@ -16,7 +16,6 @@ const storage = new CloudinaryStorage({
       folder: 'uploads',
       allowed_formats: ['jpg', 'png', 'jpeg', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv'],
       public_id: file.originalname.split('.')[0] + Date.now(), 
-      // transformation: [{ width: 500, height: 500, crop: 'limit' }], // Optional
     };
   },
 });
@@ -25,4 +24,10 @@ const singleUpload = multer({ storage }).single('image');
 
 const multipleUpload = multer({ storage }).array('files', 10);
 
-export { cloudinary, singleUpload, multipleUpload };
+const uploadBusinessImages = multer({ storage }).fields([
+  { name: 'profileImage', maxCount: 1 },
+  { name: 'certificate', maxCount: 10 },
+]);
+
+
+export { cloudinary, singleUpload, multipleUpload,  uploadBusinessImages };

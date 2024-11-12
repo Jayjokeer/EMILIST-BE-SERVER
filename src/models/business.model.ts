@@ -1,0 +1,58 @@
+import mongoose, { Document, Schema } from 'mongoose';
+import { IBusiness } from '../interfaces/business.interface';
+const ServicesRenderedSchema = new Schema({
+    name: {
+      type: String,
+    },
+    status: {
+      type: String,
+    },
+  });
+  const MemberShipSchema = new Schema({
+    
+    organisation: {type: String},
+    positionHeld: {type: String},
+    startDate: {type: Date},
+    endDate: {type: Date},
+    isMembershipExpire: {type: Boolean, default: true}
+      
+  })
+  const CertificationSchema = new Schema({
+    certificate: {type: String},
+    issuingOrganisation: {type: String},
+    verificationNumber: {type: String},
+    issuingDate: {type: Date},
+    expiringDate: {type: Date},
+    isCertificateExpire: {type: Boolean, default: true }
+
+  })
+  const InsuranceSchema = new Schema({
+    issuingOrganisation: {type: String},
+    coverage: {type: String},
+    description: {type: String},
+  })
+const businessSchema: Schema = new mongoose.Schema(
+  {
+    services: [{ type: String}],
+    firstName: { type: String },
+    lastName: { type: String },
+    languages: [{ type: String}],
+    address: { type: String },
+    phoneNumber: { type: String },
+    city: { type: String },
+    state: { type: String},
+    country: {type: String},
+    bio: {type: String},
+    profileImage: {type: String},
+    renderedServices: [{type: ServicesRenderedSchema }],
+    certification: [{type: CertificationSchema}],
+    membership: [{type: MemberShipSchema }],
+    insurance: [{ type: InsuranceSchema}],
+    coverageArea: [{type: String}],
+    userId: {type: Schema.Types.ObjectId, ref: 'Users'},
+  },
+  { timestamps: true }
+
+);
+
+export default mongoose.model<IBusiness>('Business', businessSchema);
