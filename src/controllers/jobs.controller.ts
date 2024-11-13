@@ -674,9 +674,9 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
 });
 
 export const jobAnalyticsController = catchAsync( async(req:JwtPayload, res: Response) =>{
-  const { filterBy = 'day', startDate, endDate } = req.query;
+  const { filterBy = 'day', startDate, endDate, year, month } = req.query;
   const userId = req.user._id;
-  const data = await jobService.jobAnalytics(filterBy, startDate, endDate, userId);
+  const data = await jobService.jobAnalytics(filterBy,  year, month ,startDate, endDate, userId);
 
   successResponse(res,StatusCodes.OK, data);
 

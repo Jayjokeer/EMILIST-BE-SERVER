@@ -314,85 +314,106 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
       applications: userApplications,
     };
   }
-export const jobAnalytics = async(filterBy: any, startDate: string,endDate: string, userId: string) =>{
-  const start = moment(startDate);
-  const end = moment(endDate);
 
-  if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
-   throw new BadRequestError('Invalid date range' );
-  }
 
-  const dateRange = [];
-  let currentDate = start.clone();
-
-  while (currentDate.isSameOrBefore(end)) {
-    dateRange.push(currentDate.clone());
-    currentDate = currentDate.add(1, filterBy);
-  }
-
-  const analyticsData = await Promise.all(
-    dateRange.map(async (date) => {
-      const dayStart = date.startOf(filterBy).toDate();
-      const dayEnd = date.endOf(filterBy).toDate();
-
-      const jobs = await Jobs.aggregate([
-        {
-          $match: {
-            userId,
-            createdAt: { $gte: dayStart, $lt: dayEnd }
-          }
-        },
-        {
-          $facet: {
-            totalJobs: [{ $count: 'count' }],
-            totalActiveJobs: [
-              { $match: { status: JobStatusEnum.active } },
-              { $count: 'count' }
-            ],
-            totalOverdueJobs: [
-              {
-                $match: {
-                  status: { $ne: JobStatusEnum.complete },
-                  'milestones.timeFrame': {
-                    $lt: new Date()
+  export const jobAnalytics = async (
+    filterBy: 'year' | 'month' | 'day',
+    year?: string,
+    month?: string,
+    startDate?: string,
+    endDate?: string,
+    userId?: string
+  ) => {
+    const start = startDate ? moment(startDate) : moment(year, 'YYYY').startOf('year');
+    const end = endDate ? moment(endDate) : start.clone().endOf(filterBy === 'year' ? 'year' : 'month');
+  
+    if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
+      throw new BadRequestError('Invalid date range');
+    }
+  
+    const dateRange = [];
+    let currentDate = start.clone();
+  
+    if (filterBy === 'year' && !month) {
+      while (currentDate.isSameOrBefore(end, 'month')) {
+        dateRange.push(currentDate.clone());
+        currentDate.add(1, 'month');
+      }
+    } else if (filterBy === 'month' || (filterBy === 'year' && month)) {
+      const targetMonth = month ? moment(`${year}-${month}`, 'YYYY-MM') : currentDate;
+      const monthEnd = targetMonth.clone().endOf('month');
+      currentDate = targetMonth.clone().startOf('month');
+  
+      while (currentDate.isSameOrBefore(monthEnd, 'day')) {
+        dateRange.push(currentDate.clone());
+        currentDate.add(1, 'day');
+      }
+    }
+  
+    const analyticsData = await Promise.all(
+      dateRange.map(async (date) => {
+        const dayStart = date.startOf(filterBy === 'year' && !month ? 'month' : 'day').toDate();
+        const dayEnd = date.endOf(filterBy === 'year' && !month ? 'month' : 'day').toDate();
+  
+        const jobs = await Jobs.aggregate([
+          {
+            $match: {
+              userId,
+              createdAt: { $gte: dayStart, $lt: dayEnd }
+            }
+          },
+          {
+            $facet: {
+              totalJobs: [{ $count: 'count' }],
+              totalActiveJobs: [
+                { $match: { status: JobStatusEnum.active } },
+                { $count: 'count' }
+              ],
+              totalOverdueJobs: [
+                {
+                  $match: {
+                    status: { $ne: JobStatusEnum.complete },
+                    'milestones.timeFrame': { $lt: new Date() }
                   }
-                }
-              },
-              { $count: 'count' }
-            ],
-            totalPausedJobs: [
-              { $match: { status: JobStatusEnum.paused } },
-              { $count: 'count' }
-            ],
-            totalCompletedJobs: [
-              { $match: { status: JobStatusEnum.complete } },
-              { $count: 'count' }
-            ]
+                },
+                { $count: 'count' }
+              ],
+              totalPausedJobs: [
+                { $match: { status: JobStatusEnum.paused } },
+                { $count: 'count' }
+              ],
+              totalCompletedJobs: [
+                { $match: { status: JobStatusEnum.complete } },
+                { $count: 'count' }
+              ]
+            }
+          },
+          {
+            $project: {
+              totalJobs: { $arrayElemAt: ['$totalJobs.count', 0] },
+              totalActiveJobs: { $arrayElemAt: ['$totalActiveJobs.count', 0] },
+              totalOverdueJobs: { $arrayElemAt: ['$totalOverdueJobs.count', 0] },
+              totalPausedJobs: { $arrayElemAt: ['$totalPausedJobs.count', 0] },
+              totalCompletedJobs: { $arrayElemAt: ['$totalCompletedJobs.count', 0] }
+            }
           }
-        },
-        {
-          $project: {
-            totalJobs: { $arrayElemAt: ['$totalJobs.count', 0] },
-            totalActiveJobs: { $arrayElemAt: ['$totalActiveJobs.count', 0] },
-            totalOverdueJobs: { $arrayElemAt: ['$totalOverdueJobs.count', 0] },
-            totalPausedJobs: { $arrayElemAt: ['$totalPausedJobs.count', 0] },
-            totalCompletedJobs: { $arrayElemAt: ['$totalCompletedJobs.count', 0] }
-          }
-        }
-      ]);
-      return {
-        day: date.format(filterBy === 'year' ? 'YYYY' : filterBy === 'month' ? 'MMM YYYY' : 'MMM D'),
-        totalJobs: jobs[0]?.totalJobs || 0,
-        totalActiveJobs: jobs[0]?.totalActiveJobs || 0,
-        totalOverdueJobs: jobs[0]?.totalOverdueJobs || 0,
-        totalPausedJobs: jobs[0]?.totalPausedJobs || 0,
-        totalCompletedJobs: jobs[0]?.totalCompletedJobs || 0,
-      };
-    })
-  );
-
-return analyticsData;
-};
+        ]);
+  
+        return {
+          period: date.format(filterBy === 'year' && !month ? 'MMM YYYY' : 'MMM D'),
+          totalJobs: jobs[0]?.totalJobs || 0,
+          totalActiveJobs: jobs[0]?.totalActiveJobs || 0,
+          totalOverdueJobs: jobs[0]?.totalOverdueJobs || 0,
+          totalPausedJobs: jobs[0]?.totalPausedJobs || 0,
+          totalCompletedJobs: jobs[0]?.totalCompletedJobs || 0,
+        };
+      })
+    );
+  
+    return analyticsData;
+  };
+  
+  
 export const fetchJobCount = async( userId: string)=>{
   const totalPendingJobs = await Jobs.countDocuments({ userId, status: JobStatusEnum.pending });
   const totalActiveJobs = await Jobs.countDocuments({ userId, status: JobStatusEnum.active });
