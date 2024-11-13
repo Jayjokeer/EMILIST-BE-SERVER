@@ -732,3 +732,11 @@ export const fetchProjectCountsController = catchAsync( async(req:JwtPayload, re
 
   successResponse(res,StatusCodes.OK, data);
 });
+export const projectAnalyticsController = catchAsync( async(req:JwtPayload, res: Response) =>{
+  const { startDate, endDate, year, month } = req.query;
+  const userId = req.user._id;
+  const data = await jobService.projectAnalytics( year, month ,startDate, endDate, userId);
+
+  successResponse(res,StatusCodes.OK, data);
+
+})
