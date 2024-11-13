@@ -85,3 +85,11 @@ export const deleteBusinessImageController = catchAsync( async (req: JwtPayload,
 
     successResponse(res,StatusCodes.OK, data);
 });
+export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
+    const { page = 1, limit = 10} = req.query;
+
+    const data = await businessService.fetchAllBusiness(    
+        Number(page),
+    Number(limit),);
+    successResponse(res,StatusCodes.OK, data);
+});

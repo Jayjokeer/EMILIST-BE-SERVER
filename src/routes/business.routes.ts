@@ -11,6 +11,7 @@ router.route("/update-business/:businessId").patch(userAuth,uploadBusinessImages
 router.route("/fetch-single-business/:businessId").get(userAuth,businesController.fetchSingleBusinessController);
 router.route("/fetch-user-business").get(userAuth,businesController.fetchUserBusinessController);
 router.route("/delete-business/:businessId/image/:imageId").delete(userAuth,businesController.deleteBusinessImageController);
+router.route("/fetch-all-business").get(userAuth,businesController.fetchAllBusinessController);
 
 
 export { router as BusinessRoute };

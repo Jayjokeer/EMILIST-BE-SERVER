@@ -120,3 +120,15 @@ export const fetchUserBusiness = async (userId: string)=>{
 export const fetchSingleBusiness = async (businessId: string)=>{
     return await Business.findById(businessId);
 }
+export const fetchAllBusiness = async (page:number, limit: number)=>{
+    const skip = (page - 1) * limit;
+
+    const business = await Business.find().skip(skip).limit(limit);
+    const totalBusinesses = await Business.countDocuments();
+    return {
+        business,
+        totalPages: Math.ceil( totalBusinesses / limit),
+        currentPage: page,
+        totalBusinesses,
+      };
+}
