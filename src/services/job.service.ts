@@ -316,77 +316,72 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
   }
 
 
-  export const jobAnalytics = async (
-    filterBy: 'year' | 'month' | 'day',
-    year?: string,
-    month?: string,
-    startDate?: string,
-    endDate?: string,
-    userId?: string
-  ) => {
-    const start = startDate ? moment(startDate) : moment(year, 'YYYY').startOf('year');
-    const end = endDate ? moment(endDate) : start.clone().endOf(filterBy === 'year' ? 'year' : 'month');
+  export const jobAnalytics = async (year: number = moment().year(), month?: number, startDate?: string, endDate?: string, userId?: string) => {
+    let start, end;
   
-    if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
-      throw new BadRequestError('Invalid date range');
+    if (startDate && endDate) {
+      start = moment(startDate);
+      end = moment(endDate);
+      if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
+        throw new BadRequestError('Invalid date range');
+      }
+    } else if (year && month) {
+      start = moment(`${year}-${month}-01`);
+      end = start.clone().endOf('month');
+    } else if (year) {
+      start = moment(`${year}-01-01`);
+      end = moment(`${year}-12-31`);
+    } else {
+      throw new BadRequestError('Year is required');
     }
   
     const dateRange = [];
     let currentDate = start.clone();
   
-    if (filterBy === 'year' && !month) {
-      while (currentDate.isSameOrBefore(end, 'month')) {
-        dateRange.push(currentDate.clone());
-        currentDate.add(1, 'month');
-      }
-    } else if (filterBy === 'month' || (filterBy === 'year' && month)) {
-      const targetMonth = month ? moment(`${year}-${month}`, 'YYYY-MM') : currentDate;
-      const monthEnd = targetMonth.clone().endOf('month');
-      currentDate = targetMonth.clone().startOf('month');
+    const interval = month ? 'days' : 'months';
   
-      while (currentDate.isSameOrBefore(monthEnd, 'day')) {
-        dateRange.push(currentDate.clone());
-        currentDate.add(1, 'day');
-      }
+    while (currentDate.isSameOrBefore(end)) {
+      dateRange.push(currentDate.clone());
+      currentDate = currentDate.add(1, interval);
     }
   
     const analyticsData = await Promise.all(
       dateRange.map(async (date) => {
-        const dayStart = date.startOf(filterBy === 'year' && !month ? 'month' : 'day').toDate();
-        const dayEnd = date.endOf(filterBy === 'year' && !month ? 'month' : 'day').toDate();
+        const dayStart = date.startOf(interval).toDate();
+        const dayEnd = date.endOf(interval).toDate();
   
         const jobs = await Jobs.aggregate([
           {
             $match: {
               userId,
-              createdAt: { $gte: dayStart, $lt: dayEnd }
-            }
+              createdAt: { $gte: dayStart, $lt: dayEnd },
+            },
           },
           {
             $facet: {
               totalJobs: [{ $count: 'count' }],
               totalActiveJobs: [
                 { $match: { status: JobStatusEnum.active } },
-                { $count: 'count' }
+                { $count: 'count' },
               ],
               totalOverdueJobs: [
                 {
                   $match: {
                     status: { $ne: JobStatusEnum.complete },
-                    'milestones.timeFrame': { $lt: new Date() }
-                  }
+                    'milestones.timeFrame': { $lt: new Date() },
+                  },
                 },
-                { $count: 'count' }
+                { $count: 'count' },
               ],
               totalPausedJobs: [
                 { $match: { status: JobStatusEnum.paused } },
-                { $count: 'count' }
+                { $count: 'count' },
               ],
               totalCompletedJobs: [
                 { $match: { status: JobStatusEnum.complete } },
-                { $count: 'count' }
-              ]
-            }
+                { $count: 'count' },
+              ],
+            },
           },
           {
             $project: {
@@ -394,13 +389,13 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
               totalActiveJobs: { $arrayElemAt: ['$totalActiveJobs.count', 0] },
               totalOverdueJobs: { $arrayElemAt: ['$totalOverdueJobs.count', 0] },
               totalPausedJobs: { $arrayElemAt: ['$totalPausedJobs.count', 0] },
-              totalCompletedJobs: { $arrayElemAt: ['$totalCompletedJobs.count', 0] }
-            }
-          }
+              totalCompletedJobs: { $arrayElemAt: ['$totalCompletedJobs.count', 0] },
+            },
+          },
         ]);
   
         return {
-          period: date.format(filterBy === 'year' && !month ? 'MMM YYYY' : 'MMM D'),
+          period: date.format(interval === 'months' ? 'MMM YYYY' : 'MMM D, YYYY'),
           totalJobs: jobs[0]?.totalJobs || 0,
           totalActiveJobs: jobs[0]?.totalActiveJobs || 0,
           totalOverdueJobs: jobs[0]?.totalOverdueJobs || 0,
@@ -412,7 +407,6 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
   
     return analyticsData;
   };
-  
   
 export const fetchJobCount = async( userId: string)=>{
   const totalPendingJobs = await Jobs.countDocuments({ userId, status: JobStatusEnum.pending });
