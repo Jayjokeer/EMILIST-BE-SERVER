@@ -91,11 +91,26 @@ export const updateBusiness = async (  businessId: string, businessData: any, fi
     business.state = businessData.state || business.state;
     business.country = businessData.country || business.country;
     business.bio = businessData.bio || business.bio;
+    business.businessName = businessData.businessName || business.businessName;
+    business.yearFounded = businessData.yearFounded || business.yearFounded;
+    business.numberOfEmployee = businessData.numberOfEmployee || business.numberOfEmployee;
+    business.businessAddress = businessData.businessAddress || business.businessAddress;
+    business.businessCity = businessData.businessCity || business.businessCity;
+    business.businessState = businessData.businessState || business.businessState;
+    business.businessCountry = businessData.businessCountry || business.businessCountry;
+    business.startingPrice = businessData.startingPrice || business.startingPrice;
+    business.noticePeriod = businessData.noticePeriod || business.noticePeriod;
+    business.businessDescription = businessData.businessDescription || business.businessDescription;
 
     if (files['profileImage']) {
         business.profileImage = files['profileImage'].path;
     }
-
+    if (files['businessImages'] && files['businessImages'].length > 0) {
+        const newBusinessImages = files['businessImages'].map((file: any) => ({
+            imageUrl: file.path,
+        }));
+        business.businessImages.push(...newBusinessImages);
+    }
     await business.save();
     return business;
 };

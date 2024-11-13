@@ -17,7 +17,12 @@ export const createBusinessController = catchAsync( async (req: JwtPayload, res:
     if (req.files && req.files['profileImage'] && req.files['profileImage'][0]) {
         businessData.profileImage = req.files['profileImage'][0].path;
     }
-    
+
+    if (req.files && req.files['businessImages']) {
+        businessData.businessImages = req.files['businessImages'].map((file: Express.Multer.File) => ({
+            imageUrl: file.path
+        }));
+    }
     if ( businessData.certification ) {
         businessData.certification.forEach((certData: any, index: number) => {
             let certificatePath;
@@ -39,7 +44,9 @@ export const updateBusinessController = catchAsync( async (req: JwtPayload, res:
     const { businessId} = req.params;
 
     const data = await businessService.updateBusiness( businessId,businessData, req.files);
-
+    if(String(data.userId) !== String(req.user._id)){
+        throw new UnauthorizedError("Unauthorized");
+    }
     successResponse(res,StatusCodes.OK, data);
 });
 
@@ -52,5 +59,29 @@ export const fetchUserBusinessController = catchAsync( async (req: JwtPayload, r
 export const fetchSingleBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
     const {businessId} = req.params;
     const data = await businessService.fetchSingleBusiness(String(businessId));
+    successResponse(res,StatusCodes.OK, data);
+});
+export const deleteBusinessImageController = catchAsync( async (req: JwtPayload, res: Response) => {
+    const {businessId, imageId} = req.params;
+    const business= await businessService.fetchSingleBusiness(String(businessId));
+    if(!business){
+        throw new NotFoundError("Business not found!");
+    }
+    if(String(business.userId) !== String(req.user._id)){
+        throw new UnauthorizedError("Unauthorized");
+    }
+    const imageIndex = business.businessImages?.findIndex(
+        (image: { _id: any }) => image._id.toString() === imageId
+    );
+
+    if (imageIndex === -1) {
+        throw new NotFoundError("Image not found");
+    }
+
+    business.businessImages?.splice(imageIndex, 1);
+
+    await business.save();
+    const data = await businessService.fetchSingleBusiness(String(businessId));
+
     successResponse(res,StatusCodes.OK, data);
 });

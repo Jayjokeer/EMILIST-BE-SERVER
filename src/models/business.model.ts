@@ -31,6 +31,9 @@ const ServicesRenderedSchema = new Schema({
     coverage: {type: String},
     description: {type: String},
   })
+  const BusinessImagesSchema = new Schema({
+    imageUrl: {type: String},
+  })
 const businessSchema: Schema = new mongoose.Schema(
   {
     services: [{ type: String}],
@@ -50,6 +53,17 @@ const businessSchema: Schema = new mongoose.Schema(
     insurance: [{ type: InsuranceSchema}],
     coverageArea: [{type: String}],
     userId: {type: Schema.Types.ObjectId, ref: 'Users'},
+    businessName: {type: String},
+    yearFounded: {type: String},
+    numberOfEmployee: {type: Number},
+    businessAddress: {type: String},
+    businessCity: {type: String},
+    businessState: {type: String},
+    businessCountry: {type: String},
+    startingPrice: {type: Number},
+    noticePeriod: {type: String},
+    businessDescription: {type: String},
+    businessImages: [{type:  BusinessImagesSchema }],
   },
   { timestamps: true }
 

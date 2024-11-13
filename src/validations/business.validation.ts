@@ -97,6 +97,46 @@ export const validateBusinessRegistration = (req: Request, res: Response, next: 
           }),
         })
       ).optional(),
+      businessName: Joi.string().required().messages({
+        'string.base': 'Business name must be a string',
+        'string.empty': 'Business name is required',
+      }),
+      yearFounded: Joi.string().required().messages({
+        'string.base': 'Year founded must be a string',
+        'string.empty': 'Year founded is required',
+      }),
+      numberOfEmployee: Joi.number().required().messages({
+        'number.base': 'number of employees must be a number',
+        'number.empty': 'number of employees is required',
+      }),
+      businessAddress: Joi.string().required().messages({
+        'string.base': 'Business address must be a string',
+        'string.empty': 'Business address is required',
+      }),
+      businessCity: Joi.string().required().messages({
+        'string.base': 'City must be a string',
+        'string.empty': 'City is required',
+      }),
+      businessState: Joi.string().required().messages({
+        'string.base': 'State must be a string',
+        'string.empty': 'State is required',
+      }),
+      businessCountry: Joi.string().required().messages({
+        'string.base': 'Country must be a string',
+        'string.empty': 'Country is required',
+      }),
+      startingPrice: Joi.number().required().messages({
+        'number.base': 'Starting price must be a number',
+        'number.empty': 'Starting Price is required',
+      }),
+      noticePeriod: Joi.string().required().messages({
+        'string.base': 'Notice period must be a string',
+        'string.empty': 'Notice period is required',
+      }),
+      businessDescription: Joi.string().required().messages({
+        'string.base': 'Description must be a string',
+        'string.empty': 'Description is required',
+      }),
     });
   
     const { error } = businessValidation.validate(req.body, { abortEarly: false });
@@ -217,6 +257,36 @@ export const validateBusinessRegistration = (req: Request, res: Response, next: 
           }),
         })
       ).optional(),
+      businessName: Joi.string().optional().messages({
+        'string.base': 'Business name must be a string',
+      }),
+      yearFounded: Joi.string().optional().messages({
+        'string.base': 'Year founded must be a string',
+      }),
+      numberOfEmployee: Joi.number().optional().messages({
+        'number.base': 'number of employees must be a number',
+      }),
+      businessAddress: Joi.string().optional().messages({
+        'string.base': 'Business address must be a string',
+      }),
+      businessCity: Joi.string().optional().messages({
+        'string.base': 'City must be a string',
+      }),
+      businessState: Joi.string().optional().messages({
+        'string.base': 'State must be a string',
+      }),
+      businessCountry: Joi.string().optional().messages({
+        'string.base': 'Country must be a string',
+      }),
+      startingPrice: Joi.number().optional().messages({
+        'number.base': 'Starting price must be a number',
+      }),
+      noticePeriod: Joi.string().optional().messages({
+        'string.base': 'Notice period must be a string',
+      }),
+      businessDescription: Joi.string().optional().messages({
+        'string.base': 'Description must be a string',
+      }),
     });
   
     const { error } = businessValidation.validate(req.body, { abortEarly: false });

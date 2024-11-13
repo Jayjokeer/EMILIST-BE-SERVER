@@ -46,6 +46,17 @@ export interface IBusiness extends Document {
   insurance?: IInsurance[];
   coverageArea?: string[];
   userId?: Types.ObjectId;
+  businessName?:string;
+  yearFounded?: string;
+  numberOfEmployee?: number;
+  businessAddress?:string;
+  businessCity?: string;
+  businessState?: string;
+  businessCountry?: string;
+  startingPrice?: number;
+  noticePeriod?: string;
+  businessDescription?: string;
+  businessImages?: any ;
 }
 
 export default IBusiness;

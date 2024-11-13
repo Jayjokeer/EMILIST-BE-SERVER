@@ -10,6 +10,7 @@ router.route("/register-business").post(userAuth,uploadBusinessImages,validateBu
 router.route("/update-business/:businessId").patch(userAuth,uploadBusinessImages,validateBusinessUpdate,businesController.updateBusinessController);
 router.route("/fetch-single-business/:businessId").get(userAuth,businesController.fetchSingleBusinessController);
 router.route("/fetch-user-business").get(userAuth,businesController.fetchUserBusinessController);
+router.route("/delete-business/:businessId/image/:imageId").delete(userAuth,businesController.deleteBusinessImageController);
 
 
 export { router as BusinessRoute };
