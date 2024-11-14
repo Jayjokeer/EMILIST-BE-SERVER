@@ -68,8 +68,9 @@ const projectSchema: Schema = new mongoose.Schema(
     },
     quote: {
       type: QuoteSchema,
-    }
-
+    },
+    businessId: {type: Schema.Types.ObjectId,
+    ref: 'Business',  }
   
   },
   { timestamps: true }

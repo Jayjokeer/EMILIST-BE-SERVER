@@ -23,5 +23,6 @@ import { ProjectStatusEnum } from '../enums/project.enum';
     biddableDetails?: any;
     directJobStatus?: ProjectStatusEnum;
     quote?: any 
+    businessId?: string;
   }
   

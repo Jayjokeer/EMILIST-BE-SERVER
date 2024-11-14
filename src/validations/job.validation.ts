@@ -173,6 +173,9 @@ export const validateProjectApplication = (req: Request, res: Response, next: Ne
     jobId: Joi.string().required().messages({
       'string.empty': 'Job ID is required',
     }),
+    businessId: Joi.string().required().messages({
+      'string.empty': 'Business ID is required',
+    }),
     type: Joi.string().valid('biddable', 'regular').required().messages({
       'any.only': 'Invalid job type, must be "biddable" or "regular"',
       'any.required': 'Job type is required',

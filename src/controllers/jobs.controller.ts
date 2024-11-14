@@ -14,6 +14,8 @@ import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
 import { directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage } from "../utils/templates";
 import mongoose from "mongoose";
+import * as  businessService from "../services/business.service";
+
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const job: IJob = req.body;
@@ -146,7 +148,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   
   export const applyForJobController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user.id;
-    const { jobId, type, maximumPrice, milestones } = req.body;
+    const { jobId, type, maximumPrice, milestones , businessId} = req.body;
   
    
     const job = await jobService.fetchJobById(String(jobId));
@@ -159,11 +161,15 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     if(job.status !== JobStatusEnum.pending){
       throw new BadRequestError("You can only apply to a pending job!")
     }
-    
+    const business = await businessService.fetchSingleBusiness(String(businessId));
+    if(!business){
+      throw new NotFoundError("Business not found!");
+    }
     const payload: any = {
       job: jobId,
       user: userId,
       creator: job.userId,
+      businessId: businessId,
     };
   
     
