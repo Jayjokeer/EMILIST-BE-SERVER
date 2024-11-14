@@ -29,6 +29,8 @@ const userSchema: Schema = new mongoose.Schema(
     profileImage: {type: String},
     googleId: {type: String},
     accessToken: {type: String},
+    businesses: [{ type: Schema.Types.ObjectId, ref: 'Business' }],
+
   },
   { timestamps: true }
 

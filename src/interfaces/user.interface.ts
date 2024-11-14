@@ -19,6 +19,7 @@ export interface IUser {
     profileImage?: string;
     status?: string; 
     accessToken?: string;
+    businesses?: any;
   }
   
 export interface ICreateUser {

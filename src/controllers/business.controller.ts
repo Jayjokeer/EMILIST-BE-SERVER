@@ -8,12 +8,17 @@ import { JwtPayload } from "jsonwebtoken";
 import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/error";
 import IBusiness from "../interfaces/business.interface";
 import * as  businessService from "../services/business.service";
+import * as  authService from "../services/auth.service";
 
 
 export const createBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
     const businessData = req.body;
     const userId = req.user._id;
     businessData.userId  = userId;
+    const user = await authService.findUserById(String(userId));
+    if(!user){
+        throw new NotFoundError("user not found!");
+    }
     if (req.files && req.files['profileImage'] && req.files['profileImage'][0]) {
         businessData.profileImage = req.files['profileImage'][0].path;
     }
@@ -35,6 +40,8 @@ export const createBusinessController = catchAsync( async (req: JwtPayload, res:
     }
     
     const data = await businessService.createBusiness(businessData);
+    user.businesses?.push(data._id);
+    await user.save();
 
     successResponse(res,StatusCodes.CREATED, data);
 });

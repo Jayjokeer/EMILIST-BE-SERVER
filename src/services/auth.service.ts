@@ -4,7 +4,10 @@ export const findUserByEmail = async (email: string) => {
     return await Users.findOne({email: email});
   };
 export const findUserById = async (id: string)=>{
-    return await Users.findById(id,{password: 0});
+    return await Users.findById(id,{password: 0}).populate({
+      path: 'businesses',
+      select: 'businessId businessName', 
+    });
 };
 export const createUser = async (data:  ICreateUser) =>{
     return await Users.create(data);
