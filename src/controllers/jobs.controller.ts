@@ -420,10 +420,9 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
 
   export const acceptDirectJobController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {projectId} = req.params;
-    const {status} = req.body;
+    const {status, businessId} = req.body;
     const user = req.user;
     const project = await projectService.fetchProjectById(projectId);
-    console.log(user)
     if(!project){
       throw new NotFoundError("Application not found!");
     }
@@ -438,7 +437,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       job.status = JobStatusEnum.active;
       job.milestones[0].status = MilestoneEnum.active;
       project.status= ProjectStatusEnum.accepted;
-
+      project.businessId= businessId; 
       project.directJobStatus= ProjectStatusEnum.accepted;
     }else if(status == ProjectStatusEnum.rejected){
       project.status= ProjectStatusEnum.rejected;
