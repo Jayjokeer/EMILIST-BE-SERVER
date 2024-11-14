@@ -112,9 +112,8 @@ export const validateBusinessRegistration = (req: Request, res: Response, next: 
         'number.base': 'number of employees must be a number',
         'number.empty': 'number of employees is required',
       }),
-      businessAddress: Joi.string().required().messages({
+      businessAddress: Joi.string().optional().messages({
         'string.base': 'Business address must be a string',
-        'string.empty': 'Business address is required',
       }),
       businessCity: Joi.string().required().messages({
         'string.base': 'City must be a string',
