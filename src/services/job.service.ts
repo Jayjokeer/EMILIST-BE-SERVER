@@ -539,12 +539,12 @@ export const projectAnalytics = async (year: number = moment().year(), month?: n
         },
         {
           $facet: {
-            totalJobs: [{ $count: 'count' }],
-            totalActiveJobs: [
+            totalProjects: [{ $count: 'count' }],
+            totalActiveProjects: [
               { $match: { status: JobStatusEnum.active } },
               { $count: 'count' },
             ],
-            totalOverdueJobs: [
+            totalOverdueProjects: [
               {
                 $match: {
                   status: { $ne: JobStatusEnum.complete },
@@ -553,11 +553,11 @@ export const projectAnalytics = async (year: number = moment().year(), month?: n
               },
               { $count: 'count' },
             ],
-            totalPausedJobs: [
+            totalPausedProjects: [
               { $match: { status: JobStatusEnum.paused } },
               { $count: 'count' },
             ],
-            totalCompletedJobs: [
+            totalCompletedProjects: [
               { $match: { status: JobStatusEnum.complete } },
               { $count: 'count' },
             ],
