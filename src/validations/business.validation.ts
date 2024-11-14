@@ -18,6 +18,9 @@ export const validateBusinessRegistration = (req: Request, res: Response, next: 
       address: Joi.string().optional().messages({
         'string.base': 'Address must be a string',
       }),
+      currency: Joi.string().optional().messages({
+        'string.base': 'Currency must be a string',
+      }),
       phoneNumber: Joi.string().optional().messages({
         'string.base': 'Phone number must be a string',
       }),
