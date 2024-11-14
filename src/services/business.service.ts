@@ -133,3 +133,7 @@ export const fetchAllBusiness = async (page:number, limit: number)=>{
         totalBusinesses,
       };
 }
+
+export const deleteBusiness = async (businessId: string)=>{
+    return await Business.findByIdAndDelete(businessId);
+}

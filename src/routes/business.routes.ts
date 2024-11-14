@@ -12,6 +12,7 @@ router.route("/fetch-single-business/:businessId").get(userAuth,businesControlle
 router.route("/fetch-user-business").get(userAuth,businesController.fetchUserBusinessController);
 router.route("/delete-business/:businessId/image/:imageId").delete(userAuth,businesController.deleteBusinessImageController);
 router.route("/fetch-all-business").get(userAuth,businesController.fetchAllBusinessController);
+router.route("/delete-business/:businessId").delete(userAuth,businesController.deleteBusinessController);
 
 
 export { router as BusinessRoute };

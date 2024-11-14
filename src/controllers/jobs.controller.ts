@@ -401,7 +401,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       });
     }
   
-    successResponse(res, StatusCodes.OK, data);
+    return  successResponse(res, StatusCodes.OK, data);
   });
   
   export const deleteFileController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -415,7 +415,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
 
     await job.save();
 
-    successResponse(res, StatusCodes.OK, "Image deleted successfully");
+    return successResponse(res, StatusCodes.OK, "Image deleted successfully");
   });
 
   export const acceptDirectJobController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -449,7 +449,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     await project.save();
     await job.save();
 
-    successResponse(res, StatusCodes.OK, "Status changed successfully");
+    return  successResponse(res, StatusCodes.OK, "Status changed successfully");
   });
   export const fetchUserAppliedJobsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const user = req.user;
@@ -461,7 +461,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const statusEnum = status ? (status as JobStatusEnum) : null;
 
    const data = await jobService.fetchUserJobApplications(user.id, skip, limit,statusEnum, page)
-    successResponse(res, StatusCodes.OK, data);
+   return  successResponse(res, StatusCodes.OK, data);
   });
   export const fetchApplicationByStatusController  = catchAsync(async (req: JwtPayload, res: Response) => {
     const user = req.user;
@@ -472,7 +472,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const skip = (page - 1) * limit;
 
    const data = await jobService.fetchUserApplications(user.id, skip, limit,status, page)
-    successResponse(res, StatusCodes.OK, data);
+   return  successResponse(res, StatusCodes.OK, data);
   });
   export const updateMilestoneStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
     const user = req.user;
@@ -534,7 +534,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     await job.save();
     const data = await jobService.fetchJobById(String(jobId));
 
-    successResponse(res, StatusCodes.OK, data);
+    return  successResponse(res, StatusCodes.OK, data);
   });
   export const requestForQuoteController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {jobId} = req.params;
@@ -560,7 +560,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const { html, subject } = requestForQuoteMessage(user.userName, req.user.userName, String(job._id));
     await sendEmail(user.email, subject, html); 
 
-    successResponse(res, StatusCodes.OK, 'Request for quote sent successfully');
+    return  successResponse(res, StatusCodes.OK, 'Request for quote sent successfully');
   });
   export const postQuoteController = catchAsync(async (req: JwtPayload, res: Response) => {
     const loggedInUser =  req.user;
@@ -601,7 +601,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const { html, subject } = postQuoteMessage(user.userName, req.user.userName, String(job._id));
     await sendEmail(user.email, subject, html); 
 
-    successResponse(res, StatusCodes.OK, 'Quote sent successfully');
+    return  successResponse(res, StatusCodes.OK, 'Quote sent successfully');
   });
 
   export const acceptQuoteController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -646,7 +646,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     await project.save();
     await job.save()
     const data = await jobService.fetchJobById(String(job._id));
-    successResponse(res, StatusCodes.OK, data);
+    return successResponse(res, StatusCodes.OK, data);
   });
   export const updateMilestonePaymentController = catchAsync( async (req:JwtPayload, res: Response) => {
     const {amountPaid, paymentMethod, date, jobId,milestoneId } = req.body;
@@ -675,7 +675,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     await job.save();
     const data = await jobService.fetchJobById(String(jobId));
 
-    successResponse(res,StatusCodes.OK, data);
+    return   successResponse(res,StatusCodes.OK, data);
 });
 
 export const jobAnalyticsController = catchAsync( async(req:JwtPayload, res: Response) =>{
@@ -683,7 +683,7 @@ export const jobAnalyticsController = catchAsync( async(req:JwtPayload, res: Res
   const userId = req.user._id;
   const data = await jobService.jobAnalytics( year, month ,startDate, endDate, userId);
 
-  successResponse(res,StatusCodes.OK, data);
+  return successResponse(res,StatusCodes.OK, data);
 
 })
 
@@ -722,26 +722,26 @@ export const closeContractController = catchAsync( async(req:JwtPayload, res: Re
   await job.save();
   await project.save();
 
-  successResponse(res,StatusCodes.OK, "Job closed successfully");
+  return successResponse(res,StatusCodes.OK, "Job closed successfully");
 
 })
 export const fetchJobCountsController = catchAsync( async(req:JwtPayload, res: Response) =>{
   const userId = req.user._id;
   const data = await jobService.fetchJobCount( String(userId));
 
-  successResponse(res,StatusCodes.OK, data);
+  return  successResponse(res,StatusCodes.OK, data);
 });
 export const fetchProjectCountsController = catchAsync( async(req:JwtPayload, res: Response) =>{
   const userId = req.user._id;
   const data = await jobService.fetchProjectCounts( String(userId));
 
-  successResponse(res,StatusCodes.OK, data);
+  return successResponse(res,StatusCodes.OK, data);
 });
 export const projectAnalyticsController = catchAsync( async(req:JwtPayload, res: Response) =>{
   const { startDate, endDate, year, month } = req.query;
   const userId = req.user._id;
   const data = await jobService.projectAnalytics( year, month ,startDate, endDate, userId);
 
-  successResponse(res,StatusCodes.OK, data);
+  return successResponse(res,StatusCodes.OK, data);
 
 })

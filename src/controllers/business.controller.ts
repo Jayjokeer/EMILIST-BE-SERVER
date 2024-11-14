@@ -54,19 +54,19 @@ export const updateBusinessController = catchAsync( async (req: JwtPayload, res:
     if(String(data.userId) !== String(req.user._id)){
         throw new UnauthorizedError("Unauthorized");
     }
-    successResponse(res,StatusCodes.OK, data);
+    return  successResponse(res,StatusCodes.OK, data);
 });
 
 export const fetchUserBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
     const data = await businessService.fetchUserBusiness( userId);
 
-    successResponse(res,StatusCodes.OK, data);
+    return successResponse(res,StatusCodes.OK, data);
 });
 export const fetchSingleBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
     const {businessId} = req.params;
     const data = await businessService.fetchSingleBusiness(String(businessId));
-    successResponse(res,StatusCodes.OK, data);
+    return  successResponse(res,StatusCodes.OK, data);
 });
 export const deleteBusinessImageController = catchAsync( async (req: JwtPayload, res: Response) => {
     const {businessId, imageId} = req.params;
@@ -90,7 +90,7 @@ export const deleteBusinessImageController = catchAsync( async (req: JwtPayload,
     await business.save();
     const data = await businessService.fetchSingleBusiness(String(businessId));
 
-    successResponse(res,StatusCodes.OK, data);
+    return successResponse(res,StatusCodes.OK, data);
 });
 export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
     const { page = 1, limit = 10} = req.query;
@@ -98,5 +98,13 @@ export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, re
     const data = await businessService.fetchAllBusiness(    
         Number(page),
     Number(limit),);
-    successResponse(res,StatusCodes.OK, data);
+    return  successResponse(res,StatusCodes.OK, data);
+});
+
+export const deleteBusinessController =  catchAsync( async (req: JwtPayload, res: Response) => {
+    const { businessId} = req.params;
+
+   const data=   await businessService.deleteBusiness( businessId );
+   console.log(data)
+    return  successResponse(res,StatusCodes.OK, "Bussiness deleted!");
 });
