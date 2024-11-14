@@ -57,6 +57,7 @@ export interface IBusiness extends Document {
   noticePeriod?: string;
   businessDescription?: string;
   businessImages?: any ;
+  currency?: string; 
 }
 
 export default IBusiness;

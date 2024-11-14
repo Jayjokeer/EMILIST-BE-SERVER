@@ -101,6 +101,7 @@ export const updateBusiness = async (  businessId: string, businessData: any, fi
     business.startingPrice = businessData.startingPrice || business.startingPrice;
     business.noticePeriod = businessData.noticePeriod || business.noticePeriod;
     business.businessDescription = businessData.businessDescription || business.businessDescription;
+    business.currency = businessData.currency || business.currency;
 
     if (files['profileImage']) {
         business.profileImage = files['profileImage'].path;

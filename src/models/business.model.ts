@@ -62,6 +62,7 @@ const businessSchema: Schema = new mongoose.Schema(
     businessCountry: {type: String},
     startingPrice: {type: Number},
     noticePeriod: {type: String},
+    currency: {type: String},
     businessDescription: {type: String},
     businessImages: [{type:  BusinessImagesSchema }],
   },
