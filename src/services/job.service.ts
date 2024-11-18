@@ -587,6 +587,30 @@ export const projectAnalytics = async (year: number = moment().year(), month?: n
 
   return analyticsData;
 };
-  //  export const findJobsForCron = async () =>{
-  //   return await Jobs.findOneAndDelete({userId: userId, _id: jobId});
-  //  };
+
+  // export const checkOverdueMilestones = async () => {
+  //   const jobs = await Jobs.find({
+  //     status: { $in: [JobStatusEnum.active, JobStatusEnum.paused] },
+  //     'milestones.status': { $in: [MilestoneEnum.pending, MilestoneEnum.active, MilestoneEnum.paused] },
+  //   });
+  
+  //   const now = new Date();
+  
+  //   jobs.forEach(async (job) => {
+  //     const currentMilestone = job.milestones.find(
+  //       (milestone: IMilestone) =>
+  //         milestone.status !== MilestoneEnum.completed && milestone.status !== MilestoneEnum.overdue
+  //     );
+  
+  //     if (currentMilestone && currentMilestone.timeFrame && job.startDate) {
+  //       const dueDate = new Date(job.startDate);
+  //       dueDate.setDate(dueDate.getDate() + Number(currentMilestone.timeFrame.number));
+  
+  //       if (dueDate < now) {
+  //         job.status = JobStatusEnum.;
+  //         currentMilestone.status = MilestoneEnum.overdue;
+  //         await job.save();
+  //       }
+  //     }
+  //   });
+  // };

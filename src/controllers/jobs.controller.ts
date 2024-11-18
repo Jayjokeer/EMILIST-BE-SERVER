@@ -329,29 +329,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const data = await jobService.fetchJobById(String(job._id));
     successResponse(res, StatusCodes.OK, data);
   });
-  // export const checkOverdueMilestones = async () => {
-  //   const job = await jobs.find({ 'milestones.status': MilestoneEnum.pending });
-  //   const now = new Date();
-  
-  //   job.forEach(async (job: IJob) => {
-  //     let milestonesUpdated = false;
-  
-  //     job.milestones.forEach((milestone: IMilestone) => {
-  //       if (milestone.status === MilestoneEnum.pending && milestone.timeFrame && job.startDate) {
-  //         const dueDate = new Date(job.startDate);
-  //         dueDate.setDate(dueDate.getDate() + Number(milestone.timeFrame.number));
-  //         if (dueDate < now) {
-  //           milestone.status = MilestoneEnum.overdue;
-  //           milestonesUpdated = true;
-  //         }
-  //       }
-  //     });
-  
-  //     if (milestonesUpdated) {
-  //       await job.save();
-  //     }
-  //   });
-  // };
+
   export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user.id; 
     const { status } = req.query;
@@ -744,4 +722,28 @@ export const projectAnalyticsController = catchAsync( async(req:JwtPayload, res:
 
   return successResponse(res,StatusCodes.OK, data);
 
-})
+});
+
+  // export const checkOverdueMilestones = async () => {
+  //   const job = await jobs.find({ 'milestones.status': MilestoneEnum.pending });
+  //   const now = new Date();
+  
+  //   job.forEach(async (job: IJob) => {
+  //     let milestonesUpdated = false;
+  
+  //     job.milestones.forEach((milestone: IMilestone) => {
+  //       if (milestone.status === MilestoneEnum.pending && milestone.timeFrame && job.startDate) {
+  //         const dueDate = new Date(job.startDate);
+  //         dueDate.setDate(dueDate.getDate() + Number(milestone.timeFrame.number));
+  //         if (dueDate < now) {
+  //           milestone.status = MilestoneEnum.overdue;
+  //           milestonesUpdated = true;
+  //         }
+  //       }
+  //     });
+  
+  //     if (milestonesUpdated) {
+  //       await job.save();
+  //     }
+  //   });
+  // };

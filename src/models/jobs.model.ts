@@ -1,7 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { JobExpertLevel, JobPeriod, JobType, MilestoneEnum, MilestonePaymentStatus, JobStatusEnum, RatingEnum  } from '../enums/jobs.enum';
 import { IJob, IMilestone } from '../interfaces/jobs.interface';
-import { date } from 'joi';
 
 const MilestoneSchema = new Schema<IMilestone>({
     timeFrame: {

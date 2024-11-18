@@ -100,6 +100,7 @@ const { error } = jobValidation.validate(req.body, { abortEarly: false });
   if (error) {
     const errorMessages = error.details.map((detail) => detail.message);
      res.status(400).json({ errors: errorMessages });
+     return;
   }
 
   next();
@@ -164,6 +165,7 @@ export const validateUpdateJob = (req: Request, res: Response, next: NextFunctio
   if (error) {
     const errorMessages = error.details.map((detail) => detail.message);
    res.status(400).json({ errors: errorMessages });
+   return;
   }
 
   next();
@@ -213,6 +215,7 @@ export const validateProjectApplication = (req: Request, res: Response, next: Ne
   const { error } = projectValidation.validate(req.body);
   if (error) {
      res.status(400).json({ message: error.details[0].message });
+     return;
   }
   next();
 };
@@ -260,6 +263,7 @@ export const validateMilestoneStatusUpdate = (req: Request, res: Response, next:
   if (error) {
     const errorMessages = error.details.map((detail) => detail.message);
     res.status(400).json({ errors: errorMessages });
+    return;
   }
 
   next();
@@ -302,6 +306,7 @@ export const validatePostQuote = (req: Request, res: Response, next: NextFunctio
   const { error } = quoteValidation.validate(req.body, { abortEarly: false });
   if (error) {
     res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+    return;
   }
 
   next();
@@ -334,7 +339,9 @@ export const validateUpdateMilestonePayment= (req: Request, res: Response, next:
   const { error } = milestoneValidation.validate(req.body, { abortEarly: false });
   if (error) {
     res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+    return;
   }
+
 
   next();
 };

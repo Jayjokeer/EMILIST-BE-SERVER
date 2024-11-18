@@ -41,8 +41,8 @@ export const validateBusinessRegistration = (req: Request, res: Response, next: 
       }),
       renderedServices: Joi.array().items(
         Joi.object({
-          name: Joi.string().required().messages({
-            'string.empty': 'Service name is required',
+          name: Joi.string().optional().messages({
+            'string.base': 'Service name must be a string',
           }),
           status: Joi.string().optional().messages({
             'string.base': 'Status must be a string',
@@ -115,9 +115,8 @@ export const validateBusinessRegistration = (req: Request, res: Response, next: 
       businessAddress: Joi.string().optional().messages({
         'string.base': 'Business address must be a string',
       }),
-      businessCity: Joi.string().required().messages({
+      businessCity: Joi.string().optional().messages({
         'string.base': 'City must be a string',
-        'string.empty': 'City is required',
       }),
       businessState: Joi.string().required().messages({
         'string.base': 'State must be a string',
@@ -145,7 +144,8 @@ export const validateBusinessRegistration = (req: Request, res: Response, next: 
     
     if (error) {
       const errorMessages = error.details.map((detail) => detail.message);
-      res.status(400).json({ errors: errorMessages });
+       res.status(400).json({ errors: errorMessages });
+       return
     }
   
     next();
@@ -296,6 +296,7 @@ export const validateBusinessRegistration = (req: Request, res: Response, next: 
     if (error) {
       const errorMessages = error.details.map((detail) => detail.message);
      res.status(400).json({ errors: errorMessages });
+     return;
     }
   
     next();
