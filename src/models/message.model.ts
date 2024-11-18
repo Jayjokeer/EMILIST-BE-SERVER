@@ -2,9 +2,10 @@ import mongoose, { Document, Schema } from 'mongoose';
 import { IMessage } from '../interfaces/message.interface';
 
 const messageSchema = new Schema<IMessage>({
-    sender: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    receiver: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    senderId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    receiverId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     content: { type: String, required: true },
+    chatId: { type: Schema.Types.ObjectId, ref: 'Chat', required: true },
 },  { timestamps: true }
 )
 
