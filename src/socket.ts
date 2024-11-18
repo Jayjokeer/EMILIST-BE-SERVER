@@ -1,19 +1,29 @@
 import { Server, Socket } from "socket.io";
 
+const userSocketMap: Record<string, string> = {};
+
+export const getReceiverId = (receiverId: string): string | undefined => {
+  return userSocketMap[receiverId];
+};
+export let io: Server; 
+
 const chatSocket = (io: Server) => {
   io.on("connection", (socket: Socket) => {
     console.log("User connected:", socket.id);
 
-    socket.on("joinChat", (chatId) => {
-      socket.join(chatId);
-    });
+    const userId: string | undefined = socket.handshake.query.userId as string;
 
-    socket.on("sendMessage", (data) => {
-      const { chatId, message } = data;
-      io.to(chatId).emit("newMessage", message);
-    });
+    if (userId) {
+      userSocketMap[userId] = socket.id;
+    }
+
+    io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
     socket.on("disconnect", () => {
+      if (userId) {
+        delete userSocketMap[userId];
+        io.emit("getOnlineUsers", Object.keys(userSocketMap));
+      }
       console.log("User disconnected:", socket.id);
     });
   });

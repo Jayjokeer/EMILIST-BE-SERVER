@@ -7,6 +7,7 @@ import * as chatService  from "../services/chat.services";
 import * as messageService  from "../services/message.service";
 import { IChat } from "../interfaces/chat.interface";
 import { IMessage } from "../interfaces/message.interface";
+import { getReceiverId, io } from "../socket";
 
 export const sendMessageController = catchAsync(async (req: JwtPayload, res: Response) => {
     const { receiverId} = req.params;
@@ -33,6 +34,10 @@ export const sendMessageController = catchAsync(async (req: JwtPayload, res: Res
 
     await Promise.all([chat.save(), newMessage.save()])
     const data = newMessage;
+    const receiverSocketId = getReceiverId(receiverId);
+    if(receiverSocketId){
+        io.to(receiverSocketId).emit("newMessage", data)
+    }
     successResponse(res, StatusCodes.CREATED, data);
   });
   export const getMessagesController = catchAsync(async (req: JwtPayload, res: Response) => {
