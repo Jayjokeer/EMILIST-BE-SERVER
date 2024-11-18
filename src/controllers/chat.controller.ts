@@ -21,7 +21,7 @@ export const sendMessageController = catchAsync(async (req: JwtPayload, res: Res
             messages:[]
 
         }
-        chat = await chatService.createChat(payload)
+        chat = await chatService.createChat(payload);
     }
     const msgPayload : IMessage= {
         receiverId,

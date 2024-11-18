@@ -25,7 +25,7 @@ export const getChatsWithLastMessages = async (userId: string) => {
         })
         .populate('participants', 'fullName profileImage email')
         .exec();
-  
+        console.log(chats)
       const chatList = chats.map((chat) => {
         const lastMessage = chat.messages[0] || null;
         return {
@@ -37,6 +37,7 @@ export const getChatsWithLastMessages = async (userId: string) => {
   
       return chatList;
     } catch (error) {
+        console.log(error)
       throw new NotFoundError('Error fetching chats with last messages');
     }
   };
