@@ -43,7 +43,7 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     await data.save();
     const {html, subject} = otpMessage(userName, otp);
     sendEmail(email, subject,html); 
-    successResponse(res,StatusCodes.CREATED, data);
+   return successResponse(res,StatusCodes.CREATED, data);
 });
 
 export const loginController = catchAsync(async (req: Request, res: Response) => {

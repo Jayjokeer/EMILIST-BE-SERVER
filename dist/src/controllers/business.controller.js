@@ -68,7 +68,7 @@ exports.createBusinessController = (0, error_handler_1.catchAsync)((req, res) =>
     const data = yield businessService.createBusiness(businessData);
     (_a = user.businesses) === null || _a === void 0 ? void 0 : _a.push(data._id);
     yield user.save();
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.updateBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const businessData = req.body;

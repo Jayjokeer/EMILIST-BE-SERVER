@@ -1,13 +1,17 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { IProduct } from '../interfaces/product.interface';
 
+const ProductImagesSchema = new Schema({
+    imageUrl: {type: String},
+  })
 const productSchema: Schema = new mongoose.Schema(
   {
     name: { type: String},
     category: [{ type: String }],
+    subCategory: [{ type: String }],
     brand: [{ type: String }],
     description: { type: String},
-    images: [{ type: String }],
+    images: [{ type:ProductImagesSchema }],
     availableQuantity: { type: String },
     price: { type: Number },
     storeName: { type: String},

@@ -24,12 +24,16 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
+const ProductImagesSchema = new mongoose_1.Schema({
+    imageUrl: { type: String },
+});
 const productSchema = new mongoose_1.default.Schema({
     name: { type: String },
     category: [{ type: String }],
+    subCategory: [{ type: String }],
     brand: [{ type: String }],
     description: { type: String },
-    images: [{ type: String }],
+    images: [{ type: ProductImagesSchema }],
     availableQuantity: { type: String },
     price: { type: Number },
     storeName: { type: String },

@@ -43,7 +43,7 @@ export const createBusinessController = catchAsync( async (req: JwtPayload, res:
     user.businesses?.push(data._id);
     await user.save();
 
-    successResponse(res,StatusCodes.CREATED, data);
+   return successResponse(res,StatusCodes.CREATED, data);
 });
 
 export const updateBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {

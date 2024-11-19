@@ -10,6 +10,9 @@ export const validateProduct = (req: Request, res: Response, next: NextFunction)
     category: Joi.array().items(Joi.string()).optional().messages({
       "array.base": "Category must be an array of strings",
     }),
+    subCategory: Joi.array().items(Joi.string()).optional().messages({
+        "array.base": "Sub Category must be an array of strings",
+      }),
     brand: Joi.array().items(Joi.string()).optional().messages({
       "array.base": "Brand must be an array of strings",
     }),
@@ -52,3 +55,50 @@ export const validateProduct = (req: Request, res: Response, next: NextFunction)
 
   next();
 };
+export const validateUpdateProduct = (req: Request, res: Response, next: NextFunction) => {
+    const updateProductValidation = Joi.object({
+      name: Joi.string().optional().messages({
+        "string.base": "Product name must be a string",
+      }),
+      category: Joi.array().items(Joi.string()).optional().messages({
+        "array.base": "Category must be an array of strings",
+      }),
+      subCategory: Joi.array().items(Joi.string()).optional().messages({
+        "array.base": "Sub Category must be an array of strings",
+      }),
+      brand: Joi.array().items(Joi.string()).optional().messages({
+        "array.base": "Brand must be an array of strings",
+      }),
+      description: Joi.string().optional().messages({
+        "string.base": "Description must be a string",
+      }),
+      availableQuantity: Joi.string().optional().messages({
+        "string.base": "Available quantity must be a string",
+      }),
+      price: Joi.number().optional().messages({
+        "number.base": "Price must be a number",
+      }),
+      storeName: Joi.string().optional().messages({
+        "string.base": "Store name must be a string",
+      }),
+      location: Joi.string().optional().messages({
+        "string.base": "Location must be a string",
+      }),
+      currency: Joi.string().optional().messages({
+        "string.base": "Currency must be a string",
+      }),
+      orders: Joi.array().items(Joi.string()).optional().messages({
+        "array.base": "Orders must be an array of strings",
+      }),
+    });
+  
+    const { error } = updateProductValidation.validate(req.body, { abortEarly: false });
+  
+    if (error) {
+      const errorMessages = error.details.map((detail) => detail.message);
+      res.status(400).json({ errors: errorMessages });
+      return;
+    }
+  
+    next();
+  };

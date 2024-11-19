@@ -32,27 +32,101 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateProductController = exports.createProductController = void 0;
+exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
 const http_status_codes_1 = require("http-status-codes");
 const error_1 = require("../errors/error");
 exports.createProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId } = req.user._id;
+    const userId = req.user._id;
     const payload = req.body;
     payload.userId = userId;
+    if (req.files) {
+        payload.images = req.files.map((file) => ({
+            imageUrl: file.path
+        }));
+    }
     const data = yield productService.createProduct(payload);
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.updateProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.user._id;
+    const { productId } = req.params;
+    const updates = req.body;
+    const files = req.files;
+    const product = yield productService.fetchProductById(productId);
+    if (String(product === null || product === void 0 ? void 0 : product.userId) !== String(userId)) {
+        throw new error_1.UnauthorizedError("Unauthorized!");
+    }
+    if (!product) {
+        throw new error_1.NotFoundError("Product not found!");
+    }
+    Object.keys(updates).forEach((key) => {
+        product[key] = updates[key];
+    });
+    if (files && files.length > 0) {
+        const newImages = files.map((file) => ({
+            imageUrl: file.path,
+        }));
+        product.images.push(...newImages);
+    }
+    yield product.save();
+    const data = yield productService.fetchProductById(productId);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.getSingleProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { productId } = req.params;
     const product = yield productService.fetchProductById(productId);
     if (!product) {
         throw new error_1.NotFoundError("Product not found!");
     }
-    const payload = req.body;
-    const data = yield productService.createProduct(payload);
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    ;
+    const data = product;
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.getAllProductsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page = 1, limit = 10 } = req.query;
+    const products = yield productService.fetchAllProducts(Number(page), Number(limit));
+    const data = products;
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.deleteProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.user._id;
+    const { productId } = req.params;
+    const product = yield productService.fetchProductById(productId);
+    if (String(product === null || product === void 0 ? void 0 : product.userId) !== String(userId)) {
+        throw new error_1.UnauthorizedError("Unauthorized!");
+    }
+    if (!product) {
+        throw new error_1.NotFoundError("Product not found!");
+    }
+    yield productService.deleteProduct(productId);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Product deleted successfully!");
+}));
+exports.deleteProductImageController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const { userId } = req.user._id;
+    const { productId, imageId } = req.params;
+    const product = yield productService.fetchProductById(productId);
+    if (String(product === null || product === void 0 ? void 0 : product.userId) !== String(userId)) {
+        throw new error_1.UnauthorizedError("Unauthorized!");
+    }
+    if (!product) {
+        throw new error_1.NotFoundError("Product not found!");
+    }
+    const imageIndex = (_a = product.images) === null || _a === void 0 ? void 0 : _a.findIndex((image) => image._id.toString() === imageId);
+    if (imageIndex === -1) {
+        throw new error_1.NotFoundError("Image not found");
+    }
+    (_b = product.images) === null || _b === void 0 ? void 0 : _b.splice(imageIndex, 1);
+    yield product.save();
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Image deleted successfully!");
+}));
+exports.getUserProductsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user._id;
+    const { page = 1, limit = 10 } = req.query;
+    const products = yield productService.fetchUserProducts(userId, Number(page), Number(limit));
+    const data = products;
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
