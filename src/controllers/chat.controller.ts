@@ -7,7 +7,8 @@ import * as chatService  from "../services/chat.services";
 import * as messageService  from "../services/message.service";
 import { IChat } from "../interfaces/chat.interface";
 import { IMessage } from "../interfaces/message.interface";
-import { getReceiverId, io } from "../socket";
+import { getReceiverId } from "../socket";
+import {io} from "../server";
 
 export const sendMessageController = catchAsync(async (req: JwtPayload, res: Response) => {
   const { receiverId } = req.params;

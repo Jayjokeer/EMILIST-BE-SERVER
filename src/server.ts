@@ -37,10 +37,10 @@ app.use(session({
     }),
     cookie: { secure: false } 
 }));
-const io = new Server(server, {
+export const io = new Server(server, {
   cors: {
     origin: "*", 
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE","PATCH"],
   },
 });
 app.use(passport.initialize());
