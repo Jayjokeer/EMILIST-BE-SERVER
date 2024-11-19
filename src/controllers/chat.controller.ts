@@ -10,36 +10,39 @@ import { IMessage } from "../interfaces/message.interface";
 import { getReceiverId, io } from "../socket";
 
 export const sendMessageController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const { receiverId} = req.params;
-    const {content} = req.body;
-    const userId = req.user._id;
+  const { receiverId } = req.params;
+  const { content } = req.body;
+  const userId = req.user._id;
 
-    let chat = await chatService.findChat(receiverId,userId);
-    if(!chat){
-        const payload:IChat = {
-            participants:[receiverId,userId],
-            messages:[]
+  let chat = await chatService.findChat(receiverId, userId);
+  if (!chat) {
+    const payload: IChat = {
+      participants: [receiverId, userId],
+      messages: [],
+    };
+    chat = await chatService.createChat(payload);
+  }
 
-        }
-        chat = await chatService.createChat(payload);
-    }
-    const msgPayload : IMessage= {
-        receiverId,
-        senderId: userId,
-        content,
-        chatId: chat._id
-    }
-  const newMessage = await messageService.createMessage( msgPayload );
-    chat.messages.push(newMessage._id);
+  const msgPayload: IMessage = {
+    receiverId,
+    senderId: userId,
+    content,
+    chatId: chat._id,
+  };
 
-    await Promise.all([chat.save(), newMessage.save()])
-    const data = newMessage;
-    const receiverSocketId = getReceiverId(receiverId);
-    if(receiverSocketId){
-        io.to(receiverSocketId).emit("newMessage", data)
-    }
-    successResponse(res, StatusCodes.CREATED, data);
-  });
+  const newMessage = await messageService.createMessage(msgPayload);
+  chat.messages.push(newMessage._id);
+
+  await Promise.all([chat.save(), newMessage.save()]);
+  const data = newMessage;
+
+  const receiverSocketId = getReceiverId(receiverId);
+  if (receiverSocketId && io) {
+    io.to(receiverSocketId).emit("newMessage", data);
+  }
+
+  successResponse(res, StatusCodes.CREATED, data);
+});
   export const getMessagesController = catchAsync(async (req: JwtPayload, res: Response) => {
     const { userId} = req.params;
     const loggedInUserId = req.user._id;
