@@ -5,7 +5,7 @@ export const createProduct = async (data: IProduct)=>{
     return await Product.create(data);
 };
 
-export const fetchProductById = async (productId: string) =>{
+export const fetchProductById = async (productId: any) =>{
     return await Product.findById(productId);
 };
 

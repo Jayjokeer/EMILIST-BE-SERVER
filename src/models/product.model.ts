@@ -7,12 +7,12 @@ const ProductImagesSchema = new Schema({
 const productSchema: Schema = new mongoose.Schema(
   {
     name: { type: String},
-    category: [{ type: String }],
-    subCategory: [{ type: String }],
-    brand: [{ type: String }],
+    category: { type: String },
+    subCategory: { type: String },
+    brand: { type: String },
     description: { type: String},
     images: [{ type:ProductImagesSchema }],
-    availableQuantity: { type: String },
+    availableQuantity: { type: Number},
     price: { type: Number },
     storeName: { type: String},
     location: {type: String},

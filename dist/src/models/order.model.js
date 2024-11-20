@@ -24,22 +24,26 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
-const ProductImagesSchema = new mongoose_1.Schema({
-    imageUrl: { type: String },
+const order_enum_1 = require("../enums/order.enum");
+const OrderProductSchema = new mongoose_1.Schema({
+    productId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Product" },
+    quantity: { type: Number, required: true, min: 1 },
+    price: { type: Number, required: true },
 });
-const productSchema = new mongoose_1.default.Schema({
-    name: { type: String },
-    category: { type: String },
-    subCategory: { type: String },
-    brand: { type: String },
-    description: { type: String },
-    images: [{ type: ProductImagesSchema }],
-    availableQuantity: { type: Number },
-    price: { type: Number },
-    storeName: { type: String },
-    location: { type: String },
-    currency: { type: String },
-    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users' },
-    // orders: [{type:  Schema.Types.ObjectId, ref: 'Orders'}]
+const OrderSchema = new mongoose_1.Schema({
+    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users" },
+    products: [OrderProductSchema],
+    totalAmount: { type: Number, },
+    status: {
+        type: String,
+        enum: order_enum_1.OrderStatus,
+        default: order_enum_1.OrderStatus.pending,
+    },
+    paymentStatus: {
+        type: String,
+        enum: order_enum_1.OrderPaymentStatus,
+        default: order_enum_1.OrderPaymentStatus.unpaid,
+    },
+    shippingAddress: { type: String, },
 }, { timestamps: true });
-exports.default = mongoose_1.default.model('Product', productSchema);
+exports.default = mongoose_1.default.model("Order", OrderSchema);

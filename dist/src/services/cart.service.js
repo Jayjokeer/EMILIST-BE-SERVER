@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchCartById = exports.fetchCartByUser = exports.createCart = void 0;
+exports.deleteCart = exports.fetchCartById = exports.fetchCartByUser = exports.createCart = void 0;
 const cart_enum_1 = require("../enums/cart.enum");
 const cart_model_1 = __importDefault(require("../models/cart.model"));
 const createCart = (payload) => __awaiter(void 0, void 0, void 0, function* () {
@@ -20,10 +20,14 @@ const createCart = (payload) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.createCart = createCart;
 const fetchCartByUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield cart_model_1.default.findOne({ userId, status: cart_enum_1.CartStatus.active });
+    return yield cart_model_1.default.findOne({ userId, status: cart_enum_1.CartStatus.active }).populate("products.productId");
 });
 exports.fetchCartByUser = fetchCartByUser;
 const fetchCartById = (cartId) => __awaiter(void 0, void 0, void 0, function* () {
     return yield cart_model_1.default.findById(cartId);
 });
 exports.fetchCartById = fetchCartById;
+const deleteCart = (cartId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield cart_model_1.default.findByIdAndDelete(cartId);
+});
+exports.deleteCart = deleteCart;

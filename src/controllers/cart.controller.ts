@@ -8,6 +8,10 @@ import * as productService from "../services/product.service";
 import { BadRequestError, NotFoundError } from "../errors/error";
 import { CartStatus } from "../enums/cart.enum";
 import { ICart } from "../interfaces/cart.interface";
+import { OrderPaymentStatus, OrderStatus } from "../enums/order.enum";
+import * as orderService from "../services/order.service";
+import { IOrder } from "../interfaces/order.interface";
+import mongoose from "mongoose";
 
 export const addToCartController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {productId, quantity} = req.body;
@@ -64,12 +68,40 @@ export const addToCartController = catchAsync(async (req: JwtPayload, res: Respo
 
 export const checkoutCartController= catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
-
+    console.log(userId)
     const cart = await cartService.fetchCartByUser(userId);
     if (!cart) throw new NotFoundError("Cart not found");
 
     cart.status = CartStatus.checkedOut;
-    const data = await cart.save();
+    await cart.save();
+
+
+    for (const cartItem of cart.products!) {
+        console.log("here0")
+        const product = await productService.fetchProductById(cartItem.productId);
+
+      if (!product || Number(product.availableQuantity) < cartItem.quantity) {
+        throw new NotFoundError(`Product ${product?.name} is out of stock`);
+      }
+      product.availableQuantity = product.availableQuantity! - cartItem.quantity;
+      await product.save();
+    }
+    const orderPayload = {
+      userId,
+      products: cart.products?.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+      totalAmount: cart.totalAmount,
+      status: OrderStatus.pending,
+      paymentStatus:OrderPaymentStatus.unpaid,
+    };
+    const order = await orderService.createOrder(orderPayload );
+
+    await cartService.deleteCart(String(cart._id));
+
+    const data = order; 
 
     return successResponse(res, StatusCodes.OK, data);
 });
@@ -127,3 +159,33 @@ export const decreaseCartProductQuantityController= catchAsync(async (req: JwtPa
 
     return successResponse(res, StatusCodes.OK, data);
 });
+// export const applyReferralCode = catchAsync(async (req: JwtPayload, res: Response) => {
+//     const { code } = req.body;
+//     const userId = req.user._id;
+
+//     // Validate referral code
+//     const referralCode = await ReferralCode.findOne({
+//         code,
+//         isActive: true,
+//         expiryDate: { $gte: new Date() },
+//     });
+
+//     if (!referralCode) {
+//         throw new NotFoundError("Invalid or expired referral code");
+//     }
+
+//     // Fetch the user's cart
+//     const cart = await cartService.fetchCartByUser(userId);
+//     if (!cart) throw new NotFoundError("Cart not found");
+
+//     // Calculate the discount
+//     const discountAmount = (cart.totalAmount * referralCode.discountPercentage) / 100;
+//     const discountedTotal = cart.totalAmount - discountAmount;
+
+//     return successResponse(res, StatusCodes.OK, {
+//         message: "Referral code applied successfully",
+//         originalAmount: cart.totalAmount,
+//         discountAmount,
+//         discountedTotal,
+//     });
+// });

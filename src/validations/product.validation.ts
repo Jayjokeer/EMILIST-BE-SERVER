@@ -7,21 +7,21 @@ export const validateProduct = (req: Request, res: Response, next: NextFunction)
       "string.base": "Product name must be a string",
       "string.empty": "Product name is required",
     }),
-    category: Joi.array().items(Joi.string()).optional().messages({
-      "array.base": "Category must be an array of strings",
+    category: Joi.string().optional().messages({
+      "array.base": "Category must be a string",
     }),
-    subCategory: Joi.array().items(Joi.string()).optional().messages({
-        "array.base": "Sub Category must be an array of strings",
+    subCategory: Joi.string().optional().messages({
+        "array.base": "Sub Category must be a string",
       }),
-    brand: Joi.array().items(Joi.string()).optional().messages({
-      "array.base": "Brand must be an array of strings",
+    brand: Joi.string().optional().messages({
+      "array.base": "Brand must be a of string",
     }),
     description: Joi.string().optional().messages({
       "string.base": "Description must be a string",
     }),
-    availableQuantity: Joi.string().required().messages({
-      "string.base": "Available quantity must be a string",
-      "string.empty": "Available quantity is required",
+    availableQuantity: Joi.number().required().messages({
+      "number.base": "Available quantity must be a number",
+      "number.empty": "Available quantity is required",
     }),
     price: Joi.number().required().messages({
       "number.base": "Price must be a number",
@@ -57,20 +57,20 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
       name: Joi.string().optional().messages({
         "string.base": "Product name must be a string",
       }),
-      category: Joi.array().items(Joi.string()).optional().messages({
-        "array.base": "Category must be an array of strings",
+      category: Joi.string().optional().messages({
+        "array.base": "Category must be a string",
       }),
-      subCategory: Joi.array().items(Joi.string()).optional().messages({
-        "array.base": "Sub Category must be an array of strings",
+      subCategory: Joi.string().optional().messages({
+        "array.base": "Sub Category must be a string",
       }),
-      brand: Joi.array().items(Joi.string()).optional().messages({
-        "array.base": "Brand must be an array of strings",
+      brand: Joi.string().optional().messages({
+        "array.base": "Brand must be a string",
       }),
       description: Joi.string().optional().messages({
         "string.base": "Description must be a string",
       }),
-      availableQuantity: Joi.string().optional().messages({
-        "string.base": "Available quantity must be a string",
+      availableQuantity: Joi.number().optional().messages({
+        "number.base": "Available quantity must be a number",
       }),
       price: Joi.number().optional().messages({
         "number.base": "Price must be a number",

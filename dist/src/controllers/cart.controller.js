@@ -40,6 +40,8 @@ const cartService = __importStar(require("../services/cart.service"));
 const productService = __importStar(require("../services/product.service"));
 const error_1 = require("../errors/error");
 const cart_enum_1 = require("../enums/cart.enum");
+const order_enum_1 = require("../enums/order.enum");
+const orderService = __importStar(require("../services/order.service"));
 exports.addToCartController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c;
     const { productId, quantity } = req.body;
@@ -87,12 +89,37 @@ exports.removeFromCartController = (0, error_handler_1.catchAsync)((req, res) =>
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.checkoutCartController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const userId = req.user._id;
+    console.log(userId);
     const cart = yield cartService.fetchCartByUser(userId);
     if (!cart)
         throw new error_1.NotFoundError("Cart not found");
     cart.status = cart_enum_1.CartStatus.checkedOut;
-    const data = yield cart.save();
+    yield cart.save();
+    for (const cartItem of cart.products) {
+        console.log("here0");
+        const product = yield productService.fetchProductById(cartItem.productId);
+        if (!product || Number(product.availableQuantity) < cartItem.quantity) {
+            throw new error_1.NotFoundError(`Product ${product === null || product === void 0 ? void 0 : product.name} is out of stock`);
+        }
+        product.availableQuantity = product.availableQuantity - cartItem.quantity;
+        yield product.save();
+    }
+    const orderPayload = {
+        userId,
+        products: (_a = cart.products) === null || _a === void 0 ? void 0 : _a.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+        })),
+        totalAmount: cart.totalAmount,
+        status: order_enum_1.OrderStatus.pending,
+        paymentStatus: order_enum_1.OrderPaymentStatus.unpaid,
+    };
+    const order = yield orderService.createOrder(orderPayload);
+    yield cartService.deleteCart(String(cart._id));
+    const data = order;
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.increaseCartProductQuantityController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -134,3 +161,28 @@ exports.decreaseCartProductQuantityController = (0, error_handler_1.catchAsync)(
     const data = yield cart.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
+// export const applyReferralCode = catchAsync(async (req: JwtPayload, res: Response) => {
+//     const { code } = req.body;
+//     const userId = req.user._id;
+//     // Validate referral code
+//     const referralCode = await ReferralCode.findOne({
+//         code,
+//         isActive: true,
+//         expiryDate: { $gte: new Date() },
+//     });
+//     if (!referralCode) {
+//         throw new NotFoundError("Invalid or expired referral code");
+//     }
+//     // Fetch the user's cart
+//     const cart = await cartService.fetchCartByUser(userId);
+//     if (!cart) throw new NotFoundError("Cart not found");
+//     // Calculate the discount
+//     const discountAmount = (cart.totalAmount * referralCode.discountPercentage) / 100;
+//     const discountedTotal = cart.totalAmount - discountAmount;
+//     return successResponse(res, StatusCodes.OK, {
+//         message: "Referral code applied successfully",
+//         originalAmount: cart.totalAmount,
+//         discountAmount,
+//         discountedTotal,
+//     });
+// });

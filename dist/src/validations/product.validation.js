@@ -11,21 +11,21 @@ const validateProduct = (req, res, next) => {
             "string.base": "Product name must be a string",
             "string.empty": "Product name is required",
         }),
-        category: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            "array.base": "Category must be an array of strings",
+        category: joi_1.default.string().optional().messages({
+            "array.base": "Category must be a string",
         }),
-        subCategory: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            "array.base": "Sub Category must be an array of strings",
+        subCategory: joi_1.default.string().optional().messages({
+            "array.base": "Sub Category must be a string",
         }),
-        brand: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            "array.base": "Brand must be an array of strings",
+        brand: joi_1.default.string().optional().messages({
+            "array.base": "Brand must be a of string",
         }),
         description: joi_1.default.string().optional().messages({
             "string.base": "Description must be a string",
         }),
-        availableQuantity: joi_1.default.string().required().messages({
-            "string.base": "Available quantity must be a string",
-            "string.empty": "Available quantity is required",
+        availableQuantity: joi_1.default.number().required().messages({
+            "number.base": "Available quantity must be a number",
+            "number.empty": "Available quantity is required",
         }),
         price: joi_1.default.number().required().messages({
             "number.base": "Price must be a number",
@@ -57,20 +57,20 @@ const validateUpdateProduct = (req, res, next) => {
         name: joi_1.default.string().optional().messages({
             "string.base": "Product name must be a string",
         }),
-        category: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            "array.base": "Category must be an array of strings",
+        category: joi_1.default.string().optional().messages({
+            "array.base": "Category must be a string",
         }),
-        subCategory: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            "array.base": "Sub Category must be an array of strings",
+        subCategory: joi_1.default.string().optional().messages({
+            "array.base": "Sub Category must be a string",
         }),
-        brand: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            "array.base": "Brand must be an array of strings",
+        brand: joi_1.default.string().optional().messages({
+            "array.base": "Brand must be a string",
         }),
         description: joi_1.default.string().optional().messages({
             "string.base": "Description must be a string",
         }),
-        availableQuantity: joi_1.default.string().optional().messages({
-            "string.base": "Available quantity must be a string",
+        availableQuantity: joi_1.default.number().optional().messages({
+            "number.base": "Available quantity must be a number",
         }),
         price: joi_1.default.number().optional().messages({
             "number.base": "Price must be a number",
