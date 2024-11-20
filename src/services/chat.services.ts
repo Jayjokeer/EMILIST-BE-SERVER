@@ -23,7 +23,7 @@ export const getChatsWithLastMessages = async (userId: string) => {
           path: 'messages',
           options: { sort: { createdAt: -1 }, limit: 1 }, 
         })
-        .populate('participants', 'fullName profileImage email')
+        .populate('participants', 'fullName profileImage email userName')
         .exec();
         console.log(chats)
       const chatList = chats.map((chat) => {
