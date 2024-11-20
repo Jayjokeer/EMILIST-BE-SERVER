@@ -40,9 +40,6 @@ export const validateProduct = (req: Request, res: Response, next: NextFunction)
       "string.empty": "Currency is required",
 
     }),
-    orders: Joi.array().items(Joi.string()).optional().messages({
-      "array.base": "Orders must be an array of strings",
-    }),
   });
 
   const { error } = productValidation.validate(req.body, { abortEarly: false });
@@ -86,9 +83,6 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
       }),
       currency: Joi.string().optional().messages({
         "string.base": "Currency must be a string",
-      }),
-      orders: Joi.array().items(Joi.string()).optional().messages({
-        "array.base": "Orders must be an array of strings",
       }),
     });
   

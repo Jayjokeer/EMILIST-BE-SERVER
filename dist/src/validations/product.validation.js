@@ -42,9 +42,6 @@ const validateProduct = (req, res, next) => {
             "string.base": "Currency must be a string",
             "string.empty": "Currency is required",
         }),
-        orders: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            "array.base": "Orders must be an array of strings",
-        }),
     });
     const { error } = productValidation.validate(req.body, { abortEarly: false });
     if (error) {
@@ -86,9 +83,6 @@ const validateUpdateProduct = (req, res, next) => {
         }),
         currency: joi_1.default.string().optional().messages({
             "string.base": "Currency must be a string",
-        }),
-        orders: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            "array.base": "Orders must be an array of strings",
         }),
     });
     const { error } = updateProductValidation.validate(req.body, { abortEarly: false });

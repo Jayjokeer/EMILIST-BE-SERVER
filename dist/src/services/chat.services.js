@@ -40,7 +40,6 @@ const getChatsWithLastMessages = (userId) => __awaiter(void 0, void 0, void 0, f
         })
             .populate('participants', 'fullName profileImage email userName')
             .exec();
-        console.log(chats);
         const chatList = chats.map((chat) => {
             const lastMessage = chat.messages[0] || null;
             return {
