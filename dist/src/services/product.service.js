@@ -25,8 +25,10 @@ const fetchProductById = (productId) => __awaiter(void 0, void 0, void 0, functi
 exports.fetchProductById = fetchProductById;
 const fetchAllProducts = (page, limit, userId) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
-    const totalProducts = yield product_model_1.default.countDocuments().skip(skip).limit(limit);
-    const products = yield product_model_1.default.find();
+    const totalProducts = yield product_model_1.default.countDocuments();
+    const products = yield product_model_1.default.find().skip(skip)
+        .limit(limit)
+        .populate('userId', 'name email userName profileImage level _id uniqueId');
     let productsWithLikeStatus;
     if (userId) {
         const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();

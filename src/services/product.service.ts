@@ -17,9 +17,13 @@ export const fetchAllProducts = async (
 )=>{
     const skip = (page - 1) * limit;
 
-    const totalProducts = await Product.countDocuments().skip(skip).limit(limit);
+    const totalProducts = await Product.countDocuments();
 
-    const products = await Product.find();
+
+    const products = await Product.find().skip(skip)
+    .limit(limit)
+    .populate('userId', 'name email userName profileImage level _id uniqueId');
+    
     let productsWithLikeStatus;
     if (userId) {
       const likedProducts = await ProductLike.find({ user: userId }).select('product').lean();

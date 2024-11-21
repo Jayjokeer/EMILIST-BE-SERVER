@@ -138,10 +138,12 @@ exports.likeProductsController = (0, error_handler_1.catchAsync)((req, res) => _
     if (!product) {
         throw new error_1.NotFoundError("Product not found!");
     }
+    ;
     const existingLike = yield productService.ifLikedProduct(productId, userId);
     if (existingLike) {
         throw new error_1.BadRequestError("Product previously liked!");
     }
+    ;
     yield productService.createProductLike({
         product: productId,
         user: userId

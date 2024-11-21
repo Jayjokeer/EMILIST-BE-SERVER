@@ -124,11 +124,11 @@ export const likeProductsController = catchAsync(async (req: JwtPayload, res: Re
     const product = await productService.fetchProductById(productId);
     if(!product){
         throw new NotFoundError("Product not found!")
-    }
+    };
     const existingLike = await productService.ifLikedProduct(productId, userId);
     if(existingLike) {
         throw new BadRequestError("Product previously liked!");
-    }
+    };
 
     await productService.createProductLike({
         product: productId,
