@@ -115,7 +115,6 @@ exports.fetchAllBusinessController = (0, error_handler_1.catchAsync)((req, res) 
 }));
 exports.deleteBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { businessId } = req.params;
-    const data = yield businessService.deleteBusiness(businessId);
-    console.log(data);
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Bussiness deleted!");
+    yield businessService.deleteBusiness(businessId);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Business deleted!");
 }));

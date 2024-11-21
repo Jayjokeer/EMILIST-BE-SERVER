@@ -103,8 +103,6 @@ export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, re
 
 export const deleteBusinessController =  catchAsync( async (req: JwtPayload, res: Response) => {
     const { businessId} = req.params;
-
-   const data=   await businessService.deleteBusiness( businessId );
-   console.log(data)
-    return  successResponse(res,StatusCodes.OK, "Bussiness deleted!");
+     await businessService.deleteBusiness( businessId );
+    return  successResponse(res,StatusCodes.OK, "Business deleted!");
 });
