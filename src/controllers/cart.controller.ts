@@ -88,8 +88,9 @@ export const addToCartController = catchAsync(async (req: JwtPayload, res: Respo
 
     const cart = await cartService.fetchCartByUser(userId);
     if (!cart) throw new NotFoundError("Cart not found!");
+    const cartCompare = await cartService.fetchCartById(String(cart._id))
 
-    cart.products = cart.products?.filter((p) => p.productId.toString() !== productId);
+    cart.products = cartCompare!.products?.filter((p) => p.productId.toString() !== productId);
 
     cart.totalAmount = cart.products?.reduce((sum, p) => sum + p.quantity * p.price, 0);
    const data= await cart.save();
