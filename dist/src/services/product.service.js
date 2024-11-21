@@ -12,8 +12,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductById = exports.createProduct = void 0;
+exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductById = exports.createProduct = void 0;
 const product_model_1 = __importDefault(require("../models/product.model"));
+const productLike_model_1 = __importDefault(require("../models/productLike.model"));
 const createProduct = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield product_model_1.default.create(data);
 });
@@ -50,3 +51,32 @@ const fetchUserProducts = (userId, page, limit) => __awaiter(void 0, void 0, voi
     };
 });
 exports.fetchUserProducts = fetchUserProducts;
+const ifLikedProduct = (productId, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield productLike_model_1.default.findOne({ product: productId, user: userId });
+});
+exports.ifLikedProduct = ifLikedProduct;
+const createProductLike = (data) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield productLike_model_1.default.create(data);
+});
+exports.createProductLike = createProductLike;
+const fetchLikedProducts = (userId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+    const skip = (page - 1) * limit;
+    const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();
+    const likedProductsId = likedProducts.map((like) => like.product);
+    const products = yield product_model_1.default.find({ _id: { $in: likedProductsId } })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+    const totalLikedProducts = likedProductsId.length;
+    return {
+        products,
+        totalPages: Math.ceil(totalLikedProducts / limit),
+        currentPage: page,
+        totalLikedProducts,
+    };
+});
+exports.fetchLikedProducts = fetchLikedProducts;
+const unlikeProduct = (productId, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield productLike_model_1.default.findOneAndDelete({ user: userId, product: productId });
+});
+exports.unlikeProduct = unlikeProduct;

@@ -115,3 +115,37 @@ export const getUserProductsController = catchAsync(async (req: JwtPayload, res:
     const data = products;
     return successResponse(res, StatusCodes.OK, data);
 });
+export const likeProductsController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user._id;
+    const {productId} = req.params;
+
+    const product = await productService.fetchProductById(productId);
+    if(!product){
+        throw new NotFoundError("Product not found!")
+    }
+    await productService.createProductLike({
+        product: productId,
+        user: userId
+    });
+
+    return successResponse(res, StatusCodes.OK, "Liked successfully");
+});
+export const fetchAllLikedProductsController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user._id;
+    const {page = 1, limit = 10} = req.query;
+    const data = await productService.fetchLikedProducts(userId, page, limit);
+
+    return successResponse(res, StatusCodes.OK, data);
+});
+export const unlikeProductsController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user._id;
+    const {productId} = req.params;
+
+    const product = await productService.fetchProductById(productId);
+    if(!product){
+        throw new NotFoundError("Product not found!")
+    }
+    await productService.unlikeProduct(productId, userId);
+
+    return successResponse(res, StatusCodes.OK, "Unliked successfully");
+});

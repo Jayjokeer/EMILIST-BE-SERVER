@@ -38,3 +38,6 @@ router.route("/fetch-all-products").get(productController.getAllProductsControll
 router.route("/delete-product/:productId").delete(current_user_1.userAuth, productController.deleteProductController);
 router.route("/delete-product/:productId/image/:imageId").delete(current_user_1.userAuth, productController.deleteProductImageController);
 router.route("/fetch-user-products").get(current_user_1.userAuth, productController.getUserProductsController);
+router.route("/like-product/:productId").get(current_user_1.userAuth, productController.likeProductsController);
+router.route("/unlike-product/:productId").get(current_user_1.userAuth, productController.unlikeProductsController);
+router.route("/fetch-liked-products").get(current_user_1.userAuth, productController.fetchAllLikedProductsController);
