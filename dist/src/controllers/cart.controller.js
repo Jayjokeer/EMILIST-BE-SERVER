@@ -43,17 +43,16 @@ const cart_enum_1 = require("../enums/cart.enum");
 const order_enum_1 = require("../enums/order.enum");
 const orderService = __importStar(require("../services/order.service"));
 exports.addToCartController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
     const { productId, quantity } = req.body;
     const userId = req.user._id;
     const product = yield productService.fetchProductById(productId);
     if (!product)
         throw new error_1.NotFoundError("Product not found!");
     if (String(product.userId) === String(userId)) {
-        throw new error_1.BadRequestError("You cannot add your product to cart");
+        throw new error_1.BadRequestError("You cannot add your product to the cart");
     }
-    let cart = yield cartService.fetchCartByUser(userId);
     const productPrice = product.price;
+    let cart = yield cartService.fetchCartByUser(userId);
     if (!cart) {
         const payload = {
             userId,
@@ -61,20 +60,32 @@ exports.addToCartController = (0, error_handler_1.catchAsync)((req, res) => __aw
             totalAmount: productPrice * quantity,
         };
         cart = yield cartService.createCart(payload);
-        const data = cart;
+        const cartQuantity = payload.products.reduce((sum, p) => sum + p.quantity, 0);
+        const data = Object.assign(Object.assign({}, cart.toObject()), { cartQuantity });
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
-    const existingProduct = (_a = cart.products) === null || _a === void 0 ? void 0 : _a.find((p) => p.productId.toString() === productId);
-    if (existingProduct) {
-        existingProduct.quantity += quantity;
-        existingProduct.price = productPrice;
+    const cartCompare = yield cartService.fetchCartById(String(cart._id));
+    const existingProductIndex = cartCompare.products.findIndex((p) => p.productId.toString() === productId.toString());
+    if (existingProductIndex >= 0) {
+        cart.products[existingProductIndex].quantity += quantity;
+        cart.products[existingProductIndex].price = productPrice;
     }
     else {
-        (_b = cart.products) === null || _b === void 0 ? void 0 : _b.push({ productId, quantity, price: productPrice });
+        cart.products.push({ productId, quantity, price: productPrice });
     }
-    cart.totalAmount = (_c = cart.products) === null || _c === void 0 ? void 0 : _c.reduce((sum, p) => sum + p.quantity * p.price, 0);
-    const data = yield cart.save();
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    cart.totalAmount = cart.products.reduce((sum, p) => sum + p.quantity * p.price, 0);
+    const savedCart = yield cart.save();
+    const cartQuantity = savedCart.products.reduce((sum, p) => sum + p.quantity, 0);
+    const productsWithDetails = yield Promise.all(savedCart.products.map((item) => __awaiter(void 0, void 0, void 0, function* () {
+        const productDetails = yield productService.fetchProductById(item.productId);
+        return {
+            productId: productDetails || item.productId, // Include details or keep as ID
+            quantity: item.quantity,
+            price: item.price,
+        };
+    })));
+    const data = Object.assign(Object.assign({}, savedCart.toObject()), { products: productsWithDetails, cartQuantity });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.removeFromCartController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;

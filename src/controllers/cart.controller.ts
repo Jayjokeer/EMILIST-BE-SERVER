@@ -10,46 +10,77 @@ import { CartStatus } from "../enums/cart.enum";
 import { ICart } from "../interfaces/cart.interface";
 import { OrderPaymentStatus, OrderStatus } from "../enums/order.enum";
 import * as orderService from "../services/order.service";
-import { IOrder } from "../interfaces/order.interface";
 import mongoose from "mongoose";
 
+
 export const addToCartController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const {productId, quantity} = req.body;
+    const { productId, quantity } = req.body;
     const userId = req.user._id;
 
     const product = await productService.fetchProductById(productId);
     if (!product) throw new NotFoundError("Product not found!");
-    if(String(product.userId) === String(userId)){
-        throw new BadRequestError("You cannot add your product to cart");
+    if (String(product.userId) === String(userId)) {
+        throw new BadRequestError("You cannot add your product to the cart");
     }
+
+    const productPrice = product.price as number;
+
     let cart = await cartService.fetchCartByUser(userId);
 
-    const productPrice: number = product.price as number;
     if (!cart) {
-        const payload={
-        userId,
-        products: [{ productId, quantity, price: productPrice }],
-        totalAmount: productPrice * quantity,
-        }
-        cart = await cartService.createCart(payload);  
-        const data = cart;
+        const payload = {
+            userId,
+            products: [{ productId, quantity, price: productPrice }],
+            totalAmount: productPrice * quantity,
+        };
+
+        cart = await cartService.createCart(payload);
+
+        const cartQuantity = payload.products.reduce((sum, p) => sum + p.quantity, 0);
+
+        const data = { ...cart.toObject(), cartQuantity };
         return successResponse(res, StatusCodes.CREATED, data);
-      
     }
+    const cartCompare = await cartService.fetchCartById(String(cart._id))
+    const existingProductIndex = cartCompare!.products!.findIndex(
+        (p) => p.productId!.toString() === productId.toString()
+    );
 
-    const existingProduct = cart.products?.find((p) => p.productId.toString() === productId);
-    if (existingProduct) {
-      existingProduct.quantity += quantity;
-      existingProduct.price = productPrice;
+    if (existingProductIndex >= 0) {
+        cart.products![existingProductIndex].quantity += quantity;
+
+                cart.products![existingProductIndex].price = productPrice;
     } else {
-      cart.products?.push({ productId, quantity, price: productPrice });
+        cart.products!.push({ productId, quantity, price: productPrice });
     }
 
-    cart.totalAmount = cart.products?.reduce((sum, p) => sum + p.quantity * p.price, 0);
-    const data =  await cart.save();
+    cart.totalAmount = cart.products!.reduce((sum, p) => sum + p.quantity * p.price, 0);
 
-    return successResponse(res, StatusCodes.CREATED, data);
-  });
+   
+    const savedCart = await cart.save();
+
+
+    const cartQuantity = savedCart.products!.reduce((sum, p) => sum + p.quantity, 0);
+
+   
+    const productsWithDetails = await Promise.all(
+        savedCart.products!.map(async (item) => {
+            const productDetails = await productService.fetchProductById(item.productId);
+            return {
+                productId: productDetails || item.productId, // Include details or keep as ID
+                quantity: item.quantity,
+                price: item.price,
+            };
+        })
+    );
+
+  
+    const data = { ...savedCart.toObject(), products: productsWithDetails, cartQuantity };
+    return successResponse(res, StatusCodes.OK, data);
+});
+
+
+
 
   export const removeFromCartController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
