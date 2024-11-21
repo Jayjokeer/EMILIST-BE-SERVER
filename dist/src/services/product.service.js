@@ -23,12 +23,21 @@ const fetchProductById = (productId) => __awaiter(void 0, void 0, void 0, functi
     return yield product_model_1.default.findById(productId);
 });
 exports.fetchProductById = fetchProductById;
-const fetchAllProducts = (page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllProducts = (page, limit, userId) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
     const totalProducts = yield product_model_1.default.countDocuments().skip(skip).limit(limit);
     const products = yield product_model_1.default.find();
+    let productsWithLikeStatus;
+    if (userId) {
+        const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();
+        const likedProductIds = likedProducts.map((like) => like.product.toString());
+        productsWithLikeStatus = products.map((product) => (Object.assign(Object.assign({}, product.toObject()), { liked: likedProductIds.includes(product._id.toString()) })));
+    }
+    else {
+        productsWithLikeStatus = products.map((product) => (Object.assign(Object.assign({}, product.toObject()), { liked: false })));
+    }
     return {
-        products,
+        products: productsWithLikeStatus,
         totalPages: Math.ceil(totalProducts / limit),
         currentPage: page,
         totalProducts

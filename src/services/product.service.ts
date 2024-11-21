@@ -13,14 +13,30 @@ export const fetchProductById = async (productId: any) =>{
 export const fetchAllProducts = async (
     page: number,
     limit: number,
+    userId: string,
 )=>{
     const skip = (page - 1) * limit;
 
     const totalProducts = await Product.countDocuments().skip(skip).limit(limit);
 
     const products = await Product.find();
+    let productsWithLikeStatus;
+    if (userId) {
+      const likedProducts = await ProductLike.find({ user: userId }).select('product').lean();
+      const likedProductIds = likedProducts.map((like) => like.product.toString());
+  
+      productsWithLikeStatus= products.map((product) => ({
+        ...product.toObject(),
+        liked: likedProductIds.includes(product._id.toString()),
+      }));
+    } else {
+        productsWithLikeStatus = products.map((product) => ({
+        ...product.toObject(),
+        liked: false,
+      }));
+    }
    return {
-    products,
+    products: productsWithLikeStatus,
     totalPages: Math.ceil(totalProducts/ limit),
     currentPage: page,
     totalProducts  

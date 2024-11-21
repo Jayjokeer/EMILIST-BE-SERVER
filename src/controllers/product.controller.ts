@@ -5,7 +5,7 @@ import * as productService from "../services/product.service";
 import { IProduct } from "../interfaces/product.interface";
 import { StatusCodes } from "http-status-codes";
 import { NextFunction, Request, Response } from "express";
-import { NotFoundError, UnauthorizedError } from "../errors/error";
+import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/error";
 
 
 export const createProductController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -64,7 +64,9 @@ export const getSingleProductController = catchAsync(async (req: JwtPayload, res
 
 export const getAllProductsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {page = 1, limit = 10} = req.query;
-    const products = await productService.fetchAllProducts(Number(page), Number(limit));
+    const userId = req.query.userId ? req.query.userId : null; 
+
+    const products = await productService.fetchAllProducts(Number(page), Number(limit), userId);
     const data = products;
     return successResponse(res, StatusCodes.OK, data);
 });
@@ -123,6 +125,11 @@ export const likeProductsController = catchAsync(async (req: JwtPayload, res: Re
     if(!product){
         throw new NotFoundError("Product not found!")
     }
+    const existingLike = await productService.ifLikedProduct(productId, userId);
+    if(existingLike) {
+        throw new BadRequestError("Product previously liked!");
+    }
+
     await productService.createProductLike({
         product: productId,
         user: userId

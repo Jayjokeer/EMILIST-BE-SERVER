@@ -87,7 +87,8 @@ exports.getSingleProductController = (0, error_handler_1.catchAsync)((req, res) 
 }));
 exports.getAllProductsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { page = 1, limit = 10 } = req.query;
-    const products = yield productService.fetchAllProducts(Number(page), Number(limit));
+    const userId = req.query.userId ? req.query.userId : null;
+    const products = yield productService.fetchAllProducts(Number(page), Number(limit), userId);
     const data = products;
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
@@ -136,6 +137,10 @@ exports.likeProductsController = (0, error_handler_1.catchAsync)((req, res) => _
     const product = yield productService.fetchProductById(productId);
     if (!product) {
         throw new error_1.NotFoundError("Product not found!");
+    }
+    const existingLike = yield productService.ifLikedProduct(productId, userId);
+    if (existingLike) {
+        throw new error_1.BadRequestError("Product previously liked!");
     }
     yield productService.createProductLike({
         product: productId,
