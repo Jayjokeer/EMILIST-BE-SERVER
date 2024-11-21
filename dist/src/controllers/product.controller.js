@@ -77,12 +77,23 @@ exports.updateProductController = (0, error_handler_1.catchAsync)((req, res) => 
 }));
 exports.getSingleProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { productId } = req.params;
-    const product = yield productService.fetchProductById(productId);
+    const product = yield productService.fetchProductByIdWithDetails(productId);
+    const { userId } = req.query;
     if (!product) {
         throw new error_1.NotFoundError("Product not found!");
     }
     ;
-    const data = product;
+    let liked = false;
+    if (userId) {
+        const likedProduct = yield productService.ifLikedProduct(productId, userId);
+        liked = !!likedProduct;
+    }
+    console.log(product);
+    const data = {
+        product,
+        liked,
+    };
+    console.log(data);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.getAllProductsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

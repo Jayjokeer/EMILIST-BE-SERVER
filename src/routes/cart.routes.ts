@@ -12,6 +12,6 @@ router.route("/increase-quantity/:productId").patch(userAuth, cartController.inc
 router.route("/remove-from-cart/:productId").patch(userAuth, cartController.removeFromCartController);
 router.route("/apply-discount-code").post(userAuth, cartController.applyDiscountCode);
 router.route("/generate-discount-code").post(userAuth, cartController.generateDiscountCode);//this should be for admin
-
+router.route("/get-cart-items").get(userAuth, cartController.getCartController);
 
 export { router as CartRoute };

@@ -53,12 +53,24 @@ export const updateProductController = catchAsync(async (req: JwtPayload, res: R
 
 export const getSingleProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {productId} = req.params;
-    const product = await productService.fetchProductById(productId);
+    const product = await productService.fetchProductByIdWithDetails(productId);
+    const {userId} = req.query;
 
     if(!product){
         throw new NotFoundError("Product not found!");
     };
-    const data = product;
+    let liked = false;
+    if (userId) {
+      const likedProduct = await productService.ifLikedProduct( productId ,userId, );
+      liked = !!likedProduct;  
+    }
+  console.log(product)
+   const data = {
+      product,
+      liked,  
+    };
+    console.log(data)
+
     return successResponse(res, StatusCodes.OK, data);
 });
 

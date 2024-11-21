@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateDiscountCode = exports.applyDiscountCode = exports.decreaseCartProductQuantityController = exports.increaseCartProductQuantityController = exports.checkoutCartController = exports.removeFromCartController = exports.addToCartController = void 0;
+exports.getCartController = exports.generateDiscountCode = exports.applyDiscountCode = exports.decreaseCartProductQuantityController = exports.increaseCartProductQuantityController = exports.checkoutCartController = exports.removeFromCartController = exports.addToCartController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const http_status_codes_1 = require("http-status-codes");
@@ -209,5 +209,10 @@ exports.generateDiscountCode = (0, error_handler_1.catchAsync)((req, res) => __a
         createdBy: req.user._id,
     });
     const data = discountCode;
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+}));
+exports.getCartController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user._id;
+    const data = yield cartService.fetchCartByUser(userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));

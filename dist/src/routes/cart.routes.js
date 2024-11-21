@@ -37,3 +37,4 @@ router.route("/increase-quantity/:productId").patch(current_user_1.userAuth, car
 router.route("/remove-from-cart/:productId").patch(current_user_1.userAuth, cartController.removeFromCartController);
 router.route("/apply-discount-code").post(current_user_1.userAuth, cartController.applyDiscountCode);
 router.route("/generate-discount-code").post(current_user_1.userAuth, cartController.generateDiscountCode); //this should be for admin
+router.route("/get-cart-items").get(current_user_1.userAuth, cartController.getCartController);

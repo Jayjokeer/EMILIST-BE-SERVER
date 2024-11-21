@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isUserReviewed = exports.addReview = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductById = exports.createProduct = void 0;
+exports.isUserReviewed = exports.addReview = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
 const product_model_1 = __importDefault(require("../models/product.model"));
 const productLike_model_1 = __importDefault(require("../models/productLike.model"));
 const review_model_1 = __importDefault(require("../models/review.model"));
@@ -21,15 +21,19 @@ const createProduct = (data) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.createProduct = createProduct;
 const fetchProductById = (productId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield product_model_1.default.findById(productId).populate("reviews");
+    return yield product_model_1.default.findById(productId);
 });
 exports.fetchProductById = fetchProductById;
+const fetchProductByIdWithDetails = (productId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield product_model_1.default.findById(productId).populate("reviews").populate('userId', 'fullName email userName profileImage level _id uniqueId');
+});
+exports.fetchProductByIdWithDetails = fetchProductByIdWithDetails;
 const fetchAllProducts = (page, limit, userId) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
     const totalProducts = yield product_model_1.default.countDocuments();
     const products = yield product_model_1.default.find().skip(skip)
         .limit(limit)
-        .populate('userId', 'name email userName profileImage level _id uniqueId');
+        .populate('userId', 'fullName email userName profileImage level _id uniqueId');
     let productsWithLikeStatus;
     if (userId) {
         const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();

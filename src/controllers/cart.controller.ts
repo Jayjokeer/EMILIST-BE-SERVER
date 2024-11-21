@@ -218,3 +218,9 @@ export const generateDiscountCode = catchAsync(async (req: JwtPayload, res: Resp
     const data = discountCode;
     return successResponse(res, StatusCodes.CREATED, data);
 });
+export const getCartController= catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user._id;
+
+    const data = await cartService.fetchCartByUser(userId);
+    return successResponse(res, StatusCodes.CREATED, data);
+});

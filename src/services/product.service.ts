@@ -8,9 +8,11 @@ export const createProduct = async (data: IProduct)=>{
 };
 
 export const fetchProductById = async (productId: any) =>{
-    return await Product.findById(productId).populate("reviews");
+    return await Product.findById(productId);
 };
-
+export const fetchProductByIdWithDetails = async (productId: any) =>{
+    return await Product.findById(productId).populate("reviews").populate('userId', 'fullName email userName profileImage level _id uniqueId');
+};
 export const fetchAllProducts = async (
     page: number,
     limit: number,
@@ -23,7 +25,7 @@ export const fetchAllProducts = async (
 
     const products = await Product.find().skip(skip)
     .limit(limit)
-    .populate('userId', 'name email userName profileImage level _id uniqueId');
+    .populate('userId', 'fullName email userName profileImage level _id uniqueId');
 
     let productsWithLikeStatus;
     if (userId) {
