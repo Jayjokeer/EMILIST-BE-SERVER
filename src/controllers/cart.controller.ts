@@ -204,12 +204,12 @@ export const decreaseCartProductQuantityController= catchAsync(async (req: JwtPa
 
     cartProduct.quantity -= 1;
 
-    cart.totalAmount = cart.products?.reduce(
+    cartCompare!.totalAmount = cartCompare!.products?.reduce(
       (sum, item) => sum + item.quantity * item.price,
       0
     );
 
-    const data = await cart.save();
+    const data = await cartCompare!.save();
 
     return successResponse(res, StatusCodes.OK, data);
 });

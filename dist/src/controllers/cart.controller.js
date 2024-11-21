@@ -189,8 +189,8 @@ exports.decreaseCartProductQuantityController = (0, error_handler_1.catchAsync)(
         throw new error_1.BadRequestError("Cannot decrease quantity below 1");
     }
     cartProduct.quantity -= 1;
-    cart.totalAmount = (_b = cart.products) === null || _b === void 0 ? void 0 : _b.reduce((sum, item) => sum + item.quantity * item.price, 0);
-    const data = yield cart.save();
+    cartCompare.totalAmount = (_b = cartCompare.products) === null || _b === void 0 ? void 0 : _b.reduce((sum, item) => sum + item.quantity * item.price, 0);
+    const data = yield cartCompare.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.applyDiscountCode = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
