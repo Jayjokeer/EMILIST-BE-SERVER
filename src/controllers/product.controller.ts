@@ -21,14 +21,17 @@ export const createProductController = catchAsync(async (req: JwtPayload, res: R
    return successResponse(res, StatusCodes.CREATED, data);
   });   
 export const updateProductController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const { userId} = req.user._id;
+    const userId = req.user._id;
     const {productId} = req.params;
     const updates: IProduct= req.body;
     const files = req.files;
     const product = await productService.fetchProductById(productId);
-    if(String(product?.userId) !== String(userId)){
+
+    if(String(product?.userId) != String(userId)){
         throw new UnauthorizedError("Unauthorized!");
     }
+  
+
     if(!product){
         throw new NotFoundError("Product not found!");
     }
@@ -66,7 +69,7 @@ export const getAllProductsController = catchAsync(async (req: JwtPayload, res: 
     return successResponse(res, StatusCodes.OK, data);
 });
 export const deleteProductController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const { userId} = req.user._id;
+    const userId = req.user._id;
     const {productId} = req.params;
 
     const product = await productService.fetchProductById(productId);
@@ -81,7 +84,7 @@ export const deleteProductController = catchAsync(async (req: JwtPayload, res: R
 });
 
 export const deleteProductImageController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const { userId} = req.user._id;
+    const  userId = req.user._id;
     const {productId, imageId} = req.params;
 
     const product = await productService.fetchProductById(productId);

@@ -51,12 +51,12 @@ exports.createProductController = (0, error_handler_1.catchAsync)((req, res) => 
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.updateProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId } = req.user._id;
+    const userId = req.user._id;
     const { productId } = req.params;
     const updates = req.body;
     const files = req.files;
     const product = yield productService.fetchProductById(productId);
-    if (String(product === null || product === void 0 ? void 0 : product.userId) !== String(userId)) {
+    if (String(product === null || product === void 0 ? void 0 : product.userId) != String(userId)) {
         throw new error_1.UnauthorizedError("Unauthorized!");
     }
     if (!product) {
@@ -92,7 +92,7 @@ exports.getAllProductsController = (0, error_handler_1.catchAsync)((req, res) =>
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.deleteProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId } = req.user._id;
+    const userId = req.user._id;
     const { productId } = req.params;
     const product = yield productService.fetchProductById(productId);
     if (String(product === null || product === void 0 ? void 0 : product.userId) !== String(userId)) {
@@ -106,7 +106,7 @@ exports.deleteProductController = (0, error_handler_1.catchAsync)((req, res) => 
 }));
 exports.deleteProductImageController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
-    const { userId } = req.user._id;
+    const userId = req.user._id;
     const { productId, imageId } = req.params;
     const product = yield productService.fetchProductById(productId);
     if (String(product === null || product === void 0 ? void 0 : product.userId) !== String(userId)) {
