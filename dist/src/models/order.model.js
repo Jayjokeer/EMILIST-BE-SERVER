@@ -33,7 +33,7 @@ const OrderProductSchema = new mongoose_1.Schema({
 const OrderSchema = new mongoose_1.Schema({
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users" },
     products: [OrderProductSchema],
-    totalAmount: { type: Number, },
+    totalAmount: { type: Number },
     status: {
         type: String,
         enum: order_enum_1.OrderStatus,
@@ -44,6 +44,10 @@ const OrderSchema = new mongoose_1.Schema({
         enum: order_enum_1.OrderPaymentStatus,
         default: order_enum_1.OrderPaymentStatus.unpaid,
     },
-    shippingAddress: { type: String, },
+    shippingAddress: { type: String },
+    discountApplied: { type: Boolean, default: false },
+    discountAmount: { type: Number },
+    originalTotalAmount: { type: Number },
+    discountCode: { type: String }
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("Order", OrderSchema);

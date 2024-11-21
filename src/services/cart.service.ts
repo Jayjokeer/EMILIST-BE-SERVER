@@ -17,3 +17,14 @@ export const fetchCartById = async (cartId: string)=>{
 export const deleteCart = async (cartId: string) =>{
     return await Cart.findByIdAndDelete(cartId);
 };
+
+export const fetchDiscountCode = async(discountId: string)=>{
+    return await Discount.findOne({
+        code: discountId,
+        isActive: true,
+        expiryDate: { $gte: new Date() },
+    });
+};
+export const createDiscount = async (payload: any)=>{
+    return await Discount.create(payload);
+}

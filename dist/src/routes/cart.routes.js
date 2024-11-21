@@ -31,7 +31,9 @@ const cart_validation_1 = require("../validations/cart.validation");
 const router = (0, express_1.Router)();
 exports.CartRoute = router;
 router.route("/add-to-cart").post(current_user_1.userAuth, cart_validation_1.validateAddToCart, cartController.addToCartController);
-router.route("/checkout").get(current_user_1.userAuth, cartController.checkoutCartController);
+router.route("/checkout").post(current_user_1.userAuth, cartController.checkoutCartController);
 router.route("/reduce-quantity/:productId").patch(current_user_1.userAuth, cartController.decreaseCartProductQuantityController);
 router.route("/increase-quantity/:productId").patch(current_user_1.userAuth, cartController.increaseCartProductQuantityController);
 router.route("/remove-from-cart/:productId").patch(current_user_1.userAuth, cartController.removeFromCartController);
+router.route("/apply-discount-code").post(current_user_1.userAuth, cartController.applyDiscountCode);
+router.route("/generate-discount-code").post(current_user_1.userAuth, cartController.generateDiscountCode); //this should be for admin

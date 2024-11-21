@@ -3,4 +3,6 @@ export interface IDiscount extends Document {
     discountPercentage: number;
     expiryDate: Date;
     isActive: boolean;
+    isSingleUse: boolean;
+    useCount:number;
 }

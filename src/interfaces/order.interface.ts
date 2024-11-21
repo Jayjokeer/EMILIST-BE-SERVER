@@ -14,4 +14,8 @@ export interface IOrder extends Document {
     status?: OrderStatus; 
     paymentStatus?: OrderPaymentStatus; 
     shippingAddress?: string;
-  }
+    discountApplied?:boolean;
+    discountAmount?: number;
+    originalTotalAmount?: number;
+    discountCode?:string;
+};

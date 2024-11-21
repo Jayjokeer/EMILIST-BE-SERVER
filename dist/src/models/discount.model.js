@@ -29,5 +29,7 @@ const discountSchema = new mongoose_1.Schema({
     discountPercentage: { type: Number, required: true },
     expiryDate: { type: Date, required: true },
     isActive: { type: Boolean, default: true },
+    isSingleUse: { type: Boolean, default: false },
+    useCount: { type: Number, default: 0 },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Discount', discountSchema);

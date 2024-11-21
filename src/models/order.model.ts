@@ -13,7 +13,7 @@ const OrderSchema: Schema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "Users"},
     products: [OrderProductSchema],
-    totalAmount: { type: Number,  },
+    totalAmount: { type: Number  },
     status: {
       type: String,
       enum: OrderStatus,
@@ -24,7 +24,11 @@ const OrderSchema: Schema = new Schema(
       enum: OrderPaymentStatus,
       default: OrderPaymentStatus.unpaid,
     },
-    shippingAddress: { type: String,  },
+    shippingAddress: { type: String },
+    discountApplied: { type: Boolean, default: false },
+    discountAmount:{ type: Number },
+    originalTotalAmount: { type: Number },
+    discountCode:{type: String}
   },
   { timestamps: true }
 );

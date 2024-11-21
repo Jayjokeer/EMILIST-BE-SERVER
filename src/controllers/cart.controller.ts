@@ -68,18 +68,35 @@ export const addToCartController = catchAsync(async (req: JwtPayload, res: Respo
 
 export const checkoutCartController= catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
-    console.log(userId)
+    const { code } = req.body; 
+
     const cart = await cartService.fetchCartByUser(userId);
     if (!cart) throw new NotFoundError("Cart not found");
 
     cart.status = CartStatus.checkedOut;
     await cart.save();
 
+    let discountPercentage = 0;
+    if (code) {
+        const validDiscountCode = await cartService.fetchDiscountCode(code);
+
+        if (!validDiscountCode) {
+            throw new NotFoundError("Invalid or expired discount code");
+        }
+
+        discountPercentage = validDiscountCode.discountPercentage;
+        validDiscountCode.useCount += 1;
+        if(validDiscountCode.isSingleUse){
+            validDiscountCode.isActive = false;
+        }
+        await validDiscountCode.save();
+    }
+
+    const discountAmount = (cart.totalAmount! * discountPercentage) / 100;
+    const finalTotalAmount = cart.totalAmount! - discountAmount;
 
     for (const cartItem of cart.products!) {
-        console.log("here0")
         const product = await productService.fetchProductById(cartItem.productId);
-
       if (!product || Number(product.availableQuantity) < cartItem.quantity) {
         throw new NotFoundError(`Product ${product?.name} is out of stock`);
       }
@@ -93,9 +110,13 @@ export const checkoutCartController= catchAsync(async (req: JwtPayload, res: Res
         quantity: item.quantity,
         price: item.price,
       })),
-      totalAmount: cart.totalAmount,
+      totalAmount: finalTotalAmount,
+      discountApplied: discountAmount > 0,
+      discountAmount,
+      originalTotalAmount: cart.totalAmount,
       status: OrderStatus.pending,
       paymentStatus:OrderPaymentStatus.unpaid,
+      discountCode: code,
     };
     const order = await orderService.createOrder(orderPayload );
 
@@ -159,33 +180,42 @@ export const decreaseCartProductQuantityController= catchAsync(async (req: JwtPa
 
     return successResponse(res, StatusCodes.OK, data);
 });
-// export const applyReferralCode = catchAsync(async (req: JwtPayload, res: Response) => {
-//     const { code } = req.body;
-//     const userId = req.user._id;
+export const applyDiscountCode = catchAsync(async (req: JwtPayload, res: Response) => {
+    const { code } = req.body;
+    const userId = req.user._id;
 
-//     // Validate referral code
-//     const referralCode = await ReferralCode.findOne({
-//         code,
-//         isActive: true,
-//         expiryDate: { $gte: new Date() },
-//     });
+    const discountCode = await cartService.fetchDiscountCode(code);
 
-//     if (!referralCode) {
-//         throw new NotFoundError("Invalid or expired referral code");
-//     }
+    if (!discountCode) {
+        throw new NotFoundError("Invalid or expired discount code");
+    }
 
-//     // Fetch the user's cart
-//     const cart = await cartService.fetchCartByUser(userId);
-//     if (!cart) throw new NotFoundError("Cart not found");
+    const cart = await cartService.fetchCartByUser(userId);
+    if (!cart) throw new NotFoundError("Cart not found");
 
-//     // Calculate the discount
-//     const discountAmount = (cart.totalAmount * referralCode.discountPercentage) / 100;
-//     const discountedTotal = cart.totalAmount - discountAmount;
+    const discountAmount = (cart.totalAmount! * discountCode.discountPercentage) / 100;
+    const discountedTotal = cart.totalAmount! - discountAmount;
+    const data = {
+        originalAmount: cart.totalAmount,
+        discountAmount,
+        discountedTotal,
+    }
+    return successResponse(res, StatusCodes.OK, data);
+});
 
-//     return successResponse(res, StatusCodes.OK, {
-//         message: "Referral code applied successfully",
-//         originalAmount: cart.totalAmount,
-//         discountAmount,
-//         discountedTotal,
-//     });
-// });
+export const generateDiscountCode = catchAsync(async (req: JwtPayload, res: Response) => {
+    const { discountPercentage, expiryDate, isSingleUse } = req.body;
+
+
+    const code = `${Math.random().toString(36).substr(2, 7).toUpperCase()}`;
+
+    const discountCode = await cartService.createDiscount({
+        code,
+        discountPercentage,
+        expiryDate,
+        isSingleUse, 
+        createdBy: req.user._id,
+    });
+    const data = discountCode;
+    return successResponse(res, StatusCodes.CREATED, data);
+});
