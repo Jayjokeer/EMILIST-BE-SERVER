@@ -164,8 +164,9 @@ export const increaseCartProductQuantityController= catchAsync(async (req: JwtPa
 
     const cart = await cartService.fetchCartByUser(userId);
     if (!cart) throw new NotFoundError("Cart not found");
+    const cartCompare = await cartService.fetchCartById(String(cart._id))
 
-    const cartProduct = cart.products?.find((item) => item.productId.toString() === productId);
+    const cartProduct = cartCompare!.products?.find((item) => item.productId.toString() === productId);
     if (!cartProduct) throw new NotFoundError("Product not found in cart");
 
     const product = await productService.fetchProductById(productId);
@@ -177,12 +178,12 @@ export const increaseCartProductQuantityController= catchAsync(async (req: JwtPa
 
     cartProduct.quantity += 1;
 
-    cart.totalAmount = cart.products?.reduce(
+    cartCompare!.totalAmount = cartCompare!.products?.reduce(
       (sum, item) => sum + item.quantity * item.price,
       0
     );
 
-   const data=  await cart.save();
+   const data=  await cartCompare!.save();
     return successResponse(res, StatusCodes.OK, data);
 });
 export const decreaseCartProductQuantityController= catchAsync(async (req: JwtPayload, res: Response) => {
@@ -192,8 +193,9 @@ export const decreaseCartProductQuantityController= catchAsync(async (req: JwtPa
 
     const cart = await cartService.fetchCartByUser(userId);
     if (!cart) throw new NotFoundError("Cart not found");
+    const cartCompare = await cartService.fetchCartById(String(cart._id))
 
-    const cartProduct = cart.products?.find((item) => item.productId.toString() === productId);
+    const cartProduct = cartCompare!.products?.find((item) => item.productId.toString() === productId);
     if (!cartProduct) throw new NotFoundError("Product not found in cart");
 
     if (cartProduct.quantity === 1) {

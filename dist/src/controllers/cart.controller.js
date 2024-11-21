@@ -159,7 +159,8 @@ exports.increaseCartProductQuantityController = (0, error_handler_1.catchAsync)(
     const cart = yield cartService.fetchCartByUser(userId);
     if (!cart)
         throw new error_1.NotFoundError("Cart not found");
-    const cartProduct = (_a = cart.products) === null || _a === void 0 ? void 0 : _a.find((item) => item.productId.toString() === productId);
+    const cartCompare = yield cartService.fetchCartById(String(cart._id));
+    const cartProduct = (_a = cartCompare.products) === null || _a === void 0 ? void 0 : _a.find((item) => item.productId.toString() === productId);
     if (!cartProduct)
         throw new error_1.NotFoundError("Product not found in cart");
     const product = yield productService.fetchProductById(productId);
@@ -169,8 +170,8 @@ exports.increaseCartProductQuantityController = (0, error_handler_1.catchAsync)(
         throw new error_1.NotFoundError("Not enough product available in stock");
     }
     cartProduct.quantity += 1;
-    cart.totalAmount = (_b = cart.products) === null || _b === void 0 ? void 0 : _b.reduce((sum, item) => sum + item.quantity * item.price, 0);
-    const data = yield cart.save();
+    cartCompare.totalAmount = (_b = cartCompare.products) === null || _b === void 0 ? void 0 : _b.reduce((sum, item) => sum + item.quantity * item.price, 0);
+    const data = yield cartCompare.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.decreaseCartProductQuantityController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -180,7 +181,8 @@ exports.decreaseCartProductQuantityController = (0, error_handler_1.catchAsync)(
     const cart = yield cartService.fetchCartByUser(userId);
     if (!cart)
         throw new error_1.NotFoundError("Cart not found");
-    const cartProduct = (_a = cart.products) === null || _a === void 0 ? void 0 : _a.find((item) => item.productId.toString() === productId);
+    const cartCompare = yield cartService.fetchCartById(String(cart._id));
+    const cartProduct = (_a = cartCompare.products) === null || _a === void 0 ? void 0 : _a.find((item) => item.productId.toString() === productId);
     if (!cartProduct)
         throw new error_1.NotFoundError("Product not found in cart");
     if (cartProduct.quantity === 1) {
