@@ -119,7 +119,6 @@ export const checkoutCartController= catchAsync(async (req: JwtPayload, res: Res
       discountCode: code,
     };
     const order = await orderService.createOrder(orderPayload );
-
     await cartService.deleteCart(String(cart._id));
 
     const data = order; 

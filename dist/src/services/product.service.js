@@ -12,15 +12,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductById = exports.createProduct = void 0;
+exports.isUserReviewed = exports.addReview = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductById = exports.createProduct = void 0;
 const product_model_1 = __importDefault(require("../models/product.model"));
 const productLike_model_1 = __importDefault(require("../models/productLike.model"));
+const review_model_1 = __importDefault(require("../models/review.model"));
 const createProduct = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield product_model_1.default.create(data);
 });
 exports.createProduct = createProduct;
 const fetchProductById = (productId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield product_model_1.default.findById(productId);
+    return yield product_model_1.default.findById(productId).populate("reviews");
 });
 exports.fetchProductById = fetchProductById;
 const fetchAllProducts = (page, limit, userId) => __awaiter(void 0, void 0, void 0, function* () {
@@ -91,3 +92,11 @@ const unlikeProduct = (productId, userId) => __awaiter(void 0, void 0, void 0, f
     return yield productLike_model_1.default.findOneAndDelete({ user: userId, product: productId });
 });
 exports.unlikeProduct = unlikeProduct;
+const addReview = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield review_model_1.default.create(payload);
+});
+exports.addReview = addReview;
+const isUserReviewed = (productId, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield review_model_1.default.findOne({ userId: userId, productId: productId });
+});
+exports.isUserReviewed = isUserReviewed;

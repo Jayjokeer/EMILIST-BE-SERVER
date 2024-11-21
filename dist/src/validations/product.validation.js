@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateUpdateProduct = exports.validateProduct = void 0;
+exports.validateReviewProduct = exports.validateUpdateProduct = exports.validateProduct = void 0;
 const joi_1 = __importDefault(require("joi"));
 const validateProduct = (req, res, next) => {
     const productValidation = joi_1.default.object({
@@ -94,3 +94,27 @@ const validateUpdateProduct = (req, res, next) => {
     next();
 };
 exports.validateUpdateProduct = validateUpdateProduct;
+const validateReviewProduct = (req, res, next) => {
+    const productReviewValidation = joi_1.default.object({
+        productId: joi_1.default.string().required().messages({
+            "string.base": "Product ID must be a string",
+            "string.empty": "Product ID is required",
+        }),
+        rating: joi_1.default.number().required().messages({
+            "number.base": "Rating must be a number",
+            "number.empty": "Rating is required",
+        }),
+        comment: joi_1.default.string().required().messages({
+            "string.base": "Comment must be a string",
+            "string.empty": "Comment is required",
+        }),
+    });
+    const { error } = productReviewValidation.validate(req.body, { abortEarly: false });
+    if (error) {
+        const errorMessages = error.details.map((detail) => detail.message);
+        res.status(400).json({ errors: errorMessages });
+        return;
+    }
+    next();
+};
+exports.validateReviewProduct = validateReviewProduct;

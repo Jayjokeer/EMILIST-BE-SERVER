@@ -156,3 +156,30 @@ export const unlikeProductsController = catchAsync(async (req: JwtPayload, res: 
 
     return successResponse(res, StatusCodes.OK, "Unliked successfully");
 });
+
+export const reviewProductController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user._id;
+    const {productId, rating, comment} = req.body;
+
+    const product = await productService.fetchProductById(productId);
+    if(!product){
+        throw new NotFoundError("Product not found!")
+    }
+    if(String(product.userId) == String(userId)){
+        throw new BadRequestError("You cannot review your own product!");
+    }
+    const isReviewed = await productService.isUserReviewed(productId, userId);
+    if(isReviewed){
+        throw new BadRequestError("You have previously reviewed this product!");
+    }
+    const payload ={
+        productId,
+        userId, 
+        rating, 
+        comment
+    }
+    const data = await productService.addReview(payload);
+    product.reviews?.push(String(data._id));
+    await product.save()
+    return successResponse(res, StatusCodes.OK, data);
+});

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import * as productController from "../controllers/product.controller";
 import { userAuth } from "../middlewares/current-user";
-import { validateProduct, validateUpdateProduct } from "../validations/product.validation";
+import { validateProduct, validateReviewProduct, validateUpdateProduct } from "../validations/product.validation";
 import { multipleUpload } from "../utils/image-upload";
 
 const router = Router();
@@ -16,5 +16,6 @@ router.route("/fetch-user-products").get( userAuth, productController.getUserPro
 router.route("/like-product/:productId").get( userAuth, productController.likeProductsController);
 router.route("/unlike-product/:productId").get( userAuth, productController.unlikeProductsController);
 router.route("/fetch-liked-products").get( userAuth, productController.fetchAllLikedProductsController);
+router.route("/add-review").post(userAuth,validateReviewProduct , productController.reviewProductController);
 
 export { router as ProductRoute };

@@ -1,3 +1,5 @@
+import { Schema } from "mongoose";
+
 export interface IProduct {
     name?: string;
     category?: string;
@@ -11,5 +13,6 @@ export interface IProduct {
     location?: string;
     currency?: string;
     userId?: string;
+    reviews?: string[];
     // orders?: string[];
 }

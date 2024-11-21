@@ -18,7 +18,8 @@ const productSchema: Schema = new mongoose.Schema(
     location: {type: String},
     currency: {type: String},
     userId: {type: Schema.Types.ObjectId, ref: 'Users'},
-    // orders: [{type:  Schema.Types.ObjectId, ref: 'Orders'}]
+    // orders: [{type:  Schema.Types.ObjectId, ref: 'Order'}],
+    reviews: [{type:  Schema.Types.ObjectId, ref: 'Review'}]
   },
   { timestamps: true }
 

@@ -1,13 +1,14 @@
 import { IProduct } from "../interfaces/product.interface";
 import Product from "../models/product.model";
 import ProductLike from "../models/productLike.model";
+import Review from "../models/review.model";
 
 export const createProduct = async (data: IProduct)=>{
     return await Product.create(data);
 };
 
 export const fetchProductById = async (productId: any) =>{
-    return await Product.findById(productId);
+    return await Product.findById(productId).populate("reviews");
 };
 
 export const fetchAllProducts = async (
@@ -23,7 +24,7 @@ export const fetchAllProducts = async (
     const products = await Product.find().skip(skip)
     .limit(limit)
     .populate('userId', 'name email userName profileImage level _id uniqueId');
-    
+
     let productsWithLikeStatus;
     if (userId) {
       const likedProducts = await ProductLike.find({ user: userId }).select('product').lean();
@@ -98,4 +99,12 @@ export const fetchLikedProducts = async (userId: string, page: number, limit: nu
   export const unlikeProduct = async (productId: string, userId: string ) =>{
     
    return await ProductLike.findOneAndDelete({user: userId, product: productId});
+  };
+
+  export const addReview = async(payload: any)=>{
+    return await Review.create(payload);
+  };
+
+  export const isUserReviewed = async(productId: string, userId: string)=>{
+    return await Review.findOne({userId: userId, productId:productId});
   };

@@ -41,3 +41,4 @@ router.route("/fetch-user-products").get(current_user_1.userAuth, productControl
 router.route("/like-product/:productId").get(current_user_1.userAuth, productController.likeProductsController);
 router.route("/unlike-product/:productId").get(current_user_1.userAuth, productController.unlikeProductsController);
 router.route("/fetch-liked-products").get(current_user_1.userAuth, productController.fetchAllLikedProductsController);
+router.route("/add-review").post(current_user_1.userAuth, product_validation_1.validateReviewProduct, productController.reviewProductController);

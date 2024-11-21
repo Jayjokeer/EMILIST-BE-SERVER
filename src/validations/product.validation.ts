@@ -96,3 +96,31 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
   
     next();
   };
+
+  export const validateReviewProduct = (req: Request, res: Response, next: NextFunction) => {
+    const productReviewValidation = Joi.object({
+      productId: Joi.string().required().messages({
+        "string.base": "Product ID must be a string",
+        "string.empty": "Product ID is required",
+      }),
+      rating: Joi.number().required().messages({
+        "number.base": "Rating must be a number",
+        "number.empty": "Rating is required",
+
+      }),
+      comment: Joi.string().required().messages({
+        "string.base": "Comment must be a string",
+        "string.empty": "Comment is required",
+      }),
+    });
+  
+    const { error } = productReviewValidation.validate(req.body, { abortEarly: false });
+  
+    if (error) {
+      const errorMessages = error.details.map((detail) => detail.message);
+     res.status(400).json({ errors: errorMessages });
+     return ;
+    }
+  
+    next();
+  };

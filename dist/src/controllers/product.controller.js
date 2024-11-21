@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.unlikeProductsController = exports.fetchAllLikedProductsController = exports.likeProductsController = exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
+exports.reviewProductController = exports.unlikeProductsController = exports.fetchAllLikedProductsController = exports.likeProductsController = exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -165,4 +165,30 @@ exports.unlikeProductsController = (0, error_handler_1.catchAsync)((req, res) =>
     }
     yield productService.unlikeProduct(productId, userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Unliked successfully");
+}));
+exports.reviewProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = req.user._id;
+    const { productId, rating, comment } = req.body;
+    const product = yield productService.fetchProductById(productId);
+    if (!product) {
+        throw new error_1.NotFoundError("Product not found!");
+    }
+    if (String(product.userId) == String(userId)) {
+        throw new error_1.BadRequestError("You cannot review your own product!");
+    }
+    const isReviewed = yield productService.isUserReviewed(productId, userId);
+    if (isReviewed) {
+        throw new error_1.BadRequestError("You have previously reviewed this product!");
+    }
+    const payload = {
+        productId,
+        userId,
+        rating,
+        comment
+    };
+    const data = yield productService.addReview(payload);
+    (_a = product.reviews) === null || _a === void 0 ? void 0 : _a.push(String(data._id));
+    yield product.save();
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
