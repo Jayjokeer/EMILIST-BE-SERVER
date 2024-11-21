@@ -86,7 +86,8 @@ export const fetchLikedProducts = async (userId: string, page: number, limit: nu
     const products = await Product.find({ _id: { $in: likedProductsId } })
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .populate('userId', 'fullName email userName profileImage level _id uniqueId');
   
     const totalLikedProducts = likedProductsId.length;
   

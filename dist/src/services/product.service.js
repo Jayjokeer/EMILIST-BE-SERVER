@@ -82,7 +82,8 @@ const fetchLikedProducts = (userId, page, limit) => __awaiter(void 0, void 0, vo
     const products = yield product_model_1.default.find({ _id: { $in: likedProductsId } })
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit);
+        .limit(limit)
+        .populate('userId', 'fullName email userName profileImage level _id uniqueId');
     const totalLikedProducts = likedProductsId.length;
     return {
         products,
