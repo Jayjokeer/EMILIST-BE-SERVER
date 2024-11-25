@@ -12,7 +12,7 @@ export const fetchProductById = async (productId: any) =>{
     return await Product.findById(productId);
 };
 export const fetchProductByIdWithDetails = async (productId: any) =>{
-    return await Product.findById(productId).populate("reviews").populate('userId', 'fullName email userName profileImage level _id uniqueId');
+    return await Product.findById(productId).populate('userId', 'fullName email userName profileImage level _id uniqueId');
 };
 export const fetchAllProducts = async (
     page: number,
@@ -142,19 +142,50 @@ export const fetchLikedProducts = async (userId: string, page: number, limit: nu
   };
 
 
-  export const fetchReviewForProduct = async (productId: string) => {
-    const objectId = new mongoose.Types.ObjectId(productId);
   
-    return await Review.aggregate([
-      {
-        $match: { productId: objectId },
+export const fetchReviewForProduct = async (productId: string) => {
+  const objectId = new mongoose.Types.ObjectId(productId);
+
+  return await Review.aggregate([
+    {
+      $match: { productId: objectId }, 
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "userId", 
+        foreignField: "_id", 
+        as: "userInfo", 
+        pipeline: [
+          {
+            $project: {
+              _id: 0, 
+              fullName: 1,
+              profileImage: 1,
+              email: 1,
+              userName: 1,
+              
+            },
+          },
+        ],
       },
-      {
-        $group: {
-          _id: "$productId",
-          averageRating: { $avg: "$rating" },
-          numberOfRatings: { $sum: 1 },
+    },
+    {
+      $unwind: "$userInfo",
+    },
+    {
+      $group: {
+        _id: "$productId",
+        averageRating: { $avg: "$rating" },
+        numberOfRatings: { $sum: 1 },
+        reviews: {
+          $push: {
+            rating: "$rating",
+            comment: "$comment", 
+            user: "$userInfo", 
         },
+      }
       },
-    ]);
-  };
+    },
+  ]);
+};

@@ -65,15 +65,14 @@ export const getSingleProductController = catchAsync(async (req: JwtPayload, res
       liked = !!likedProduct;  
     }
     const reviewAggregation = await productService.fetchReviewForProduct(productId);
-    console.log(reviewAggregation)
     const review = reviewAggregation[0] || { averageRating: 0, numberOfRatings: 0 }; 
     const data = {
       product,
       liked,
       averageRating: review.averageRating || 0,
       numberOfRatings: review.numberOfRatings || 0,
+      reviewsData: reviewAggregation[0].reviews
     };
-    console.log(data)
 
     return successResponse(res, StatusCodes.OK, data);
 });
