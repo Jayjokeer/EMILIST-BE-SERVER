@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { IProduct } from "../interfaces/product.interface";
 import Product from "../models/product.model";
 import ProductLike from "../models/productLike.model";
@@ -21,29 +22,57 @@ export const fetchAllProducts = async (
     const skip = (page - 1) * limit;
 
     const totalProducts = await Product.countDocuments();
-
-
-    const products = await Product.find().skip(skip)
+    const products = await Product.find()
+    .skip(skip)
     .limit(limit)
-    .populate('userId', 'fullName email userName profileImage level _id uniqueId');
+    .populate('userId', 'fullName email userName profileImage level _id uniqueId') // Include user details
+    .lean();
 
-    let productsWithLikeStatus;
-    if (userId) {
-      const likedProducts = await ProductLike.find({ user: userId }).select('product').lean();
-      const likedProductIds = likedProducts.map((like) => like.product.toString());
-  
-      productsWithLikeStatus= products.map((product) => ({
-        ...product.toObject(),
-        liked: likedProductIds.includes(product._id.toString()),
-      }));
-    } else {
-        productsWithLikeStatus = products.map((product) => ({
-        ...product.toObject(),
-        liked: false,
-      }));
-    }
+  const productIds = products.map((product) => product._id);
+  const reviews = await Review.aggregate([
+    {
+      $match: { productId: { $in: productIds } },
+    },
+    {
+      $group: {
+        _id: "$productId",
+        averageRating: { $avg: "$rating" },
+        numberOfRatings: { $sum: 1 },
+      },
+    },
+  ]);
+
+  // Map reviews to products
+  const reviewMap = reviews.reduce((map, review) => {
+    map[review._id.toString()] = {
+      averageRating: review.averageRating || 0,
+      numberOfRatings: review.numberOfRatings || 0,
+    };
+    return map;
+  }, {});
+
+  let productsWithDetails;
+  if (userId) {
+    const likedProducts = await ProductLike.find({ user: userId }).select('product').lean();
+    const likedProductIds = likedProducts.map((like) => like.product.toString());
+
+    productsWithDetails = products.map((product) => ({
+      ...product,
+      averageRating: reviewMap[product._id.toString()]?.averageRating || 0,
+      numberOfRatings: reviewMap[product._id.toString()]?.numberOfRatings || 0,
+      liked: likedProductIds.includes(product._id.toString()),
+    }));
+  } else {
+    productsWithDetails = products.map((product) => ({
+      ...product,
+      averageRating: reviewMap[product._id.toString()]?.averageRating || 0,
+      numberOfRatings: reviewMap[product._id.toString()]?.numberOfRatings || 0,
+      liked: false,
+    }));
+  }
+
    return {
-    products: productsWithLikeStatus,
+    products: productsWithDetails,
     totalPages: Math.ceil(totalProducts/ limit),
     currentPage: page,
     totalProducts  
@@ -110,4 +139,22 @@ export const fetchLikedProducts = async (userId: string, page: number, limit: nu
 
   export const isUserReviewed = async(productId: string, userId: string)=>{
     return await Review.findOne({userId: userId, productId:productId});
+  };
+
+
+  export const fetchReviewForProduct = async (productId: string) => {
+    const objectId = new mongoose.Types.ObjectId(productId);
+  
+    return await Review.aggregate([
+      {
+        $match: { productId: objectId },
+      },
+      {
+        $group: {
+          _id: "$productId",
+          averageRating: { $avg: "$rating" },
+          numberOfRatings: { $sum: 1 },
+        },
+      },
+    ]);
   };

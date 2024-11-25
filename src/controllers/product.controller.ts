@@ -64,10 +64,14 @@ export const getSingleProductController = catchAsync(async (req: JwtPayload, res
       const likedProduct = await productService.ifLikedProduct( productId ,userId, );
       liked = !!likedProduct;  
     }
-  console.log(product)
-   const data = {
+    const reviewAggregation = await productService.fetchReviewForProduct(productId);
+    console.log(reviewAggregation)
+    const review = reviewAggregation[0] || { averageRating: 0, numberOfRatings: 0 }; 
+    const data = {
       product,
-      liked,  
+      liked,
+      averageRating: review.averageRating || 0,
+      numberOfRatings: review.numberOfRatings || 0,
     };
     console.log(data)
 
