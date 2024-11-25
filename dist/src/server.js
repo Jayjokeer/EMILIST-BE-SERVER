@@ -49,7 +49,7 @@ app.use((0, express_session_1.default)({
 }));
 exports.io = new socket_io_1.Server(server, {
     cors: {
-        origin: ["*", "https://emilist-tom.netlify.app/"],
+        origin: "*",
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     },
 });

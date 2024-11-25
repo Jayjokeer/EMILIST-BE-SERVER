@@ -39,7 +39,7 @@ app.use(session({
 }));
 export const io = new Server(server, {
   cors: {
-    origin: ["*", "https://emilist-tom.netlify.app/"], 
+    origin: "*", 
     methods: ["GET", "POST", "PUT", "DELETE","PATCH"],
   },
 });
