@@ -321,6 +321,9 @@ const validateUpdateMilestonePayment = (req, res, next) => {
             'string.empty': 'Payment Date must be a string ',
             'any.required': 'Payment Date   is required',
         }),
+        note: joi_1.default.string().optional().messages({
+            'string.empty': 'Note must be a string',
+        }),
     });
     const { error } = milestoneValidation.validate(req.body, { abortEarly: false });
     if (error) {

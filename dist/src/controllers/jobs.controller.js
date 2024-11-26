@@ -558,7 +558,7 @@ exports.acceptQuoteController = (0, error_handler_1.catchAsync)((req, res) => __
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.updateMilestonePaymentController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { amountPaid, paymentMethod, date, jobId, milestoneId } = req.body;
+    const { amountPaid, paymentMethod, date, jobId, milestoneId, note } = req.body;
     if (!jobId && !milestoneId) {
         throw new error_1.NotFoundError("Ids required!");
     }
@@ -576,6 +576,7 @@ exports.updateMilestonePaymentController = (0, error_handler_1.catchAsync)((req,
         amountPaid,
         paymentMethod,
         date,
+        note,
     };
     if (req.file) {
         milestone.paymentInfo.paymentReciept = req.file.path;
