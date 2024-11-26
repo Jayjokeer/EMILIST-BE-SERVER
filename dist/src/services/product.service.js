@@ -12,7 +12,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isUserReviewed = exports.addReview = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
+exports.fetchReviewForProduct = exports.isUserReviewed = exports.addReview = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
+const mongoose_1 = __importDefault(require("mongoose"));
 const product_model_1 = __importDefault(require("../models/product.model"));
 const productLike_model_1 = __importDefault(require("../models/productLike.model"));
 const review_model_1 = __importDefault(require("../models/review.model"));
@@ -25,26 +26,55 @@ const fetchProductById = (productId) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.fetchProductById = fetchProductById;
 const fetchProductByIdWithDetails = (productId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield product_model_1.default.findById(productId).populate("reviews").populate('userId', 'fullName email userName profileImage level _id uniqueId');
+    return yield product_model_1.default.findById(productId).populate('userId', 'fullName email userName profileImage level _id uniqueId');
 });
 exports.fetchProductByIdWithDetails = fetchProductByIdWithDetails;
 const fetchAllProducts = (page, limit, userId) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
     const totalProducts = yield product_model_1.default.countDocuments();
-    const products = yield product_model_1.default.find().skip(skip)
+    const products = yield product_model_1.default.find()
+        .skip(skip)
         .limit(limit)
-        .populate('userId', 'fullName email userName profileImage level _id uniqueId');
-    let productsWithLikeStatus;
+        .populate('userId', 'fullName email userName profileImage level _id uniqueId') // Include user details
+        .lean();
+    const productIds = products.map((product) => product._id);
+    const reviews = yield review_model_1.default.aggregate([
+        {
+            $match: { productId: { $in: productIds } },
+        },
+        {
+            $group: {
+                _id: "$productId",
+                averageRating: { $avg: "$rating" },
+                numberOfRatings: { $sum: 1 },
+            },
+        },
+    ]);
+    // Map reviews to products
+    const reviewMap = reviews.reduce((map, review) => {
+        map[review._id.toString()] = {
+            averageRating: review.averageRating || 0,
+            numberOfRatings: review.numberOfRatings || 0,
+        };
+        return map;
+    }, {});
+    let productsWithDetails;
     if (userId) {
         const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();
         const likedProductIds = likedProducts.map((like) => like.product.toString());
-        productsWithLikeStatus = products.map((product) => (Object.assign(Object.assign({}, product.toObject()), { liked: likedProductIds.includes(product._id.toString()) })));
+        productsWithDetails = products.map((product) => {
+            var _a, _b;
+            return (Object.assign(Object.assign({}, product), { averageRating: ((_a = reviewMap[product._id.toString()]) === null || _a === void 0 ? void 0 : _a.averageRating) || 0, numberOfRatings: ((_b = reviewMap[product._id.toString()]) === null || _b === void 0 ? void 0 : _b.numberOfRatings) || 0, liked: likedProductIds.includes(product._id.toString()) }));
+        });
     }
     else {
-        productsWithLikeStatus = products.map((product) => (Object.assign(Object.assign({}, product.toObject()), { liked: false })));
+        productsWithDetails = products.map((product) => {
+            var _a, _b;
+            return (Object.assign(Object.assign({}, product), { averageRating: ((_a = reviewMap[product._id.toString()]) === null || _a === void 0 ? void 0 : _a.averageRating) || 0, numberOfRatings: ((_b = reviewMap[product._id.toString()]) === null || _b === void 0 ? void 0 : _b.numberOfRatings) || 0, liked: false }));
+        });
     }
     return {
-        products: productsWithLikeStatus,
+        products: productsWithDetails,
         totalPages: Math.ceil(totalProducts / limit),
         currentPage: page,
         totalProducts
@@ -105,3 +135,48 @@ const isUserReviewed = (productId, userId) => __awaiter(void 0, void 0, void 0, 
     return yield review_model_1.default.findOne({ userId: userId, productId: productId });
 });
 exports.isUserReviewed = isUserReviewed;
+const fetchReviewForProduct = (productId) => __awaiter(void 0, void 0, void 0, function* () {
+    const objectId = new mongoose_1.default.Types.ObjectId(productId);
+    return yield review_model_1.default.aggregate([
+        {
+            $match: { productId: objectId },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "userInfo",
+                pipeline: [
+                    {
+                        $project: {
+                            _id: 0,
+                            fullName: 1,
+                            profileImage: 1,
+                            email: 1,
+                            userName: 1,
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            $unwind: "$userInfo",
+        },
+        {
+            $group: {
+                _id: "$productId",
+                averageRating: { $avg: "$rating" },
+                numberOfRatings: { $sum: 1 },
+                reviews: {
+                    $push: {
+                        rating: "$rating",
+                        comment: "$comment",
+                        user: "$userInfo",
+                    },
+                }
+            },
+        },
+    ]);
+});
+exports.fetchReviewForProduct = fetchReviewForProduct;

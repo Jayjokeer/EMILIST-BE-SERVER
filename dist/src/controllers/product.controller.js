@@ -88,12 +88,15 @@ exports.getSingleProductController = (0, error_handler_1.catchAsync)((req, res) 
         const likedProduct = yield productService.ifLikedProduct(productId, userId);
         liked = !!likedProduct;
     }
-    console.log(product);
+    const reviewAggregation = yield productService.fetchReviewForProduct(productId);
+    const review = reviewAggregation[0] || { averageRating: 0, numberOfRatings: 0 };
     const data = {
         product,
         liked,
+        averageRating: review.averageRating || 0,
+        numberOfRatings: review.numberOfRatings || 0,
+        reviewsData: reviewAggregation[0].reviews
     };
-    console.log(data);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.getAllProductsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

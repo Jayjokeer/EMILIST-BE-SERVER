@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getChatsWithLastMessages = exports.findChatWithMessages = exports.findChat = exports.createChat = void 0;
+const mongoose_1 = __importDefault(require("mongoose"));
 const error_1 = require("../errors/error");
 const chat_model_1 = __importDefault(require("../models/chat.model"));
 const createChat = (data) => __awaiter(void 0, void 0, void 0, function* () {
@@ -33,26 +34,59 @@ const findChatWithMessages = (recieverId, senderId) => __awaiter(void 0, void 0,
 exports.findChatWithMessages = findChatWithMessages;
 const getChatsWithLastMessages = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const chats = yield chat_model_1.default.find({ participants: userId })
-            .populate({
-            path: 'messages',
-            options: { sort: { createdAt: -1 }, limit: 1 },
-        })
-            .populate('participants', 'fullName profileImage email userName')
-            .exec();
-        const chatList = chats.map((chat) => {
-            const lastMessage = chat.messages[0] || null;
-            return {
-                chatId: chat._id,
-                participants: chat.participants.filter((participant) => participant._id.toString() !== userId),
-                lastMessage: lastMessage,
-            };
-        });
-        return chatList;
+        const chats = yield chat_model_1.default.aggregate([
+            {
+                $match: { participants: new mongoose_1.default.Types.ObjectId(userId) },
+            },
+            {
+                $lookup: {
+                    from: "messages",
+                    localField: "_id",
+                    foreignField: "chatId",
+                    as: "messages",
+                },
+            },
+            {
+                $addFields: {
+                    lastMessage: { $arrayElemAt: ["$messages", -1] },
+                },
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "participants",
+                    foreignField: "_id",
+                    as: "participants",
+                },
+            },
+            {
+                $project: {
+                    _id: 1,
+                    participants: {
+                        $filter: {
+                            input: "$participants",
+                            as: "participant",
+                            cond: { $ne: ["$$participant._id", new mongoose_1.default.Types.ObjectId(userId)] },
+                        },
+                    },
+                    lastMessage: 1,
+                },
+            },
+        ]);
+        return chats.map((chat) => ({
+            chatId: chat._id,
+            participants: chat.participants.map((p) => ({
+                fullName: p.fullName,
+                profileImage: p.profileImage,
+                email: p.email,
+                userName: p.userName,
+            })),
+            lastMessage: chat.lastMessage,
+        }));
     }
     catch (error) {
-        console.log(error);
-        throw new error_1.NotFoundError('Error fetching chats with last messages');
+        console.error(error);
+        throw new error_1.NotFoundError("Error fetching chats with last messages");
     }
 });
 exports.getChatsWithLastMessages = getChatsWithLastMessages;
