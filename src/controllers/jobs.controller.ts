@@ -627,7 +627,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     return successResponse(res, StatusCodes.OK, data);
   });
   export const updateMilestonePaymentController = catchAsync( async (req:JwtPayload, res: Response) => {
-    const {amountPaid, paymentMethod, date, jobId,milestoneId } = req.body;
+    const {amountPaid, paymentMethod, date, jobId,milestoneId, note } = req.body;
 
     if(!jobId && !milestoneId){
         throw new NotFoundError("Ids required!");
@@ -644,6 +644,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
         amountPaid,
         paymentMethod,
         date,
+        note,
     };
     if(req.file){
       milestone.paymentInfo.paymentReciept = req.file.path;

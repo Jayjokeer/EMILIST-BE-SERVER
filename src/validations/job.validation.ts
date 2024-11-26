@@ -333,7 +333,9 @@ export const validateUpdateMilestonePayment= (req: Request, res: Response, next:
       'string.empty': 'Payment Date must be a string ',
       'any.required': 'Payment Date   is required',
     }),
-    
+    note: Joi.string().optional().messages({
+      'string.empty': 'Note must be a string',
+    }),
   });
 
   const { error } = milestoneValidation.validate(req.body, { abortEarly: false });

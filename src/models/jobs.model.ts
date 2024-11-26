@@ -35,6 +35,7 @@ const MilestoneSchema = new Schema<IMilestone>({
       paymentMethod: {type: String},
       date: {type: Date},
       paymentReciept: {type: String },
+      note: {type: String },
     },
   });
 const jobSchema: Schema = new mongoose.Schema(
