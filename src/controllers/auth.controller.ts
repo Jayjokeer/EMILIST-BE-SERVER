@@ -280,3 +280,16 @@ export const deactivateUserController = catchAsync(async (req: JwtPayload, res: 
   const deactivateUser = await authService.updateUserById(loggedIn.id,{status: UserStatus.deactivated});
   return successResponse(res, StatusCodes.OK,  "Successfully deactivated!");
 });
+export const findUserController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const { user } = req.query;
+
+  if (!user) {
+    throw new BadRequestError("Query is required to search for a user");
+  }
+ 
+  const data = await authService.findSpecificUser(user);
+  if (!data) {
+    throw new NotFoundError("User not found!")
+  }
+  return successResponse(res, StatusCodes.OK, data);
+});

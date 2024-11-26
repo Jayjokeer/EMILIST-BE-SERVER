@@ -32,6 +32,7 @@ router.route("/update-profile").patch(userAuth,singleUpload,authController.updat
 router.route("/change-password").patch(userAuth,authController.changePasswordController);
 router.route("/current-user").get(userAuth,authController.currentUserController);
 router.route("/deactivate-user").patch(userAuth,authController.deactivateUserController);
+router.route("/get-specific-user").get(userAuth,authController.findUserController);
 
 
 export { router as AuthRoute };

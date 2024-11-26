@@ -57,3 +57,4 @@ router.route("/update-profile").patch(current_user_1.userAuth, image_upload_1.si
 router.route("/change-password").patch(current_user_1.userAuth, authController.changePasswordController);
 router.route("/current-user").get(current_user_1.userAuth, authController.currentUserController);
 router.route("/deactivate-user").patch(current_user_1.userAuth, authController.deactivateUserController);
+router.route("/get-specific-user").get(current_user_1.userAuth, authController.findUserController);

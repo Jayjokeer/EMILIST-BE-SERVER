@@ -43,4 +43,9 @@ export const findUserByEmailOrUserName = async(email: string | undefined, userNa
 
   return await Users.findOne({ $or: [{ email }, { userName }] });
 }   
- 
+export const findSpecificUser = async (query: string)=>{
+  return await  Users.findOne({
+    $or: [{ userName: query }, { email: query }],
+  }).select('-password');
+
+}
