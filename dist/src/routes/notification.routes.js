@@ -26,6 +26,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationRoute = void 0;
 const express_1 = require("express");
 const notificationController = __importStar(require("../controllers/notification.controller"));
+const current_user_1 = require("../middlewares/current-user");
 const router = (0, express_1.Router)();
 exports.NotificationRoute = router;
-router.route("/fetch-user-notification").get(notificationController.getAllUserNotificationsController);
+router.route("/fetch-user-notification").get(current_user_1.userAuth, notificationController.getAllUserNotificationsController);

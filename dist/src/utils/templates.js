@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.otpMessage = void 0;
+exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.otpMessage = void 0;
 const otpMessage = (name, otp) => {
     const subject = "Otp Email";
     const html = `
@@ -36,3 +36,10 @@ const postQuoteMessage = (name, posterName, id) => {
     return { html, subject };
 };
 exports.postQuoteMessage = postQuoteMessage;
+const sendMessage = (name, posterName) => {
+    const subject = "New message";
+    const html = `
+        Hi ${name}!, ${posterName} messaged you. kindly log into to your account to respond`;
+    return { html, subject };
+};
+exports.sendMessage = sendMessage;

@@ -14,6 +14,8 @@ import { JwtPayload } from "jsonwebtoken";
 import { config } from "../utils/config";
 import { UserStatus } from "../enums/user.enums";
 import axios from "axios";
+import * as notificationService from "../services/notification.service";
+import { NotificationTypeEnum } from "../enums/notification.enum";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -128,7 +130,13 @@ export const resetPasswordController = catchAsync(async (req: Request, res: Resp
   foundUser.passwordResetOtp = undefined;
   foundUser.otpExpiresAt = undefined;
   await foundUser.save();
-
+  const notificationPayload = {
+    userId: foundUser._id,
+    title: " Password Reset",
+    message: "You just reset your password",
+    type: NotificationTypeEnum.info
+  }
+  await notificationService.createNotification(notificationPayload);
   return successResponse(res, StatusCodes.OK, "Password reset successfully!");
 });
 

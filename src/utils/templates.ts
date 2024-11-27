@@ -38,3 +38,12 @@ export const postQuoteMessage = (name: string, posterName: string, id: string) =
 
   return { html, subject };
 };
+
+export const sendMessage = (name: string, posterName: string,) => {
+  const subject = "New message";
+  const html = `
+        Hi ${name}!, ${posterName} messaged you. kindly log into to your account to respond`;
+
+  return { html, subject };
+};
+

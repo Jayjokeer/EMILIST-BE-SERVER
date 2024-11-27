@@ -40,10 +40,16 @@ const chatService = __importStar(require("../services/chat.services"));
 const messageService = __importStar(require("../services/message.service"));
 const socket_1 = require("../socket");
 const server_1 = require("../server");
+const notification_enum_1 = require("../enums/notification.enum");
+const notificationService = __importStar(require("../services/notification.service"));
+const userService = __importStar(require("../services/auth.service"));
+const send_email_1 = require("../utils/send_email");
+const templates_1 = require("../utils/templates");
 exports.sendMessageController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { receiverId } = req.params;
     const { content } = req.body;
     const userId = req.user._id;
+    let isNewChat = false;
     let chat = yield chatService.findChat(receiverId, userId);
     if (!chat) {
         const payload = {
@@ -51,6 +57,7 @@ exports.sendMessageController = (0, error_handler_1.catchAsync)((req, res) => __
             messages: [],
         };
         chat = yield chatService.createChat(payload);
+        isNewChat = true;
     }
     const msgPayload = {
         receiverId,
@@ -65,6 +72,18 @@ exports.sendMessageController = (0, error_handler_1.catchAsync)((req, res) => __
     const receiverSocketId = (0, socket_1.getReceiverId)(receiverId);
     if (receiverSocketId && server_1.io) {
         server_1.io.to(receiverSocketId).emit("newMessage", data);
+    }
+    if (isNewChat) {
+        const user = yield userService.findUserById(receiverId);
+        const notificationPayload = {
+            userId: receiverId,
+            title: "You have a new message",
+            message: `${req.user.userName} sent you a message!`,
+            type: notification_enum_1.NotificationTypeEnum.info
+        };
+        const { html, subject } = (0, templates_1.sendMessage)(user.userName, req.user.userName);
+        (0, send_email_1.sendEmail)(user.email, subject, html);
+        yield notificationService.createNotification(notificationPayload);
     }
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));

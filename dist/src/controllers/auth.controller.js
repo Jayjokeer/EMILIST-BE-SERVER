@@ -49,6 +49,8 @@ const send_email_1 = require("../utils/send_email");
 const config_1 = require("../utils/config");
 const user_enums_1 = require("../enums/user.enums");
 const axios_1 = __importDefault(require("axios"));
+const notificationService = __importStar(require("../services/notification.service"));
+const notification_enum_1 = require("../enums/notification.enum");
 exports.registerUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userName, email, password, } = req.body;
     const isEmailExists = yield authService.findUserByEmail(email);
@@ -146,6 +148,13 @@ exports.resetPasswordController = (0, error_handler_1.catchAsync)((req, res) => 
     foundUser.passwordResetOtp = undefined;
     foundUser.otpExpiresAt = undefined;
     yield foundUser.save();
+    const notificationPayload = {
+        userId: foundUser._id,
+        title: " Password Reset",
+        message: "You just reset your password",
+        type: notification_enum_1.NotificationTypeEnum.info
+    };
+    yield notificationService.createNotification(notificationPayload);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Password reset successfully!");
 }));
 exports.updateUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

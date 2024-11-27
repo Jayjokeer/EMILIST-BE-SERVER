@@ -9,12 +9,17 @@ import { IChat } from "../interfaces/chat.interface";
 import { IMessage } from "../interfaces/message.interface";
 import { getReceiverId } from "../socket";
 import {io} from "../server";
+import { NotificationTypeEnum } from "../enums/notification.enum";
+import * as notificationService from "../services/notification.service";
+import * as userService from "../services/auth.service";
+import { sendEmail } from "../utils/send_email";
+import { otpMessage, sendMessage } from "../utils/templates";
 
 export const sendMessageController = catchAsync(async (req: JwtPayload, res: Response) => {
   const { receiverId } = req.params;
   const { content } = req.body;
   const userId = req.user._id;
-
+  let isNewChat = false;
   let chat = await chatService.findChat(receiverId, userId);
   if (!chat) {
     const payload: IChat = {
@@ -22,6 +27,7 @@ export const sendMessageController = catchAsync(async (req: JwtPayload, res: Res
       messages: [],
     };
     chat = await chatService.createChat(payload);
+    isNewChat = true;
   }
 
   const msgPayload: IMessage = {
@@ -41,7 +47,21 @@ export const sendMessageController = catchAsync(async (req: JwtPayload, res: Res
   if (receiverSocketId && io) {
     io.to(receiverSocketId).emit("newMessage", data);
   }
+  if(isNewChat){
+    const user = await userService.findUserById(receiverId);
 
+    const notificationPayload = {
+      userId: receiverId,
+      title: "You have a new message",
+      message: `${req.user.userName} sent you a message!`,
+      type: NotificationTypeEnum.info
+    }
+
+    const {html, subject} = sendMessage(user!.userName, req.user.userName);
+    sendEmail(user!.email, subject,html); 
+    await notificationService.createNotification(notificationPayload);
+  }
+ 
   successResponse(res, StatusCodes.CREATED, data);
 });
   export const getMessagesController = catchAsync(async (req: JwtPayload, res: Response) => {
