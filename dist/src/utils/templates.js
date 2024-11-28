@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.acceptJobApplicationMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.otpMessage = void 0;
+exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.otpMessage = void 0;
 const otpMessage = (name, otp) => {
     const subject = "Otp Email";
     const html = `
@@ -57,3 +57,10 @@ const acceptJobApplicationMessage = (name, user, title, status) => {
     return { html, subject };
 };
 exports.acceptJobApplicationMessage = acceptJobApplicationMessage;
+const acceptDirectJobApplicationMessage = (creatorName, name, id) => {
+    const subject = "Direct Job Accepted";
+    const html = `
+        Hi ${creatorName}!, ${name} accepted your direct job with ID: ${id}. kindly log into to your account to view.`;
+    return { html, subject };
+};
+exports.acceptDirectJobApplicationMessage = acceptDirectJobApplicationMessage;

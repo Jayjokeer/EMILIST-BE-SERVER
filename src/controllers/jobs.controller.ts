@@ -12,7 +12,7 @@ import { ProjectStatusEnum } from "../enums/project.enum";
 import { JobStatusEnum, JobType, MilestoneEnum, MilestonePaymentStatus, QuoteStatusEnum } from "../enums/jobs.enum";
 import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
-import { acceptJobApplicationMessage, directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage, sendJobApplicationMessage } from "../utils/templates";
+import { acceptDirectJobApplicationMessage, acceptJobApplicationMessage, directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage, sendJobApplicationMessage } from "../utils/templates";
 import mongoose from "mongoose";
 import * as  businessService from "../services/business.service";
 import * as notificationService from "../services/notification.service";
@@ -476,6 +476,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       project.status= ProjectStatusEnum.accepted;
       project.businessId= businessId; 
       project.directJobStatus= ProjectStatusEnum.accepted;
+      
     }else if(status == ProjectStatusEnum.rejected){
       project.status= ProjectStatusEnum.rejected;
       project.directJobStatus= ProjectStatusEnum.rejected;
@@ -485,7 +486,20 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     };
     await project.save();
     await job.save();
+    const jobOwner = await userService.findUserById(job.userId);
 
+    const applicationStatus = status;
+
+    const notificationPayload = {
+      userId: job.userId,
+      title: `Direct job ${applicationStatus }`,
+      message: `${req.user.userName} ${applicationStatus } your direct job  with ID: ${job._id}`,
+      type: NotificationTypeEnum.info
+    }
+
+    const {html, subject} = acceptDirectJobApplicationMessage(user!.userName, jobOwner!.userName, String(job._id));
+    await sendEmail(jobOwner!.email, subject,html); 
+    await notificationService.createNotification(notificationPayload);
     return  successResponse(res, StatusCodes.OK, "Status changed successfully");
   });
   export const fetchUserAppliedJobsController = catchAsync(async (req: JwtPayload, res: Response) => {

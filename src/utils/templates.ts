@@ -61,3 +61,11 @@ export const acceptJobApplicationMessage = (name: string, user: string,title: st
 
   return { html, subject };
 };
+
+export const acceptDirectJobApplicationMessage = (creatorName: string, name: string,  id: string) => {
+  const subject = "Direct Job Accepted";
+  const html = `
+        Hi ${creatorName}!, ${name} accepted your direct job with ID: ${id}. kindly log into to your account to view.`;
+
+  return { html, subject };
+};

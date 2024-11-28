@@ -438,6 +438,17 @@ exports.acceptDirectJobController = (0, error_handler_1.catchAsync)((req, res) =
     ;
     yield project.save();
     yield job.save();
+    const jobOwner = yield userService.findUserById(job.userId);
+    const applicationStatus = status;
+    const notificationPayload = {
+        userId: job.userId,
+        title: `Direct job ${applicationStatus}`,
+        message: `${req.user.userName} ${applicationStatus} your direct job  with ID: ${job._id}`,
+        type: notification_enum_1.NotificationTypeEnum.info
+    };
+    const { html, subject } = (0, templates_1.acceptDirectJobApplicationMessage)(user.userName, jobOwner.userName, String(job._id));
+    yield (0, send_email_1.sendEmail)(jobOwner.email, subject, html);
+    yield notificationService.createNotification(notificationPayload);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Status changed successfully");
 }));
 exports.fetchUserAppliedJobsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
