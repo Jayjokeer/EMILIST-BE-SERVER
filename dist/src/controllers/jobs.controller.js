@@ -49,6 +49,9 @@ const send_email_1 = require("../utils/send_email");
 const templates_1 = require("../utils/templates");
 const mongoose_1 = __importDefault(require("mongoose"));
 const businessService = __importStar(require("../services/business.service"));
+const notificationService = __importStar(require("../services/notification.service"));
+const notification_enum_1 = require("../enums/notification.enum");
+const userService = __importStar(require("../services/auth.service"));
 exports.createJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const job = req.body;
     const files = req.files;
@@ -187,6 +190,16 @@ exports.applyForJobController = (0, error_handler_1.catchAsync)((req, res) => __
     job.applications.push(String(projectData._id));
     job.milestones;
     yield job.save();
+    const notificationPayload = {
+        userId: job.userId,
+        title: "Job Application",
+        message: `${req.user.userName} applied to your job titled: ${job.title}`,
+        type: notification_enum_1.NotificationTypeEnum.info
+    };
+    const user = yield userService.findUserById(job.userId);
+    const { html, subject } = (0, templates_1.sendJobApplicationMessage)(user.userName, req.user.userName, job.title);
+    (0, send_email_1.sendEmail)(user.email, subject, html);
+    yield notificationService.createNotification(notificationPayload);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, projectData);
 }));
 exports.deleteJobApplicationController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -245,6 +258,7 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)((req, res) => __aw
     const { projectId } = req.params;
     const { status } = req.body;
     const project = yield projectService.fetchProjectById(projectId);
+    const user = yield userService.findUserById(project.user);
     if (!project) {
         throw new error_1.NotFoundError("Application not found!");
     }
@@ -276,10 +290,30 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)((req, res) => __aw
             });
         }
         yield projectService.updateRejectProject(projectId, String(job._id));
+        const applicationStatus = "accepted";
+        const notificationPayload = {
+            userId: project.user,
+            title: `Job application ${applicationStatus}`,
+            message: `${req.user.userName} ${applicationStatus} your job application titled: ${job.title}`,
+            type: notification_enum_1.NotificationTypeEnum.info
+        };
+        const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(user.userName, req.user.userName, job.title, applicationStatus);
+        yield (0, send_email_1.sendEmail)(user.email, subject, html);
+        yield notificationService.createNotification(notificationPayload);
     }
     else if (status == project_enum_1.ProjectStatusEnum.rejected) {
         project.rejectedAt = new Date();
         project.status = status;
+        const applicationStatus = "rejected";
+        const notificationPayload = {
+            userId: project.user,
+            title: `Job application ${applicationStatus}`,
+            message: `${req.user.userName} ${applicationStatus} your job application titled: ${job.title}`,
+            type: notification_enum_1.NotificationTypeEnum.info
+        };
+        const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(user.userName, req.user.userName, job.title, applicationStatus);
+        yield (0, send_email_1.sendEmail)(user.email, subject, html);
+        yield notificationService.createNotification(notificationPayload);
     }
     else if (status == project_enum_1.ProjectStatusEnum.pause) {
         job.status = jobs_enum_1.JobStatusEnum.paused;
@@ -289,6 +323,16 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)((req, res) => __aw
                 milestone.status = jobs_enum_1.MilestoneEnum.paused;
             }
         });
+        const applicationStatus = "paused";
+        const notificationPayload = {
+            userId: project.user,
+            title: `Job ${applicationStatus}`,
+            message: `${req.user.userName} ${applicationStatus} your job application titled: ${job.title}`,
+            type: notification_enum_1.NotificationTypeEnum.info
+        };
+        const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(user.userName, req.user.userName, job.title, applicationStatus);
+        yield (0, send_email_1.sendEmail)(user.email, subject, html);
+        yield notificationService.createNotification(notificationPayload);
     }
     else if (status == project_enum_1.ProjectStatusEnum.unpause) {
         job.status = jobs_enum_1.JobStatusEnum.active;
@@ -297,6 +341,16 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)((req, res) => __aw
                 milestone.status = jobs_enum_1.MilestoneEnum.active;
             }
         });
+        const applicationStatus = "unpaused";
+        const notificationPayload = {
+            userId: project.user,
+            title: `Job application ${applicationStatus}`,
+            message: `${req.user.userName} ${applicationStatus} your job application titled: ${job.title}`,
+            type: notification_enum_1.NotificationTypeEnum.info
+        };
+        const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(user.userName, req.user.userName, job.title, applicationStatus);
+        yield (0, send_email_1.sendEmail)(user.email, subject, html);
+        yield notificationService.createNotification(notificationPayload);
     }
     yield project.save();
     yield job.save();

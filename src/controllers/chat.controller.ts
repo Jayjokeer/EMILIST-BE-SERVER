@@ -58,7 +58,7 @@ export const sendMessageController = catchAsync(async (req: JwtPayload, res: Res
     }
 
     const {html, subject} = sendMessage(user!.userName, req.user.userName);
-    sendEmail(user!.email, subject,html); 
+   await sendEmail(user!.email, subject,html); 
     await notificationService.createNotification(notificationPayload);
   }
  

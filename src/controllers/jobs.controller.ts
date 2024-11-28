@@ -12,9 +12,12 @@ import { ProjectStatusEnum } from "../enums/project.enum";
 import { JobStatusEnum, JobType, MilestoneEnum, MilestonePaymentStatus, QuoteStatusEnum } from "../enums/jobs.enum";
 import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
-import { directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage } from "../utils/templates";
+import { acceptJobApplicationMessage, directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage, sendJobApplicationMessage } from "../utils/templates";
 import mongoose from "mongoose";
 import * as  businessService from "../services/business.service";
+import * as notificationService from "../services/notification.service";
+import { NotificationTypeEnum } from "../enums/notification.enum";
+import * as userService from "../services/auth.service";
 
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
@@ -196,7 +199,16 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     job.milestones
     await job.save();
   
-    
+    const notificationPayload = {
+      userId: job.userId,
+      title: "Job Application",
+      message: `${req.user.userName} applied to your job titled: ${job.title}`,
+      type: NotificationTypeEnum.info
+    }
+    const user = await userService.findUserById(job.userId);
+    const {html, subject} = sendJobApplicationMessage(user!.userName, req.user.userName, job.title);
+    sendEmail(user!.email, subject,html); 
+    await notificationService.createNotification(notificationPayload);
     successResponse(res, StatusCodes.CREATED, projectData);
   });
   
@@ -262,6 +274,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const {projectId} = req.params;
     const {status} = req.body;
     const project = await projectService.fetchProjectById(projectId);
+    const user = await userService.findUserById(project!.user);
 
     if(!project){
       throw new NotFoundError("Application not found!");
@@ -300,9 +313,34 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       }
 
       await projectService.updateRejectProject(projectId, String(job._id));
+
+      const applicationStatus = "accepted";
+
+    const notificationPayload = {
+      userId: project.user,
+      title: `Job application ${applicationStatus }`,
+      message: `${req.user.userName} ${applicationStatus } your job application titled: ${job.title}`,
+      type: NotificationTypeEnum.info
+    }
+    const {html, subject} = acceptJobApplicationMessage(user!.userName, req.user.userName, job.title, applicationStatus);
+    await sendEmail(user!.email, subject,html); 
+    await notificationService.createNotification(notificationPayload);
+
     }else if(status == ProjectStatusEnum.rejected){
       project.rejectedAt = new Date();
       project.status = status;
+
+      const applicationStatus = "rejected";
+
+    const notificationPayload = {
+      userId: project.user,
+      title: `Job application ${applicationStatus }`,
+      message: `${req.user.userName} ${applicationStatus } your job application titled: ${job.title}`,
+      type: NotificationTypeEnum.info
+    }
+    const {html, subject} = acceptJobApplicationMessage(user!.userName, req.user.userName, job.title, applicationStatus);
+    await sendEmail(user!.email, subject,html); 
+    await notificationService.createNotification(notificationPayload);
 
     }else if(status == ProjectStatusEnum.pause){
       job.status = JobStatusEnum.paused;
@@ -313,7 +351,18 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
           milestone.status = MilestoneEnum.paused;
         }
       });
-    
+      const applicationStatus = "paused";
+
+      const notificationPayload = {
+        userId: project.user,
+        title: `Job ${applicationStatus }`,
+        message: `${req.user.userName} ${applicationStatus } your job application titled: ${job.title}`,
+        type: NotificationTypeEnum.info
+      }
+      const {html, subject} = acceptJobApplicationMessage(user!.userName, req.user.userName, job.title, applicationStatus);
+      await sendEmail(user!.email, subject,html); 
+      await notificationService.createNotification(notificationPayload);
+
     } else if (status == ProjectStatusEnum.unpause){
       job.status = JobStatusEnum.active;
       job.milestones.forEach((milestone: IMilestone) => {
@@ -321,7 +370,17 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
           milestone.status = MilestoneEnum.active; 
         }
       });
+      const applicationStatus = "unpaused";
 
+      const notificationPayload = {
+        userId: project.user,
+        title: `Job application ${applicationStatus }`,
+        message: `${req.user.userName} ${applicationStatus } your job application titled: ${job.title}`,
+        type: NotificationTypeEnum.info
+      }
+      const {html, subject} = acceptJobApplicationMessage(user!.userName, req.user.userName, job.title, applicationStatus);
+      await sendEmail(user!.email, subject,html); 
+      await notificationService.createNotification(notificationPayload);
     }
 
     await project.save();

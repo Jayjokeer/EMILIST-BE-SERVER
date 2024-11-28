@@ -82,7 +82,7 @@ exports.sendMessageController = (0, error_handler_1.catchAsync)((req, res) => __
             type: notification_enum_1.NotificationTypeEnum.info
         };
         const { html, subject } = (0, templates_1.sendMessage)(user.userName, req.user.userName);
-        (0, send_email_1.sendEmail)(user.email, subject, html);
+        yield (0, send_email_1.sendEmail)(user.email, subject, html);
         yield notificationService.createNotification(notificationPayload);
     }
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);

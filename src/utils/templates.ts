@@ -47,3 +47,17 @@ export const sendMessage = (name: string, posterName: string,) => {
   return { html, subject };
 };
 
+export const sendJobApplicationMessage = (name: string, user: string,title: string,) => {
+  const subject = "New Job Application";
+  const html = `
+        Hi ${name}!, ${user} applied to your job titled: ${title}. kindly log into to your account to view`;
+
+  return { html, subject };
+};
+export const acceptJobApplicationMessage = (name: string, user: string,title: string, status: string) => {
+  const subject = "Application Accepted!";
+  const html = `
+        Hi ${name}!, ${user} ${status} your job application titled: ${title}. kindly log into to your account to view`;
+
+  return { html, subject };
+};
