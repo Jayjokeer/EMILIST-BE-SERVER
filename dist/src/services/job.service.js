@@ -1,4 +1,27 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -21,6 +44,7 @@ const jobs_enum_1 = require("../enums/jobs.enum");
 const project_enum_1 = require("../enums/project.enum");
 const date_fns_1 = require("date-fns");
 const moment_1 = __importDefault(require("moment"));
+const userService = __importStar(require("./auth.service"));
 const createJob = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield jobs_model_1.default.create(data);
 });
@@ -56,8 +80,10 @@ const fetchAllUserJobs = (userId_1, page_1, limit_1, ...args_1) => __awaiter(voi
 exports.fetchAllUserJobs = fetchAllUserJobs;
 const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __awaiter(void 0, [page_1, limit_1, userId_1, search_1, ...args_1], void 0, function* (page, limit, userId, search, filters = {}) {
     const skip = (page - 1) * limit;
-    const searchCriteria = { type: { $ne: jobs_enum_1.JobType.direct },
-        status: jobs_enum_1.JobStatusEnum.pending };
+    const searchCriteria = {
+        type: { $ne: jobs_enum_1.JobType.direct },
+        status: jobs_enum_1.JobStatusEnum.pending,
+    };
     if (search) {
         const searchRegex = new RegExp(search, 'i');
         const jobSchemaPaths = jobs_model_1.default.schema.paths;
@@ -73,6 +99,12 @@ const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __await
             searchCriteria.category = { $regex: new RegExp(filters.category, 'i') };
         if (filters.service)
             searchCriteria.service = { $regex: new RegExp(filters.service, 'i') };
+    }
+    if (userId) {
+        const user = yield userService.fetchUserMutedJobs(userId);
+        if (user && user.mutedJobs && user.mutedJobs.length > 0) {
+            searchCriteria._id = { $nin: user.mutedJobs };
+        }
     }
     const jobs = yield jobs_model_1.default.find(searchCriteria)
         .sort({ createdAt: -1 })

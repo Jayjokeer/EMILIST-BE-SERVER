@@ -36,25 +36,34 @@ const updateBusiness = (businessId, businessData, files) => __awaiter(void 0, vo
     }
     if (businessData.certification) {
         businessData.certification.forEach((newCert) => {
-            const existingCertIndex = business.certification.findIndex((cert) => String(cert._id) == String(newCert.id));
-            if (existingCertIndex !== -1) {
-                let certificatePath;
-                if (files && files['certificate']) {
-                    certificatePath = files['certificate'].path;
-                    newCert.certificate = certificatePath;
+            var _a;
+            const existingCert = business.certification.find((cert) => String(cert._id) === String(newCert.id));
+            if (existingCert) {
+                if (files && files['certificate'] && files['certificate'].path) {
+                    existingCert.certificate = files['certificate'].path;
                 }
-                business.certification[existingCertIndex] = Object.assign(Object.assign(Object.assign({}, business.certification[existingCertIndex]), newCert), { certificate: newCert.certificate || business.certification[existingCertIndex].certificate });
+                existingCert.issuingOrganisation = newCert.issuingOrganisation || existingCert.issuingOrganisation;
+                existingCert.verificationNumber = newCert.verificationNumber || existingCert.verificationNumber;
+                existingCert.issuingDate = newCert.issuingDate || existingCert.issuingDate;
+                existingCert.expiringDate = newCert.expiringDate || existingCert.expiringDate;
+                existingCert.isCertificateExpire = newCert.isCertificateExpire || existingCert.isCertificateExpire;
             }
             else {
-                business.certification.push(newCert);
+                const certificatePath = (_a = files === null || files === void 0 ? void 0 : files['certificate'][0]) === null || _a === void 0 ? void 0 : _a.path;
+                newCert.certificate = certificatePath;
+                business.certification.push(Object.assign({}, newCert));
             }
         });
     }
     if (businessData.membership) {
         businessData.membership.forEach((newMembership) => {
-            const existingMembershipIndex = business.membership.findIndex((membership) => String(membership._id) == String(newMembership.id));
-            if (existingMembershipIndex !== -1) {
-                business.membership[existingMembershipIndex] = Object.assign(Object.assign({}, business.membership[existingMembershipIndex]), newMembership);
+            const existingMembership = business.membership.find((membership) => String(membership._id) === String(newMembership.id));
+            if (existingMembership) {
+                existingMembership.organisation = newMembership.organisation || existingMembership.organisation;
+                existingMembership.positionHeld = newMembership.positionHeld || existingMembership.positionHeld;
+                existingMembership.startDate = newMembership.startDate || existingMembership.startDate;
+                existingMembership.endDate = newMembership.endDate || existingMembership.endDate;
+                existingMembership.isMembershipExpire = newMembership.isMembershipExpire || existingMembership.isMembershipExpire;
             }
             else {
                 business.membership.push(newMembership);
@@ -63,9 +72,11 @@ const updateBusiness = (businessId, businessData, files) => __awaiter(void 0, vo
     }
     if (businessData.insurance) {
         businessData.insurance.forEach((newInsurance) => {
-            const existingInsuranceIndex = business.insurance.findIndex((ins) => String(ins._id) == String(newInsurance.id));
-            if (existingInsuranceIndex !== -1) {
-                business.insurance[existingInsuranceIndex] = Object.assign(Object.assign({}, business.insurance[existingInsuranceIndex]), newInsurance);
+            const existingInsurance = business.insurance.find((ins) => String(ins._id) == String(newInsurance.id));
+            if (existingInsurance) {
+                existingInsurance.issuingOrganisation = newInsurance.issuingOrganisation || existingInsurance.issuingOrganisation;
+                existingInsurance.coverage = newInsurance.coverage || existingInsurance.coverage;
+                existingInsurance.description = newInsurance.description || existingInsurance.description;
             }
             else {
                 business.insurance.push(newInsurance);
@@ -93,7 +104,7 @@ const updateBusiness = (businessId, businessData, files) => __awaiter(void 0, vo
     business.businessDescription = businessData.businessDescription || business.businessDescription;
     business.currency = businessData.currency || business.currency;
     if (files['profileImage']) {
-        business.profileImage = files['profileImage'].path;
+        business.profileImage = files['profileImage'][0].path;
     }
     if (files['businessImages'] && files['businessImages'].length > 0) {
         const newBusinessImages = files['businessImages'].map((file) => ({

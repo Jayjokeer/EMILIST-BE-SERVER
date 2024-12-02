@@ -58,3 +58,4 @@ router.route("/close-contract/:jobId").patch(current_user_1.userAuth, jobControl
 router.route("/fetch-job-count-creator").get(current_user_1.userAuth, jobController.fetchJobCountsController);
 router.route("/fetch-project-count").get(current_user_1.userAuth, jobController.fetchProjectCountsController);
 router.route("/user-project-analytics").get(current_user_1.userAuth, jobController.projectAnalyticsController);
+router.route("/mute-job/:jobId").get(current_user_1.userAuth, jobController.muteJobController);

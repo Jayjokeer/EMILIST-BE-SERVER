@@ -7,7 +7,7 @@ import { JobStatusEnum, JobType, MilestoneEnum } from "../enums/jobs.enum";
 import { ProjectStatusEnum } from "../enums/project.enum";
 import { add } from 'date-fns';
 import moment from "moment";
-
+import * as userService from './auth.service';
 
 export const createJob = async (data:  IJob) =>{
     return await Jobs.create(data);
@@ -50,62 +50,71 @@ export const fetchAllUserJobs = async (
 };
 
   
-  export const fetchAllJobs = async (
-    page: number,
-    limit: number,
-    userId: string | null,
-    search: string | null,
-    filters: { title?: string, location?: string, category?: string, service?: string } = {}
-  ) => {
-    const skip = (page - 1) * limit;
-    const searchCriteria: any = { type: { $ne: JobType.direct },
-    status: JobStatusEnum.pending}; 
-  
-
-    if (search) {
-      const searchRegex = new RegExp(search, 'i');
-      const jobSchemaPaths = Jobs.schema.paths;
-      const stringFields = Object.keys(jobSchemaPaths).filter(
-        (field) => jobSchemaPaths[field].instance === 'String'
-      );
-  
-      searchCriteria.$or = stringFields.map((field) => ({ [field]: { $regex: searchRegex } }));
-    } else {
-      if (filters.title) searchCriteria.title = { $regex: new RegExp(filters.title, 'i') };
-      if (filters.location) searchCriteria.location = { $regex: new RegExp(filters.location, 'i') };
-      if (filters.category) searchCriteria.category = { $regex: new RegExp(filters.category, 'i') };
-      if (filters.service) searchCriteria.service = { $regex: new RegExp(filters.service, 'i') };
-    }
-  
-    const jobs = await Jobs.find(searchCriteria)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-    const totalJobs = await Jobs.countDocuments(searchCriteria);
-  
-    let jobsWithLikeStatus;
-    if (userId) {
-      const likedJobs = await JobLike.find({ user: userId }).select('job').lean();
-      const likedJobIds = likedJobs.map((like) => like.job.toString());
-  
-      jobsWithLikeStatus = jobs.map((job) => ({
-        ...job.toObject(),
-        liked: likedJobIds.includes(job._id.toString()),
-      }));
-    } else {
-      jobsWithLikeStatus = jobs.map((job) => ({
-        ...job.toObject(),
-        liked: false,
-      }));
-    }
-  
-    return {
-      jobs: jobsWithLikeStatus,
-      totalPages: Math.ceil(totalJobs / limit),
-      currentPage: page,
-      totalJobs,
-    };
+export const fetchAllJobs = async (
+  page: number,
+  limit: number,
+  userId: string | null,
+  search: string | null,
+  filters: { title?: string, location?: string, category?: string, service?: string } = {}
+) => {
+  const skip = (page - 1) * limit;
+  const searchCriteria: any = {
+    type: { $ne: JobType.direct },
+    status: JobStatusEnum.pending,
   };
+
+  if (search) {
+    const searchRegex = new RegExp(search, 'i');
+    const jobSchemaPaths = Jobs.schema.paths;
+    const stringFields = Object.keys(jobSchemaPaths).filter(
+      (field) => jobSchemaPaths[field].instance === 'String'
+    );
+
+    searchCriteria.$or = stringFields.map((field) => ({ [field]: { $regex: searchRegex } }));
+  } else {
+    if (filters.title) searchCriteria.title = { $regex: new RegExp(filters.title, 'i') };
+    if (filters.location) searchCriteria.location = { $regex: new RegExp(filters.location, 'i') };
+    if (filters.category) searchCriteria.category = { $regex: new RegExp(filters.category, 'i') };
+    if (filters.service) searchCriteria.service = { $regex: new RegExp(filters.service, 'i') };
+  }
+
+  if (userId) {
+    const user = await userService.fetchUserMutedJobs(userId)
+    if (user && user.mutedJobs && user.mutedJobs.length > 0) {
+      searchCriteria._id = { $nin: user.mutedJobs };
+    }
+  }
+
+  const jobs = await Jobs.find(searchCriteria)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+  const totalJobs = await Jobs.countDocuments(searchCriteria);
+
+  let jobsWithLikeStatus;
+  if (userId) {
+    const likedJobs = await JobLike.find({ user: userId }).select('job').lean();
+    const likedJobIds = likedJobs.map((like) => like.job.toString());
+
+    jobsWithLikeStatus = jobs.map((job) => ({
+      ...job.toObject(),
+      liked: likedJobIds.includes(job._id.toString()),
+    }));
+  } else {
+    jobsWithLikeStatus = jobs.map((job) => ({
+      ...job.toObject(),
+      liked: false,
+    }));
+  }
+
+  return {
+    jobs: jobsWithLikeStatus,
+    totalPages: Math.ceil(totalJobs / limit),
+    currentPage: page,
+    totalJobs,
+  };
+};
+
   
   
   

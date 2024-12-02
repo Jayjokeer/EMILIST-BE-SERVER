@@ -52,5 +52,6 @@ const userSchema = new mongoose_1.default.Schema({
     googleId: { type: String },
     accessToken: { type: String },
     businesses: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Business' }],
+    mutedJobs: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Jobs' }]
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Users', userSchema);

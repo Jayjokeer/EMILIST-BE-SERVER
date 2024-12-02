@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
+exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -705,6 +705,25 @@ exports.projectAnalyticsController = (0, error_handler_1.catchAsync)((req, res) 
     const userId = req.user._id;
     const data = yield jobService.projectAnalytics(year, month, startDate, endDate, userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.muteJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { jobId } = req.params;
+    const userId = req.user._id;
+    const job = yield jobService.fetchJobById(jobId);
+    if (!job) {
+        throw new error_1.NotFoundError("Job not found!");
+    }
+    if (String(userId) === String(job.userId)) {
+        throw new error_1.BadRequestError("You cannot mute your own job!");
+    }
+    const user = yield userService.findUserById(userId);
+    const isMuted = user === null || user === void 0 ? void 0 : user.mutedJobs.includes(jobId);
+    if (isMuted) {
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job is already muted.");
+    }
+    user.mutedJobs.push(jobId);
+    yield (user === null || user === void 0 ? void 0 : user.save());
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job muted successfully");
 }));
 // export const checkOverdueMilestones = async () => {
 //   const job = await jobs.find({ 'milestones.status': MilestoneEnum.pending });
