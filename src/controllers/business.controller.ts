@@ -49,7 +49,6 @@ export const createBusinessController = catchAsync( async (req: JwtPayload, res:
 export const updateBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
     const businessData = req.body;
     const { businessId} = req.params;
-
     const data = await businessService.updateBusiness( businessId,businessData, req.files);
     if(String(data.userId) !== String(req.user._id)){
         throw new UnauthorizedError("Unauthorized");
