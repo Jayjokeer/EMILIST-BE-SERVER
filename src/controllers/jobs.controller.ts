@@ -797,7 +797,25 @@ export const projectAnalyticsController = catchAsync( async(req:JwtPayload, res:
   return successResponse(res,StatusCodes.OK, data);
 
 });
+export const muteJobController = catchAsync( async(req:JwtPayload, res: Response) =>{
+  const { jobId } = req.params;
+  const userId = req.user._id;
 
+  const job = await jobService.fetchJobById(jobId);
+  if(!job) {
+    throw new NotFoundError("Job not found!")
+  }
+
+const user = await userService.findUserById(userId);
+const isMuted = user?.mutedJobs.includes(jobId);
+if (isMuted) {
+  return successResponse(res, StatusCodes.OK, "Job is already muted.");
+}
+  user!.mutedJobs.push(jobId)
+  await user?.save()
+  return successResponse(res,StatusCodes.OK, "Job muted successfully");
+
+});
   // export const checkOverdueMilestones = async () => {
   //   const job = await jobs.find({ 'milestones.status': MilestoneEnum.pending });
   //   const now = new Date();

@@ -33,6 +33,7 @@ router.route("/close-contract/:jobId").patch(userAuth, jobController.closeContra
 router.route("/fetch-job-count-creator").get(userAuth, jobController.fetchJobCountsController);
 router.route("/fetch-project-count").get(userAuth, jobController.fetchProjectCountsController);
 router.route("/user-project-analytics").get(userAuth, jobController.projectAnalyticsController);
+router.route("/mute-job/:jobId").get(userAuth, jobController.muteJobController);
 
 
 export { router as JobsRoute };

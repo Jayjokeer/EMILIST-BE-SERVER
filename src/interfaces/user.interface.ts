@@ -20,6 +20,7 @@ export interface IUser {
     status?: string; 
     accessToken?: string;
     businesses?: any;
+    mutedJobs?: any;
   }
   
 export interface ICreateUser {
