@@ -42,7 +42,6 @@ export const fetchAllProducts = async (
     },
   ]);
 
-  // Map reviews to products
   const reviewMap = reviews.reduce((map, review) => {
     map[review._id.toString()] = {
       averageRating: review.averageRating || 0,
@@ -143,49 +142,63 @@ export const fetchLikedProducts = async (userId: string, page: number, limit: nu
 
 
   
-export const fetchReviewForProduct = async (productId: string) => {
-  const objectId = new mongoose.Types.ObjectId(productId);
-
-  return await Review.aggregate([
-    {
-      $match: { productId: objectId }, 
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "userId", 
-        foreignField: "_id", 
-        as: "userInfo", 
-        pipeline: [
-          {
-            $project: {
-              _id: 0, 
-              fullName: 1,
-              profileImage: 1,
-              email: 1,
-              userName: 1,
-              
+  export const fetchReviewForProduct = async (productId: string) => {
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      throw new Error("Invalid productId");
+    }
+  
+    const objectId = new mongoose.Types.ObjectId(productId);
+  
+    const result = await Review.aggregate([
+      {
+        $match: { productId: objectId },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userInfo",
+          pipeline: [
+            {
+              $project: {
+                _id: 0,
+                fullName: 1,
+                profileImage: 1,
+                email: 1,
+                userName: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true },
+      },
+      {
+        $group: {
+          _id: "$productId",
+          averageRating: { $avg: "$rating" },
+          numberOfRatings: { $sum: 1 },
+          reviews: {
+            $push: {
+              rating: "$rating",
+              comment: "$comment",
+              user: "$userInfo",
             },
           },
-        ],
-      },
-    },
-    {
-      $unwind: "$userInfo",
-    },
-    {
-      $group: {
-        _id: "$productId",
-        averageRating: { $avg: "$rating" },
-        numberOfRatings: { $sum: 1 },
-        reviews: {
-          $push: {
-            rating: "$rating",
-            comment: "$comment", 
-            user: "$userInfo", 
         },
-      }
       },
-    },
-  ]);
-};
+    ]);
+  
+    if (result.length === 0) {
+      return {
+        averageRating: 0,
+        numberOfRatings: 0,
+        reviews: [],
+      };
+    }
+  
+    return result[0];
+  };
+  

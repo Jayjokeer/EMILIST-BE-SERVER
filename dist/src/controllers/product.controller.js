@@ -82,20 +82,19 @@ exports.getSingleProductController = (0, error_handler_1.catchAsync)((req, res) 
     if (!product) {
         throw new error_1.NotFoundError("Product not found!");
     }
-    ;
     let liked = false;
     if (userId) {
         const likedProduct = yield productService.ifLikedProduct(productId, userId);
         liked = !!likedProduct;
     }
     const reviewAggregation = yield productService.fetchReviewForProduct(productId);
-    const review = reviewAggregation[0] || { averageRating: 0, numberOfRatings: 0 };
+    const review = reviewAggregation[0] || { averageRating: 0, numberOfRatings: 0, reviews: [] };
     const data = {
         product,
         liked,
         averageRating: review.averageRating || 0,
         numberOfRatings: review.numberOfRatings || 0,
-        reviewsData: reviewAggregation[0].reviews
+        reviewsData: review.reviews || [],
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

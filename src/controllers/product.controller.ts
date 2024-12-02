@@ -51,31 +51,35 @@ export const updateProductController = catchAsync(async (req: JwtPayload, res: R
     return successResponse(res, StatusCodes.OK, data);
   });   
 
-export const getSingleProductController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const {productId} = req.params;
+  export const getSingleProductController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const { productId } = req.params;
     const product = await productService.fetchProductByIdWithDetails(productId);
-    const {userId} = req.query;
-
-    if(!product){
-        throw new NotFoundError("Product not found!");
-    };
+    const { userId } = req.query;
+  
+    if (!product) {
+      throw new NotFoundError("Product not found!");
+    }
+  
     let liked = false;
     if (userId) {
-      const likedProduct = await productService.ifLikedProduct( productId ,userId, );
-      liked = !!likedProduct;  
+      const likedProduct = await productService.ifLikedProduct(productId, userId);
+      liked = !!likedProduct;
     }
+  
     const reviewAggregation = await productService.fetchReviewForProduct(productId);
-    const review = reviewAggregation[0] || { averageRating: 0, numberOfRatings: 0 }; 
+    const review = reviewAggregation[0] || { averageRating: 0, numberOfRatings: 0, reviews: [] };
+  
     const data = {
       product,
       liked,
       averageRating: review.averageRating || 0,
       numberOfRatings: review.numberOfRatings || 0,
-      reviewsData: reviewAggregation[0].reviews
+      reviewsData: review.reviews || [], 
     };
-
+  
     return successResponse(res, StatusCodes.OK, data);
-});
+  });
+  
 
 export const getAllProductsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {page = 1, limit = 10} = req.query;

@@ -130,7 +130,11 @@ export const fetchSingleBusiness = async (businessId: string)=>{
 export const fetchAllBusiness = async (page:number, limit: number)=>{
     const skip = (page - 1) * limit;
 
-    const business = await Business.find().skip(skip).limit(limit);
+    const business = await Business.find()
+    .sort({ createdAt: -1 }) 
+    .skip(skip)
+    .limit(limit);
+    
     const totalBusinesses = await Business.countDocuments();
     return {
         business,

@@ -50,7 +50,6 @@ const fetchAllProducts = (page, limit, userId) => __awaiter(void 0, void 0, void
             },
         },
     ]);
-    // Map reviews to products
     const reviewMap = reviews.reduce((map, review) => {
         map[review._id.toString()] = {
             averageRating: review.averageRating || 0,
@@ -136,8 +135,11 @@ const isUserReviewed = (productId, userId) => __awaiter(void 0, void 0, void 0, 
 });
 exports.isUserReviewed = isUserReviewed;
 const fetchReviewForProduct = (productId) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!mongoose_1.default.Types.ObjectId.isValid(productId)) {
+        throw new Error("Invalid productId");
+    }
     const objectId = new mongoose_1.default.Types.ObjectId(productId);
-    return yield review_model_1.default.aggregate([
+    const result = yield review_model_1.default.aggregate([
         {
             $match: { productId: objectId },
         },
@@ -161,7 +163,7 @@ const fetchReviewForProduct = (productId) => __awaiter(void 0, void 0, void 0, f
             },
         },
         {
-            $unwind: "$userInfo",
+            $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true },
         },
         {
             $group: {
@@ -174,9 +176,17 @@ const fetchReviewForProduct = (productId) => __awaiter(void 0, void 0, void 0, f
                         comment: "$comment",
                         user: "$userInfo",
                     },
-                }
+                },
             },
         },
     ]);
+    if (result.length === 0) {
+        return {
+            averageRating: 0,
+            numberOfRatings: 0,
+            reviews: [],
+        };
+    }
+    return result[0];
 });
 exports.fetchReviewForProduct = fetchReviewForProduct;

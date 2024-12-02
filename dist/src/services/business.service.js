@@ -126,7 +126,10 @@ const fetchSingleBusiness = (businessId) => __awaiter(void 0, void 0, void 0, fu
 exports.fetchSingleBusiness = fetchSingleBusiness;
 const fetchAllBusiness = (page, limit) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
-    const business = yield business_model_1.default.find().skip(skip).limit(limit);
+    const business = yield business_model_1.default.find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
     const totalBusinesses = yield business_model_1.default.countDocuments();
     return {
         business,
