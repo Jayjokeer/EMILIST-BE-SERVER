@@ -30,7 +30,9 @@ const userSchema: Schema = new mongoose.Schema(
     googleId: {type: String},
     accessToken: {type: String},
     businesses: [{ type: Schema.Types.ObjectId, ref: 'Business' }],
-    mutedJobs: [{ type: Schema.Types.ObjectId, ref: 'Jobs' }]
+    mutedJobs: [{ type: Schema.Types.ObjectId, ref: 'Jobs' }],
+    wallet: [{ type: Schema.Types.ObjectId, ref: 'Wallet' }],
+
   },
   { timestamps: true }
 

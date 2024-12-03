@@ -28,6 +28,6 @@ const transaction_enum_1 = require("../enums/transaction.enum");
 const walletSchema = new mongoose_1.Schema({
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users', required: true, unique: true },
     balance: { type: Number, default: 0 },
-    currency: { type: String, default: transaction_enum_1.WalletEnum.USD },
+    currency: { type: String, default: transaction_enum_1.WalletEnum.NGN },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Wallet', walletSchema);

@@ -36,5 +36,5 @@ router.route("/update-business/:businessId").patch(current_user_1.userAuth, imag
 router.route("/fetch-single-business/:businessId").get(current_user_1.userAuth, businesController.fetchSingleBusinessController);
 router.route("/fetch-user-business").get(current_user_1.userAuth, businesController.fetchUserBusinessController);
 router.route("/delete-business/:businessId/image/:imageId").delete(current_user_1.userAuth, businesController.deleteBusinessImageController);
-router.route("/fetch-all-business").get(current_user_1.userAuth, businesController.fetchAllBusinessController);
+router.route("/fetch-all-business").get(businesController.fetchAllBusinessController);
 router.route("/delete-business/:businessId").delete(current_user_1.userAuth, businesController.deleteBusinessController);

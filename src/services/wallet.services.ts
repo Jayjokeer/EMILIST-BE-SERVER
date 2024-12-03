@@ -9,5 +9,5 @@ export const findUserWallet = async (userId: string)=>{
 };
 
 export const fundWallet = async (amount: number, userId: string)=>{
-    
+
 }

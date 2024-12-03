@@ -21,6 +21,7 @@ export interface IUser {
     accessToken?: string;
     businesses?: any;
     mutedJobs?: any;
+    wallet?:any;
   }
   
 export interface ICreateUser {

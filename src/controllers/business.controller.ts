@@ -95,7 +95,7 @@ export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, re
     const { page = 1, limit = 10} = req.query;
 
     const data = await businessService.fetchAllBusiness(    
-        Number(page),
+    Number(page),
     Number(limit),);
     return  successResponse(res,StatusCodes.OK, data);
 });

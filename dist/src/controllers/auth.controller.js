@@ -76,7 +76,9 @@ exports.registerUserController = (0, error_handler_1.catchAsync)((req, res) => _
     const walletPayload = {
         userId: data._id,
     };
-    yield walletService.createWallet(walletPayload);
+    const wallet = yield walletService.createWallet(walletPayload);
+    data.wallet = wallet._id;
+    yield data.save();
     const { html, subject } = (0, templates_1.otpMessage)(userName, otp);
     (0, send_email_1.sendEmail)(email, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
@@ -107,6 +109,12 @@ exports.loginController = (0, error_handler_1.catchAsync)((req, res) => __awaite
         token,
         userData
     };
+    const checkWalletExists = yield walletService.findUserWallet(String(foundUser._id));
+    if (!checkWalletExists) {
+        const wallet = yield walletService.createWallet({ userId: foundUser._id });
+        foundUser.wallet = wallet._id;
+        yield foundUser.save();
+    }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, user);
 }));
 exports.verifyEmailController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
