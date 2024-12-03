@@ -46,21 +46,39 @@ export const sendMessageController = catchAsync(async (req: JwtPayload, res: Res
   const receiverSocketId = getReceiverId(receiverId);
   if (receiverSocketId && io) {
     io.to(receiverSocketId).emit("newMessage", data);
-  }
-  if(isNewChat){
-    const user = await userService.findUserById(receiverId);
+  }else {
+    const receiver = await userService.findUserById(receiverId);
 
-    const notificationPayload = {
-      userId: receiverId,
-      title: "You have a new message",
-      message: `${req.user.userName} sent you a message!`,
-      type: NotificationTypeEnum.info
+    if (receiver) {
+      const notificationPayload = {
+        userId: receiverId,
+        title: "You have a new message",
+        message: `${req.user.userName} sent you a message!`,
+        type: NotificationTypeEnum.info,
+      };
+      await notificationService.createNotification(notificationPayload);
+
+      const { html, subject } = sendMessage(receiver.userName, req.user.userName);
+      await sendEmail(receiver.email, subject, html);
     }
+  };
+  // if(!receiverSocketId){
 
-    const {html, subject} = sendMessage(user!.userName, req.user.userName);
-   await sendEmail(user!.email, subject,html); 
-    await notificationService.createNotification(notificationPayload);
-  }
+  // }
+  // if(isNewChat){
+  //   const user = await userService.findUserById(receiverId);
+
+  //   const notificationPayload = {
+  //     userId: receiverId,
+  //     title: "You have a new message",
+  //     message: `${req.user.userName} sent you a message!`,
+  //     type: NotificationTypeEnum.info
+  //   }
+
+  //   const {html, subject} = sendMessage(user!.userName, req.user.userName);
+  //  await sendEmail(user!.email, subject,html); 
+  //   await notificationService.createNotification(notificationPayload);
+  // }
  
   successResponse(res, StatusCodes.CREATED, data);
 });

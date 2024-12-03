@@ -73,18 +73,35 @@ exports.sendMessageController = (0, error_handler_1.catchAsync)((req, res) => __
     if (receiverSocketId && server_1.io) {
         server_1.io.to(receiverSocketId).emit("newMessage", data);
     }
-    if (isNewChat) {
-        const user = yield userService.findUserById(receiverId);
-        const notificationPayload = {
-            userId: receiverId,
-            title: "You have a new message",
-            message: `${req.user.userName} sent you a message!`,
-            type: notification_enum_1.NotificationTypeEnum.info
-        };
-        const { html, subject } = (0, templates_1.sendMessage)(user.userName, req.user.userName);
-        yield (0, send_email_1.sendEmail)(user.email, subject, html);
-        yield notificationService.createNotification(notificationPayload);
+    else {
+        const receiver = yield userService.findUserById(receiverId);
+        if (receiver) {
+            const notificationPayload = {
+                userId: receiverId,
+                title: "You have a new message",
+                message: `${req.user.userName} sent you a message!`,
+                type: notification_enum_1.NotificationTypeEnum.info,
+            };
+            yield notificationService.createNotification(notificationPayload);
+            const { html, subject } = (0, templates_1.sendMessage)(receiver.userName, req.user.userName);
+            yield (0, send_email_1.sendEmail)(receiver.email, subject, html);
+        }
     }
+    ;
+    // if(!receiverSocketId){
+    // }
+    // if(isNewChat){
+    //   const user = await userService.findUserById(receiverId);
+    //   const notificationPayload = {
+    //     userId: receiverId,
+    //     title: "You have a new message",
+    //     message: `${req.user.userName} sent you a message!`,
+    //     type: NotificationTypeEnum.info
+    //   }
+    //   const {html, subject} = sendMessage(user!.userName, req.user.userName);
+    //  await sendEmail(user!.email, subject,html); 
+    //   await notificationService.createNotification(notificationPayload);
+    // }
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.getMessagesController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

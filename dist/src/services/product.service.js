@@ -35,7 +35,7 @@ const fetchAllProducts = (page, limit, userId) => __awaiter(void 0, void 0, void
     const products = yield product_model_1.default.find()
         .skip(skip)
         .limit(limit)
-        .populate('userId', 'fullName email userName profileImage level _id uniqueId') // Include user details
+        .populate('userId', 'fullName email userName profileImage level _id uniqueId')
         .lean();
     const productIds = products.map((product) => product._id);
     const reviews = yield review_model_1.default.aggregate([

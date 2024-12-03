@@ -25,7 +25,7 @@ export const fetchAllProducts = async (
     const products = await Product.find()
     .skip(skip)
     .limit(limit)
-    .populate('userId', 'fullName email userName profileImage level _id uniqueId') // Include user details
+    .populate('userId', 'fullName email userName profileImage level _id uniqueId') 
     .lean();
 
   const productIds = products.map((product) => product._id);

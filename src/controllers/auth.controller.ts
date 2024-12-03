@@ -16,6 +16,7 @@ import { UserStatus } from "../enums/user.enums";
 import axios from "axios";
 import * as notificationService from "../services/notification.service";
 import { NotificationTypeEnum } from "../enums/notification.enum";
+import * as walletService from "../services/wallet.services";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -43,6 +44,10 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     data.otpExpiresAt = otpExpiryTime;
     data.registrationOtp = otp;
     await data.save();
+    const walletPayload ={
+      userId: data._id,
+    }
+    await walletService.createWallet(walletPayload);
     const {html, subject} = otpMessage(userName, otp);
     sendEmail(email, subject,html); 
    return successResponse(res,StatusCodes.CREATED, data);
