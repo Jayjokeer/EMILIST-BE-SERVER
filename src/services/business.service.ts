@@ -123,10 +123,10 @@ export const updateBusiness = async (  businessId: string, businessData: any, fi
 };
 export const fetchUserBusiness = async (userId: string)=>{
     return await Business.findOne({userId});
-}
+};
 export const fetchSingleBusiness = async (businessId: string)=>{
-    return await Business.findById(businessId);
-}
+    return await Business.findById(businessId).populate('userId', 'fullName email userName uniqueId profileImage level');
+};
 export const fetchAllBusiness = async (page:number, limit: number)=>{
     const skip = (page - 1) * limit;
 
@@ -142,8 +142,8 @@ export const fetchAllBusiness = async (page:number, limit: number)=>{
         currentPage: page,
         totalBusinesses,
       };
-}
+};
 
 export const deleteBusiness = async (businessId: string)=>{
     return await Business.findByIdAndDelete(businessId);
-}
+};

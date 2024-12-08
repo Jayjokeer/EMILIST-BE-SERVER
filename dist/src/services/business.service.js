@@ -121,7 +121,7 @@ const fetchUserBusiness = (userId) => __awaiter(void 0, void 0, void 0, function
 });
 exports.fetchUserBusiness = fetchUserBusiness;
 const fetchSingleBusiness = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield business_model_1.default.findById(businessId);
+    return yield business_model_1.default.findById(businessId).populate('userId', 'fullName email userName uniqueId profileImage level');
 });
 exports.fetchSingleBusiness = fetchSingleBusiness;
 const fetchAllBusiness = (page, limit) => __awaiter(void 0, void 0, void 0, function* () {
