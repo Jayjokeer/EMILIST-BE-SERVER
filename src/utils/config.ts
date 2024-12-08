@@ -21,4 +21,5 @@ export const config = {
   cloudinarySecretKey: process.env.CLOUDINARY_SECRET_KEY as string,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY as string,
   cloudinaryName: process.env.CLOUDINARY_NAME as string,
+  frontendSignUpUrl: process.env.FRONTEND_SIGNUP as string,
 };

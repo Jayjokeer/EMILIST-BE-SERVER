@@ -102,16 +102,16 @@ exports.sendMessageController = (0, error_handler_1.catchAsync)((req, res) => __
     //  await sendEmail(user!.email, subject,html); 
     //   await notificationService.createNotification(notificationPayload);
     // }
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.getMessagesController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.params;
     const loggedInUserId = req.user._id;
     const data = yield chatService.findChatWithMessages(loggedInUserId, userId);
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.getChatsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const loggedInUserId = req.user._id;
     const data = yield chatService.getChatsWithLastMessages(loggedInUserId);
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

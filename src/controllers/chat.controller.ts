@@ -80,7 +80,7 @@ export const sendMessageController = catchAsync(async (req: JwtPayload, res: Res
   //   await notificationService.createNotification(notificationPayload);
   // }
  
-  successResponse(res, StatusCodes.CREATED, data);
+ return successResponse(res, StatusCodes.CREATED, data);
 });
   export const getMessagesController = catchAsync(async (req: JwtPayload, res: Response) => {
     const { userId} = req.params;
@@ -88,7 +88,7 @@ export const sendMessageController = catchAsync(async (req: JwtPayload, res: Res
 
     const data = await chatService.findChatWithMessages(loggedInUserId,userId);
 
-    successResponse(res, StatusCodes.OK, data);
+    return successResponse(res, StatusCodes.OK, data);
   });   
 
   export const getChatsController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -96,5 +96,5 @@ export const sendMessageController = catchAsync(async (req: JwtPayload, res: Res
   
     const data = await chatService.getChatsWithLastMessages(loggedInUserId);
   
-    successResponse(res, StatusCodes.OK, data);
+   return successResponse(res, StatusCodes.OK, data);
   });

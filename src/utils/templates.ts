@@ -69,3 +69,10 @@ export const acceptDirectJobApplicationMessage = (creatorName: string, name: str
 
   return { html, subject };
 };
+
+export const sendInviteMessage = (creatorName: string, link: string) => {
+  const subject = "Emilist Invite";
+  const html = `
+        You were invited by ${creatorName}, to join the emilist platform. Kindly click on this link to sign up ${link}`
+  return { html, subject };
+};

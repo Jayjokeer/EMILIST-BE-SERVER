@@ -14,7 +14,7 @@ export const fetchUserTransactions = async (page: number, limit: number,userId: 
     return await Transaction.find({userId: userId})
     .skip(skip)
     .limit(limit);
-}
+};
 
 export const adminFetchAllTransactions = async (page: number, limit: number)=>{
     const skip = (page - 1) * limit;
@@ -23,4 +23,28 @@ export const adminFetchAllTransactions = async (page: number, limit: number)=>{
     .skip(skip)
     .limit(limit)
     .populate('userId', 'fullName email userName profileImage level _id uniqueId');
-}
+};
+
+// export const approveBankTransfer = async (transactionId: string, adminId: string) => {
+//     const transaction = await Transaction.findById(transactionId);
+//     if (!transaction || transaction.paymentMethod !== 'BankTransfer') {
+//       throw new Error('Transaction not found or not a bank transfer');
+//     }
+  
+//     if (transaction.status === 'completed') {
+//       throw new Error('Transaction is already completed');
+//     }
+  
+//     transaction.status = 'completed';
+//     transaction.adminApproval = true;
+  
+//     // Update wallet balance
+//     const wallet = await Wallet.findOne({ userId: transaction.userId });
+//     wallet!.balance += transaction.amount;
+  
+//     // Save changes
+//     await Promise.all([transaction.save(), wallet!.save()]);
+  
+//     return transaction;
+//   };
+  

@@ -8,6 +8,7 @@ const walletSchema = new Schema(
     userId: { type: Schema.Types.ObjectId, ref: 'Users', required: true, unique: true },
     balance: { type: Number, default: 0 },
     currency: { type: String, default: WalletEnum.NGN },
+    isDefault: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

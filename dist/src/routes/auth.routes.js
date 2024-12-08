@@ -58,3 +58,4 @@ router.route("/change-password").patch(current_user_1.userAuth, authController.c
 router.route("/current-user").get(current_user_1.userAuth, authController.currentUserController);
 router.route("/deactivate-user").patch(current_user_1.userAuth, authController.deactivateUserController);
 router.route("/get-specific-user").get(current_user_1.userAuth, authController.findUserController);
+router.route("/invite-user").get(current_user_1.userAuth, authController.inviteUserController);

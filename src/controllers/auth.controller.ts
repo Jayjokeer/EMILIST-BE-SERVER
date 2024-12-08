@@ -8,7 +8,7 @@ import { NotFoundError, BadRequestError, UnauthorizedError } from '../errors/err
 import { generateOTPData, generateShortUUID } from "../utils/utility";
 import { generateJWTwithExpiryDate } from "../utils/jwt";
 import { catchAsync } from "../errors/error-handler";
-import { otpMessage, passwordResetMessage } from "../utils/templates";
+import { otpMessage, passwordResetMessage, sendInviteMessage } from "../utils/templates";
 import { sendEmail } from "../utils/send_email";
 import { JwtPayload } from "jsonwebtoken";
 import { config } from "../utils/config";
@@ -46,6 +46,7 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     await data.save();
     const walletPayload ={
       userId: data._id,
+      isDefault: true
     }
    const wallet = await walletService.createWallet(walletPayload);
    data.wallet = wallet._id;
@@ -86,7 +87,7 @@ const user = {
 
   const checkWalletExists = await walletService.findUserWallet(String(foundUser._id));
 if(!checkWalletExists){
-  const wallet = await walletService.createWallet({userId: foundUser._id});
+  const wallet = await walletService.createWallet({userId: foundUser._id, isDefault: true});
   foundUser.wallet = wallet._id;
   await foundUser.save();
 }
@@ -316,3 +317,18 @@ export const findUserController = catchAsync(async (req: JwtPayload, res: Respon
   }
   return successResponse(res, StatusCodes.OK, data);
 });
+
+export const inviteUserController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const { email } = req.query;
+  if(!email){
+    throw new BadRequestError("Email is required!");
+  };
+  const user = await authService.findUserByEmail(email);
+  if (user) {
+    throw new NotFoundError("User is already on the platform!")
+  }
+  const {html, subject} = sendInviteMessage(req.user.userName, config.frontendSignUpUrl);
+  await sendEmail(email, subject,html); 
+  return successResponse(res, StatusCodes.OK, "Invite sent successfully");
+});
+

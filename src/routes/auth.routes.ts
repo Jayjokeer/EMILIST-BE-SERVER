@@ -33,6 +33,7 @@ router.route("/change-password").patch(userAuth,authController.changePasswordCon
 router.route("/current-user").get(userAuth,authController.currentUserController);
 router.route("/deactivate-user").patch(userAuth,authController.deactivateUserController);
 router.route("/get-specific-user").get(userAuth,authController.findUserController);
+router.route("/invite-user").get(userAuth,authController.inviteUserController);
 
 
 export { router as AuthRoute };

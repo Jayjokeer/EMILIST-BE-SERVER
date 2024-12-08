@@ -4,4 +4,5 @@ export interface IWallet extends Document {
   userId: mongoose.Schema.Types.ObjectId;
   balance: number;
   currency: string;
+  isDefault: boolean;
 }

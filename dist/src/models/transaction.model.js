@@ -26,10 +26,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const transactionSchema = new mongoose_1.Schema({
-    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users', required: true },
     type: { type: String, enum: Object.values(transaction_enum_1.TransactionType), required: true },
     amount: { type: Number, required: true },
     description: { type: String },
     balanceAfter: { type: Number, required: true },
+    status: { type: String, enum: transaction_enum_1.TransactionEnum, default: transaction_enum_1.TransactionEnum.pending },
+    recieverId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users', required: true },
+    dateCompleted: { type: Date },
+    productId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Product' },
+    quantity: { type: Number },
+    jobId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Jobs' }
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Transaction', transactionSchema);

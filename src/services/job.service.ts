@@ -255,7 +255,6 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
         if (job.status !== JobStatusEnum.active && job.status !== JobStatusEnum.paused) {
           return job.toObject();
         }
-  
         let accumulatedTime = job.startDate!.getTime();
         let milestoneDueDate: any = null;
         const totalMilestones = job.milestones.length;

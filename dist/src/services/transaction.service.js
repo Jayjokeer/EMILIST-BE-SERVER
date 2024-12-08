@@ -37,3 +37,20 @@ const adminFetchAllTransactions = (page, limit) => __awaiter(void 0, void 0, voi
         .populate('userId', 'fullName email userName profileImage level _id uniqueId');
 });
 exports.adminFetchAllTransactions = adminFetchAllTransactions;
+// export const approveBankTransfer = async (transactionId: string, adminId: string) => {
+//     const transaction = await Transaction.findById(transactionId);
+//     if (!transaction || transaction.paymentMethod !== 'BankTransfer') {
+//       throw new Error('Transaction not found or not a bank transfer');
+//     }
+//     if (transaction.status === 'completed') {
+//       throw new Error('Transaction is already completed');
+//     }
+//     transaction.status = 'completed';
+//     transaction.adminApproval = true;
+//     // Update wallet balance
+//     const wallet = await Wallet.findOne({ userId: transaction.userId });
+//     wallet!.balance += transaction.amount;
+//     // Save changes
+//     await Promise.all([transaction.save(), wallet!.save()]);
+//     return transaction;
+//   };

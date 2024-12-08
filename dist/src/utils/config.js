@@ -22,4 +22,5 @@ exports.config = {
     cloudinarySecretKey: process.env.CLOUDINARY_SECRET_KEY,
     cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
     cloudinaryName: process.env.CLOUDINARY_NAME,
+    frontendSignUpUrl: process.env.FRONTEND_SIGNUP,
 };

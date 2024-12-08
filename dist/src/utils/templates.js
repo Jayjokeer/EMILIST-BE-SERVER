@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.otpMessage = void 0;
+exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.otpMessage = void 0;
 const otpMessage = (name, otp) => {
     const subject = "Otp Email";
     const html = `
@@ -64,3 +64,10 @@ const acceptDirectJobApplicationMessage = (creatorName, name, id) => {
     return { html, subject };
 };
 exports.acceptDirectJobApplicationMessage = acceptDirectJobApplicationMessage;
+const sendInviteMessage = (creatorName, link) => {
+    const subject = "Emilist Invite";
+    const html = `
+        You were invited by ${creatorName}, to join the emilist platform. Kindly click on this link to sign up ${link}`;
+    return { html, subject };
+};
+exports.sendInviteMessage = sendInviteMessage;
