@@ -32,20 +32,59 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createWalletController = void 0;
+exports.initiateWalletFunding = exports.createWalletController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const walletService = __importStar(require("../services/wallet.services"));
+const error_1 = require("../errors/error");
+const transactionService = __importStar(require("../services/transaction.service"));
+const paystack_1 = require("../utils/paystack");
+const transaction_enum_1 = require("../enums/transaction.enum");
 exports.createWalletController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user._id;
     const { currency, isDefault } = req.body;
     const data = yield walletService.createNewWallet(userId, currency, isDefault);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
-const initiateWalletFunding = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.initiateWalletFunding = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user._id;
-    const { currency, amount, paymentMethod } = req.body;
-    const wallet = yield walletService.findUserWalletByCurrency(userId, currency);
-    // return successResponse(res, StatusCodes.OK, data);
+    const { currency, amount, paymentMethod, walletId } = req.body;
+    const wallet = yield walletService.findWallet(userId, currency, walletId);
+    if (!wallet)
+        throw new error_1.NotFoundError('Wallet not found');
+    const transactionPayload = {
+        userId,
+        type: transaction_enum_1.TransactionType.CREDIT,
+        amount,
+        description: `Wallet funding via ${paymentMethod}`,
+        paymentMethod: paymentMethod,
+        reference: paymentMethod === 'Paystack' ? `PS-${Date.now()}` : `BT-${Date.now()}`,
+        recieverId: userId,
+        balanceAfter: wallet.balance,
+    };
+    const transaction = yield transactionService.createTransaction(transactionPayload);
+    if (paymentMethod === 'Paystack') {
+        const paymentLink = yield (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, amount, req.user.email);
+        const data = { paymentLink, transaction };
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    }
+    else {
+        if (req.file) {
+            transaction.transferReceipt = req.file.path;
+        }
+        ;
+        yield transaction.save();
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, "Wallet funding initiated successfully");
+    }
 }));
+// export const verifyBankTransferWalletFunding =  catchAsync(async (req: JwtPayload, res: Response) => {
+//   const userId = req.user._id;
+//   const transaction = await transactionService. (transactionPayload);
+//   if (req.file) {
+//     transaction.transferReceipt = req.file.path;
+//  };
+//   await transaction.save();
+//   return successResponse(res, StatusCodes.CREATED, "Wallet funding initiated successfully");
+// }
+// });

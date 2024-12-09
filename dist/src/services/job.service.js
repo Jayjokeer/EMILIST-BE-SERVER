@@ -210,7 +210,7 @@ const fetchJobByUserIdAndStatus = (userId, status) => __awaiter(void 0, void 0, 
     return yield jobs_model_1.default.find({ userId: userId, status: status });
 });
 exports.fetchJobByUserIdAndStatus = fetchJobByUserIdAndStatus;
-const fetchUserJobApplications = (userId, skip, limit, status, page) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchUserJobApplications = (userId_1, skip_1, limit_1, status_1, page_1, ...args_1) => __awaiter(void 0, [userId_1, skip_1, limit_1, status_1, page_1, ...args_1], void 0, function* (userId, skip, limit, status, page, search = null, filters = {}) {
     const userProjects = yield project_model_1.default.find({ user: userId }).select('_id');
     const projectIds = userProjects.map((project) => project._id);
     let query = { applications: { $in: projectIds } };
@@ -220,6 +220,22 @@ const fetchUserJobApplications = (userId, skip, limit, status, page) => __awaite
             query = { acceptedApplicationId: { $in: projectIds } };
             query.status = status;
         }
+    }
+    if (search) {
+        const searchRegex = new RegExp(search, 'i');
+        const jobSchemaPaths = jobs_model_1.default.schema.paths;
+        const stringFields = Object.keys(jobSchemaPaths).filter((field) => jobSchemaPaths[field].instance === 'String');
+        query.$or = stringFields.map((field) => ({ [field]: { $regex: searchRegex } }));
+    }
+    else {
+        if (filters.title)
+            query.title = { $regex: new RegExp(filters.title, 'i') };
+        if (filters.location)
+            query.location = { $regex: new RegExp(filters.location, 'i') };
+        if (filters.category)
+            query.category = { $regex: new RegExp(filters.category, 'i') };
+        if (filters.service)
+            query.service = { $regex: new RegExp(filters.service, 'i') };
     }
     const userApplications = yield jobs_model_1.default.find(query)
         .populate('applications', 'title description status')

@@ -19,3 +19,8 @@ export enum TransactionServiceEnum {
     material = 'material',
     job = 'job'
 };
+
+export enum PaymentMethodEnum {
+    paystack= 'Paystack',
+    bankTransfer = 'BankTransfer'
+}

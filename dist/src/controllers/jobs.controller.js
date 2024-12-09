@@ -453,12 +453,18 @@ exports.acceptDirectJobController = (0, error_handler_1.catchAsync)((req, res) =
 }));
 exports.fetchUserAppliedJobsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
-    const { status } = req.query;
+    const { status, search = null, title, location, category, service } = req.query;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
     const statusEnum = status ? status : null;
-    const data = yield jobService.fetchUserJobApplications(user.id, skip, limit, statusEnum, page);
+    const filters = {
+        title,
+        location,
+        category,
+        service
+    };
+    const data = yield jobService.fetchUserJobApplications(user.id, skip, limit, statusEnum, page, search, filters);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchApplicationByStatusController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

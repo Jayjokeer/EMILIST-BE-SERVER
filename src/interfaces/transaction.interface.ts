@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { TransactionEnum, TransactionType } from "../enums/transaction.enum";
+import { PaymentMethodEnum, TransactionEnum, TransactionType } from "../enums/transaction.enum";
 
 export interface ITransaction extends Document {
     userId: mongoose.Schema.Types.ObjectId;
@@ -8,7 +8,10 @@ export interface ITransaction extends Document {
     description: string;
     balanceAfter: number;
     dateCompleted: Date;
-    // paymentMethod: ;
-    status: TransactionEnum
+    paymentMethod: PaymentMethodEnum;
+    status: TransactionEnum;
+    adminApproval: boolean;
+    reference: string;
+    transferReceipt?: string;
   };
   

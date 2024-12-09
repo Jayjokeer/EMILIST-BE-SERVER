@@ -27,7 +27,7 @@ const mongoose_1 = __importStar(require("mongoose"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const transactionSchema = new mongoose_1.Schema({
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users', required: true },
-    type: { type: String, enum: Object.values(transaction_enum_1.TransactionType), required: true },
+    type: { type: String, enum: transaction_enum_1.TransactionType, required: true },
     amount: { type: Number, required: true },
     description: { type: String },
     balanceAfter: { type: Number, required: true },
@@ -36,6 +36,10 @@ const transactionSchema = new mongoose_1.Schema({
     dateCompleted: { type: Date },
     productId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Product' },
     quantity: { type: Number },
-    jobId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Jobs' }
+    jobId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Jobs' },
+    reference: { type: String },
+    paymentMethod: { type: String, enum: transaction_enum_1.PaymentMethodEnum, required: true },
+    adminApproval: { type: Boolean, default: false },
+    transferReceipt: { type: String, default: null },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Transaction', transactionSchema);

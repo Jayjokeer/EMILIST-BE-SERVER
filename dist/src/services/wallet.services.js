@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.payWithWallet = exports.setDefaultWallet = exports.createNewWallet = exports.fundWallet = exports.findUserWalletByCurrency = exports.findUserWallet = exports.createWallet = void 0;
+exports.payWithWallet = exports.setDefaultWallet = exports.createNewWallet = exports.fundWallet = exports.findWallet = exports.findUserWalletByCurrency = exports.findUserWallet = exports.createWallet = void 0;
 const transaction_enum_1 = require("../enums/transaction.enum");
 const error_1 = require("../errors/error");
 const wallet_model_1 = __importDefault(require("../models/wallet.model"));
@@ -52,6 +52,10 @@ const findUserWalletByCurrency = (userId, currency) => __awaiter(void 0, void 0,
     return yield wallet_model_1.default.findOne({ userId: userId, currency: currency });
 });
 exports.findUserWalletByCurrency = findUserWalletByCurrency;
+const findWallet = (userId, currency, walletId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield wallet_model_1.default.findOne({ userId: userId, currency: currency, _id: walletId });
+});
+exports.findWallet = findWallet;
 const fundWallet = (walletId, amount, description) => __awaiter(void 0, void 0, void 0, function* () {
     const wallet = yield wallet_model_1.default.findById(walletId);
     if (!wallet)

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TransactionServiceEnum = exports.TransactionEnum = exports.WalletEnum = exports.TransactionType = void 0;
+exports.PaymentMethodEnum = exports.TransactionServiceEnum = exports.TransactionEnum = exports.WalletEnum = exports.TransactionType = void 0;
 var TransactionType;
 (function (TransactionType) {
     TransactionType["CREDIT"] = "CREDIT";
@@ -28,3 +28,8 @@ var TransactionServiceEnum;
     TransactionServiceEnum["job"] = "job";
 })(TransactionServiceEnum || (exports.TransactionServiceEnum = TransactionServiceEnum = {}));
 ;
+var PaymentMethodEnum;
+(function (PaymentMethodEnum) {
+    PaymentMethodEnum["paystack"] = "Paystack";
+    PaymentMethodEnum["bankTransfer"] = "BankTransfer";
+})(PaymentMethodEnum || (exports.PaymentMethodEnum = PaymentMethodEnum = {}));

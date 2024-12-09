@@ -230,7 +230,9 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
     skip: number,
     limit: number,
     status: JobStatusEnum | null,
-    page: number
+    page: number,
+    search: string | null = null,
+    filters: { title?: string, location?: string, category?: string, service?: string } = {}
   ) => {
     const userProjects = await Project.find({ user: userId }).select('_id');
     const projectIds = userProjects.map((project) => project._id);
@@ -243,7 +245,20 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
         query.status = status;
       }
     }
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      const jobSchemaPaths = Jobs.schema.paths;
+      const stringFields = Object.keys(jobSchemaPaths).filter(
+        (field) => jobSchemaPaths[field].instance === 'String'
+      );
   
+      query.$or = stringFields.map((field) => ({ [field]: { $regex: searchRegex } }));
+    } else {
+      if (filters.title) query.title = { $regex: new RegExp(filters.title, 'i') };
+      if (filters.location) query.location = { $regex: new RegExp(filters.location, 'i') };
+      if (filters.category) query.category = { $regex: new RegExp(filters.category, 'i') };
+      if (filters.service) query.service = { $regex: new RegExp(filters.service, 'i') };
+    }
     const userApplications = await Jobs.find(query)
       .populate('applications', 'title description status')
       .skip(skip)
