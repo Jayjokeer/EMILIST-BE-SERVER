@@ -30,7 +30,8 @@ const transactionSchema = new mongoose_1.Schema({
     type: { type: String, enum: transaction_enum_1.TransactionType, required: true },
     amount: { type: Number, required: true },
     description: { type: String },
-    balanceAfter: { type: Number, required: true },
+    balanceAfter: { type: Number },
+    balanceBefore: { type: Number },
     status: { type: String, enum: transaction_enum_1.TransactionEnum, default: transaction_enum_1.TransactionEnum.pending },
     recieverId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users', required: true },
     dateCompleted: { type: Date },
@@ -41,5 +42,8 @@ const transactionSchema = new mongoose_1.Schema({
     paymentMethod: { type: String, enum: transaction_enum_1.PaymentMethodEnum, required: true },
     adminApproval: { type: Boolean, default: false },
     transferReceipt: { type: String, default: null },
+    walletId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Wallet' },
+    paymentService: { type: String, enum: transaction_enum_1.PaymentServiceEnum },
+    currency: { type: String, enum: transaction_enum_1.WalletEnum },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Transaction', transactionSchema);

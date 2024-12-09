@@ -23,13 +23,15 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const mongoose_1 = __importStar(require("mongoose"));
-const transaction_enum_1 = require("../enums/transaction.enum");
-const walletSchema = new mongoose_1.Schema({
-    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users', required: true },
-    balance: { type: Number, default: 0 },
-    currency: { type: String, default: transaction_enum_1.WalletEnum.NGN },
-    isDefault: { type: Boolean, default: false },
-}, { timestamps: true });
-walletSchema.index({ userId: 1, currency: 1 }, { unique: true });
-exports.default = mongoose_1.default.model('Wallet', walletSchema);
+exports.WalletRoute = void 0;
+const express_1 = require("express");
+const current_user_1 = require("../middlewares/current-user");
+const image_upload_1 = require("../utils/image-upload");
+const walletController = __importStar(require("../controllers/wallet.controller"));
+const router = (0, express_1.Router)();
+exports.WalletRoute = router;
+router.route("/create-wallet").post(current_user_1.userAuth, walletController.createWalletController);
+router.route("/initiate-wallet-funding").post(current_user_1.userAuth, image_upload_1.singleUpload, walletController.initiateWalletFunding);
+router.route("/verify-paystack/:reference").get(walletController.verifyPaystackCardWalletFunding);
+router.route("/verify-bank-transfer").post(current_user_1.adminAuth, walletController.verifyBankTransferWalletFunding);
+router.route("/fetch-single-transaction/:transactionId").get(current_user_1.adminAuth, walletController.fetchSingleTransactionController);

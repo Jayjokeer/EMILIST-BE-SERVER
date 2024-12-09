@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.payWithWallet = exports.setDefaultWallet = exports.createNewWallet = exports.fundWallet = exports.findWallet = exports.findUserWalletByCurrency = exports.findUserWallet = exports.createWallet = void 0;
+exports.payWithWallet = exports.setDefaultWallet = exports.createNewWallet = exports.fundWallet = exports.findWallet = exports.findUserWalletByCurrency = exports.findUserWallet = exports.findWalletById = exports.createWallet = void 0;
 const transaction_enum_1 = require("../enums/transaction.enum");
 const error_1 = require("../errors/error");
 const wallet_model_1 = __importDefault(require("../models/wallet.model"));
@@ -44,6 +44,10 @@ const createWallet = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield wallet_model_1.default.create(data);
 });
 exports.createWallet = createWallet;
+const findWalletById = (walletId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield wallet_model_1.default.findById(walletId);
+});
+exports.findWalletById = findWalletById;
 const findUserWallet = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     return yield wallet_model_1.default.findOne({ userId: userId });
 });
@@ -56,24 +60,20 @@ const findWallet = (userId, currency, walletId) => __awaiter(void 0, void 0, voi
     return yield wallet_model_1.default.findOne({ userId: userId, currency: currency, _id: walletId });
 });
 exports.findWallet = findWallet;
-const fundWallet = (walletId, amount, description) => __awaiter(void 0, void 0, void 0, function* () {
-    const wallet = yield wallet_model_1.default.findById(walletId);
-    if (!wallet)
-        throw new Error('Wallet not found');
-    wallet.balance += amount;
-    yield wallet.save();
-    const transactionPayloaad = {
-        userId: wallet.userId,
-        type: transaction_enum_1.TransactionType.CREDIT,
-        amount,
-        description: `Funded wallet in ${wallet.currency}`,
-        balanceAfter: wallet.balance,
-        status: transaction_enum_1.TransactionEnum.completed,
-        recieverId: wallet.userId,
-        dateCompleted: Date.now(),
-    };
-    yield transactionService.createTransaction(transactionPayloaad);
-    return wallet;
+const fundWallet = (walletId, amount) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const wallet = yield wallet_model_1.default.findById({ _id: walletId });
+        console.log('here');
+        if (!wallet)
+            throw new Error('Wallet not found');
+        wallet.balance += amount;
+        yield wallet.save();
+        return wallet;
+    }
+    catch (error) {
+        console.log(error);
+    }
+    ;
 });
 exports.fundWallet = fundWallet;
 const createNewWallet = (userId_1, currency_1, ...args_1) => __awaiter(void 0, [userId_1, currency_1, ...args_1], void 0, function* (userId, currency, isDefault = false) {
