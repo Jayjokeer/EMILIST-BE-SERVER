@@ -7,14 +7,16 @@ import { ProductRoute } from "./product.routes";
 import { CartRoute } from "./cart.routes";
 import { NotificationRoute } from "./notification.routes";
 import { WalletRoute } from "./wallet.routes";
+import { TransactionRoute } from "./transaction.routes";
 const router = Router(); 
 
 router.use("/auth", AuthRoute);
 router.use("/jobs", JobsRoute);
 router.use("/business", BusinessRoute);
 router.use("/chat", ChatRoute );
-router.use("/material", ProductRoute)
-router.use("/cart", CartRoute)
-router.use("/notification", NotificationRoute)
-router.use("/wallet", WalletRoute)
+router.use("/material", ProductRoute);
+router.use("/cart", CartRoute);
+router.use("/notification", NotificationRoute);
+router.use("/wallet", WalletRoute);
+router.use("/transaction", TransactionRoute);
 export default router;

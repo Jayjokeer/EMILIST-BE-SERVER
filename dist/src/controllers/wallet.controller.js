@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchSingleTransactionController = exports.verifyPaystackCardWalletFunding = exports.verifyBankTransferWalletFunding = exports.initiateWalletFunding = exports.createWalletController = void 0;
+exports.verifyPaystackCardWalletFunding = exports.verifyBankTransferWalletFunding = exports.initiateWalletFunding = exports.createWalletController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -45,7 +45,7 @@ exports.createWalletController = (0, error_handler_1.catchAsync)((req, res) => _
     const userId = req.user._id;
     const { currency, isDefault } = req.body;
     const data = yield walletService.createNewWallet(userId, currency, isDefault);
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.initiateWalletFunding = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user._id;
@@ -108,7 +108,7 @@ exports.verifyBankTransferWalletFunding = (0, error_handler_1.catchAsync)((req, 
         transaction.status = transaction_enum_1.TransactionEnum.declined;
         yield transaction.save();
     }
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, message);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, message);
 }));
 exports.verifyPaystackCardWalletFunding = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { reference } = req.params;
@@ -135,10 +135,5 @@ exports.verifyPaystackCardWalletFunding = (0, error_handler_1.catchAsync)((req, 
         message = "Wallet funding failed";
         yield transaction.save();
     }
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, message);
-}));
-exports.fetchSingleTransactionController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { transactionId } = req.params;
-    const data = yield transactionService.fetchSingleTransactionWithDetails(transactionId);
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, message);
 }));

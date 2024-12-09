@@ -14,7 +14,7 @@ export const createWalletController = catchAsync(async (req: JwtPayload, res: Re
   const {currency, isDefault} = req.body;
 
  const data = await walletService.createNewWallet(userId, currency, isDefault); 
-    return successResponse(res, StatusCodes.OK, data);
+    return successResponse(res, StatusCodes.CREATED, data);
   });
 
 export const initiateWalletFunding =  catchAsync(async (req: JwtPayload, res: Response) => {
@@ -79,8 +79,9 @@ const transaction = await transactionService.createTransaction(transactionPayloa
       await transaction.save();
     }
 
-    return successResponse(res, StatusCodes.CREATED, message);
+    return successResponse(res, StatusCodes.OK, message);
   });
+
   export const verifyPaystackCardWalletFunding =  catchAsync(async (req: JwtPayload, res: Response) => {
     const {reference} = req.params;
     const transaction = await transactionService.fetchTransactionByReference(reference);
@@ -103,11 +104,7 @@ const transaction = await transactionService.createTransaction(transactionPayloa
       message = "Wallet funding failed"
       await transaction.save();
     }
-    return successResponse(res, StatusCodes.CREATED, message);
+    return successResponse(res, StatusCodes.OK, message);
   });
-  export const fetchSingleTransactionController =  catchAsync(async (req: JwtPayload, res: Response) => {
-    const {transactionId} = req.params;
 
-    const data = await transactionService. fetchSingleTransactionWithDetails(transactionId);
-    return successResponse(res, StatusCodes.CREATED, data);
-  });
+ 

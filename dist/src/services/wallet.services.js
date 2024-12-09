@@ -63,7 +63,6 @@ exports.findWallet = findWallet;
 const fundWallet = (walletId, amount) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const wallet = yield wallet_model_1.default.findById({ _id: walletId });
-        console.log('here');
         if (!wallet)
             throw new Error('Wallet not found');
         wallet.balance += amount;
