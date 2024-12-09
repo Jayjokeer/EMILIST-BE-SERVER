@@ -5,7 +5,7 @@ export const createTransaction = async (data: any)=>{
 };
 
 export const fetchSingleTransaction = async (transactionId: string) =>{
-    return await Transaction.findById(transactionId);
+    return await Transaction.findById(transactionId).populate('walletId').populate('userId', 'fullName email userName profileImage level _id uniqueId');
 };
 
 export const fetchUserTransactions = async (page: number, limit: number,userId: string)=>{
@@ -24,7 +24,9 @@ export const adminFetchAllTransactions = async (page: number, limit: number)=>{
     .limit(limit)
     .populate('userId', 'fullName email userName profileImage level _id uniqueId');
 };
-
+export const fetchTransactionByReference = async (reference: string)=>{
+    return await Transaction.findOne({reference});
+}
 // export const approveBankTransfer = async (transactionId: string, adminId: string) => {
 //     const transaction = await Transaction.findById(transactionId);
 //     if (!transaction || transaction.paymentMethod !== 'BankTransfer') {

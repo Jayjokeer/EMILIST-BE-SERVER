@@ -6,7 +6,9 @@ import * as transactionService from "../services/transaction.service";
 export const createWallet= async(data: any)=>{
     return await Wallet.create(data);
 };
-
+export const findWalletById = async(walletId: string)=>{
+  return await Wallet.findById(walletId);
+}
 export const findUserWallet = async (userId: string)=>{
     return await Wallet.findOne({userId: userId});
 };
@@ -16,24 +18,13 @@ export const findUserWalletByCurrency = async (userId: string, currency : Wallet
 export const findWallet= async (userId: string, currency: WalletEnum, walletId: string)=>{
   return await Wallet.findOne({userId: userId, currency: currency, _id: walletId});
 }
-export const fundWallet = async (walletId: string, amount: number, description: string) => {
+export const fundWallet = async (walletId: string, amount: number) => {
     const wallet = await Wallet.findById(walletId);
     if (!wallet) throw new Error('Wallet not found');
   
     wallet.balance += amount;
     await wallet.save();
   
-   const transactionPayloaad = {
-      userId: wallet.userId,
-      type: TransactionType.CREDIT,
-      amount,
-      description: `Funded wallet in ${wallet.currency}`,
-      balanceAfter: wallet.balance,
-      status: TransactionEnum.completed,
-      recieverId: wallet.userId, 
-      dateCompleted: Date.now(),
-    };
-  await transactionService.createTransaction(transactionPayloaad);
     return wallet;
   };
   

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { config } from './config';
 
 export const generatePaystackPaymentLink = async (reference: string, amount: number, email: string) => {
   const response = await axios.post(
@@ -8,7 +9,7 @@ export const generatePaystackPaymentLink = async (reference: string, amount: num
       amount: amount * 100,
       email: email, 
     },
-    { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    { headers: { Authorization: `Bearer ${config.paystackSecretKey}` } }
   );
 
   return response.data.data.authorization_url;
@@ -17,7 +18,7 @@ export const generatePaystackPaymentLink = async (reference: string, amount: num
 export const verifyPaystackPayment = async (reference: string) => {
   const response = await axios.get(
     `https://api.paystack.co/transaction/verify/${reference}`,
-    { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+    { headers: { Authorization: `Bearer ${config.paystackSecretKey}` } }
   );
 
   return response.data.data.status === 'success' ? 'success' : 'failed';

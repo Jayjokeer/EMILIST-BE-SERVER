@@ -6,6 +6,7 @@ import { ChatRoute } from "./chat.route";
 import { ProductRoute } from "./product.routes";
 import { CartRoute } from "./cart.routes";
 import { NotificationRoute } from "./notification.routes";
+import { WalletRoute } from "./wallet.routes";
 const router = Router(); 
 
 router.use("/auth", AuthRoute);
@@ -15,5 +16,5 @@ router.use("/chat", ChatRoute );
 router.use("/material", ProductRoute)
 router.use("/cart", CartRoute)
 router.use("/notification", NotificationRoute)
-
+router.use("/wallet", WalletRoute)
 export default router;

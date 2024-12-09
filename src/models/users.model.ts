@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { IUser } from '../interfaces/user.interface';
-import { UserStatus } from '../enums/user.enums';
+import { UserRolesEnum, UserStatus } from '../enums/user.enums';
 import {JobExpertLevel } from "../enums/jobs.enum";
 
 const userSchema: Schema = new mongoose.Schema(
@@ -32,6 +32,7 @@ const userSchema: Schema = new mongoose.Schema(
     businesses: [{ type: Schema.Types.ObjectId, ref: 'Business' }],
     mutedJobs: [{ type: Schema.Types.ObjectId, ref: 'Jobs' }],
     wallet: [{ type: Schema.Types.ObjectId, ref: 'Wallet' }],
+    role: {type: String, enum: UserRolesEnum, default: UserRolesEnum.user},
 
   },
   { timestamps: true }

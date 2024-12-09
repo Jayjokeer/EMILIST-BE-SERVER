@@ -12,7 +12,8 @@ export enum WalletEnum{
 export enum TransactionEnum {
     pending = 'pending',
     completed = 'completed',
-    declined = 'declined'
+    declined = 'declined',
+    failed = 'failed',
 };
 
 export enum TransactionServiceEnum {
@@ -21,6 +22,11 @@ export enum TransactionServiceEnum {
 };
 
 export enum PaymentMethodEnum {
-    paystack= 'Paystack',
+    card= 'Card',
     bankTransfer = 'BankTransfer'
-}
+};
+export enum PaymentServiceEnum {
+    paystack= 'Paystack',
+    stripe = 'Stripe',
+    // flutterwave = 'Flutterwave',
+};
