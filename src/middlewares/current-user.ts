@@ -4,6 +4,7 @@ import { verifyJWT } from "../utils/jwt";
 import { UnauthorizedError } from "../errors/error";
 import * as authService from '../services/auth.service';
 import { JwtPayload } from "jsonwebtoken";
+import { UserRolesEnum } from "../enums/user.enums";
 
 
 
@@ -73,9 +74,8 @@ export const adminAuth = async (req: JwtPayload, res: Response, next: NextFuncti
     if (!user) {
       throw new UnauthorizedError("No user found");
     }
-
-    if (!user.isEmailVerified) {
-      throw new UnauthorizedError("Access Denied! Your account is disabled, please contact admin.");
+    if(user.role !== UserRolesEnum.admin){
+      throw new UnauthorizedError("Admin access only")
     }
 
     req.user = user;

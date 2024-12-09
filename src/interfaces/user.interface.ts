@@ -1,3 +1,5 @@
+import { UserRolesEnum } from "../enums/user.enums";
+
 export interface IUser {
     fullName: string;
     email: string;
@@ -22,6 +24,7 @@ export interface IUser {
     businesses?: any;
     mutedJobs?: any;
     wallet?:any;
+    role?: UserRolesEnum;
   }
   
 export interface ICreateUser {

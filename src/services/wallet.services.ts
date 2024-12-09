@@ -19,15 +19,18 @@ export const findWallet= async (userId: string, currency: WalletEnum, walletId: 
   return await Wallet.findOne({userId: userId, currency: currency, _id: walletId});
 }
 export const fundWallet = async (walletId: string, amount: number) => {
-    const wallet = await Wallet.findById(walletId);
+    try{
+      const wallet = await Wallet.findById({_id:walletId});
     if (!wallet) throw new Error('Wallet not found');
   
     wallet.balance += amount;
     await wallet.save();
   
     return wallet;
+  }catch(error){
+    console.log(error)
   };
-  
+}
 
 export const createNewWallet = async (userId: string, currency: WalletEnum, isDefault = false) => {
     const existingWallet = await Wallet.findOne({ userId, currency });
@@ -86,4 +89,3 @@ export const setDefaultWallet = async (userId: string, walletId: string) => {
   await transactionService.createTransaction(transactionPayload);
     return wallet;
   };
-  

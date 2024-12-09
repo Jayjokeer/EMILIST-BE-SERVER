@@ -4,10 +4,12 @@ export const createTransaction = async (data: any)=>{
     return await Transaction.create(data);
 };
 
-export const fetchSingleTransaction = async (transactionId: string) =>{
+export const fetchSingleTransactionWithDetails = async (transactionId: string) =>{
     return await Transaction.findById(transactionId).populate('walletId').populate('userId', 'fullName email userName profileImage level _id uniqueId');
 };
-
+export const fetchSingleTransaction = async (transactionId: string) =>{
+    return await Transaction.findById(transactionId);
+};
 export const fetchUserTransactions = async (page: number, limit: number,userId: string)=>{
     const skip = (page - 1) * limit;
 

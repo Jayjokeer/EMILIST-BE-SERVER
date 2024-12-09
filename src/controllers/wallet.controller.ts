@@ -31,7 +31,7 @@ export const initiateWalletFunding =  catchAsync(async (req: JwtPayload, res: Re
     paymentMethod: paymentMethod,
     reference: paymentMethod === PaymentMethodEnum.card ? `PS-${Date.now()}` : `BT-${Date.now()}`,
     recieverId: userId,
-    balanceAfter: wallet.balance,
+    balanceBefore: wallet.balance,
     walletId,
     currency,
   };
@@ -58,7 +58,10 @@ const transaction = await transactionService.createTransaction(transactionPayloa
      if (!transaction || transaction.paymentMethod !== PaymentMethodEnum.bankTransfer) {
       throw new Error('Transaction not found or not a bank transfer');
     }
-  
+    const wallet = await walletService.findWallet(String(transaction.userId), transaction.currency, transaction.walletId);
+    if(!wallet){
+      throw new NotFoundError("Wallet not found!")
+    };
     if (transaction.status === TransactionEnum.completed) {
       throw new Error('Transaction is already completed');
     }
@@ -68,6 +71,7 @@ const transaction = await transactionService.createTransaction(transactionPayloa
     if(status === "Approved"){
       transaction.status = TransactionEnum.completed;
       transaction.adminApproval = true;
+      transaction.balanceAfter = wallet.balance + transaction.amount;
 
       await Promise.all([ transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
     }else if (status === "Declined"){
@@ -90,7 +94,8 @@ const transaction = await transactionService.createTransaction(transactionPayloa
     let message;
     const verifyPayment = await  verifyPaystackPayment(reference);
     if(verifyPayment == "success"){
-      transaction.status = TransactionEnum.completed
+      transaction.status = TransactionEnum.completed;
+      transaction.balanceAfter = wallet.balance + transaction.amount;
       await Promise.all([ transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
       message = "Wallet funded successfully"
     }else {
@@ -103,6 +108,6 @@ const transaction = await transactionService.createTransaction(transactionPayloa
   export const fetchSingleTransactionController =  catchAsync(async (req: JwtPayload, res: Response) => {
     const {transactionId} = req.params;
 
-    const data = await transactionService.fetchSingleTransaction(transactionId);
+    const data = await transactionService. fetchSingleTransactionWithDetails(transactionId);
     return successResponse(res, StatusCodes.CREATED, data);
   });

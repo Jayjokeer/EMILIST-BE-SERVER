@@ -16,5 +16,6 @@ export interface ITransaction extends Document {
     paymentService?: PaymentServiceEnum;
     currency: WalletEnum;
     walletId: any;
+    balanceBefore: number;
   };
   
