@@ -14,7 +14,7 @@ const transactionSchema = new Schema(
     status: {type: String, enum: TransactionEnum, default: TransactionEnum.pending},
     recieverId: { type: Schema.Types.ObjectId, ref: 'Users', required: true},
     dateCompleted: {type: Date},
-    productId: { type: Schema.Types.ObjectId, ref: 'Product'},
+    cartId: { type: Schema.Types.ObjectId, ref: 'Cart'},
     quantity: {type: Number},
     jobId: {type: Schema.Types.ObjectId, ref: 'Jobs'},
     reference: { type: String },

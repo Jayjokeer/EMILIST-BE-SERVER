@@ -105,9 +105,6 @@ export const checkoutCartController= catchAsync(async (req: JwtPayload, res: Res
     const cart = await cartService.fetchCartByUser(userId);
     if (!cart) throw new NotFoundError("Cart not found");
 
-    cart.status = CartStatus.checkedOut;
-    await cart.save();
-
     let discountPercentage = 0;
     if (code) {
         const validDiscountCode = await cartService.fetchDiscountCode(code);
@@ -151,7 +148,8 @@ export const checkoutCartController= catchAsync(async (req: JwtPayload, res: Res
       discountCode: code,
     };
     const order = await orderService.createOrder(orderPayload );
-    await cartService.deleteCart(String(cart._id));
+    cart.status = CartStatus.checkedOut;
+    await cart.save();
 
     const data = order; 
 

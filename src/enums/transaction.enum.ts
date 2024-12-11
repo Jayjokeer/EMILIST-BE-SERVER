@@ -23,7 +23,9 @@ export enum TransactionServiceEnum {
 
 export enum PaymentMethodEnum {
     card= 'Card',
-    bankTransfer = 'BankTransfer'
+    bankTransfer = 'BankTransfer',
+    wallet = 'Wallet'
+
 };
 export enum PaymentServiceEnum {
     paystack= 'Paystack',
