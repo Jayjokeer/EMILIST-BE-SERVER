@@ -80,6 +80,7 @@ const getChatsWithLastMessages = (userId) => __awaiter(void 0, void 0, void 0, f
                 profileImage: p.profileImage,
                 email: p.email,
                 userName: p.userName,
+                _id: p._id,
             })),
             lastMessage: chat.lastMessage,
         }));

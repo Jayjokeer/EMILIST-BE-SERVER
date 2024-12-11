@@ -44,7 +44,6 @@ const adminFetchAllTransactionsByStatus = (status, page, limit) => __awaiter(voi
         .skip(skip)
         .limit(limit)
         .populate('userId', 'fullName email userName profileImage level _id uniqueId');
-    console.log(transactions);
     return {
         transactions,
         totalTransactions,

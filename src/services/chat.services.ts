@@ -66,6 +66,7 @@ export const getChatsWithLastMessages = async (userId: string) => {
         profileImage: p.profileImage,
         email: p.email,
         userName: p.userName,
+        _id: p._id,
       })),
       lastMessage: chat.lastMessage,
     }));

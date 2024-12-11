@@ -14,6 +14,9 @@ export const fetchCartByUser = async (userId: string)=>{
 export const fetchCartById = async (cartId: string)=>{
     return await Cart.findById(cartId);
 };
+export const fetchCartByIdPayment = async (cartId: string, userId: string)=>{
+    return await Cart.findById({ _id: cartId, userId, status: "active" }).populate("products.productId");
+};
 export const deleteCart = async (cartId: string) =>{
     return await Cart.findByIdAndDelete(cartId);
 };
