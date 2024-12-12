@@ -33,6 +33,7 @@ var PaymentMethodEnum;
 (function (PaymentMethodEnum) {
     PaymentMethodEnum["card"] = "Card";
     PaymentMethodEnum["bankTransfer"] = "BankTransfer";
+    PaymentMethodEnum["wallet"] = "Wallet";
 })(PaymentMethodEnum || (exports.PaymentMethodEnum = PaymentMethodEnum = {}));
 ;
 var PaymentServiceEnum;

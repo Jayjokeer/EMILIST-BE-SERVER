@@ -53,7 +53,7 @@ const userSchema = new mongoose_1.default.Schema({
     accessToken: { type: String },
     businesses: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Business' }],
     mutedJobs: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Jobs' }],
-    wallet: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Wallet' }],
+    wallets: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Wallet' }],
     role: { type: String, enum: user_enums_1.UserRolesEnum, default: user_enums_1.UserRolesEnum.user },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Users', userSchema);

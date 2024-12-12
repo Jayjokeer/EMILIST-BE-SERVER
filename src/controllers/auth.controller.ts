@@ -49,7 +49,7 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
       isDefault: true
     }
    const wallet = await walletService.createWallet(walletPayload);
-   data.wallet = wallet._id;
+   data.wallets.push(wallet._id);
    await data.save();
     const {html, subject} = otpMessage(userName, otp);
     sendEmail(email, subject,html); 
@@ -88,7 +88,7 @@ const user = {
   const checkWalletExists = await walletService.findUserWallet(String(foundUser._id));
 if(!checkWalletExists){
   const wallet = await walletService.createWallet({userId: foundUser._id, isDefault: true});
-  foundUser.wallet = wallet._id;
+  foundUser.wallets.push(wallet._id );
   await foundUser.save();
 }
 

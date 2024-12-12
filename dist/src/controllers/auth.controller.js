@@ -78,7 +78,7 @@ exports.registerUserController = (0, error_handler_1.catchAsync)((req, res) => _
         isDefault: true
     };
     const wallet = yield walletService.createWallet(walletPayload);
-    data.wallet = wallet._id;
+    data.wallets.push(wallet._id);
     yield data.save();
     const { html, subject } = (0, templates_1.otpMessage)(userName, otp);
     (0, send_email_1.sendEmail)(email, subject, html);
@@ -113,7 +113,7 @@ exports.loginController = (0, error_handler_1.catchAsync)((req, res) => __awaite
     const checkWalletExists = yield walletService.findUserWallet(String(foundUser._id));
     if (!checkWalletExists) {
         const wallet = yield walletService.createWallet({ userId: foundUser._id, isDefault: true });
-        foundUser.wallet = wallet._id;
+        foundUser.wallets.push(wallet._id);
         yield foundUser.save();
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, user);

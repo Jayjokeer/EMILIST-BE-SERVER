@@ -35,7 +35,7 @@ const transactionSchema = new mongoose_1.Schema({
     status: { type: String, enum: transaction_enum_1.TransactionEnum, default: transaction_enum_1.TransactionEnum.pending },
     recieverId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users', required: true },
     dateCompleted: { type: Date },
-    productId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Product' },
+    cartId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Cart' },
     quantity: { type: Number },
     jobId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Jobs' },
     reference: { type: String },

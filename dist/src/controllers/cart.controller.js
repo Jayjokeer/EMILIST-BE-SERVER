@@ -107,8 +107,6 @@ exports.checkoutCartController = (0, error_handler_1.catchAsync)((req, res) => _
     const cart = yield cartService.fetchCartByUser(userId);
     if (!cart)
         throw new error_1.NotFoundError("Cart not found");
-    cart.status = cart_enum_1.CartStatus.checkedOut;
-    yield cart.save();
     let discountPercentage = 0;
     if (code) {
         const validDiscountCode = yield cartService.fetchDiscountCode(code);
@@ -148,7 +146,8 @@ exports.checkoutCartController = (0, error_handler_1.catchAsync)((req, res) => _
         discountCode: code,
     };
     const order = yield orderService.createOrder(orderPayload);
-    yield cartService.deleteCart(String(cart._id));
+    cart.status = cart_enum_1.CartStatus.checkedOut;
+    yield cart.save();
     const data = order;
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

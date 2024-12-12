@@ -8,12 +8,16 @@ import { NotFoundError } from "../errors/error";
 import * as transactionService from "../services/transaction.service";
 import { generatePaystackPaymentLink, verifyPaystackPayment } from "../utils/paystack";
 import { PaymentMethodEnum, PaymentServiceEnum, TransactionEnum, TransactionType, WalletEnum } from "../enums/transaction.enum";
+import * as userService from "../services/auth.service";
 
 export const createWalletController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
   const {currency, isDefault} = req.body;
 
  const data = await walletService.createNewWallet(userId, currency, isDefault); 
+ const user = await userService.findUserById(userId);
+ user?.wallets?.push(data._id);
+ await user?.save()
     return successResponse(res, StatusCodes.CREATED, data);
   });
 

@@ -31,7 +31,7 @@ const userSchema: Schema = new mongoose.Schema(
     accessToken: {type: String},
     businesses: [{ type: Schema.Types.ObjectId, ref: 'Business' }],
     mutedJobs: [{ type: Schema.Types.ObjectId, ref: 'Jobs' }],
-    wallet: [{ type: Schema.Types.ObjectId, ref: 'Wallet' }],
+    wallets: [{ type: Schema.Types.ObjectId, ref: 'Wallet' }],
     role: {type: String, enum: UserRolesEnum, default: UserRolesEnum.user},
 
   },

@@ -23,7 +23,7 @@ export interface IUser {
     accessToken?: string;
     businesses?: any;
     mutedJobs?: any;
-    wallet?:any;
+    wallets?:any;
     role?: UserRolesEnum;
   }
   

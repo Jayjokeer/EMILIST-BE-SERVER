@@ -41,10 +41,15 @@ const error_1 = require("../errors/error");
 const transactionService = __importStar(require("../services/transaction.service"));
 const paystack_1 = require("../utils/paystack");
 const transaction_enum_1 = require("../enums/transaction.enum");
+const userService = __importStar(require("../services/auth.service"));
 exports.createWalletController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const userId = req.user._id;
     const { currency, isDefault } = req.body;
     const data = yield walletService.createNewWallet(userId, currency, isDefault);
+    const user = yield userService.findUserById(userId);
+    (_a = user === null || user === void 0 ? void 0 : user.wallets) === null || _a === void 0 ? void 0 : _a.push(data._id);
+    yield (user === null || user === void 0 ? void 0 : user.save());
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.initiateWalletFunding = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
