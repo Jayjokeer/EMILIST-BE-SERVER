@@ -37,6 +37,7 @@ const transactionSchema = new mongoose_1.Schema({
     dateCompleted: { type: Date },
     cartId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Cart' },
     jobId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Jobs' },
+    milestoneId: { type: mongoose_1.Schema.Types.ObjectId },
     reference: { type: String },
     paymentMethod: { type: String, enum: transaction_enum_1.PaymentMethodEnum, required: true },
     adminApproval: { type: Boolean, default: false },

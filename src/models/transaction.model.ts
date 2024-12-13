@@ -16,6 +16,7 @@ const transactionSchema = new Schema(
     dateCompleted: {type: Date},
     cartId: { type: Schema.Types.ObjectId, ref: 'Cart'},
     jobId: {type: Schema.Types.ObjectId, ref: 'Jobs'},
+    milestoneId:{type: Schema.Types.ObjectId},
     reference: { type: String },
     paymentMethod: { type: String, enum: PaymentMethodEnum, required: true },
     adminApproval: { type: Boolean, default: false },

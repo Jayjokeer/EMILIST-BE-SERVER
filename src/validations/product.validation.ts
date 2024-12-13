@@ -160,3 +160,44 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
   
     next();
   };
+  export const validatePaymentForJob = (req: Request, res: Response, next: NextFunction) => {
+    const jobValidationSchema = Joi.object({
+      jobId: Joi.string().required().messages({
+        'string.base': 'Job ID must be a string',
+        'string.empty': 'Job ID is required',
+      }),
+      milestoneId: Joi.string().required().messages({
+        'string.base': 'Milestone ID must be a string',
+        'string.empty': 'Milestone ID is required',
+      }),
+      note: Joi.string().optional().messages({
+        'string.base': 'Note must be a string',
+      }),
+      paymentMethod: Joi.string()
+        .valid(...Object.values(PaymentMethodEnum))
+        .required()
+        .messages({
+          'string.base': 'Payment method must be a string',
+          'any.only': 'Payment method must be one of the allowed values',
+          'string.empty': 'Payment method is required',
+        }),
+      currency: Joi.string()
+        .valid(...Object.values(WalletEnum))
+        .required()
+        .messages({
+          'string.base': 'Currency must be a string',
+          'any.only': 'Currency must be one of the allowed values',
+          'string.empty': 'Currency is required',
+        }),
+    });
+  
+    const { error } = jobValidationSchema.validate(req.body, { abortEarly: false });
+  
+    if (error) {
+      const errorMessages = error.details.map((detail) => detail.message);
+       res.status(400).json({ errors: errorMessages });
+       return;
+    }
+  
+    next();
+  };

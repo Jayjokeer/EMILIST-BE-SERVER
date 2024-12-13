@@ -15,8 +15,10 @@ export interface ITransaction extends Document {
     transferReceipt?: string;
     paymentService?: PaymentServiceEnum;
     currency: WalletEnum;
-    walletId: any;
+    walletId?: any;
     balanceBefore: number;
-    cartId: any;
+    cartId?: any; 
+    jobId?: any;
+    milestoneId?: any;
   };
   

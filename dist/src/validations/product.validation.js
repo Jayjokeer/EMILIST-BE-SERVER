@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validatePayForProduct = exports.validateReviewProduct = exports.validateUpdateProduct = exports.validateProduct = void 0;
+exports.validatePaymentForJob = exports.validatePayForProduct = exports.validateReviewProduct = exports.validateUpdateProduct = exports.validateProduct = void 0;
 const joi_1 = __importDefault(require("joi"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const validateProduct = (req, res, next) => {
@@ -151,3 +151,42 @@ const validatePayForProduct = (req, res, next) => {
     next();
 };
 exports.validatePayForProduct = validatePayForProduct;
+const validatePaymentForJob = (req, res, next) => {
+    const jobValidationSchema = joi_1.default.object({
+        jobId: joi_1.default.string().required().messages({
+            'string.base': 'Job ID must be a string',
+            'string.empty': 'Job ID is required',
+        }),
+        milestoneId: joi_1.default.string().required().messages({
+            'string.base': 'Milestone ID must be a string',
+            'string.empty': 'Milestone ID is required',
+        }),
+        note: joi_1.default.string().optional().messages({
+            'string.base': 'Note must be a string',
+        }),
+        paymentMethod: joi_1.default.string()
+            .valid(...Object.values(transaction_enum_1.PaymentMethodEnum))
+            .required()
+            .messages({
+            'string.base': 'Payment method must be a string',
+            'any.only': 'Payment method must be one of the allowed values',
+            'string.empty': 'Payment method is required',
+        }),
+        currency: joi_1.default.string()
+            .valid(...Object.values(transaction_enum_1.WalletEnum))
+            .required()
+            .messages({
+            'string.base': 'Currency must be a string',
+            'any.only': 'Currency must be one of the allowed values',
+            'string.empty': 'Currency is required',
+        }),
+    });
+    const { error } = jobValidationSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+        const errorMessages = error.details.map((detail) => detail.message);
+        res.status(400).json({ errors: errorMessages });
+        return;
+    }
+    next();
+};
+exports.validatePaymentForJob = validatePaymentForJob;

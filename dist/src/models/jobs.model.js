@@ -25,6 +25,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const jobs_enum_1 = require("../enums/jobs.enum");
+const transaction_enum_1 = require("../enums/transaction.enum");
 const MilestoneSchema = new mongoose_1.Schema({
     timeFrame: {
         number: { type: String },
@@ -55,7 +56,7 @@ const MilestoneSchema = new mongoose_1.Schema({
     },
     paymentInfo: {
         amountPaid: { type: Number },
-        paymentMethod: { type: String },
+        paymentMethod: { type: String, enum: transaction_enum_1.PaymentMethodEnum },
         date: { type: Date },
         paymentReciept: { type: String },
         note: { type: String },

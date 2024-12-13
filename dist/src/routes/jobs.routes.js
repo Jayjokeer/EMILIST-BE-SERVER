@@ -29,6 +29,8 @@ const jobController = __importStar(require("../controllers/jobs.controller"));
 const job_validation_1 = require("../validations/job.validation");
 const current_user_1 = require("../middlewares/current-user");
 const image_upload_1 = require("../utils/image-upload");
+const paymentController = __importStar(require("../controllers/payment.controller"));
+const product_validation_1 = require("../validations/product.validation");
 const router = (0, express_1.Router)();
 exports.JobsRoute = router;
 router.route("/create-job").post(current_user_1.userAuth, image_upload_1.multipleUpload, job_validation_1.validateJob, jobController.createJobController);
@@ -59,3 +61,5 @@ router.route("/fetch-job-count-creator").get(current_user_1.userAuth, jobControl
 router.route("/fetch-project-count").get(current_user_1.userAuth, jobController.fetchProjectCountsController);
 router.route("/user-project-analytics").get(current_user_1.userAuth, jobController.projectAnalyticsController);
 router.route("/mute-job/:jobId").get(current_user_1.userAuth, jobController.muteJobController);
+router.route("/pay-for-job").post(current_user_1.userAuth, product_validation_1.validatePaymentForJob, paymentController.payforJobController);
+router.route("/verify-job-payment/:reference").get(paymentController.verifyPaystackJobPayment);

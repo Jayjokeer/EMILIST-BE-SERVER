@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { JobExpertLevel, JobPeriod, JobType, MilestoneEnum, MilestonePaymentStatus, JobStatusEnum, RatingEnum  } from '../enums/jobs.enum';
 import { IJob, IMilestone } from '../interfaces/jobs.interface';
+import { PaymentMethodEnum } from '../enums/transaction.enum';
 
 const MilestoneSchema = new Schema<IMilestone>({
     timeFrame: {
@@ -32,7 +33,7 @@ const MilestoneSchema = new Schema<IMilestone>({
     },
     paymentInfo: {
       amountPaid:{type: Number},
-      paymentMethod: {type: String},
+      paymentMethod: {type: String, enum: PaymentMethodEnum},
       date: {type: Date},
       paymentReciept: {type: String },
       note: {type: String },

@@ -3,6 +3,8 @@ import * as jobController from "../controllers/jobs.controller";
 import { validateJob, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
 import { userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload } from "../utils/image-upload";
+import * as paymentController from "../controllers/payment.controller";
+import { validatePaymentForJob } from "../validations/product.validation";
 
 const router = Router();
 
@@ -34,7 +36,8 @@ router.route("/fetch-job-count-creator").get(userAuth, jobController.fetchJobCou
 router.route("/fetch-project-count").get(userAuth, jobController.fetchProjectCountsController);
 router.route("/user-project-analytics").get(userAuth, jobController.projectAnalyticsController);
 router.route("/mute-job/:jobId").get(userAuth, jobController.muteJobController);
-
+router.route("/pay-for-job").post(userAuth, validatePaymentForJob, paymentController.payforJobController);
+router.route("/verify-job-payment/:reference").get(paymentController.verifyPaystackJobPayment);
 
 export { router as JobsRoute };
 
