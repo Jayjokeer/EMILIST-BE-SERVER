@@ -17,5 +17,6 @@ export interface ITransaction extends Document {
     currency: WalletEnum;
     walletId: any;
     balanceBefore: number;
+    cartId: any;
   };
   

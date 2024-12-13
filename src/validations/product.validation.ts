@@ -1,5 +1,6 @@
 import Joi from "joi";
 import { Request, Response, NextFunction } from "express";
+import { PaymentMethodEnum, WalletEnum } from "../enums/transaction.enum";
 
 export const validateProduct = (req: Request, res: Response, next: NextFunction) => {
   const productValidation = Joi.object({
@@ -120,6 +121,41 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
       const errorMessages = error.details.map((detail) => detail.message);
      res.status(400).json({ errors: errorMessages });
      return ;
+    }
+  
+    next();
+  };
+
+  export const validatePayForProduct = (req: Request, res: Response, next: NextFunction) => {
+    const paymentValidationSchema = Joi.object({
+      cartId: Joi.string().required().messages({
+        'string.base': 'Cart ID must be a string',
+        'string.empty': 'Cart ID is required',
+      }),
+      paymentMethod: Joi.string()
+        .valid(...Object.values(PaymentMethodEnum))
+        .required()
+        .messages({
+          'string.base': 'Payment method must be a string',
+          'any.only': 'Payment method must be one of the allowed values',
+          'string.empty': 'Payment method is required',
+        }),
+      currency: Joi.string()
+        .valid(...Object.values(WalletEnum))
+        .required()
+        .messages({
+          'string.base': 'Currency must be a string',
+          'any.only': 'Currency must be one of the allowed values',
+          'string.empty': 'Currency is required',
+        }),
+    });
+  
+    const { error } = paymentValidationSchema.validate(req.body, { abortEarly: false });
+  
+    if (error) {
+      const errorMessages = error.details.map((detail) => detail.message);
+       res.status(400).json({ errors: errorMessages });
+       return;
     }
   
     next();

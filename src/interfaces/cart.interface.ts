@@ -10,5 +10,6 @@ export interface ICartProduct {
     userId?: Schema.Types.ObjectId; 
     products?: ICartProduct[]; 
     totalAmount?: number; 
-    status?: CartStatus 
+    status?: CartStatus;
+    isPaid?: boolean; 
   }

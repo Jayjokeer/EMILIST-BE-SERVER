@@ -18,6 +18,7 @@ import { ICart } from "../interfaces/cart.interface";
         enum: CartStatus,
         default: CartStatus.active,
       },
+      isPaid: {type: Boolean, default: false},
     },
     { timestamps: true }
   );

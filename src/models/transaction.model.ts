@@ -12,10 +12,9 @@ const transactionSchema = new Schema(
     balanceAfter: { type: Number},
     balanceBefore: { type: Number },
     status: {type: String, enum: TransactionEnum, default: TransactionEnum.pending},
-    recieverId: { type: Schema.Types.ObjectId, ref: 'Users', required: true},
+    recieverId: { type: Schema.Types.ObjectId, ref: 'Users'},
     dateCompleted: {type: Date},
     cartId: { type: Schema.Types.ObjectId, ref: 'Cart'},
-    quantity: {type: Number},
     jobId: {type: Schema.Types.ObjectId, ref: 'Jobs'},
     reference: { type: String },
     paymentMethod: { type: String, enum: PaymentMethodEnum, required: true },
@@ -24,6 +23,7 @@ const transactionSchema = new Schema(
     walletId: { type: Schema.Types.ObjectId, ref: 'Wallet'},
     paymentService: {type: String, enum: PaymentServiceEnum},
     currency: {type: String, enum: WalletEnum},
+    isSettled: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

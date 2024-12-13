@@ -33,10 +33,9 @@ const transactionSchema = new mongoose_1.Schema({
     balanceAfter: { type: Number },
     balanceBefore: { type: Number },
     status: { type: String, enum: transaction_enum_1.TransactionEnum, default: transaction_enum_1.TransactionEnum.pending },
-    recieverId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users', required: true },
+    recieverId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users' },
     dateCompleted: { type: Date },
     cartId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Cart' },
-    quantity: { type: Number },
     jobId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Jobs' },
     reference: { type: String },
     paymentMethod: { type: String, enum: transaction_enum_1.PaymentMethodEnum, required: true },
@@ -45,5 +44,6 @@ const transactionSchema = new mongoose_1.Schema({
     walletId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Wallet' },
     paymentService: { type: String, enum: transaction_enum_1.PaymentServiceEnum },
     currency: { type: String, enum: transaction_enum_1.WalletEnum },
+    isSettled: { type: Boolean, default: false }
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Transaction', transactionSchema);

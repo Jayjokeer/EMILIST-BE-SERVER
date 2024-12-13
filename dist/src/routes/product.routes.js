@@ -29,6 +29,7 @@ const productController = __importStar(require("../controllers/product.controlle
 const current_user_1 = require("../middlewares/current-user");
 const product_validation_1 = require("../validations/product.validation");
 const image_upload_1 = require("../utils/image-upload");
+const paymentController = __importStar(require("../controllers/payment.controller"));
 const router = (0, express_1.Router)();
 exports.ProductRoute = router;
 router.route("/create-product").post(current_user_1.userAuth, image_upload_1.multipleUpload, product_validation_1.validateProduct, productController.createProductController);
@@ -42,3 +43,5 @@ router.route("/like-product/:productId").get(current_user_1.userAuth, productCon
 router.route("/unlike-product/:productId").get(current_user_1.userAuth, productController.unlikeProductsController);
 router.route("/fetch-liked-products").get(current_user_1.userAuth, productController.fetchAllLikedProductsController);
 router.route("/add-review").post(current_user_1.userAuth, product_validation_1.validateReviewProduct, productController.reviewProductController);
+router.route("/pay-for-product").post(current_user_1.userAuth, product_validation_1.validatePayForProduct, paymentController.payforProductController);
+router.route("/verify-product-payment/:reference").get(paymentController.verifyPaystackProductPayment);

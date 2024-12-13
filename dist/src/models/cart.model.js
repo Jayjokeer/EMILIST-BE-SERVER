@@ -39,5 +39,6 @@ const CartSchema = new mongoose_1.Schema({
         enum: cart_enum_1.CartStatus,
         default: cart_enum_1.CartStatus.active,
     },
+    isPaid: { type: Boolean, default: false },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("Cart", CartSchema);

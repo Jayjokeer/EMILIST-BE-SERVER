@@ -1,8 +1,9 @@
 import { Router, Request, Response } from "express";
 import * as productController from "../controllers/product.controller";
 import { userAuth } from "../middlewares/current-user";
-import { validateProduct, validateReviewProduct, validateUpdateProduct } from "../validations/product.validation";
+import { validatePayForProduct, validateProduct, validateReviewProduct, validateUpdateProduct } from "../validations/product.validation";
 import { multipleUpload } from "../utils/image-upload";
+import * as paymentController from "../controllers/payment.controller";
 
 const router = Router();
 
@@ -17,5 +18,7 @@ router.route("/like-product/:productId").get( userAuth, productController.likePr
 router.route("/unlike-product/:productId").get( userAuth, productController.unlikeProductsController);
 router.route("/fetch-liked-products").get( userAuth, productController.fetchAllLikedProductsController);
 router.route("/add-review").post(userAuth,validateReviewProduct , productController.reviewProductController);
+router.route("/pay-for-product").post(userAuth,validatePayForProduct , paymentController.payforProductController);
+router.route("/verify-product-payment/:reference").get(paymentController.verifyPaystackProductPayment);
 
 export { router as ProductRoute };
