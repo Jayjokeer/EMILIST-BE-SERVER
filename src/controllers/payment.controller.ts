@@ -66,7 +66,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
           cart.isPaid = true;
           order.paymentStatus = OrderPaymentStatus.paid;
           await order.save();
-          // cart.status = CartStatus.checkedOut;
+          cart.status = CartStatus.checkedOut;
          await cart.save();
          data = "Payment successful"
       } else if (paymentMethod === PaymentMethodEnum.card) {
@@ -112,7 +112,7 @@ export const verifyPaystackProductPayment=  catchAsync(async (req: JwtPayload, r
   const verifyPayment = await  verifyPaystackPayment(reference);
   if(verifyPayment == "success"){
     cart.isPaid = true;
-    // cart.status = CartStatus.checkedOut;
+    cart.status = CartStatus.checkedOut;
     await cart.save();
     transaction.status = TransactionEnum.completed;
     transaction.dateCompleted = new Date();

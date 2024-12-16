@@ -39,7 +39,6 @@ const http_status_codes_1 = require("http-status-codes");
 const cartService = __importStar(require("../services/cart.service"));
 const productService = __importStar(require("../services/product.service"));
 const error_1 = require("../errors/error");
-const cart_enum_1 = require("../enums/cart.enum");
 const order_enum_1 = require("../enums/order.enum");
 const orderService = __importStar(require("../services/order.service"));
 exports.addToCartController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -147,7 +146,6 @@ exports.checkoutCartController = (0, error_handler_1.catchAsync)((req, res) => _
         cartId: cart._id,
     };
     const order = yield orderService.createOrder(orderPayload);
-    cart.status = cart_enum_1.CartStatus.checkedOut;
     yield cart.save();
     const data = order;
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);

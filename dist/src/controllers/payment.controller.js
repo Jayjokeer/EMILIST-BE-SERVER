@@ -42,6 +42,7 @@ const error_1 = require("../errors/error");
 const transaction_enum_1 = require("../enums/transaction.enum");
 const transactionService = __importStar(require("../services/transaction.service"));
 const paystack_1 = require("../utils/paystack");
+const cart_enum_1 = require("../enums/cart.enum");
 const jobService = __importStar(require("../services/job.service"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 const projectService = __importStar(require("../services/project.service"));
@@ -94,7 +95,7 @@ exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => 
         cart.isPaid = true;
         order.paymentStatus = order_enum_1.OrderPaymentStatus.paid;
         yield order.save();
-        // cart.status = CartStatus.checkedOut;
+        cart.status = cart_enum_1.CartStatus.checkedOut;
         yield cart.save();
         data = "Payment successful";
     }
@@ -141,7 +142,7 @@ exports.verifyPaystackProductPayment = (0, error_handler_1.catchAsync)((req, res
     const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
     if (verifyPayment == "success") {
         cart.isPaid = true;
-        // cart.status = CartStatus.checkedOut;
+        cart.status = cart_enum_1.CartStatus.checkedOut;
         yield cart.save();
         transaction.status = transaction_enum_1.TransactionEnum.completed;
         transaction.dateCompleted = new Date();

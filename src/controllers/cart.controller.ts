@@ -149,7 +149,6 @@ export const checkoutCartController= catchAsync(async (req: JwtPayload, res: Res
       cartId: cart._id,
     };
     const order = await orderService.createOrder(orderPayload );
-    cart.status = CartStatus.checkedOut;
     await cart.save();
 
     const data = order; 
