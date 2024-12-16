@@ -17,3 +17,11 @@ export const fetchAllTransactionsByStatusController =  catchAsync(async (req: Jw
     const data = await transactionService.adminFetchAllTransactionsByStatus(status, page, limit);
     return successResponse(res, StatusCodes.OK, data);
   });
+
+  export const fetchAllTransactionsByUsersController =  catchAsync(async (req: JwtPayload, res: Response) => {
+    const {page, limit} = req.query;
+    const userId = req.user._id;
+    
+    const data = await transactionService.fetchAllTransactionsByUser(userId, page, limit);
+    return successResponse(res, StatusCodes.OK, data);
+  });

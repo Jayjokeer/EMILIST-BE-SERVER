@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllTransactionsByStatusController = exports.fetchSingleTransactionController = void 0;
+exports.fetchAllTransactionsByUsersController = exports.fetchAllTransactionsByStatusController = exports.fetchSingleTransactionController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -45,5 +45,11 @@ exports.fetchSingleTransactionController = (0, error_handler_1.catchAsync)((req,
 exports.fetchAllTransactionsByStatusController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { page, limit, status } = req.query;
     const data = yield transactionService.adminFetchAllTransactionsByStatus(status, page, limit);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.fetchAllTransactionsByUsersController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page, limit } = req.query;
+    const userId = req.user._id;
+    const data = yield transactionService.fetchAllTransactionsByUser(userId, page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

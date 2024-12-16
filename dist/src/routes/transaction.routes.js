@@ -31,3 +31,4 @@ const router = (0, express_1.Router)();
 exports.TransactionRoute = router;
 router.route("/fetch-single-transaction/:transactionId").get(current_user_1.adminAuth, transactionController.fetchSingleTransactionController);
 router.route("/fetch-all-transactions-by-status").get(current_user_1.adminAuth, transactionController.fetchAllTransactionsByStatusController);
+router.route("/fetch-all-user-transactions").get(current_user_1.userAuth, transactionController.fetchAllTransactionsByUsersController);

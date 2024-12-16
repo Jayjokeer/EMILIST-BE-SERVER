@@ -27,6 +27,23 @@ export const adminFetchAllTransactionsByStatus = async(status: TransactionEnum ,
     const skip = (page - 1) * limit;
     const totalTransactions = await Transaction.countDocuments({status});
     const transactions = await Transaction.find({status})
+    .sort({ createdAt: -1 }) 
+    .skip(skip)
+    .limit(limit)
+    .populate('userId', 'fullName email userName profileImage level _id uniqueId');
+    return {
+        transactions,
+        totalTransactions,
+        page,
+    };
+};
+
+export const fetchAllTransactionsByUser = async(userId: string,page: number, limit: number)=>{
+    const skip = (page - 1) * limit;
+
+    const totalTransactions = await Transaction.countDocuments({userId});
+    const transactions = await Transaction.find({userId})
+    .sort({ createdAt: -1 }) 
     .skip(skip)
     .limit(limit)
     .populate('userId', 'fullName email userName profileImage level _id uniqueId');

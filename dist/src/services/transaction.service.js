@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminFetchAllTransactionsByStatus = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
+exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
 const transaction_model_1 = __importDefault(require("../models/transaction.model"));
 const createTransaction = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield transaction_model_1.default.create(data);
@@ -41,6 +41,7 @@ const adminFetchAllTransactionsByStatus = (status, page, limit) => __awaiter(voi
     const skip = (page - 1) * limit;
     const totalTransactions = yield transaction_model_1.default.countDocuments({ status });
     const transactions = yield transaction_model_1.default.find({ status })
+        .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .populate('userId', 'fullName email userName profileImage level _id uniqueId');
@@ -51,3 +52,18 @@ const adminFetchAllTransactionsByStatus = (status, page, limit) => __awaiter(voi
     };
 });
 exports.adminFetchAllTransactionsByStatus = adminFetchAllTransactionsByStatus;
+const fetchAllTransactionsByUser = (userId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+    const skip = (page - 1) * limit;
+    const totalTransactions = yield transaction_model_1.default.countDocuments({ userId });
+    const transactions = yield transaction_model_1.default.find({ userId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('userId', 'fullName email userName profileImage level _id uniqueId');
+    return {
+        transactions,
+        totalTransactions,
+        page,
+    };
+});
+exports.fetchAllTransactionsByUser = fetchAllTransactionsByUser;
