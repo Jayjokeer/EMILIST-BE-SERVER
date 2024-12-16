@@ -19,9 +19,9 @@ export const fetchAllTransactionsByStatusController =  catchAsync(async (req: Jw
   });
 
   export const fetchAllTransactionsByUsersController =  catchAsync(async (req: JwtPayload, res: Response) => {
-    const {page, limit} = req.query;
+    const {page, limit, paymentMethod} = req.query;
     const userId = req.user._id;
-    
-    const data = await transactionService.fetchAllTransactionsByUser(userId, page, limit);
+
+    const data = await transactionService.fetchAllTransactionsByUser(userId, page, limit, paymentMethod );
     return successResponse(res, StatusCodes.OK, data);
   });

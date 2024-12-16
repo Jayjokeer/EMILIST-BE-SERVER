@@ -52,10 +52,10 @@ const adminFetchAllTransactionsByStatus = (status, page, limit) => __awaiter(voi
     };
 });
 exports.adminFetchAllTransactionsByStatus = adminFetchAllTransactionsByStatus;
-const fetchAllTransactionsByUser = (userId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllTransactionsByUser = (userId, page, limit, paymentMethod) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
-    const totalTransactions = yield transaction_model_1.default.countDocuments({ userId });
-    const transactions = yield transaction_model_1.default.find({ userId })
+    const totalTransactions = yield transaction_model_1.default.countDocuments({ userId, paymentMethod });
+    const transactions = yield transaction_model_1.default.find({ userId, paymentMethod })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

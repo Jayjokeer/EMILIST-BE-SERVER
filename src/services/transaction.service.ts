@@ -1,4 +1,4 @@
-import { TransactionEnum } from "../enums/transaction.enum";
+import { PaymentMethodEnum, TransactionEnum } from "../enums/transaction.enum";
 import Transaction from "../models/transaction.model";
 
 export const createTransaction = async (data: any)=>{
@@ -38,11 +38,11 @@ export const adminFetchAllTransactionsByStatus = async(status: TransactionEnum ,
     };
 };
 
-export const fetchAllTransactionsByUser = async(userId: string,page: number, limit: number)=>{
+export const fetchAllTransactionsByUser = async(userId: string,page: number, limit: number,  paymentMethod:PaymentMethodEnum)=>{
     const skip = (page - 1) * limit;
 
-    const totalTransactions = await Transaction.countDocuments({userId});
-    const transactions = await Transaction.find({userId})
+    const totalTransactions = await Transaction.countDocuments({userId, paymentMethod});
+    const transactions = await Transaction.find({userId, paymentMethod})
     .sort({ createdAt: -1 }) 
     .skip(skip)
     .limit(limit)

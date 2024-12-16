@@ -19,6 +19,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
     const userId = req.user._id;
     const {cartId, paymentMethod, currency} = req.body;
     let data;
+
     const cart = await cartService.fetchCartByIdPayment(cartId, userId);
     if(!cart || cart.userId?.toString() !== userId.toString()){
         throw new NotFoundError("Cart not found or unauthorized access");
