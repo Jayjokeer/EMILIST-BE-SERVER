@@ -146,6 +146,7 @@ export const checkoutCartController= catchAsync(async (req: JwtPayload, res: Res
       status: OrderStatus.pending,
       paymentStatus:OrderPaymentStatus.unpaid,
       discountCode: code,
+      cartId: cart._id,
     };
     const order = await orderService.createOrder(orderPayload );
     cart.status = CartStatus.checkedOut;

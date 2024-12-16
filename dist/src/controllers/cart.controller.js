@@ -144,6 +144,7 @@ exports.checkoutCartController = (0, error_handler_1.catchAsync)((req, res) => _
         status: order_enum_1.OrderStatus.pending,
         paymentStatus: order_enum_1.OrderPaymentStatus.unpaid,
         discountCode: code,
+        cartId: cart._id,
     };
     const order = yield orderService.createOrder(orderPayload);
     cart.status = cart_enum_1.CartStatus.checkedOut;
