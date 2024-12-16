@@ -54,8 +54,15 @@ const adminFetchAllTransactionsByStatus = (status, page, limit) => __awaiter(voi
 exports.adminFetchAllTransactionsByStatus = adminFetchAllTransactionsByStatus;
 const fetchAllTransactionsByUser = (userId, page, limit, paymentMethod) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
-    const totalTransactions = yield transaction_model_1.default.countDocuments({ userId, paymentMethod });
-    const transactions = yield transaction_model_1.default.find({ userId, paymentMethod })
+    let queryPayload = {
+        userId: userId
+    };
+    if (paymentMethod) {
+        queryPayload.paymentMethod = paymentMethod;
+    }
+    ;
+    const totalTransactions = yield transaction_model_1.default.countDocuments(queryPayload);
+    const transactions = yield transaction_model_1.default.find(queryPayload)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

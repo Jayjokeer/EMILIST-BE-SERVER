@@ -40,9 +40,14 @@ export const adminFetchAllTransactionsByStatus = async(status: TransactionEnum ,
 
 export const fetchAllTransactionsByUser = async(userId: string,page: number, limit: number,  paymentMethod:PaymentMethodEnum)=>{
     const skip = (page - 1) * limit;
-
-    const totalTransactions = await Transaction.countDocuments({userId, paymentMethod});
-    const transactions = await Transaction.find({userId, paymentMethod})
+   let queryPayload: any= {
+        userId: userId
+      };
+      if(paymentMethod){
+        queryPayload.paymentMethod = paymentMethod as PaymentMethodEnum;
+      };
+    const totalTransactions = await Transaction.countDocuments(queryPayload);
+    const transactions = await Transaction.find(queryPayload)
     .sort({ createdAt: -1 }) 
     .skip(skip)
     .limit(limit)
