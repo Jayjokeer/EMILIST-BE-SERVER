@@ -20,5 +20,6 @@ export interface ITransaction extends Document {
     cartId?: any; 
     jobId?: any;
     milestoneId?: any;
+    orderId: any;
   };
   

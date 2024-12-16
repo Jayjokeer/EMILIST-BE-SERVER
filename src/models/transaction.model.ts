@@ -24,7 +24,8 @@ const transactionSchema = new Schema(
     walletId: { type: Schema.Types.ObjectId, ref: 'Wallet'},
     paymentService: {type: String, enum: PaymentServiceEnum},
     currency: {type: String, enum: WalletEnum},
-    isSettled: { type: Boolean, default: false }
+    isSettled: { type: Boolean, default: false },
+    orderId: { type: Schema.Types.ObjectId, ref: 'Order'},
   },
   { timestamps: true }
 );

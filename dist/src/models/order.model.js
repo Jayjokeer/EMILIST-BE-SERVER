@@ -48,6 +48,7 @@ const OrderSchema = new mongoose_1.Schema({
     discountApplied: { type: Boolean, default: false },
     discountAmount: { type: Number },
     originalTotalAmount: { type: Number },
-    discountCode: { type: String }
+    discountCode: { type: String },
+    cartId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Cart" }
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("Order", OrderSchema);

@@ -42,10 +42,11 @@ const error_1 = require("../errors/error");
 const transaction_enum_1 = require("../enums/transaction.enum");
 const transactionService = __importStar(require("../services/transaction.service"));
 const paystack_1 = require("../utils/paystack");
-const cart_enum_1 = require("../enums/cart.enum");
 const jobService = __importStar(require("../services/job.service"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 const projectService = __importStar(require("../services/project.service"));
+const orderService = __importStar(require("../services/order.service"));
+const order_enum_1 = require("../enums/order.enum");
 exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const userId = req.user._id;
@@ -56,7 +57,11 @@ exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => 
         throw new error_1.NotFoundError("Cart not found or unauthorized access");
     }
     ;
-    const totalAmount = cart.totalAmount;
+    const order = yield orderService.fetchOrderByCartId(cartId);
+    if (!order) {
+        throw new error_1.NotFoundError("Your order cannot be found");
+    }
+    const totalAmount = order.totalAmount;
     for (const item of cart.products) {
         const product = item.productId;
         if (product.availableQuantity < item.quantity) {
@@ -79,6 +84,7 @@ exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => 
             currency: userWallet.currency,
             status: transaction_enum_1.TransactionEnum.completed,
             cartId: cart._id,
+            orderId: order._id,
         };
         const transaction = yield transactionService.createTransaction(transactionPayload);
         userWallet.balance -= totalAmount;
@@ -86,7 +92,9 @@ exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => 
         transaction.balanceAfter = userWallet.balance;
         yield transaction.save();
         cart.isPaid = true;
-        cart.status = cart_enum_1.CartStatus.checkedOut;
+        order.paymentStatus = order_enum_1.OrderPaymentStatus.paid;
+        yield order.save();
+        // cart.status = CartStatus.checkedOut;
         yield cart.save();
         data = "Payment successful";
     }
@@ -102,6 +110,7 @@ exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => 
                 status: transaction_enum_1.TransactionEnum.pending,
                 reference: `PS-${Date.now()}`,
                 cartId: cart._id,
+                orderId: order._id,
             };
             const transaction = yield transactionService.createTransaction(transactionPayload);
             transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
@@ -124,15 +133,21 @@ exports.verifyPaystackProductPayment = (0, error_handler_1.catchAsync)((req, res
         throw new error_1.NotFoundError("Cart not found or unauthorized access");
     }
     ;
+    const order = yield orderService.fetchOrderByCartId(String(cart._id));
+    if (!order) {
+        throw new error_1.NotFoundError("Your order cannot be found");
+    }
     let message;
     const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
     if (verifyPayment == "success") {
         cart.isPaid = true;
-        cart.status = cart_enum_1.CartStatus.checkedOut;
+        // cart.status = CartStatus.checkedOut;
         yield cart.save();
         transaction.status = transaction_enum_1.TransactionEnum.completed;
         transaction.dateCompleted = new Date();
         yield transaction.save();
+        order.paymentStatus = order_enum_1.OrderPaymentStatus.paid;
+        yield order.save();
         message = "Payment successfully";
     }
     else {

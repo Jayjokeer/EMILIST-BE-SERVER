@@ -10,12 +10,14 @@ export const createCart = async(payload: any) =>{
 export const fetchCartByUser = async (userId: string)=>{
     return await Cart.findOne({userId, status: CartStatus.active}).populate("products.productId");
 };
-
+export const fetchCartByUserId = async (userId: string)=>{
+    return await Cart.findOne({userId}).populate("products.productId");
+};
 export const fetchCartById = async (cartId: string)=>{
     return await Cart.findById(cartId);
 };
 export const fetchCartByIdPayment = async (cartId: string, userId: string)=>{
-    return await Cart.findById({ _id: cartId, userId, status: "active" }).populate("products.productId");
+    return await Cart.findById({ _id: cartId, userId }).populate("products.productId");
 };
 export const deleteCart = async (cartId: string) =>{
     return await Cart.findByIdAndDelete(cartId);

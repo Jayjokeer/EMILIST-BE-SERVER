@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createDiscount = exports.fetchDiscountCode = exports.deleteCart = exports.fetchCartByIdPayment = exports.fetchCartById = exports.fetchCartByUser = exports.createCart = void 0;
+exports.createDiscount = exports.fetchDiscountCode = exports.deleteCart = exports.fetchCartByIdPayment = exports.fetchCartById = exports.fetchCartByUserId = exports.fetchCartByUser = exports.createCart = void 0;
 const cart_enum_1 = require("../enums/cart.enum");
 const cart_model_1 = __importDefault(require("../models/cart.model"));
 const discount_model_1 = __importDefault(require("../models/discount.model"));
@@ -24,12 +24,16 @@ const fetchCartByUser = (userId) => __awaiter(void 0, void 0, void 0, function* 
     return yield cart_model_1.default.findOne({ userId, status: cart_enum_1.CartStatus.active }).populate("products.productId");
 });
 exports.fetchCartByUser = fetchCartByUser;
+const fetchCartByUserId = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield cart_model_1.default.findOne({ userId }).populate("products.productId");
+});
+exports.fetchCartByUserId = fetchCartByUserId;
 const fetchCartById = (cartId) => __awaiter(void 0, void 0, void 0, function* () {
     return yield cart_model_1.default.findById(cartId);
 });
 exports.fetchCartById = fetchCartById;
 const fetchCartByIdPayment = (cartId, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield cart_model_1.default.findById({ _id: cartId, userId, status: "active" }).populate("products.productId");
+    return yield cart_model_1.default.findById({ _id: cartId, userId }).populate("products.productId");
 });
 exports.fetchCartByIdPayment = fetchCartByIdPayment;
 const deleteCart = (cartId) => __awaiter(void 0, void 0, void 0, function* () {

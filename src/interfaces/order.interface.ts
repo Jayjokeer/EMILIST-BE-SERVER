@@ -18,4 +18,5 @@ export interface IOrder extends Document {
     discountAmount?: number;
     originalTotalAmount?: number;
     discountCode?:string;
+    cartId: any;
 };

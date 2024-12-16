@@ -28,7 +28,8 @@ const OrderSchema: Schema = new Schema(
     discountApplied: { type: Boolean, default: false },
     discountAmount:{ type: Number },
     originalTotalAmount: { type: Number },
-    discountCode:{type: String}
+    discountCode:{type: String},
+    cartId: { type: Schema.Types.ObjectId, ref: "Cart"}
   },
   { timestamps: true }
 );

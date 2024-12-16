@@ -14,6 +14,8 @@ import { CartStatus } from "../enums/cart.enum";
 import * as jobService from "../services/job.service";
 import { MilestonePaymentStatus } from "../enums/jobs.enum";
 import * as  projectService from "../services/project.service";
+import * as orderService from '../services/order.service';
+import { OrderPaymentStatus } from "../enums/order.enum";
 
 export const payforProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
@@ -24,8 +26,13 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
     if(!cart || cart.userId?.toString() !== userId.toString()){
         throw new NotFoundError("Cart not found or unauthorized access");
     };
+    const order = await orderService.fetchOrderByCartId(cartId);
+    if(!order){
+      throw new NotFoundError("Your order cannot be found");
+    }
 
-    const totalAmount = cart.totalAmount!;
+
+    const totalAmount = order.totalAmount!;
 
     for (const item of cart.products!) {
       const product = item.productId as any; 
@@ -49,6 +56,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
             currency: userWallet.currency,
             status: TransactionEnum.completed,
             cartId: cart._id,
+            orderId: order._id,
           };
         const transaction = await transactionService.createTransaction(transactionPayload);
         userWallet.balance -= totalAmount;
@@ -56,7 +64,9 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
         transaction.balanceAfter = userWallet.balance;
         await transaction.save();
           cart.isPaid = true;
-          cart.status = CartStatus.checkedOut;
+          order.paymentStatus = OrderPaymentStatus.paid;
+          await order.save();
+          // cart.status = CartStatus.checkedOut;
          await cart.save();
          data = "Payment successful"
       } else if (paymentMethod === PaymentMethodEnum.card) {
@@ -71,6 +81,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
                 status: TransactionEnum.pending,
                 reference:`PS-${Date.now()}`,
                 cartId: cart._id,
+                orderId: order._id,
               };
             const transaction = await transactionService.createTransaction(transactionPayload);
             transaction.paymentService = PaymentServiceEnum.paystack;
@@ -93,16 +104,21 @@ export const verifyPaystackProductPayment=  catchAsync(async (req: JwtPayload, r
   if(!cart){
       throw new NotFoundError("Cart not found or unauthorized access");
   };
-
+  const order = await orderService.fetchOrderByCartId(String(cart._id));
+  if(!order){
+    throw new NotFoundError("Your order cannot be found");
+  }
   let message;
   const verifyPayment = await  verifyPaystackPayment(reference);
   if(verifyPayment == "success"){
     cart.isPaid = true;
-    cart.status = CartStatus.checkedOut;
+    // cart.status = CartStatus.checkedOut;
     await cart.save();
     transaction.status = TransactionEnum.completed;
     transaction.dateCompleted = new Date();
     await transaction.save();
+    order.paymentStatus = OrderPaymentStatus.paid;
+    await order.save();
     message = "Payment successfully";
   }else {
     transaction.status = TransactionEnum.failed;
