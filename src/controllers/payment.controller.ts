@@ -108,8 +108,11 @@ const milestone = job.milestones.find((milestone: any)=> milestone._id.toString(
 if(!milestone){
   throw new NotFoundError("No milestone");
 }
-milestone.paymentInfo.note = note;
-await job.save();
+if(note){
+  milestone.paymentInfo.note = note;
+  await job.save();
+}
+
 
 const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
 if(!project){

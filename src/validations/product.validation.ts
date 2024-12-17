@@ -170,7 +170,7 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
         'string.base': 'Milestone ID must be a string',
         'string.empty': 'Milestone ID is required',
       }),
-      note: Joi.string().optional().messages({
+      note: Joi.string().optional().allow("").messages({
         'string.base': 'Note must be a string',
       }),
       paymentMethod: Joi.string()

@@ -136,8 +136,10 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
     if (!milestone) {
         throw new error_1.NotFoundError("No milestone");
     }
-    milestone.paymentInfo.note = note;
-    yield job.save();
+    if (note) {
+        milestone.paymentInfo.note = note;
+        yield job.save();
+    }
     const project = yield projectService.fetchProjectById(String(job.acceptedApplicationId));
     if (!project) {
         throw new error_1.NotFoundError("Application not found");

@@ -161,7 +161,7 @@ const validatePaymentForJob = (req, res, next) => {
             'string.base': 'Milestone ID must be a string',
             'string.empty': 'Milestone ID is required',
         }),
-        note: joi_1.default.string().optional().messages({
+        note: joi_1.default.string().optional().allow("").messages({
             'string.base': 'Note must be a string',
         }),
         paymentMethod: joi_1.default.string()
