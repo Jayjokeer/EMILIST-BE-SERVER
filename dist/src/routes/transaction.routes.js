@@ -29,6 +29,8 @@ const current_user_1 = require("../middlewares/current-user");
 const transactionController = __importStar(require("../controllers/transaction.controller"));
 const router = (0, express_1.Router)();
 exports.TransactionRoute = router;
+const paymentController = __importStar(require("../controllers/payment.controller"));
 router.route("/fetch-single-transaction/:transactionId").get(current_user_1.adminAuth, transactionController.fetchSingleTransactionController);
 router.route("/fetch-all-transactions-by-status").get(current_user_1.adminAuth, transactionController.fetchAllTransactionsByStatusController);
 router.route("/fetch-all-user-transactions").get(current_user_1.userAuth, transactionController.fetchAllTransactionsByUsersController);
+router.route("/verify-paystack-payment/:reference").get(paymentController.verifyPaystackPaymentController);

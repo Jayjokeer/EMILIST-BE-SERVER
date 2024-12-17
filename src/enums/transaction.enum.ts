@@ -32,3 +32,9 @@ export enum PaymentServiceEnum {
     stripe = 'Stripe',
     // flutterwave = 'Flutterwave',
 };
+
+export enum ServiceEnum {
+    job= 'Job',
+    material = 'Material',
+    walletFunding = 'Walletfunding'
+};

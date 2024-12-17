@@ -47,5 +47,6 @@ const transactionSchema = new mongoose_1.Schema({
     currency: { type: String, enum: transaction_enum_1.WalletEnum },
     isSettled: { type: Boolean, default: false },
     orderId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Order' },
+    serviceType: { type: String, enum: transaction_enum_1.ServiceEnum },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Transaction', transactionSchema);

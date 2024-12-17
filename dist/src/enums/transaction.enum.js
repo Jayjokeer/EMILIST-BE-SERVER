@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PaymentServiceEnum = exports.PaymentMethodEnum = exports.TransactionServiceEnum = exports.TransactionEnum = exports.WalletEnum = exports.TransactionType = void 0;
+exports.ServiceEnum = exports.PaymentServiceEnum = exports.PaymentMethodEnum = exports.TransactionServiceEnum = exports.TransactionEnum = exports.WalletEnum = exports.TransactionType = void 0;
 var TransactionType;
 (function (TransactionType) {
     TransactionType["CREDIT"] = "CREDIT";
@@ -42,4 +42,11 @@ var PaymentServiceEnum;
     PaymentServiceEnum["stripe"] = "Stripe";
     // flutterwave = 'Flutterwave',
 })(PaymentServiceEnum || (exports.PaymentServiceEnum = PaymentServiceEnum = {}));
+;
+var ServiceEnum;
+(function (ServiceEnum) {
+    ServiceEnum["job"] = "Job";
+    ServiceEnum["material"] = "Material";
+    ServiceEnum["walletFunding"] = "Walletfunding";
+})(ServiceEnum || (exports.ServiceEnum = ServiceEnum = {}));
 ;

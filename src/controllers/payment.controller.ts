@@ -7,7 +7,7 @@ import * as walletService from "../services/wallet.services";
 import { StatusCodes } from "http-status-codes";
 import { NextFunction, Request, Response } from "express";
 import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/error";
-import { PaymentMethodEnum, PaymentServiceEnum, TransactionEnum, TransactionType, WalletEnum } from "../enums/transaction.enum";
+import { PaymentMethodEnum, PaymentServiceEnum, ServiceEnum, TransactionEnum, TransactionType, WalletEnum } from "../enums/transaction.enum";
 import * as transactionService from "../services/transaction.service";
 import { generatePaystackPaymentLink, verifyPaystackPayment } from "../utils/paystack";
 import { CartStatus } from "../enums/cart.enum";
@@ -57,6 +57,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
             status: TransactionEnum.completed,
             cartId: cart._id,
             orderId: order._id,
+            serviceType: ServiceEnum.material,
           };
         const transaction = await transactionService.createTransaction(transactionPayload);
         userWallet.balance -= totalAmount;
@@ -82,6 +83,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
                 reference:`PS-${Date.now()}`,
                 cartId: cart._id,
                 orderId: order._id,
+                serviceType: ServiceEnum.material,
               };
             const transaction = await transactionService.createTransaction(transactionPayload);
             transaction.paymentService = PaymentServiceEnum.paystack;
@@ -93,40 +95,6 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
     return successResponse(res, StatusCodes.CREATED, data);
   }   
 );
-
-export const verifyPaystackProductPayment=  catchAsync(async (req: JwtPayload, res: Response) => {
-  const {reference} = req.params;
-  const transaction = await transactionService.fetchTransactionByReference(reference);
-  if(!transaction){
-    throw new NotFoundError("Transaction not found!");
-  };
-  const cart = await cartService.fetchCartByIdPayment(transaction.cartId!, String(transaction.userId));
-  if(!cart){
-      throw new NotFoundError("Cart not found or unauthorized access");
-  };
-  const order = await orderService.fetchOrderByCartId(String(cart._id));
-  if(!order){
-    throw new NotFoundError("Your order cannot be found");
-  }
-  let message;
-  const verifyPayment = await  verifyPaystackPayment(reference);
-  if(verifyPayment == "success"){
-    cart.isPaid = true;
-    cart.status = CartStatus.checkedOut;
-    await cart.save();
-    transaction.status = TransactionEnum.completed;
-    transaction.dateCompleted = new Date();
-    await transaction.save();
-    order.paymentStatus = OrderPaymentStatus.paid;
-    await order.save();
-    message = "Payment successfully";
-  }else {
-    transaction.status = TransactionEnum.failed;
-    message = "Payment failed";
-    await transaction.save();
-  }
-  return successResponse(res, StatusCodes.OK, message);
-});
 
 export const payforJobController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user._id;
@@ -165,6 +133,8 @@ if(!project){
           jobId,
           milestoneId,
           recieverId: project.user, 
+          serviceType: ServiceEnum.job,
+
         };
       const transaction = await transactionService.createTransaction(transactionPayload);
       userWallet.balance -= milestone.amount;
@@ -190,6 +160,7 @@ if(!project){
               jobId,
               milestoneId,
               recieverId: project.user, 
+              serviceType: ServiceEnum.job,
              };
           const transaction = await transactionService.createTransaction(transactionPayload);
           transaction.paymentService = PaymentServiceEnum.paystack;
@@ -202,37 +173,83 @@ if(!project){
 }   
 );
 
-export const verifyPaystackJobPayment=  catchAsync(async (req: JwtPayload, res: Response) => {
+export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload, res: Response) => {
   const {reference} = req.params;
   const transaction = await transactionService.fetchTransactionByReference(reference);
+  let message;
+
   if(!transaction){
     throw new NotFoundError("Transaction not found!");
   };
-  const job = await jobService.fetchJobById(transaction.jobId!);
-  if(!job){
-    throw new NotFoundError("Job Not found");
-  }
-  const milestone = job.milestones.find((milestone: any)=> milestone._id.toString()  === transaction.milestoneId.toString());
-  if(!milestone){
-    throw new NotFoundError("No milestone");
-  }
-
-  let message;
-  const verifyPayment = await  verifyPaystackPayment(reference);
-  if(verifyPayment == "success"){
-    milestone.paymentStatus =  MilestonePaymentStatus.paid;
-    milestone.paymentInfo.amountPaid = milestone.amount;
-    milestone.paymentInfo.paymentMethod = PaymentMethodEnum.card;  
-    milestone.paymentInfo.date = new Date();
-    transaction.status = TransactionEnum.completed;
-    transaction.dateCompleted = new Date();
-    await transaction.save();
-    await job.save();
-    message = "Payment successfully";
+  if(transaction.serviceType === ServiceEnum.job){
+    const job = await jobService.fetchJobById(transaction.jobId!);
+    if(!job){
+      throw new NotFoundError("Job Not found");
+    }
+    const milestone = job.milestones.find((milestone: any)=> milestone._id.toString()  === transaction.milestoneId.toString());
+    if(!milestone){
+      throw new NotFoundError("No milestone");
+    }
+  
+    const verifyPayment = await  verifyPaystackPayment(reference);
+    if(verifyPayment == "success"){
+      milestone.paymentStatus =  MilestonePaymentStatus.paid;
+      milestone.paymentInfo.amountPaid = milestone.amount;
+      milestone.paymentInfo.paymentMethod = PaymentMethodEnum.card;  
+      milestone.paymentInfo.date = new Date();
+      transaction.status = TransactionEnum.completed;
+      transaction.dateCompleted = new Date();
+      await transaction.save();
+      await job.save();
+      message = "Payment successfully";
+    }else {
+      transaction.status = TransactionEnum.failed;
+      message = "Payment failed";
+      await transaction.save();
+    }
+  }else if(transaction.serviceType === ServiceEnum.material){
+    const cart = await cartService.fetchCartByIdPayment(transaction.cartId!, String(transaction.userId));
+    if(!cart){
+      throw new NotFoundError("Cart not found or unauthorized access");
+    };
+    const order = await orderService.fetchOrderByCartId(String(cart._id));
+    if(!order){
+    throw new NotFoundError("Your order cannot be found");
+    }
+    const verifyPayment = await  verifyPaystackPayment(reference);
+    if(verifyPayment == "success"){
+      cart.isPaid = true;
+      cart.status = CartStatus.checkedOut;
+      await cart.save();
+      transaction.status = TransactionEnum.completed;
+      transaction.dateCompleted = new Date();
+      await transaction.save();
+      order.paymentStatus = OrderPaymentStatus.paid;
+      await order.save();
+      message = "Payment successfully";
   }else {
-    transaction.status = TransactionEnum.failed;
-    message = "Payment failed";
-    await transaction.save();
+      transaction.status = TransactionEnum.failed;
+      message = "Payment failed";
+      await transaction.save();
   }
+  }else if(transaction.serviceType === ServiceEnum.walletFunding){
+    const wallet = await walletService.findWallet(String(transaction.userId), transaction.currency, transaction.walletId);
+    if(!wallet){
+      throw new NotFoundError("Wallet not found!")
+    };
+    let message;
+    const verifyPayment = await  verifyPaystackPayment(reference);
+    if(verifyPayment == "success"){
+      transaction.status = TransactionEnum.completed;
+      transaction.balanceAfter = wallet.balance + transaction.amount;
+      await Promise.all([ transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
+      message = "Wallet funded successfully"
+    }else {
+      transaction.status = TransactionEnum.failed;
+      message = "Wallet funding failed"
+      await transaction.save();
+    }
+  };
+
   return successResponse(res, StatusCodes.OK, message);
 });

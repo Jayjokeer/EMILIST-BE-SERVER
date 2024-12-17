@@ -44,4 +44,3 @@ router.route("/unlike-product/:productId").get(current_user_1.userAuth, productC
 router.route("/fetch-liked-products").get(current_user_1.userAuth, productController.fetchAllLikedProductsController);
 router.route("/add-review").post(current_user_1.userAuth, product_validation_1.validateReviewProduct, productController.reviewProductController);
 router.route("/pay-for-product").post(current_user_1.userAuth, product_validation_1.validatePayForProduct, paymentController.payforProductController);
-router.route("/verify-product-payment/:reference").get(paymentController.verifyPaystackProductPayment);

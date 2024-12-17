@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { PaymentMethodEnum, PaymentServiceEnum, TransactionEnum, TransactionType, WalletEnum } from "../enums/transaction.enum";
+import { PaymentMethodEnum, PaymentServiceEnum, ServiceEnum, TransactionEnum, TransactionType, WalletEnum } from "../enums/transaction.enum";
 
 export interface ITransaction extends Document {
     userId: mongoose.Schema.Types.ObjectId;
@@ -21,5 +21,6 @@ export interface ITransaction extends Document {
     jobId?: any;
     milestoneId?: any;
     orderId: any;
+    serviceType: ServiceEnum;
   };
   

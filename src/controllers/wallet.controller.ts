@@ -7,7 +7,7 @@ import * as walletService from "../services/wallet.services";
 import { NotFoundError } from "../errors/error";
 import * as transactionService from "../services/transaction.service";
 import { generatePaystackPaymentLink, verifyPaystackPayment } from "../utils/paystack";
-import { PaymentMethodEnum, PaymentServiceEnum, TransactionEnum, TransactionType, WalletEnum } from "../enums/transaction.enum";
+import { PaymentMethodEnum, PaymentServiceEnum, ServiceEnum, TransactionEnum, TransactionType, WalletEnum } from "../enums/transaction.enum";
 import * as userService from "../services/auth.service";
 
 export const createWalletController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -38,6 +38,7 @@ export const initiateWalletFunding =  catchAsync(async (req: JwtPayload, res: Re
     balanceBefore: wallet.balance,
     walletId,
     currency,
+    serviceType: ServiceEnum.walletFunding,
   };
 const transaction = await transactionService.createTransaction(transactionPayload);
   if (paymentMethod === PaymentMethodEnum.card && currency === WalletEnum.NGN ) {
@@ -86,29 +87,5 @@ const transaction = await transactionService.createTransaction(transactionPayloa
     return successResponse(res, StatusCodes.OK, message);
   });
 
-  export const verifyPaystackCardWalletFunding =  catchAsync(async (req: JwtPayload, res: Response) => {
-    const {reference} = req.params;
-    const transaction = await transactionService.fetchTransactionByReference(reference);
-    if(!transaction){
-      throw new NotFoundError("Transaction not found!")
-    };
-    const wallet = await walletService.findWallet(String(transaction.userId), transaction.currency, transaction.walletId);
-    if(!wallet){
-      throw new NotFoundError("Wallet not found!")
-    };
-    let message;
-    const verifyPayment = await  verifyPaystackPayment(reference);
-    if(verifyPayment == "success"){
-      transaction.status = TransactionEnum.completed;
-      transaction.balanceAfter = wallet.balance + transaction.amount;
-      await Promise.all([ transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
-      message = "Wallet funded successfully"
-    }else {
-      transaction.status = TransactionEnum.failed;
-      message = "Wallet funding failed"
-      await transaction.save();
-    }
-    return successResponse(res, StatusCodes.OK, message);
-  });
 
  

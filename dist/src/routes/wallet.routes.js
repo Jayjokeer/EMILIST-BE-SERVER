@@ -32,5 +32,4 @@ const router = (0, express_1.Router)();
 exports.WalletRoute = router;
 router.route("/create-wallet").post(current_user_1.userAuth, walletController.createWalletController);
 router.route("/initiate-wallet-funding").post(current_user_1.userAuth, image_upload_1.singleUpload, walletController.initiateWalletFunding);
-router.route("/verify-paystack/:reference").get(walletController.verifyPaystackCardWalletFunding);
 router.route("/verify-bank-transfer").post(current_user_1.adminAuth, walletController.verifyBankTransferWalletFunding);

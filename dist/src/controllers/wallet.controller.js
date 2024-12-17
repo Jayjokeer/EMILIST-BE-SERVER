@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyPaystackCardWalletFunding = exports.verifyBankTransferWalletFunding = exports.initiateWalletFunding = exports.createWalletController = void 0;
+exports.verifyBankTransferWalletFunding = exports.initiateWalletFunding = exports.createWalletController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -69,6 +69,7 @@ exports.initiateWalletFunding = (0, error_handler_1.catchAsync)((req, res) => __
         balanceBefore: wallet.balance,
         walletId,
         currency,
+        serviceType: transaction_enum_1.ServiceEnum.walletFunding,
     };
     const transaction = yield transactionService.createTransaction(transactionPayload);
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency === transaction_enum_1.WalletEnum.NGN) {
@@ -111,33 +112,6 @@ exports.verifyBankTransferWalletFunding = (0, error_handler_1.catchAsync)((req, 
     }
     else if (status === "Declined") {
         transaction.status = transaction_enum_1.TransactionEnum.declined;
-        yield transaction.save();
-    }
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, message);
-}));
-exports.verifyPaystackCardWalletFunding = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { reference } = req.params;
-    const transaction = yield transactionService.fetchTransactionByReference(reference);
-    if (!transaction) {
-        throw new error_1.NotFoundError("Transaction not found!");
-    }
-    ;
-    const wallet = yield walletService.findWallet(String(transaction.userId), transaction.currency, transaction.walletId);
-    if (!wallet) {
-        throw new error_1.NotFoundError("Wallet not found!");
-    }
-    ;
-    let message;
-    const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
-    if (verifyPayment == "success") {
-        transaction.status = transaction_enum_1.TransactionEnum.completed;
-        transaction.balanceAfter = wallet.balance + transaction.amount;
-        yield Promise.all([transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
-        message = "Wallet funded successfully";
-    }
-    else {
-        transaction.status = transaction_enum_1.TransactionEnum.failed;
-        message = "Wallet funding failed";
         yield transaction.save();
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, message);

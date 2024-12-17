@@ -62,4 +62,3 @@ router.route("/fetch-project-count").get(current_user_1.userAuth, jobController.
 router.route("/user-project-analytics").get(current_user_1.userAuth, jobController.projectAnalyticsController);
 router.route("/mute-job/:jobId").get(current_user_1.userAuth, jobController.muteJobController);
 router.route("/pay-for-job").post(current_user_1.userAuth, product_validation_1.validatePaymentForJob, paymentController.payforJobController);
-router.route("/verify-job-payment/:reference").get(paymentController.verifyPaystackJobPayment);

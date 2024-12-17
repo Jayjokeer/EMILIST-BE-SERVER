@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyPaystackJobPayment = exports.payforJobController = exports.verifyPaystackProductPayment = exports.payforProductController = void 0;
+exports.verifyPaystackPaymentController = exports.payforJobController = exports.payforProductController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const cartService = __importStar(require("../services/cart.service"));
@@ -86,6 +86,7 @@ exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => 
             status: transaction_enum_1.TransactionEnum.completed,
             cartId: cart._id,
             orderId: order._id,
+            serviceType: transaction_enum_1.ServiceEnum.material,
         };
         const transaction = yield transactionService.createTransaction(transactionPayload);
         userWallet.balance -= totalAmount;
@@ -112,6 +113,7 @@ exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => 
                 reference: `PS-${Date.now()}`,
                 cartId: cart._id,
                 orderId: order._id,
+                serviceType: transaction_enum_1.ServiceEnum.material,
             };
             const transaction = yield transactionService.createTransaction(transactionPayload);
             transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
@@ -121,42 +123,6 @@ exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => 
         }
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.verifyPaystackProductPayment = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { reference } = req.params;
-    const transaction = yield transactionService.fetchTransactionByReference(reference);
-    if (!transaction) {
-        throw new error_1.NotFoundError("Transaction not found!");
-    }
-    ;
-    const cart = yield cartService.fetchCartByIdPayment(transaction.cartId, String(transaction.userId));
-    if (!cart) {
-        throw new error_1.NotFoundError("Cart not found or unauthorized access");
-    }
-    ;
-    const order = yield orderService.fetchOrderByCartId(String(cart._id));
-    if (!order) {
-        throw new error_1.NotFoundError("Your order cannot be found");
-    }
-    let message;
-    const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
-    if (verifyPayment == "success") {
-        cart.isPaid = true;
-        cart.status = cart_enum_1.CartStatus.checkedOut;
-        yield cart.save();
-        transaction.status = transaction_enum_1.TransactionEnum.completed;
-        transaction.dateCompleted = new Date();
-        yield transaction.save();
-        order.paymentStatus = order_enum_1.OrderPaymentStatus.paid;
-        yield order.save();
-        message = "Payment successfully";
-    }
-    else {
-        transaction.status = transaction_enum_1.TransactionEnum.failed;
-        message = "Payment failed";
-        yield transaction.save();
-    }
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, message);
 }));
 exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user._id;
@@ -194,6 +160,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
             jobId,
             milestoneId,
             recieverId: project.user,
+            serviceType: transaction_enum_1.ServiceEnum.job,
         };
         const transaction = yield transactionService.createTransaction(transactionPayload);
         userWallet.balance -= milestone.amount;
@@ -220,6 +187,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
                 jobId,
                 milestoneId,
                 recieverId: project.user,
+                serviceType: transaction_enum_1.ServiceEnum.job,
             };
             const transaction = yield transactionService.createTransaction(transactionPayload);
             transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
@@ -230,38 +198,89 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
-exports.verifyPaystackJobPayment = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { reference } = req.params;
     const transaction = yield transactionService.fetchTransactionByReference(reference);
+    let message;
     if (!transaction) {
         throw new error_1.NotFoundError("Transaction not found!");
     }
     ;
-    const job = yield jobService.fetchJobById(transaction.jobId);
-    if (!job) {
-        throw new error_1.NotFoundError("Job Not found");
+    if (transaction.serviceType === transaction_enum_1.ServiceEnum.job) {
+        const job = yield jobService.fetchJobById(transaction.jobId);
+        if (!job) {
+            throw new error_1.NotFoundError("Job Not found");
+        }
+        const milestone = job.milestones.find((milestone) => milestone._id.toString() === transaction.milestoneId.toString());
+        if (!milestone) {
+            throw new error_1.NotFoundError("No milestone");
+        }
+        const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
+        if (verifyPayment == "success") {
+            milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.paid;
+            milestone.paymentInfo.amountPaid = milestone.amount;
+            milestone.paymentInfo.paymentMethod = transaction_enum_1.PaymentMethodEnum.card;
+            milestone.paymentInfo.date = new Date();
+            transaction.status = transaction_enum_1.TransactionEnum.completed;
+            transaction.dateCompleted = new Date();
+            yield transaction.save();
+            yield job.save();
+            message = "Payment successfully";
+        }
+        else {
+            transaction.status = transaction_enum_1.TransactionEnum.failed;
+            message = "Payment failed";
+            yield transaction.save();
+        }
     }
-    const milestone = job.milestones.find((milestone) => milestone._id.toString() === transaction.milestoneId.toString());
-    if (!milestone) {
-        throw new error_1.NotFoundError("No milestone");
+    else if (transaction.serviceType === transaction_enum_1.ServiceEnum.material) {
+        const cart = yield cartService.fetchCartByIdPayment(transaction.cartId, String(transaction.userId));
+        if (!cart) {
+            throw new error_1.NotFoundError("Cart not found or unauthorized access");
+        }
+        ;
+        const order = yield orderService.fetchOrderByCartId(String(cart._id));
+        if (!order) {
+            throw new error_1.NotFoundError("Your order cannot be found");
+        }
+        const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
+        if (verifyPayment == "success") {
+            cart.isPaid = true;
+            cart.status = cart_enum_1.CartStatus.checkedOut;
+            yield cart.save();
+            transaction.status = transaction_enum_1.TransactionEnum.completed;
+            transaction.dateCompleted = new Date();
+            yield transaction.save();
+            order.paymentStatus = order_enum_1.OrderPaymentStatus.paid;
+            yield order.save();
+            message = "Payment successfully";
+        }
+        else {
+            transaction.status = transaction_enum_1.TransactionEnum.failed;
+            message = "Payment failed";
+            yield transaction.save();
+        }
     }
-    let message;
-    const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
-    if (verifyPayment == "success") {
-        milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.paid;
-        milestone.paymentInfo.amountPaid = milestone.amount;
-        milestone.paymentInfo.paymentMethod = transaction_enum_1.PaymentMethodEnum.card;
-        milestone.paymentInfo.date = new Date();
-        transaction.status = transaction_enum_1.TransactionEnum.completed;
-        transaction.dateCompleted = new Date();
-        yield transaction.save();
-        yield job.save();
-        message = "Payment successfully";
+    else if (transaction.serviceType === transaction_enum_1.ServiceEnum.walletFunding) {
+        const wallet = yield walletService.findWallet(String(transaction.userId), transaction.currency, transaction.walletId);
+        if (!wallet) {
+            throw new error_1.NotFoundError("Wallet not found!");
+        }
+        ;
+        let message;
+        const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
+        if (verifyPayment == "success") {
+            transaction.status = transaction_enum_1.TransactionEnum.completed;
+            transaction.balanceAfter = wallet.balance + transaction.amount;
+            yield Promise.all([transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
+            message = "Wallet funded successfully";
+        }
+        else {
+            transaction.status = transaction_enum_1.TransactionEnum.failed;
+            message = "Wallet funding failed";
+            yield transaction.save();
+        }
     }
-    else {
-        transaction.status = transaction_enum_1.TransactionEnum.failed;
-        message = "Payment failed";
-        yield transaction.save();
-    }
+    ;
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, message);
 }));

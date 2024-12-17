@@ -19,6 +19,5 @@ router.route("/unlike-product/:productId").get( userAuth, productController.unli
 router.route("/fetch-liked-products").get( userAuth, productController.fetchAllLikedProductsController);
 router.route("/add-review").post(userAuth,validateReviewProduct , productController.reviewProductController);
 router.route("/pay-for-product").post(userAuth,validatePayForProduct , paymentController.payforProductController);
-router.route("/verify-product-payment/:reference").get(paymentController.verifyPaystackProductPayment);
 
 export { router as ProductRoute };

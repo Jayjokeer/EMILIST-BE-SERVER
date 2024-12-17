@@ -6,7 +6,6 @@ const router = Router();
 
 router.route("/create-wallet").post(userAuth, walletController.createWalletController);
 router.route("/initiate-wallet-funding").post(userAuth, singleUpload,walletController.initiateWalletFunding);
-router.route("/verify-paystack/:reference").get(walletController.verifyPaystackCardWalletFunding);
 router.route("/verify-bank-transfer").post(adminAuth,walletController.verifyBankTransferWalletFunding);
 
 export { router as WalletRoute };

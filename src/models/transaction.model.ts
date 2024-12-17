@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { ITransaction } from '../interfaces/transaction.interface';
-import { PaymentMethodEnum, PaymentServiceEnum, TransactionEnum, TransactionType, WalletEnum } from '../enums/transaction.enum';
+import { PaymentMethodEnum, PaymentServiceEnum, ServiceEnum, TransactionEnum, TransactionType, WalletEnum } from '../enums/transaction.enum';
 
 
 const transactionSchema = new Schema(
@@ -26,6 +26,7 @@ const transactionSchema = new Schema(
     currency: {type: String, enum: WalletEnum},
     isSettled: { type: Boolean, default: false },
     orderId: { type: Schema.Types.ObjectId, ref: 'Order'},
+    serviceType: {type: String, enum: ServiceEnum},
   },
   { timestamps: true }
 );
