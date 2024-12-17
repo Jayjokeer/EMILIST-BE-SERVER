@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
+const transaction_enum_1 = require("../enums/transaction.enum");
 const transaction_model_1 = __importDefault(require("../models/transaction.model"));
 const createTransaction = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield transaction_model_1.default.create(data);
@@ -58,7 +59,21 @@ const fetchAllTransactionsByUser = (userId, page, limit, paymentMethod) => __awa
         userId: userId
     };
     if (paymentMethod) {
-        queryPayload.paymentMethod = paymentMethod;
+        if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
+            queryPayload = {
+                userId: userId,
+                $or: [
+                    { paymentMethod: transaction_enum_1.PaymentMethodEnum.wallet },
+                    {
+                        paymentMethod: transaction_enum_1.PaymentMethodEnum.card,
+                        serviceType: transaction_enum_1.ServiceEnum.walletFunding,
+                    },
+                ],
+            };
+        }
+        else {
+            queryPayload.paymentMethod = paymentMethod;
+        }
     }
     ;
     const totalTransactions = yield transaction_model_1.default.countDocuments(queryPayload);
