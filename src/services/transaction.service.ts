@@ -1,4 +1,4 @@
-import { PaymentMethodEnum, TransactionEnum } from "../enums/transaction.enum";
+import { PaymentMethodEnum, ServiceEnum, TransactionEnum } from "../enums/transaction.enum";
 import Transaction from "../models/transaction.model";
 
 export const createTransaction = async (data: any)=>{
@@ -44,7 +44,20 @@ export const fetchAllTransactionsByUser = async(userId: string,page: number, lim
         userId: userId
       };
       if(paymentMethod){
-        queryPayload.paymentMethod = paymentMethod as PaymentMethodEnum;
+        if (paymentMethod === PaymentMethodEnum.wallet) {
+            queryPayload = {
+              userId: userId,
+              $or: [
+                { paymentMethod: PaymentMethodEnum.wallet }, 
+                {
+                  paymentMethod: PaymentMethodEnum.card,
+                  serviceType: ServiceEnum.walletFunding, 
+                },
+              ],
+            };
+          } else {
+            queryPayload.paymentMethod = paymentMethod as PaymentMethodEnum;
+          }
       };
     const totalTransactions = await Transaction.countDocuments(queryPayload);
     const transactions = await Transaction.find(queryPayload)
