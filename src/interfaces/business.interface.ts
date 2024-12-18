@@ -1,4 +1,5 @@
 import { Document, Types } from 'mongoose';
+import { ExpertTypeEnum } from '../enums/business.enum';
 
 interface IServicesRendered {
   name?: string;
@@ -58,6 +59,9 @@ export interface IBusiness extends Document {
   businessDescription?: string;
   businessImages?: any ;
   currency?: string; 
+  expertType?: ExpertTypeEnum;
+  reviews?: any;
+
 }
 
 export default IBusiness;

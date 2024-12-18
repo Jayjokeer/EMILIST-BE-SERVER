@@ -9,7 +9,8 @@ import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/err
 import IBusiness from "../interfaces/business.interface";
 import * as  businessService from "../services/business.service";
 import * as  authService from "../services/auth.service";
-
+import * as reviewService from "../services/review.service";
+import { ExpertTypeEnum } from "../enums/business.enum";
 
 export const createBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
     const businessData = req.body;
@@ -64,7 +65,7 @@ export const fetchUserBusinessController = catchAsync( async (req: JwtPayload, r
 });
 export const fetchSingleBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
     const {businessId} = req.params;
-    const data = await businessService.fetchSingleBusiness(String(businessId));
+    const data = await businessService.fetchSingleBusinessWithDetails(String(businessId));
     return  successResponse(res,StatusCodes.OK, data);
 });
 export const deleteBusinessImageController = catchAsync( async (req: JwtPayload, res: Response) => {
@@ -92,11 +93,30 @@ export const deleteBusinessImageController = catchAsync( async (req: JwtPayload,
     return successResponse(res,StatusCodes.OK, data);
 });
 export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
-    const { page = 1, limit = 10} = req.query;
+    const { 
+        page = 1,
+        limit = 10, 
+        startPriceRange,
+        expertType,
+        minRating,
+        minReviews,
+        location,
+        noticePeriod,
+    } = req.query;
 
+    const filters=  {
+        startPriceRange,
+        expertType,
+        minRating,
+        minReviews,
+        location,
+        noticePeriod
+      }
     const data = await businessService.fetchAllBusiness(    
     Number(page),
-    Number(limit),);
+    Number(limit),
+    filters,
+);
     return  successResponse(res,StatusCodes.OK, data);
 });
 
@@ -104,4 +124,30 @@ export const deleteBusinessController =  catchAsync( async (req: JwtPayload, res
     const { businessId} = req.params;
      await businessService.deleteBusiness( businessId );
     return  successResponse(res,StatusCodes.OK, "Business deleted!");
+});
+export const reviewBusinessController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user._id;
+    const {businessId, rating, comment} = req.body;
+
+    const business = await businessService.fetchSingleBusiness(businessId);
+    if(!business){
+        throw new NotFoundError("Business not found!")
+    }
+    if(String(business.userId) == String(userId)){
+        throw new BadRequestError("You cannot review your own service!");
+    }
+    const isReviewed = await reviewService.isReviewedbyUser(businessId, userId);
+    if(isReviewed){
+        throw new BadRequestError("You have previously reviewed this business!");
+    }
+    const payload ={
+        businessId,
+        userId, 
+        rating, 
+        comment
+    }
+    const data = await reviewService.addReview(payload);
+    business.reviews?.push(String(data._id));
+    await business.save();
+    return successResponse(res, StatusCodes.OK, data);
 });

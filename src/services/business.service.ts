@@ -1,6 +1,8 @@
+import { ExpertTypeEnum } from "../enums/business.enum";
 import { NotFoundError } from "../errors/error";
 import IBusiness from "../interfaces/business.interface";
 import Business from "../models/business.model";
+import Review from "../models/review.model";
 
 export const createBusiness = async (data:  IBusiness) =>{
     return await Business.create(data);
@@ -125,25 +127,111 @@ export const fetchUserBusiness = async (userId: string)=>{
     return await Business.findOne({userId});
 };
 export const fetchSingleBusiness = async (businessId: string)=>{
-    return await Business.findById(businessId).populate('userId', 'fullName email userName uniqueId profileImage level');
+    return  await Business.findById(businessId)
+    .populate('userId', 'fullName email userName uniqueId profileImage level')
+  
 };
-export const fetchAllBusiness = async (page:number, limit: number)=>{
-    const skip = (page - 1) * limit;
-
-    const business = await Business.find()
-    .sort({ createdAt: -1 }) 
-    .skip(skip)
-    .limit(limit);
-    
-    const totalBusinesses = await Business.countDocuments();
+export const fetchSingleBusinessWithDetails = async (businessId: string)=>{
+    const business =  await Business.findById(businessId)
+    .populate('userId', 'fullName email userName uniqueId profileImage level')
+    .populate('reviews', 'rating');
+    if(!business){
+        return null;
+    }
+    const totalReviews = business.reviews.length;
+    const averageRating =
+      totalReviews > 0
+        ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
+        : 0;
+  
     return {
-        business,
-        totalPages: Math.ceil( totalBusinesses / limit),
-        currentPage: page,
-        totalBusinesses,
-      };
+      ...business.toObject(),
+      totalReviews,
+      averageRating: parseFloat(averageRating.toFixed(2)),
+    };
 };
+
+export const fetchAllBusiness = async (
+  page: number,
+  limit: number,
+  filters: {
+    startPriceRange?: [number, number];
+    expertType?: ExpertTypeEnum;
+    minRating?: number;
+    minReviews?: number;
+    location?: string;
+    noticePeriod?: string;
+  }
+) => {
+  const skip = (page - 1) * limit;
+
+  const query: Record<string, any> = {};
+
+  if (filters.startPriceRange) {
+    query.startingPrice = {
+      $gte: filters.startPriceRange[0],
+      $lte: filters.startPriceRange[1],
+    };
+  }
+
+  if (filters.expertType) {
+    query.expertType = filters.expertType;
+  }
+
+  if (filters.location) {
+    query.$or = [
+      { city: { $regex: filters.location, $options: 'i' } },
+      { state: { $regex: filters.location, $options: 'i' } },
+      { country: { $regex: filters.location, $options: 'i' } },
+    ];
+  }
+
+  if (filters.noticePeriod) {
+    query.noticePeriod = filters.noticePeriod;
+  }
+
+  const businesses = await Business.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .populate('reviews', 'rating');
+
+  const totalBusinesses = await Business.countDocuments(query);
+
+  const enhancedBusinesses = businesses
+    .map((business: any) => {
+      const totalReviews = business.reviews.length;
+      const averageRating =
+        totalReviews > 0
+          ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
+          : 0;
+
+      return {
+        ...business.toObject(),
+        totalReviews,
+        averageRating: parseFloat(averageRating.toFixed(2)),
+      };
+    })
+    .filter((business) => {
+      if (filters.minRating && business.averageRating < filters.minRating) {
+        return false;
+      }
+      if (filters.minReviews && business.totalReviews < filters.minReviews) {
+        return false;
+      }
+      return true;
+    });
+
+  return {
+    business: enhancedBusinesses,
+    totalPages: Math.ceil(totalBusinesses / limit),
+    currentPage: page,
+    totalBusinesses,
+  };
+};
+
 
 export const deleteBusiness = async (businessId: string)=>{
     return await Business.findByIdAndDelete(businessId);
 };
+

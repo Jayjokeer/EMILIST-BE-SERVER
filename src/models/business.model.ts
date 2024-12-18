@@ -1,5 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { IBusiness } from '../interfaces/business.interface';
+import { ExpertTypeEnum } from '../enums/business.enum';
 const ServicesRenderedSchema = new Schema({
     name: {
       type: String,
@@ -65,6 +66,8 @@ const businessSchema: Schema = new mongoose.Schema(
     currency: {type: String},
     businessDescription: {type: String},
     businessImages: [{type:  BusinessImagesSchema }],
+    expertType: {type: String, enum: ExpertTypeEnum, default: ExpertTypeEnum.verified},
+    reviews: [{type:  Schema.Types.ObjectId, ref: 'Review'}],
   },
   { timestamps: true }
 

@@ -24,6 +24,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
+const business_enum_1 = require("../enums/business.enum");
 const ServicesRenderedSchema = new mongoose_1.Schema({
     name: {
         type: String,
@@ -85,5 +86,7 @@ const businessSchema = new mongoose_1.default.Schema({
     currency: { type: String },
     businessDescription: { type: String },
     businessImages: [{ type: BusinessImagesSchema }],
+    expertType: { type: String, enum: business_enum_1.ExpertTypeEnum, default: business_enum_1.ExpertTypeEnum.verified },
+    reviews: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Review' }],
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Business', businessSchema);

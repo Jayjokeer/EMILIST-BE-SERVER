@@ -38,6 +38,7 @@ const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
 const http_status_codes_1 = require("http-status-codes");
 const error_1 = require("../errors/error");
+const reviewService = __importStar(require("../services/review.service"));
 exports.createProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user._id;
     const payload = req.body;
@@ -190,7 +191,7 @@ exports.reviewProductController = (0, error_handler_1.catchAsync)((req, res) => 
     if (String(product.userId) == String(userId)) {
         throw new error_1.BadRequestError("You cannot review your own product!");
     }
-    const isReviewed = yield productService.isUserReviewed(productId, userId);
+    const isReviewed = yield reviewService.isUserReviewed(productId, userId);
     if (isReviewed) {
         throw new error_1.BadRequestError("You have previously reviewed this product!");
     }
@@ -200,7 +201,7 @@ exports.reviewProductController = (0, error_handler_1.catchAsync)((req, res) => 
         rating,
         comment
     };
-    const data = yield productService.addReview(payload);
+    const data = yield reviewService.addReview(payload);
     (_a = product.reviews) === null || _a === void 0 ? void 0 : _a.push(String(data._id));
     yield product.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);

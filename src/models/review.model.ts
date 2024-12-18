@@ -4,10 +4,14 @@ import { IReview } from '../interfaces/review.interface';
 
   const reviewSchema: Schema = new mongoose.Schema(
     {
-      productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+      productId: { type: Schema.Types.ObjectId, ref: "Product" },
       userId: { type: Schema.Types.ObjectId, ref: "Users", required: true },
       rating: { type: Number, required: true, min: 1, max: 5 },
       comment: { type: String, trim: true },
+      businessId: { type: Schema.Types.ObjectId, ref: "Business" },
+      projectId: { type: Schema.Types.ObjectId, ref: "Project" },
+      rateCommunication: { type: Number, required: true, min: 1, max: 5 },
+      isRecommendVendor: {type: Boolean}
     },
     { timestamps: true }
   );

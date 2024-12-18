@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchReviewForProduct = exports.isUserReviewed = exports.addReview = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
+exports.fetchReviewForProduct = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const product_model_1 = __importDefault(require("../models/product.model"));
 const productLike_model_1 = __importDefault(require("../models/productLike.model"));
@@ -126,14 +126,6 @@ const unlikeProduct = (productId, userId) => __awaiter(void 0, void 0, void 0, f
     return yield productLike_model_1.default.findOneAndDelete({ user: userId, product: productId });
 });
 exports.unlikeProduct = unlikeProduct;
-const addReview = (payload) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield review_model_1.default.create(payload);
-});
-exports.addReview = addReview;
-const isUserReviewed = (productId, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield review_model_1.default.findOne({ userId: userId, productId: productId });
-});
-exports.isUserReviewed = isUserReviewed;
 const fetchReviewForProduct = (productId) => __awaiter(void 0, void 0, void 0, function* () {
     if (!mongoose_1.default.Types.ObjectId.isValid(productId)) {
         throw new Error("Invalid productId");

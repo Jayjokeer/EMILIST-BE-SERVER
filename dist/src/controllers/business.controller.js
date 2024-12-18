@@ -32,13 +32,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
+exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const error_1 = require("../errors/error");
 const businessService = __importStar(require("../services/business.service"));
 const authService = __importStar(require("../services/auth.service"));
+const reviewService = __importStar(require("../services/review.service"));
 exports.createBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const businessData = req.body;
@@ -86,7 +87,7 @@ exports.fetchUserBusinessController = (0, error_handler_1.catchAsync)((req, res)
 }));
 exports.fetchSingleBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { businessId } = req.params;
-    const data = yield businessService.fetchSingleBusiness(String(businessId));
+    const data = yield businessService.fetchSingleBusinessWithDetails(String(businessId));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.deleteBusinessImageController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -109,12 +110,46 @@ exports.deleteBusinessImageController = (0, error_handler_1.catchAsync)((req, re
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchAllBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { page = 1, limit = 10 } = req.query;
-    const data = yield businessService.fetchAllBusiness(Number(page), Number(limit));
+    const { page = 1, limit = 10, startPriceRange, expertType, minRating, minReviews, location, noticePeriod, } = req.query;
+    const filters = {
+        startPriceRange,
+        expertType,
+        minRating,
+        minReviews,
+        location,
+        noticePeriod
+    };
+    const data = yield businessService.fetchAllBusiness(Number(page), Number(limit), filters);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.deleteBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { businessId } = req.params;
     yield businessService.deleteBusiness(businessId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Business deleted!");
+}));
+exports.reviewBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = req.user._id;
+    const { businessId, rating, comment } = req.body;
+    const business = yield businessService.fetchSingleBusiness(businessId);
+    if (!business) {
+        throw new error_1.NotFoundError("Business not found!");
+    }
+    if (String(business.userId) == String(userId)) {
+        throw new error_1.BadRequestError("You cannot review your own service!");
+    }
+    const isReviewed = yield reviewService.isReviewedbyUser(businessId, userId);
+    if (isReviewed) {
+        throw new error_1.BadRequestError("You have previously reviewed this business!");
+    }
+    const payload = {
+        businessId,
+        userId,
+        rating,
+        comment
+    };
+    const data = yield reviewService.addReview(payload);
+    (_a = business.reviews) === null || _a === void 0 ? void 0 : _a.push(String(data._id));
+    yield business.save();
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

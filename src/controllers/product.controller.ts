@@ -6,6 +6,7 @@ import { IProduct } from "../interfaces/product.interface";
 import { StatusCodes } from "http-status-codes";
 import { NextFunction, Request, Response } from "express";
 import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/error";
+import * as reviewService from "../services/review.service";
 
 
 export const createProductController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -187,7 +188,7 @@ export const reviewProductController = catchAsync(async (req: JwtPayload, res: R
     if(String(product.userId) == String(userId)){
         throw new BadRequestError("You cannot review your own product!");
     }
-    const isReviewed = await productService.isUserReviewed(productId, userId);
+    const isReviewed = await reviewService.isUserReviewed(productId, userId);
     if(isReviewed){
         throw new BadRequestError("You have previously reviewed this product!");
     }
@@ -197,7 +198,7 @@ export const reviewProductController = catchAsync(async (req: JwtPayload, res: R
         rating, 
         comment
     }
-    const data = await productService.addReview(payload);
+    const data = await reviewService.addReview(payload);
     product.reviews?.push(String(data._id));
     await product.save()
     return successResponse(res, StatusCodes.OK, data);

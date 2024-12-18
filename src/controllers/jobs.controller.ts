@@ -18,6 +18,7 @@ import * as  businessService from "../services/business.service";
 import * as notificationService from "../services/notification.service";
 import { NotificationTypeEnum } from "../enums/notification.enum";
 import * as userService from "../services/auth.service";
+import * as reviewService from "../services/review.service";
 
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
@@ -768,20 +769,32 @@ export const closeContractController = catchAsync( async(req:JwtPayload, res: Re
   }
   const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
   if(!project){
-    throw new NotFoundError("Project not foound!");
+    throw new NotFoundError("Project not found!");
   }
+  const business = await businessService.fetchSingleBusiness(String(project.businessId));
+  if(!business) {
+    throw new NotFoundError("Business not found!");
+  };
   project.status = ProjectStatusEnum.completed;
   job.isClosed = true;
-  job.review.rating = rating;
-  job.review.note = note; 
-  job.review.rateCommunication = rateCommunication;
-  job.review.isRecommendVendor= isRecommendVendor;
+
+  const payload ={
+    businessId: project.businessId,
+    userId, 
+    rating, 
+    comment: note,
+    rateCommunication,
+    isRecommendVendor
+};
+const data = await reviewService.addReview(payload);
   await job.save();
   await project.save();
-
+  await business.reviews?.push(data._id);
+  await business.save();
   return successResponse(res,StatusCodes.OK, "Job closed successfully");
 
-})
+});
+
 export const fetchJobCountsController = catchAsync( async(req:JwtPayload, res: Response) =>{
   const userId = req.user._id;
   const data = await jobService.fetchJobCount( String(userId));

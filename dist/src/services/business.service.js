@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
+exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
 const business_model_1 = __importDefault(require("../models/business.model"));
 const createBusiness = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield business_model_1.default.create(data);
@@ -121,18 +121,71 @@ const fetchUserBusiness = (userId) => __awaiter(void 0, void 0, void 0, function
 });
 exports.fetchUserBusiness = fetchUserBusiness;
 const fetchSingleBusiness = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield business_model_1.default.findById(businessId).populate('userId', 'fullName email userName uniqueId profileImage level');
+    return yield business_model_1.default.findById(businessId)
+        .populate('userId', 'fullName email userName uniqueId profileImage level');
 });
 exports.fetchSingleBusiness = fetchSingleBusiness;
-const fetchAllBusiness = (page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchSingleBusinessWithDetails = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
+    const business = yield business_model_1.default.findById(businessId)
+        .populate('userId', 'fullName email userName uniqueId profileImage level')
+        .populate('reviews', 'rating');
+    if (!business) {
+        return null;
+    }
+    const totalReviews = business.reviews.length;
+    const averageRating = totalReviews > 0
+        ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+        : 0;
+    return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
+});
+exports.fetchSingleBusinessWithDetails = fetchSingleBusinessWithDetails;
+const fetchAllBusiness = (page, limit, filters) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
-    const business = yield business_model_1.default.find()
+    const query = {};
+    if (filters.startPriceRange) {
+        query.startingPrice = {
+            $gte: filters.startPriceRange[0],
+            $lte: filters.startPriceRange[1],
+        };
+    }
+    if (filters.expertType) {
+        query.expertType = filters.expertType;
+    }
+    if (filters.location) {
+        query.$or = [
+            { city: { $regex: filters.location, $options: 'i' } },
+            { state: { $regex: filters.location, $options: 'i' } },
+            { country: { $regex: filters.location, $options: 'i' } },
+        ];
+    }
+    if (filters.noticePeriod) {
+        query.noticePeriod = filters.noticePeriod;
+    }
+    const businesses = yield business_model_1.default.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit);
-    const totalBusinesses = yield business_model_1.default.countDocuments();
+        .limit(limit)
+        .populate('reviews', 'rating');
+    const totalBusinesses = yield business_model_1.default.countDocuments(query);
+    const enhancedBusinesses = businesses
+        .map((business) => {
+        const totalReviews = business.reviews.length;
+        const averageRating = totalReviews > 0
+            ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+            : 0;
+        return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
+    })
+        .filter((business) => {
+        if (filters.minRating && business.averageRating < filters.minRating) {
+            return false;
+        }
+        if (filters.minReviews && business.totalReviews < filters.minReviews) {
+            return false;
+        }
+        return true;
+    });
     return {
-        business,
+        business: enhancedBusinesses,
         totalPages: Math.ceil(totalBusinesses / limit),
         currentPage: page,
         totalBusinesses,

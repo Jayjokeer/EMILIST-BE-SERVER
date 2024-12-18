@@ -132,15 +132,6 @@ export const fetchLikedProducts = async (userId: string, page: number, limit: nu
    return await ProductLike.findOneAndDelete({user: userId, product: productId});
   };
 
-  export const addReview = async(payload: any)=>{
-    return await Review.create(payload);
-  };
-
-  export const isUserReviewed = async(productId: string, userId: string)=>{
-    return await Review.findOne({userId: userId, productId:productId});
-  };
-
-
   
   export const fetchReviewForProduct = async (productId: string) => {
     if (!mongoose.Types.ObjectId.isValid(productId)) {

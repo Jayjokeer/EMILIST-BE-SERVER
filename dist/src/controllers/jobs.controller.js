@@ -52,6 +52,7 @@ const businessService = __importStar(require("../services/business.service"));
 const notificationService = __importStar(require("../services/notification.service"));
 const notification_enum_1 = require("../enums/notification.enum");
 const userService = __importStar(require("../services/auth.service"));
+const reviewService = __importStar(require("../services/review.service"));
 exports.createJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const job = req.body;
     const files = req.files;
@@ -664,6 +665,7 @@ exports.jobAnalyticsController = (0, error_handler_1.catchAsync)((req, res) => _
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.closeContractController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const userId = req.user._id;
     const { jobId } = req.params;
     const { rating, note, rateCommunication, isRecommendVendor } = req.body;
@@ -684,16 +686,28 @@ exports.closeContractController = (0, error_handler_1.catchAsync)((req, res) => 
     }
     const project = yield projectService.fetchProjectById(String(job.acceptedApplicationId));
     if (!project) {
-        throw new error_1.NotFoundError("Project not foound!");
+        throw new error_1.NotFoundError("Project not found!");
     }
+    const business = yield businessService.fetchSingleBusiness(String(project.businessId));
+    if (!business) {
+        throw new error_1.NotFoundError("Business not found!");
+    }
+    ;
     project.status = project_enum_1.ProjectStatusEnum.completed;
     job.isClosed = true;
-    job.review.rating = rating;
-    job.review.note = note;
-    job.review.rateCommunication = rateCommunication;
-    job.review.isRecommendVendor = isRecommendVendor;
+    const payload = {
+        businessId: project.businessId,
+        userId,
+        rating,
+        comment: note,
+        rateCommunication,
+        isRecommendVendor
+    };
+    const data = yield reviewService.addReview(payload);
     yield job.save();
     yield project.save();
+    yield ((_a = business.reviews) === null || _a === void 0 ? void 0 : _a.push(data._id));
+    yield business.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job closed successfully");
 }));
 exports.fetchJobCountsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
