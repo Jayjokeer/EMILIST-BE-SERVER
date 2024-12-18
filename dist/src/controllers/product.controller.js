@@ -100,9 +100,15 @@ exports.getSingleProductController = (0, error_handler_1.catchAsync)((req, res) 
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.getAllProductsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, priceRange, minRating, minReviews, isPrimeMember, } = req.query;
     const userId = req.query.userId ? req.query.userId : null;
-    const products = yield productService.fetchAllProducts(Number(page), Number(limit), userId);
+    const filters = {
+        priceRange,
+        minRating,
+        minReviews,
+        isPrimeMember,
+    };
+    const products = yield productService.fetchAllProducts(Number(page), Number(limit), userId, filters);
     const data = products;
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

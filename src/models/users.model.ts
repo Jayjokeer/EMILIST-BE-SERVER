@@ -33,7 +33,7 @@ const userSchema: Schema = new mongoose.Schema(
     mutedJobs: [{ type: Schema.Types.ObjectId, ref: 'Jobs' }],
     wallets: [{ type: Schema.Types.ObjectId, ref: 'Wallet' }],
     role: {type: String, enum: UserRolesEnum, default: UserRolesEnum.user},
-
+    isPrimeMember: {type: Boolean, default: false},
   },
   { timestamps: true }
 

@@ -14,29 +14,55 @@ export const fetchProductById = async (productId: any) =>{
 export const fetchProductByIdWithDetails = async (productId: any) =>{
     return await Product.findById(productId).populate('userId', 'fullName email userName profileImage level _id uniqueId');
 };
-export const fetchAllProducts = async (
-    page: number,
-    limit: number,
-    userId: string,
-)=>{
-    const skip = (page - 1) * limit;
 
-    const totalProducts = await Product.countDocuments();
-    const products = await Product.find()
+
+export const fetchAllProducts = async (
+  page: number,
+  limit: number,
+  userId: string,
+  filters: {
+    priceRange?: [number, number];
+    minRating?: number;
+    minReviews?: number;
+    isPrimeMember?: boolean;
+  }
+) => {
+  const skip = (page - 1) * limit;
+
+  const query: Record<string, any> = {};
+
+  if (filters.priceRange) {
+    query.price = {
+      $gte: filters.priceRange[0],
+      $lte: filters.priceRange[1],
+    };
+  }
+
+
+  const totalProducts = await Product.countDocuments(query);
+
+  const products = await Product.find(query)
     .skip(skip)
     .limit(limit)
-    .populate('userId', 'fullName email userName profileImage level _id uniqueId') 
+    .populate({
+      path: 'userId',
+      select: 'fullName email userName profileImage level uniqueId isPrimeMember',
+      match: filters.isPrimeMember !== undefined ? { isPrimeMember: filters.isPrimeMember } : {},
+    })
     .lean();
 
-  const productIds = products.map((product) => product._id);
+  const filteredProducts = products.filter((product) => product.userId !== null);
+
+  const productIds = filteredProducts.map((product) => product._id);
+
   const reviews = await Review.aggregate([
     {
       $match: { productId: { $in: productIds } },
     },
     {
       $group: {
-        _id: "$productId",
-        averageRating: { $avg: "$rating" },
+        _id: '$productId',
+        averageRating: { $avg: '$rating' },
         numberOfRatings: { $sum: 1 },
       },
     },
@@ -50,33 +76,42 @@ export const fetchAllProducts = async (
     return map;
   }, {});
 
+  const enhancedProducts = filteredProducts
+    .map((product) => ({
+      ...product,
+      averageRating: reviewMap[product._id.toString()]?.averageRating || 0,
+      numberOfRatings: reviewMap[product._id.toString()]?.numberOfRatings || 0,
+    }))
+    .filter((product) => {
+      if (filters.minRating && product.averageRating < filters.minRating) return false;
+      if (filters.minReviews && product.numberOfRatings < filters.minReviews) return false;
+      return true;
+    });
+
   let productsWithDetails;
   if (userId) {
     const likedProducts = await ProductLike.find({ user: userId }).select('product').lean();
     const likedProductIds = likedProducts.map((like) => like.product.toString());
 
-    productsWithDetails = products.map((product) => ({
+    productsWithDetails = enhancedProducts.map((product) => ({
       ...product,
-      averageRating: reviewMap[product._id.toString()]?.averageRating || 0,
-      numberOfRatings: reviewMap[product._id.toString()]?.numberOfRatings || 0,
       liked: likedProductIds.includes(product._id.toString()),
     }));
   } else {
-    productsWithDetails = products.map((product) => ({
+    productsWithDetails = enhancedProducts.map((product) => ({
       ...product,
-      averageRating: reviewMap[product._id.toString()]?.averageRating || 0,
-      numberOfRatings: reviewMap[product._id.toString()]?.numberOfRatings || 0,
       liked: false,
     }));
   }
 
-   return {
+  return {
     products: productsWithDetails,
-    totalPages: Math.ceil(totalProducts/ limit),
+    totalPages: Math.ceil(totalProducts / limit),
     currentPage: page,
-    totalProducts  
-    };
+    totalProducts:productsWithDetails.length,
+  };
 };
+
 
 export const deleteProduct = async(productId: string)=>{
     return await Product.findByIdAndDelete(productId)

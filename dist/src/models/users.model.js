@@ -55,5 +55,6 @@ const userSchema = new mongoose_1.default.Schema({
     mutedJobs: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Jobs' }],
     wallets: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Wallet' }],
     role: { type: String, enum: user_enums_1.UserRolesEnum, default: user_enums_1.UserRolesEnum.user },
+    isPrimeMember: { type: Boolean, default: false },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Users', userSchema);

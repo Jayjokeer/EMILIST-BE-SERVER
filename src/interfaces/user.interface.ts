@@ -25,6 +25,7 @@ export interface IUser {
     mutedJobs?: any;
     wallets?:any;
     role?: UserRolesEnum;
+    isPrimeMember: boolean;
   }
   
 export interface ICreateUser {
