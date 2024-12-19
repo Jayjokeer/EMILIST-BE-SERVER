@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.otpMessage = void 0;
+exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.otpMessage = void 0;
 const otpMessage = (name, otp) => {
     const subject = "Otp Email";
     const html = `
@@ -71,3 +71,16 @@ const sendInviteMessage = (creatorName, link) => {
     return { html, subject };
 };
 exports.sendInviteMessage = sendInviteMessage;
+const sendPrivateExpertMessage = (fullName, phoneNumber, email, typeOfExpert, details) => {
+    const subject = "Private Expert Alert";
+    const html = `${fullName} requested for a private expert.
+  Details: 
+  Full Name = ${fullName}.
+  Mobile = ${phoneNumber},
+  Email = ${email},
+  Expert Needed = ${typeOfExpert},
+  Details == ${details}.
+  `;
+    return { html, subject };
+};
+exports.sendPrivateExpertMessage = sendPrivateExpertMessage;

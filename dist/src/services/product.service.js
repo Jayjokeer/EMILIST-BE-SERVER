@@ -31,19 +31,14 @@ const fetchProductByIdWithDetails = (productId) => __awaiter(void 0, void 0, voi
 exports.fetchProductByIdWithDetails = fetchProductByIdWithDetails;
 const fetchAllProducts = (page, limit, userId, filters) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
-    // Base query for Product model
     const query = {};
-    // Apply price range filter
     if (filters.priceRange) {
         query.price = {
             $gte: filters.priceRange[0],
             $lte: filters.priceRange[1],
         };
     }
-    // Prime member filter will be applied during population
-    // Find total products for pagination
     const totalProducts = yield product_model_1.default.countDocuments(query);
-    // Fetch products with filters and populate user data
     const products = yield product_model_1.default.find(query)
         .skip(skip)
         .limit(limit)
@@ -53,11 +48,8 @@ const fetchAllProducts = (page, limit, userId, filters) => __awaiter(void 0, voi
         match: filters.isPrimeMember !== undefined ? { isPrimeMember: filters.isPrimeMember } : {},
     })
         .lean();
-    // Filter out products whose users don't match the prime member criteria
     const filteredProducts = products.filter((product) => product.userId !== null);
-    // Collect product IDs for review aggregation
     const productIds = filteredProducts.map((product) => product._id);
-    // Fetch review metrics using aggregation
     const reviews = yield review_model_1.default.aggregate([
         {
             $match: { productId: { $in: productIds } },
@@ -70,7 +62,6 @@ const fetchAllProducts = (page, limit, userId, filters) => __awaiter(void 0, voi
             },
         },
     ]);
-    // Map review data for easy lookup
     const reviewMap = reviews.reduce((map, review) => {
         map[review._id.toString()] = {
             averageRating: review.averageRating || 0,
@@ -78,21 +69,18 @@ const fetchAllProducts = (page, limit, userId, filters) => __awaiter(void 0, voi
         };
         return map;
     }, {});
-    // Enhance products with review data and apply additional filters
     const enhancedProducts = filteredProducts
         .map((product) => {
         var _a, _b;
         return (Object.assign(Object.assign({}, product), { averageRating: ((_a = reviewMap[product._id.toString()]) === null || _a === void 0 ? void 0 : _a.averageRating) || 0, numberOfRatings: ((_b = reviewMap[product._id.toString()]) === null || _b === void 0 ? void 0 : _b.numberOfRatings) || 0 }));
     })
         .filter((product) => {
-        // Apply rating and review filters
         if (filters.minRating && product.averageRating < filters.minRating)
             return false;
         if (filters.minReviews && product.numberOfRatings < filters.minReviews)
             return false;
         return true;
     });
-    // Check liked status for each product if userId is provided
     let productsWithDetails;
     if (userId) {
         const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();

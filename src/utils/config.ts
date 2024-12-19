@@ -24,4 +24,5 @@ export const config = {
   frontendSignUpUrl: process.env.FRONTEND_SIGNUP as string,
   paystackSecretKey: process.env.PAYSTACK_SECRET_KEY as string,
   paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY as string,
+  adminEmail: process.env.ADMIN_EMAIL as string,
 };

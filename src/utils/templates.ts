@@ -76,3 +76,17 @@ export const sendInviteMessage = (creatorName: string, link: string) => {
         You were invited by ${creatorName}, to join the emilist platform. Kindly click on this link to sign up ${link}`
   return { html, subject };
 };
+
+
+export const sendPrivateExpertMessage = (fullName: string, phoneNumber: string,email: string, typeOfExpert: string, details: string ) => {
+  const subject = "Private Expert Alert";
+  const html = `${fullName} requested for a private expert.
+  Details: 
+  Full Name = ${fullName}.
+  Mobile = ${phoneNumber},
+  Email = ${email},
+  Expert Needed = ${typeOfExpert},
+  Details == ${details}.
+  ` 
+ return { html, subject };
+};

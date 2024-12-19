@@ -25,4 +25,5 @@ exports.config = {
     frontendSignUpUrl: process.env.FRONTEND_SIGNUP,
     paystackSecretKey: process.env.PAYSTACK_SECRET_KEY,
     paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY,
+    adminEmail: process.env.ADMIN_EMAIL,
 };
