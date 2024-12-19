@@ -10,5 +10,11 @@ const ExpertSchema = new mongoose_1.default.Schema({
     email: { type: String },
     typeOfExpert: { type: String },
     details: { type: String },
+    fileUrl: { type: String },
+    location: { type: String },
+    availability: {
+        time: { type: String },
+        date: { type: Date },
+    }
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("Expert", ExpertSchema);

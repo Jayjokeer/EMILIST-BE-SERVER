@@ -14,13 +14,29 @@ export const createExpertController = catchAsync( async (req: Request, res: Resp
          phoneNumber,
          email, 
          typeOfExpert, 
-         details} = expertData; 
+         details,
+        location,
+        availability
+    } = expertData; 
+    const {time, date} = availability;
+
+         if(req.file){
+            expertData.fileUrl = req.file.path;
+         };
+
     const data = await expertService.createPrivateExpert(expertData);
     const { html, subject } = sendPrivateExpertMessage(fullName,
         phoneNumber,
         email, 
         typeOfExpert, 
-        details);
+        details,
+        location,
+        time,
+        date
+
+    );
+
+
     await sendEmail(config.adminEmail, subject, html); 
    return successResponse(res,StatusCodes.CREATED, data);
 });

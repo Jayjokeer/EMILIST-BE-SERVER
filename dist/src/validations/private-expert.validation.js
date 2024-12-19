@@ -37,6 +37,17 @@ const validateExpert = (req, res, next) => {
             .messages({
             'string.base': 'Details must be a string',
         }),
+        location: joi_1.default.string().optional().messages({
+            'string.base': 'Location must be a string',
+        }),
+        availability: joi_1.default.object({
+            time: joi_1.default.string().optional().messages({
+                'string.base': 'Availability time must be a valid string',
+            }),
+            date: joi_1.default.date().optional().messages({
+                'date.base': 'Availability date must be a valid date',
+            }),
+        }).optional(),
     });
     const { error } = expertValidationSchema.validate(req.body, { abortEarly: false });
     if (error) {

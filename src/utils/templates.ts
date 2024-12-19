@@ -78,15 +78,18 @@ export const sendInviteMessage = (creatorName: string, link: string) => {
 };
 
 
-export const sendPrivateExpertMessage = (fullName: string, phoneNumber: string,email: string, typeOfExpert: string, details: string ) => {
+export const sendPrivateExpertMessage = (fullName: string, phoneNumber: string,email: string, typeOfExpert: string, details: string, location: string, time: string, date: any ) => {
   const subject = "Private Expert Alert";
-  const html = `${fullName} requested for a private expert.
-  Details: 
-  Full Name = ${fullName}.
-  Mobile = ${phoneNumber},
-  Email = ${email},
-  Expert Needed = ${typeOfExpert},
-  Details == ${details}.
-  ` 
- return { html, subject };
+  const html = `${fullName} requested for a private expert.\n\n
+Details: \n\n
+Full Name: ${fullName}\n\n
+Mobile: ${phoneNumber}\n\n
+Email: ${email}\n\n
+Expert Needed: ${typeOfExpert}\n\n
+Details: ${details}\n\n
+Location: ${location}\n\n
+Time: ${time}\n\n
+Date: ${date}.\n\n`;
+
+return {html, subject}
 };

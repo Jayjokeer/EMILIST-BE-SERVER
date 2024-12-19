@@ -42,9 +42,14 @@ const templates_1 = require("../utils/templates");
 const config_1 = require("../utils/config");
 exports.createExpertController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const expertData = req.body;
-    const { fullName, phoneNumber, email, typeOfExpert, details } = expertData;
+    const { fullName, phoneNumber, email, typeOfExpert, details, location, availability } = expertData;
+    const { time, date } = availability;
+    if (req.file) {
+        expertData.fileUrl = req.file.path;
+    }
+    ;
     const data = yield expertService.createPrivateExpert(expertData);
-    const { html, subject } = (0, templates_1.sendPrivateExpertMessage)(fullName, phoneNumber, email, typeOfExpert, details);
+    const { html, subject } = (0, templates_1.sendPrivateExpertMessage)(fullName, phoneNumber, email, typeOfExpert, details, location, time, date);
     yield (0, send_email_1.sendEmail)(config_1.config.adminEmail, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));

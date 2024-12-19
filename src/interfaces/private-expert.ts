@@ -4,4 +4,10 @@ export interface IExpert {
     email: string;
     typeOfExpert : string;
     details: string;
+    fileUrl: string;
+    location: string;
+    availability: {
+      time: string;
+      date: Date;
+    }
 }

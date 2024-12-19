@@ -27,6 +27,7 @@ exports.TargetRoute = void 0;
 const express_1 = require("express");
 const targetController = __importStar(require("../controllers/target.controller"));
 const target_validation_1 = require("../validations/target.validation");
+const current_user_1 = require("../middlewares/current-user");
 const router = (0, express_1.Router)();
 exports.TargetRoute = router;
-router.route("/create-target").post(target_validation_1.validateTarget, targetController.createTargetController);
+router.route("/create-target").post(current_user_1.userAuth, target_validation_1.validateTarget, targetController.createTargetController);
