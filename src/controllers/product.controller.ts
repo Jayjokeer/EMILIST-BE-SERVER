@@ -7,20 +7,43 @@ import { StatusCodes } from "http-status-codes";
 import { NextFunction, Request, Response } from "express";
 import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/error";
 import * as reviewService from "../services/review.service";
-
+import * as subscriptionService from "../services/subscription.service";
+import { SubscriptionPerksEnum } from "../enums/suscribtion.enum";
 
 export const createProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
-    const payload: IProduct= req.body;
+    const payload = req.body;
+  
     payload.userId = userId;
-    if (req.files ) {
-        payload.images = req.files.map((file: Express.Multer.File) => ({
-            imageUrl: file.path
-        }));
+  
+    if (req.files) {
+      payload.images = req.files.map((file: Express.Multer.File) => ({
+        imageUrl: file.path,
+      }));
     }
-    const data = await productService.createProduct(payload)
-   return successResponse(res, StatusCodes.CREATED, data);
-  });   
+  
+    const subscription = await subscriptionService.getActiveSubscription(userId);
+  
+    if (!subscription) {
+        throw new BadRequestError("You do not have an active subscription.");
+    }
+  
+//     const productPerk = subscription.perks.find((perk) => perk.name === SubscriptionPerksEnum.product );
+  
+//     if (!productPerk) {
+//         throw new BadRequestError("You do not have the required subscription to create products.");
+//     }
+  
+//     if (productPerk.planId.used >= productPerk..planId.limit) {
+// throw new BadRequestError("You have reached the limit of products you can create.");}
+  
+    const data = await productService.createProduct(payload);
+  
+    // productPerk.used += 1;
+    await subscription.save();
+  
+    return successResponse(res, StatusCodes.CREATED, data);
+  });
 export const updateProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
     const {productId} = req.params;

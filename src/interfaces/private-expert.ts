@@ -6,8 +6,8 @@ export interface IExpert {
     details: string;
     fileUrl: string;
     location: string;
-    availability: {
+    availability: [{
       time: string;
       date: Date;
-    }
+    }]
 }

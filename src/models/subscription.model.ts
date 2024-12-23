@@ -1,14 +1,8 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { SubscriptionStatusEnum } from '../enums/suscribtion.enum';
+import { ISubscription } from '../interfaces/subscription.interface';
 
-interface ISubscription extends Document {
-  userId: Schema.Types.ObjectId;
-  planId: Schema.Types.ObjectId;
-  status: string; 
-  startDate: Date;
-  endDate: Date;
-  perks: string[]; 
-}
+
 
 const SubscriptionSchema = new Schema<ISubscription>(
   {
@@ -21,7 +15,6 @@ const SubscriptionSchema = new Schema<ISubscription>(
     },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
-    perks: [{ type: String, required: true }],
   },
   { timestamps: true }
 );

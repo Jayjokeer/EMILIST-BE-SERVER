@@ -36,14 +36,27 @@ export const validateExpert = (req: Request, res: Response, next: NextFunction) 
       location: Joi.string().optional().messages({
         'string.base': 'Location must be a string',
       }),
-      availability: Joi.object({
-        time: Joi.string().optional().messages({
-          'string.base': 'Availability time must be a valid string',
-        }),
-        date: Joi.date().optional().messages({
-          'date.base': 'Availability date must be a valid date',
-        }),
-    }).optional(),
+      availability: Joi.array()
+      .items(
+        Joi.object({
+          time: Joi.string()
+            .required()
+            .messages({
+              'string.base': 'Availability time must be a valid string',
+              'string.empty': 'Availability time is required',
+            }),
+          date: Joi.date()
+            .required()
+            .messages({
+              'date.base': 'Availability date must be a valid date',
+              'date.empty': 'Availability date is required',
+            }),
+        })
+      )
+      .optional()
+      .messages({
+        'array.base': 'Availability must be an array of time and date objects',
+      }),
 
   });
 

@@ -12,10 +12,10 @@ import { IExpert } from '../interfaces/private-expert';
       details: {type: String},
       fileUrl: {type: String},
       location: {type: String},
-      availability: {
+      availability: [{
         time: {type: String},
         date: {type: Date},
-      }
+      }]
     },
     { timestamps: true }
   );

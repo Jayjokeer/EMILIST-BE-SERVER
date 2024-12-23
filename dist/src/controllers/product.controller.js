@@ -39,16 +39,29 @@ const productService = __importStar(require("../services/product.service"));
 const http_status_codes_1 = require("http-status-codes");
 const error_1 = require("../errors/error");
 const reviewService = __importStar(require("../services/review.service"));
+const subscriptionService = __importStar(require("../services/subscription.service"));
 exports.createProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user._id;
     const payload = req.body;
     payload.userId = userId;
     if (req.files) {
         payload.images = req.files.map((file) => ({
-            imageUrl: file.path
+            imageUrl: file.path,
         }));
     }
+    const subscription = yield subscriptionService.getActiveSubscription(userId);
+    if (!subscription) {
+        throw new error_1.BadRequestError("You do not have an active subscription.");
+    }
+    //     const productPerk = subscription.perks.find((perk) => perk.name === SubscriptionPerksEnum.product );
+    //     if (!productPerk) {
+    //         throw new BadRequestError("You do not have the required subscription to create products.");
+    //     }
+    //     if (productPerk.planId.used >= productPerk..planId.limit) {
+    // throw new BadRequestError("You have reached the limit of products you can create.");}
     const data = yield productService.createProduct(payload);
+    // productPerk.used += 1;
+    yield subscription.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.updateProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
