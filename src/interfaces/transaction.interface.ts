@@ -22,5 +22,6 @@ export interface ITransaction extends Document {
     milestoneId?: any;
     orderId: any;
     serviceType: ServiceEnum;
+    planId: any;
   };
   

@@ -48,6 +48,8 @@ const jobs_enum_1 = require("../enums/jobs.enum");
 const projectService = __importStar(require("../services/project.service"));
 const orderService = __importStar(require("../services/order.service"));
 const order_enum_1 = require("../enums/order.enum");
+const planService = __importStar(require("../services/plan.service"));
+const subscriptionService = __importStar(require("../services/subscription.service"));
 exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const userId = req.user._id;
@@ -283,6 +285,31 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
             yield transaction.save();
         }
     }
-    ;
+    else if (transaction.serviceType === transaction_enum_1.ServiceEnum.subscription) {
+        const plan = yield planService.getPlanById(transaction.planId);
+        if (!plan) {
+            throw new error_1.NotFoundError("Plan not found");
+        }
+        const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
+        if (verifyPayment == "success") {
+            transaction.status = transaction_enum_1.TransactionEnum.completed;
+            yield transaction.save();
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setDate(startDate.getDate() + plan.duration);
+            message = yield subscriptionService.createSubscription({
+                userId: transaction.userId,
+                planId: transaction.planId,
+                perks: plan.perks,
+                startDate,
+                endDate,
+            });
+        }
+        else {
+            transaction.status = transaction_enum_1.TransactionEnum.failed;
+            message = "Subscription payment failed";
+            yield transaction.save();
+        }
+    }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, message);
 }));

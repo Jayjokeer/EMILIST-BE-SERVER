@@ -16,7 +16,8 @@ import { MilestonePaymentStatus } from "../enums/jobs.enum";
 import * as  projectService from "../services/project.service";
 import * as orderService from '../services/order.service';
 import { OrderPaymentStatus } from "../enums/order.enum";
-
+import * as planService from '../services/plan.service';
+import * as subscriptionService from '../services/subscription.service';
 export const payforProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
     const {cartId, paymentMethod, currency} = req.body;
@@ -252,7 +253,33 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
       message = "Wallet funding failed"
       await transaction.save();
     }
-  };
+  }else if(transaction.serviceType === ServiceEnum.subscription){
+    const plan = await planService.getPlanById(transaction.planId!);
+    if(!plan){
+      throw new NotFoundError("Plan not found");
+    }
+    
+    const verifyPayment = await  verifyPaystackPayment(reference);
+    if(verifyPayment == "success"){
+      transaction.status = TransactionEnum.completed;
+      await transaction.save();
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(startDate.getDate() + plan.duration);
+  
+      message =  await subscriptionService.createSubscription({
+        userId: transaction.userId,
+        planId: transaction.planId,
+        perks: plan.perks,
+        startDate,
+        endDate,
+      });
+    }else {
+      transaction.status = TransactionEnum.failed;
+      message = "Subscription payment failed"
+      await transaction.save();
+    }
+  }
 
   return successResponse(res, StatusCodes.OK, message);
 });

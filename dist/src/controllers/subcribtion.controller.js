@@ -39,23 +39,74 @@ const error_handler_1 = require("../errors/error-handler");
 const error_1 = require("../errors/error");
 const http_status_codes_1 = require("http-status-codes");
 const success_response_1 = require("../helpers/success-response");
+const transaction_enum_1 = require("../enums/transaction.enum");
+const walletService = __importStar(require("../services/wallet.services"));
+const transactionService = __importStar(require("../services/transaction.service"));
+const paystack_1 = require("../utils/paystack");
 exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { planId } = req.body;
+    const { planId, paymentMethod, currency } = req.body;
     const userId = req.user._id;
     const plan = yield planService.getPlanById(planId);
     if (!plan)
         throw new error_1.NotFoundError('Plan not found');
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(startDate.getDate() + plan.duration);
-    const data = subscriptionService.createSubscription({
-        userId,
-        planId,
-        perks: plan.perks,
-        startDate,
-        endDate,
-    });
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    let data;
+    if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
+        const userWallet = yield walletService.findUserWalletByCurrency(userId, currency);
+        if (!userWallet || userWallet.balance < plan.price) {
+            throw new error_1.BadRequestError("Insufficient wallet balance");
+        }
+        const transactionPayload = {
+            userId,
+            type: transaction_enum_1.TransactionType.DEBIT,
+            amount: plan.price,
+            description: `Subscription payment via wallet`,
+            paymentMethod: paymentMethod,
+            balanceBefore: userWallet.balance,
+            walletId: userWallet._id,
+            currency: userWallet.currency,
+            status: transaction_enum_1.TransactionEnum.completed,
+            serviceType: transaction_enum_1.ServiceEnum.subscription,
+            planId: plan._id,
+        };
+        const transaction = yield transactionService.createTransaction(transactionPayload);
+        userWallet.balance -= plan.price;
+        yield userWallet.save();
+        transaction.balanceAfter = userWallet.balance;
+        yield transaction.save();
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(startDate.getDate() + plan.duration);
+        data = yield subscriptionService.createSubscription({
+            userId,
+            planId,
+            perks: plan.perks,
+            startDate,
+            endDate,
+        });
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    }
+    else if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card) {
+        if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card) {
+            const transactionPayload = {
+                userId,
+                type: transaction_enum_1.TransactionType.DEBIT,
+                amount: plan.price,
+                description: `Subscription payment via card`,
+                paymentMethod: paymentMethod,
+                currency: currency,
+                status: transaction_enum_1.TransactionEnum.pending,
+                reference: `PS-${Date.now()}`,
+                serviceType: transaction_enum_1.ServiceEnum.subscription,
+                planId: plan._id,
+            };
+            const transaction = yield transactionService.createTransaction(transactionPayload);
+            transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
+            yield transaction.save();
+            const paymentLink = yield (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, plan.price, req.user.email);
+            data = { paymentLink, transaction };
+        }
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    }
 }));
 exports.getUserSubscription = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user._id;

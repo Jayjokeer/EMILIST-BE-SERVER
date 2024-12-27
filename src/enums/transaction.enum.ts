@@ -1,3 +1,5 @@
+import { sub } from "date-fns";
+
 export enum TransactionType {
     CREDIT = 'CREDIT',
     DEBIT = 'DEBIT',
@@ -36,5 +38,6 @@ export enum PaymentServiceEnum {
 export enum ServiceEnum {
     job= 'Job',
     material = 'Material',
-    walletFunding = 'Walletfunding'
+    walletFunding = 'Walletfunding',
+    subscription = 'Subscription',
 };

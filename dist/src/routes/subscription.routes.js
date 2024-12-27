@@ -23,23 +23,12 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const mongoose_1 = __importStar(require("mongoose"));
-const suscribtion_enum_1 = require("../enums/suscribtion.enum");
-const PerkSchema = new mongoose_1.Schema({
-    name: { type: String, enum: suscribtion_enum_1.SubscriptionPerksEnum },
-    limit: { type: Number, default: 0 },
-    used: { type: Number, default: 0 },
-});
-const SubscriptionSchema = new mongoose_1.Schema({
-    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },
-    planId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Plan', required: true },
-    status: {
-        type: String,
-        enum: suscribtion_enum_1.SubscriptionStatusEnum,
-        default: suscribtion_enum_1.SubscriptionStatusEnum.active,
-    },
-    startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
-    perks: [PerkSchema],
-}, { timestamps: true });
-exports.default = mongoose_1.default.model('Subscription', SubscriptionSchema);
+exports.SubscribeRoute = void 0;
+const express_1 = require("express");
+const subscrbtionController = __importStar(require("../controllers/subcribtion.controller"));
+const current_user_1 = require("../middlewares/current-user");
+const subscription_validation_1 = require("../validations/subscription.validation");
+const router = (0, express_1.Router)();
+exports.SubscribeRoute = router;
+router.route("/get-user-subscription").get(current_user_1.userAuth, subscrbtionController.getUserSubscription);
+router.route("/subscribe-plan").post(current_user_1.userAuth, subscription_validation_1.validateSubscriptionPayment, subscrbtionController.subscribeToPlan);

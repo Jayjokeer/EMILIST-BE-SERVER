@@ -27,6 +27,7 @@ const transactionSchema = new Schema(
     isSettled: { type: Boolean, default: false },
     orderId: { type: Schema.Types.ObjectId, ref: 'Order'},
     serviceType: {type: String, enum: ServiceEnum},
+    planId: { type: Schema.Types.ObjectId, ref: 'Plan'},
   },
   { timestamps: true }
 );

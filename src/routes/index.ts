@@ -10,6 +10,7 @@ import { WalletRoute } from "./wallet.routes";
 import { TransactionRoute } from "./transaction.routes";
 import { ExpertRoute } from "./private-expert";
 import { TargetRoute } from "./target.routes";
+import { SubscribeRoute } from "./subscription.routes";
 const router = Router(); 
 
 router.use("/auth", AuthRoute);
@@ -23,5 +24,6 @@ router.use("/wallet", WalletRoute);
 router.use("/transaction", TransactionRoute);
 router.use("/expert", ExpertRoute);
 router.use("/target", TargetRoute);
+router.use("/subscription", SubscribeRoute);
 
 export default router;

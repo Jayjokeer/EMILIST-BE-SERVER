@@ -27,21 +27,23 @@ export const createProductController = catchAsync(async (req: JwtPayload, res: R
     if (!subscription) {
         throw new BadRequestError("You do not have an active subscription.");
     }
-  
-//     const productPerk = subscription.perks.find((perk) => perk.name === SubscriptionPerksEnum.product );
-  
-//     if (!productPerk) {
-//         throw new BadRequestError("You do not have the required subscription to create products.");
-//     }
-  
-//     if (productPerk.planId.used >= productPerk..planId.limit) {
-// throw new BadRequestError("You have reached the limit of products you can create.");}
-  
-    const data = await productService.createProduct(payload);
-  
-    // productPerk.used += 1;
-    await subscription.save();
-  
+    const productPerk = subscription.perks.find(
+        (perk) => perk.name === SubscriptionPerksEnum.product
+      );
+    
+      if (!productPerk) {
+        throw new BadRequestError("Your subscription does not include the ability to create products.");
+      }
+    
+      if (productPerk.used >= productPerk.limit) {
+        throw new BadRequestError("You have reached the limit of products you can create with your subscription.");
+      }
+    
+      const data = await productService.createProduct(payload);
+    
+      productPerk.used += 1;
+    
+      await subscription.save();
     return successResponse(res, StatusCodes.CREATED, data);
   });
 export const updateProductController = catchAsync(async (req: JwtPayload, res: Response) => {

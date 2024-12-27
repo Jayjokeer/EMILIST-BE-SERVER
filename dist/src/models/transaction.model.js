@@ -48,5 +48,6 @@ const transactionSchema = new mongoose_1.Schema({
     isSettled: { type: Boolean, default: false },
     orderId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Order' },
     serviceType: { type: String, enum: transaction_enum_1.ServiceEnum },
+    planId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Plan' },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Transaction', transactionSchema);
