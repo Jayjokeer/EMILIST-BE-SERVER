@@ -49,6 +49,9 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
     const plan = yield planService.getPlanById(planId);
     if (!plan)
         throw new error_1.NotFoundError('Plan not found');
+    const subscription = yield subscriptionService.getActiveSubscription(userId);
+    if (subscription)
+        throw new error_1.BadRequestError('You already have an active subscription');
     let data;
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
         const userWallet = yield walletService.findUserWalletByCurrency(userId, currency);
