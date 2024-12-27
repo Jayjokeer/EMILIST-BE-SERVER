@@ -19,6 +19,8 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
 
     const plan = await planService.getPlanById(planId);
     if (!plan) throw new NotFoundError('Plan not found');
+    const subscription = await subscriptionService.getActiveSubscription(userId);    
+    if(subscription) throw new BadRequestError('You already have an active subscription');
     let data;
     if (paymentMethod === PaymentMethodEnum.wallet) {
         const userWallet = await walletService.findUserWalletByCurrency(userId, currency);
