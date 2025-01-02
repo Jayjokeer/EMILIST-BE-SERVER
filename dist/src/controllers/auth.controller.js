@@ -299,7 +299,9 @@ exports.findUserController = (0, error_handler_1.catchAsync)((req, res) => __awa
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.inviteUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { email } = req.query;
+    const userId = req.user._id;
     if (!email) {
         throw new error_1.BadRequestError("Email is required!");
     }
@@ -308,6 +310,12 @@ exports.inviteUserController = (0, error_handler_1.catchAsync)((req, res) => __a
     if (user) {
         throw new error_1.NotFoundError("User is already on the platform!");
     }
+    const loggedInUser = yield authService.findUserById(userId);
+    if (!loggedInUser) {
+        throw new error_1.NotFoundError("User not found!");
+    }
+    (_a = loggedInUser.invitedUsers) === null || _a === void 0 ? void 0 : _a.push(email);
+    yield loggedInUser.save();
     const { html, subject } = (0, templates_1.sendInviteMessage)(req.user.userName, config_1.config.frontendSignUpUrl);
     yield (0, send_email_1.sendEmail)(email, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Invite sent successfully");

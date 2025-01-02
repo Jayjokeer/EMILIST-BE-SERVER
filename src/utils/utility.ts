@@ -25,3 +25,10 @@ export const generateShortUUID = (): string => {
      const otpExpiryTime = AddMinutesToDate(time, minutes );
      return { otp, otpCreatedAt, otpExpiryTime };
   };
+  export const calculatePercentage  =(currentValue: number, targetValue: number) =>{
+    if (targetValue === 0) {
+      return currentValue > 0 ? 100 : 0;
+    }
+    const percentage = (currentValue / targetValue) * 100;
+    return Math.min(Math.max(percentage, 0), 100); 
+  };

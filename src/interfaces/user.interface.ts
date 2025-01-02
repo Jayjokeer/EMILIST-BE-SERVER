@@ -26,6 +26,7 @@ export interface IUser {
     wallets?:any;
     role?: UserRolesEnum;
     isPrimeMember: boolean;
+    invitedUsers?: string[]; 
   }
   
 export interface ICreateUser {

@@ -34,6 +34,7 @@ const userSchema: Schema = new mongoose.Schema(
     wallets: [{ type: Schema.Types.ObjectId, ref: 'Wallet' }],
     role: {type: String, enum: UserRolesEnum, default: UserRolesEnum.user},
     isPrimeMember: {type: Boolean, default: false},
+    invitedUsers: [{ type: String }],
   },
   { timestamps: true }
 

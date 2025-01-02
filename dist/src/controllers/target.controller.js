@@ -32,11 +32,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createTargetController = void 0;
+exports.fetchDynamicTargetMetrics = exports.createTargetController = void 0;
 const http_status_codes_1 = require("http-status-codes");
+const error_1 = require("../errors/error");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
+const userService = __importStar(require("../services/auth.service"));
 const targetService = __importStar(require("../services/target.service"));
+const transactionService = __importStar(require("../services/transaction.service"));
+const utility_1 = require("../utils/utility");
 exports.createTargetController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const targetData = req.body;
     const userId = req.user._id;
@@ -44,65 +48,36 @@ exports.createTargetController = (0, error_handler_1.catchAsync)((req, res) => _
     const data = yield targetService.createTarget(targetData);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
-// export const fetchDynamicTargetMetrics = catchAsync(async (req: JwtPayload, res: Response) => {
-//   try {
-//     const userId = req.user._id;
-//     const target = await targetService.findUserTarget(userId );
-//     if (!target) {
-//         throw new NotFoundError("No target set!");
-//     }
-//     const targetGoals = {
-//         jobs: target.job || 0,
-//         amount: target.amount || 0,
-//         referrals: target.referrals || 0,
-//         invites: target.invites || 0,
-//       };
-//     // 1. Calculate Completed Jobs
-//     const completedJobs = await Transaction.countDocuments({
-//       userId,
-//       jobId: { $exists: true },
-//       status: TransactionEnum.completed,
-//     });
-//     // 2. Calculate Total Amount
-//     const totalAmount = await Transaction.aggregate([
-//       { $match: { userId, status: TransactionEnum.completed } },
-//       { $group: { _id: null, total: { $sum: "$amount" } } },
-//     ]);
-//     const currentAmount = totalAmount.length > 0 ? totalAmount[0].total : 0;
-//     // 3. Count Referrals
-//     const totalReferrals = await Transaction.countDocuments({
-//       userId,
-//       serviceType: ServiceEnum.Referral,
-//       status: TransactionEnum.completed,
-//     });
-//     // 4. Count Invites
-//     const totalInvites = await Transaction.countDocuments({
-//       userId,
-//       serviceType: ServiceEnum.Invite,
-//       status: TransactionEnum.completed,
-//     });
-//     // Calculate percentages dynamically
-//     const jobPercentage = calculatePercentage(completedJobs, targetGoals.jobs);
-//     const amountPercentage = calculatePercentage(currentAmount, targetGoals.amount);
-//     const referralPercentage = calculatePercentage(totalReferrals, targetGoals.referrals);
-//     const invitePercentage = calculatePercentage(totalInvites, targetGoals.invites);
-//     // Calculate overall percentage (average of all metrics)
-//     const totalTargetPercentage = Math.floor(
-//       (jobPercentage + amountPercentage + referralPercentage + invitePercentage) / 4
-//     );
-//     // Response
-//     return res.status(200).json({
-//       success: true,
-//       data: {
-//         jobs: { current: completedJobs, target: targetGoals.jobs, percentage: jobPercentage },
-//         amount: { current: currentAmount, target: targetGoals.amount, percentage: amountPercentage },
-//         referrals: { current: totalReferrals, target: targetGoals.referrals, percentage: referralPercentage },
-//         invites: { current: totalInvites, target: targetGoals.invites, percentage: invitePercentage },
-//         totalTargetPercentage,
-//       },
-//     });
-//   } catch (error) {
-//     console.error("Error calculating dynamic target metrics:", error);
-//     return res.status(500).json({ message: "Internal server error" });
-//   }
-// });
+exports.fetchDynamicTargetMetrics = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const userId = req.user._id;
+    const user = yield userService.findUserById(userId);
+    const target = yield targetService.findUserTarget(userId);
+    if (!target) {
+        throw new error_1.NotFoundError("No target set!");
+    }
+    const targetGoals = {
+        jobs: target.job || 0,
+        amount: target.amount || 0,
+        referrals: target.referrals || 0,
+        invites: target.invites || 0,
+    };
+    const completedJobs = yield transactionService.totalCompletedJobsByTransaction(userId);
+    const totalAmount = yield transactionService.totalAmountByTransaction(userId);
+    const currentAmount = totalAmount.length > 0 ? totalAmount[0].total : 0;
+    const totalReferrals = 0;
+    const totalInvites = (_a = user === null || user === void 0 ? void 0 : user.invitedUsers) === null || _a === void 0 ? void 0 : _a.length;
+    const jobPercentage = (0, utility_1.calculatePercentage)(completedJobs, targetGoals.jobs);
+    const amountPercentage = (0, utility_1.calculatePercentage)(currentAmount, targetGoals.amount);
+    const referralPercentage = (0, utility_1.calculatePercentage)(totalReferrals, targetGoals.referrals);
+    const invitePercentage = (0, utility_1.calculatePercentage)(totalInvites, targetGoals.invites);
+    const totalTargetPercentage = Math.floor((jobPercentage + amountPercentage + referralPercentage + invitePercentage) / 4);
+    const data = {
+        jobs: { current: completedJobs, target: targetGoals.jobs, percentage: jobPercentage },
+        amount: { current: currentAmount, target: targetGoals.amount, percentage: amountPercentage },
+        referrals: { current: totalReferrals, target: targetGoals.referrals, percentage: referralPercentage },
+        invites: { current: totalInvites, target: targetGoals.invites, percentage: invitePercentage },
+        totalTargetPercentage,
+    };
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));

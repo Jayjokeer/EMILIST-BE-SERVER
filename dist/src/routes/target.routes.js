@@ -31,3 +31,4 @@ const current_user_1 = require("../middlewares/current-user");
 const router = (0, express_1.Router)();
 exports.TargetRoute = router;
 router.route("/create-target").post(current_user_1.userAuth, target_validation_1.validateTarget, targetController.createTargetController);
+router.route("/fetch-target-metrics").get(current_user_1.userAuth, targetController.fetchDynamicTargetMetrics);

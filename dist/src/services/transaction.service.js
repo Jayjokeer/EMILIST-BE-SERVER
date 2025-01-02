@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
+exports.totalAmountByTransaction = exports.totalCompletedJobsByTransaction = exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
 const transaction_enum_1 = require("../enums/transaction.enum");
 const transaction_model_1 = __importDefault(require("../models/transaction.model"));
 const createTransaction = (data) => __awaiter(void 0, void 0, void 0, function* () {
@@ -89,3 +89,18 @@ const fetchAllTransactionsByUser = (userId, page, limit, paymentMethod) => __awa
     };
 });
 exports.fetchAllTransactionsByUser = fetchAllTransactionsByUser;
+const totalCompletedJobsByTransaction = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield transaction_model_1.default.countDocuments({
+        userId,
+        jobId: { $exists: true },
+        status: transaction_enum_1.TransactionEnum.completed,
+    });
+});
+exports.totalCompletedJobsByTransaction = totalCompletedJobsByTransaction;
+const totalAmountByTransaction = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield transaction_model_1.default.aggregate([
+        { $match: { userId, status: transaction_enum_1.TransactionEnum.completed } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+});
+exports.totalAmountByTransaction = totalAmountByTransaction;

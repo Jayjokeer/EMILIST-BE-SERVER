@@ -43,19 +43,21 @@ const transaction_enum_1 = require("../enums/transaction.enum");
 const walletService = __importStar(require("../services/wallet.services"));
 const transactionService = __importStar(require("../services/transaction.service"));
 const paystack_1 = require("../utils/paystack");
+const plan_enum_1 = require("../enums/plan.enum");
 exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { planId, paymentMethod, currency, isRenew } = req.body;
     const userId = req.user._id;
     let plan;
     if (isRenew) {
         console.log('here');
-        const subscription = yield subscriptionService.getActiveSubscription(userId);
+        const subscription = yield subscriptionService.getActiveSubscriptionWithoutDetails(userId);
         if (!subscription)
             throw new error_1.BadRequestError('You do not have an active subscription');
-        console.log(subscription);
-        plan = yield planService.getPlanById(String(subscription.planId)); //work on this
+        plan = yield planService.getPlanById(String(subscription.planId));
         if (!plan)
             throw new error_1.NotFoundError('Plan not found');
+        if (plan.name === plan_enum_1.PlanEnum.basic)
+            throw new error_1.BadRequestError('You cannot renew a free plan');
     }
     else {
         plan = yield planService.getPlanById(planId);

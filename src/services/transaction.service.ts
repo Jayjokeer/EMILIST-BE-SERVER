@@ -71,3 +71,18 @@ export const fetchAllTransactionsByUser = async(userId: string,page: number, lim
         page,
     };
 };
+
+export const totalCompletedJobsByTransaction = async (userId: string)=>{
+    return await Transaction.countDocuments({
+        userId,
+        jobId: { $exists: true },
+        status: TransactionEnum.completed,
+      });
+};
+
+export const totalAmountByTransaction = async (userId: string)=>{
+   return  await Transaction.aggregate([
+        { $match: { userId, status: TransactionEnum.completed } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]);
+};

@@ -24,7 +24,7 @@ const getActiveSubscription = (userId) => __awaiter(void 0, void 0, void 0, func
 });
 exports.getActiveSubscription = getActiveSubscription;
 const getActiveSubscriptionWithoutDetails = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield subscription_model_1.default.findOne({ userId, status: suscribtion_enum_1.SubscriptionStatusEnum.active }).populate('planId');
+    return yield subscription_model_1.default.findOne({ userId, status: suscribtion_enum_1.SubscriptionStatusEnum.active });
 });
 exports.getActiveSubscriptionWithoutDetails = getActiveSubscriptionWithoutDetails;
 const getSubscriptionById = (subscriptionId) => __awaiter(void 0, void 0, void 0, function* () {

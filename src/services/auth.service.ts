@@ -51,4 +51,5 @@ export const findSpecificUser = async (query: string)=>{
 }
 export const fetchUserMutedJobs = async(userId: string)=>{
   return Users.findById(userId).select('mutedJobs').lean();
-}
+};
+

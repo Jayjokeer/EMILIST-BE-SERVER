@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateOTPData = exports.generateShortUUID = void 0;
+exports.calculatePercentage = exports.generateOTPData = exports.generateShortUUID = void 0;
 const uuid_1 = require("uuid");
 const otplib_1 = require("otplib");
 const config_1 = require("./config");
@@ -29,3 +29,11 @@ const generateOTPData = (userId) => {
     return { otp, otpCreatedAt, otpExpiryTime };
 };
 exports.generateOTPData = generateOTPData;
+const calculatePercentage = (currentValue, targetValue) => {
+    if (targetValue === 0) {
+        return currentValue > 0 ? 100 : 0;
+    }
+    const percentage = (currentValue / targetValue) * 100;
+    return Math.min(Math.max(percentage, 0), 100);
+};
+exports.calculatePercentage = calculatePercentage;

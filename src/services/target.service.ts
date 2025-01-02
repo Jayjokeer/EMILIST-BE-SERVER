@@ -6,4 +6,6 @@ export const createTarget = async(payload: any)=>{
 
 export const findUserTarget = async (userId: string) =>{
     return await Target.findOne({userId: userId});
-}
+};
+
+  

@@ -326,6 +326,7 @@ export const findUserController = catchAsync(async (req: JwtPayload, res: Respon
 
 export const inviteUserController = catchAsync(async (req: JwtPayload, res: Response) => {
   const { email } = req.query;
+  const userId = req.user._id;
   if(!email){
     throw new BadRequestError("Email is required!");
   };
@@ -333,6 +334,13 @@ export const inviteUserController = catchAsync(async (req: JwtPayload, res: Resp
   if (user) {
     throw new NotFoundError("User is already on the platform!")
   }
+  const loggedInUser = await authService.findUserById(userId);
+  if (!loggedInUser) {
+    throw new NotFoundError("User not found!")
+  }
+  loggedInUser.invitedUsers?.push(email);
+  await loggedInUser.save();
+  
   const {html, subject} = sendInviteMessage(req.user.userName, config.frontendSignUpUrl);
   await sendEmail(email, subject,html); 
   return successResponse(res, StatusCodes.OK, "Invite sent successfully");
