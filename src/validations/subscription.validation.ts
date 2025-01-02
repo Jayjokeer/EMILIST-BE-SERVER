@@ -24,6 +24,10 @@ export const validateSubscriptionPayment = (req: Request, res: Response, next: N
       'any.only': 'Currency must be one of the allowed values',
       'string.empty': 'Currency is required',
     }),
+    isRenew: Joi.boolean().required().messages({
+        "boolean.base": "isRenew must be a boolean",
+        "boolean.empty": "isRenew is required",
+    }),
   });
 
   const { error } = subscriptionPaymentValidation.validate(req.body, { abortEarly: false });

@@ -1,3 +1,5 @@
+import { Schema } from "mongoose";
+
 export interface IPerk {
     name: string; 
     limit: number; 
@@ -10,4 +12,12 @@ export interface IPerk {
     duration: number; 
     perks:  IPerk[];
     isActive: boolean;
+    offers: IOffers[];
   }
+export interface IOffers {
+    name: string; 
+    value: string; 
+    isActive: boolean; 
+  }
+  
+ 

@@ -5,8 +5,8 @@ import { StatusCodes } from 'http-status-codes';
 import { successResponse } from '../helpers/success-response';
 
 export const createPlanController = catchAsync(async (req: Request, res: Response) => {
-    const { name, price, duration, perks } = req.body;
-    const data = await planService.createPlan({ name, price, duration, perks });
+    const { name, price, duration, perks, offers } = req.body;
+    const data = await planService.createPlan({ name, price, duration, perks, offers });
     return  successResponse(res,StatusCodes.CREATED, data);
 
 });

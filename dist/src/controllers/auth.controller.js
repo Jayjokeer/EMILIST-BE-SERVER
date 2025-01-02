@@ -52,6 +52,9 @@ const axios_1 = __importDefault(require("axios"));
 const notificationService = __importStar(require("../services/notification.service"));
 const notification_enum_1 = require("../enums/notification.enum");
 const walletService = __importStar(require("../services/wallet.services"));
+const subscriptionService = __importStar(require("../services/subscription.service"));
+const planService = __importStar(require("../services/plan.service"));
+const plan_enum_1 = require("../enums/plan.enum");
 exports.registerUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userName, email, password, } = req.body;
     const isEmailExists = yield authService.findUserByEmail(email);
@@ -80,6 +83,10 @@ exports.registerUserController = (0, error_handler_1.catchAsync)((req, res) => _
     const wallet = yield walletService.createWallet(walletPayload);
     data.wallets.push(wallet._id);
     yield data.save();
+    const plan = yield planService.getPlanByName(plan_enum_1.PlanEnum.basic);
+    if (!plan)
+        throw new error_1.NotFoundError("Plan not found!");
+    yield subscriptionService.createSubscription({ userId: data._id, planId: plan._id, startDate: new Date(), perks: plan.perks });
     const { html, subject } = (0, templates_1.otpMessage)(userName, otp);
     (0, send_email_1.sendEmail)(email, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);

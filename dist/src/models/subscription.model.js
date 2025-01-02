@@ -39,7 +39,7 @@ const SubscriptionSchema = new mongoose_1.Schema({
         default: suscribtion_enum_1.SubscriptionStatusEnum.active,
     },
     startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
+    endDate: { type: Date },
     perks: [PerkSchema],
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Subscription', SubscriptionSchema);

@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { ObjectId } from 'mongoose';
 import * as planService from '../services/plan.service';
 import * as subscriptionService from '../services/subscription.service';
 import { JwtPayload } from 'jsonwebtoken';
@@ -12,15 +13,28 @@ import { CartStatus } from '../enums/cart.enum';
 import { OrderPaymentStatus } from '../enums/order.enum';
 import * as transactionService from '../services/transaction.service';
 import { generatePaystackPaymentLink } from '../utils/paystack';
+import { PlanEnum } from '../enums/plan.enum';
 
 export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response) => {
-    const { planId, paymentMethod, currency } = req.body;
+    const { planId, paymentMethod, currency, isRenew } = req.body;
     const userId = req.user._id;
+    let plan;
+    if(isRenew){
+        console.log('here')
+        const subscription = await subscriptionService.getActiveSubscriptionWithoutDetails(userId);
+        if(!subscription) throw new BadRequestError('You do not have an active subscription');
 
-    const plan = await planService.getPlanById(planId);
+        plan = await planService.getPlanById(String(subscription.planId)); 
+        if (!plan) throw new NotFoundError('Plan not found');
+        if(plan.name === PlanEnum.basic) throw new BadRequestError('You cannot renew a free plan');
+    }else {
+        plan = await planService.getPlanById(planId);
     if (!plan) throw new NotFoundError('Plan not found');
-    const subscription = await subscriptionService.getActiveSubscription(userId);    
+    const subscription = await subscriptionService.getActiveSubscription(userId);   
+     
     if(subscription) throw new BadRequestError('You already have an active subscription');
+    }
+     
     let data;
     if (paymentMethod === PaymentMethodEnum.wallet) {
         const userWallet = await walletService.findUserWalletByCurrency(userId, currency);
@@ -93,4 +107,3 @@ export const getUserSubscription = catchAsync( async (req: JwtPayload, res: Resp
 return successResponse(res, StatusCodes.OK, data);
 });
 
-// Additional controllers: cancelSubscription, renewSubscription

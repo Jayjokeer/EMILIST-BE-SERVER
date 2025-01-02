@@ -44,14 +44,27 @@ const walletService = __importStar(require("../services/wallet.services"));
 const transactionService = __importStar(require("../services/transaction.service"));
 const paystack_1 = require("../utils/paystack");
 exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { planId, paymentMethod, currency } = req.body;
+    const { planId, paymentMethod, currency, isRenew } = req.body;
     const userId = req.user._id;
-    const plan = yield planService.getPlanById(planId);
-    if (!plan)
-        throw new error_1.NotFoundError('Plan not found');
-    const subscription = yield subscriptionService.getActiveSubscription(userId);
-    if (subscription)
-        throw new error_1.BadRequestError('You already have an active subscription');
+    let plan;
+    if (isRenew) {
+        console.log('here');
+        const subscription = yield subscriptionService.getActiveSubscription(userId);
+        if (!subscription)
+            throw new error_1.BadRequestError('You do not have an active subscription');
+        console.log(subscription);
+        plan = yield planService.getPlanById(String(subscription.planId)); //work on this
+        if (!plan)
+            throw new error_1.NotFoundError('Plan not found');
+    }
+    else {
+        plan = yield planService.getPlanById(planId);
+        if (!plan)
+            throw new error_1.NotFoundError('Plan not found');
+        const subscription = yield subscriptionService.getActiveSubscription(userId);
+        if (subscription)
+            throw new error_1.BadRequestError('You already have an active subscription');
+    }
     let data;
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
         const userWallet = yield walletService.findUserWalletByCurrency(userId, currency);
@@ -118,4 +131,3 @@ exports.getUserSubscription = (0, error_handler_1.catchAsync)((req, res) => __aw
         throw new error_1.NotFoundError('Subscription not found');
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
-// Additional controllers: cancelSubscription, renewSubscription

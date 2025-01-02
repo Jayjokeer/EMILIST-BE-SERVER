@@ -8,7 +8,9 @@ export const createSubscription = async (data: any) => {
 export const getActiveSubscription = async (userId: string) => {
     return await Subscription.findOne({ userId, status: SubscriptionStatusEnum.active }).populate('planId');
 };
-
+export const getActiveSubscriptionWithoutDetails = async (userId: string) => {
+    return await Subscription.findOne({ userId, status: SubscriptionStatusEnum.active });
+};
 export const getSubscriptionById = async (subscriptionId: string) => {
     return await Subscription.findById(subscriptionId);
 };

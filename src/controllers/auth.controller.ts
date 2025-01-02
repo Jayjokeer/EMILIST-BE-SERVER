@@ -17,6 +17,9 @@ import axios from "axios";
 import * as notificationService from "../services/notification.service";
 import { NotificationTypeEnum } from "../enums/notification.enum";
 import * as walletService from "../services/wallet.services";
+import * as subscriptionService from "../services/subscription.service";
+import * as planService from "../services/plan.service";
+import { PlanEnum } from "../enums/plan.enum";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -51,6 +54,9 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
    const wallet = await walletService.createWallet(walletPayload);
    data.wallets.push(wallet._id);
    await data.save();
+    const plan = await planService.getPlanByName(PlanEnum.basic); 
+    if(!plan) throw new NotFoundError("Plan not found!");
+    await subscriptionService.createSubscription({userId: data._id, planId: plan._id, startDate: new Date(), perks: plan.perks});
     const {html, subject} = otpMessage(userName, otp);
     sendEmail(email, subject,html); 
    return successResponse(res,StatusCodes.CREATED, data);

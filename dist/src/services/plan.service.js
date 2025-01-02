@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPlanById = exports.getPlans = exports.createPlan = void 0;
+exports.getPlanByName = exports.getPlanById = exports.getPlans = exports.createPlan = void 0;
 const plan_model_1 = __importDefault(require("../models/plan.model"));
 const createPlan = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield plan_model_1.default.create(data);
@@ -26,3 +26,7 @@ const getPlanById = (planId) => __awaiter(void 0, void 0, void 0, function* () {
     return yield plan_model_1.default.findById(planId);
 });
 exports.getPlanById = getPlanById;
+const getPlanByName = (name) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield plan_model_1.default.findOne({ name });
+});
+exports.getPlanByName = getPlanByName;

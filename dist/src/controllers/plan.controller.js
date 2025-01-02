@@ -38,8 +38,8 @@ const error_handler_1 = require("../errors/error-handler");
 const http_status_codes_1 = require("http-status-codes");
 const success_response_1 = require("../helpers/success-response");
 exports.createPlanController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { name, price, duration, perks } = req.body;
-    const data = yield planService.createPlan({ name, price, duration, perks });
+    const { name, price, duration, perks, offers } = req.body;
+    const data = yield planService.createPlan({ name, price, duration, perks, offers });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.getPlansController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

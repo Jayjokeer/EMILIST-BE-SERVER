@@ -1,5 +1,5 @@
 import { Schema } from "mongoose";
-import { IPerk } from "./plans.interface";
+import { IOffers, IPerk } from "./plans.interface";
 
 export interface ISubscription extends Document {
     userId: Schema.Types.ObjectId;

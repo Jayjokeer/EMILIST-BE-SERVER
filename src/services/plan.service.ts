@@ -1,3 +1,4 @@
+import { PlanEnum } from '../enums/plan.enum';
 import Plan from '../models/plan.model';
 
 export const createPlan = async (data: any) => {
@@ -10,4 +11,7 @@ export const getPlans = async () => {
 
 export const getPlanById = async (planId: string) => {
     return await Plan.findById(planId);
+};
+export const getPlanByName = async (name: PlanEnum ) => {
+    return await Plan.findOne({ name });
 };

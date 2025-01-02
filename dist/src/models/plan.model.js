@@ -25,16 +25,23 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const suscribtion_enum_1 = require("../enums/suscribtion.enum");
+const plan_enum_1 = require("../enums/plan.enum");
 const PerkSchema = new mongoose_1.Schema({
     name: { type: String, enum: suscribtion_enum_1.SubscriptionPerksEnum },
     limit: { type: Number, default: 0 },
     used: { type: Number, default: 0 },
 });
+const OffersSchema = new mongoose_1.Schema({
+    name: { type: String },
+    value: { type: String },
+    isActive: { type: Boolean, default: true },
+});
 const PlanSchema = new mongoose_1.Schema({
-    name: { type: String, required: true, unique: true },
+    name: { type: String, required: true, enum: plan_enum_1.PlanEnum },
     price: { type: Number, required: true },
     duration: { type: Number, required: true },
     perks: [PerkSchema],
     isActive: { type: Boolean, default: true },
+    offers: [OffersSchema],
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Plan', PlanSchema);

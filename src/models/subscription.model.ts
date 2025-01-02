@@ -11,7 +11,8 @@ const PerkSchema = new Schema<IPerk>(
       used: { type: Number, default: 0 }, 
     },
   );
-  
+
+
 const SubscriptionSchema = new Schema<ISubscription>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -22,7 +23,7 @@ const SubscriptionSchema = new Schema<ISubscription>(
       default: SubscriptionStatusEnum.active,
     },
     startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
+    endDate: { type: Date},
     perks: [PerkSchema],
   },
   { timestamps: true }

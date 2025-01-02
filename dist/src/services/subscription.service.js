@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSubscriptionById = exports.getActiveSubscription = exports.createSubscription = void 0;
+exports.getSubscriptionById = exports.getActiveSubscriptionWithoutDetails = exports.getActiveSubscription = exports.createSubscription = void 0;
 const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const subscription_model_1 = __importDefault(require("../models/subscription.model"));
 const createSubscription = (data) => __awaiter(void 0, void 0, void 0, function* () {
@@ -23,6 +23,10 @@ const getActiveSubscription = (userId) => __awaiter(void 0, void 0, void 0, func
     return yield subscription_model_1.default.findOne({ userId, status: suscribtion_enum_1.SubscriptionStatusEnum.active }).populate('planId');
 });
 exports.getActiveSubscription = getActiveSubscription;
+const getActiveSubscriptionWithoutDetails = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield subscription_model_1.default.findOne({ userId, status: suscribtion_enum_1.SubscriptionStatusEnum.active }).populate('planId');
+});
+exports.getActiveSubscriptionWithoutDetails = getActiveSubscriptionWithoutDetails;
 const getSubscriptionById = (subscriptionId) => __awaiter(void 0, void 0, void 0, function* () {
     return yield subscription_model_1.default.findById(subscriptionId);
 });
