@@ -40,6 +40,8 @@ const productSchema = new mongoose_1.default.Schema({
     location: { type: String },
     currency: { type: String },
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users' },
+    discountedPrice: { type: Number },
+    isDiscounted: { type: Boolean, default: false },
     // orders: [{type:  Schema.Types.ObjectId, ref: 'Order'}],
     reviews: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Review' }]
 }, { timestamps: true });

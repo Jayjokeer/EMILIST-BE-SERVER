@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validatePaymentForJob = exports.validatePayForProduct = exports.validateReviewProduct = exports.validateUpdateProduct = exports.validateProduct = void 0;
+exports.addDiscountToProductValidator = exports.validatePaymentForJob = exports.validatePayForProduct = exports.validateReviewProduct = exports.validateUpdateProduct = exports.validateProduct = void 0;
 const joi_1 = __importDefault(require("joi"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const validateProduct = (req, res, next) => {
@@ -190,3 +190,19 @@ const validatePaymentForJob = (req, res, next) => {
     next();
 };
 exports.validatePaymentForJob = validatePaymentForJob;
+const addDiscountToProductValidator = (req, res, next) => {
+    const addDiscountValidation = joi_1.default.object({
+        discount: joi_1.default.number().required().messages({
+            "number.base": "Discount must be a number",
+            "number.empty": "Discount is required",
+        }),
+    });
+    const { error } = addDiscountValidation.validate(req.body, { abortEarly: false });
+    if (error) {
+        const errorMessages = error.details.map((detail) => detail.message);
+        res.status(400).json({ errors: errorMessages });
+        return;
+    }
+    next();
+};
+exports.addDiscountToProductValidator = addDiscountToProductValidator;

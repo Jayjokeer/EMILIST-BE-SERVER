@@ -18,6 +18,8 @@ const productSchema: Schema = new mongoose.Schema(
     location: {type: String},
     currency: {type: String},
     userId: {type: Schema.Types.ObjectId, ref: 'Users'},
+    discountedPrice: {type: Number},
+    isDiscounted: {type: Boolean, default: false}, 
     // orders: [{type:  Schema.Types.ObjectId, ref: 'Order'}],
     reviews: [{type:  Schema.Types.ObjectId, ref: 'Review'}]
   },

@@ -201,3 +201,22 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
   
     next();
   };
+
+  export const addDiscountToProductValidator = (req: Request, res: Response, next: NextFunction) => {
+    const addDiscountValidation = Joi.object({
+      discount: Joi.number().required().messages({
+        "number.base": "Discount must be a number",
+        "number.empty": "Discount is required",
+      }),
+    });
+  
+    const { error } = addDiscountValidation .validate(req.body, { abortEarly: false });
+  
+    if (error) {
+      const errorMessages = error.details.map((detail) => detail.message);
+     res.status(400).json({ errors: errorMessages });
+     return ;
+    }
+  
+    next();
+  };

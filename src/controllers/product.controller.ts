@@ -240,3 +240,22 @@ export const reviewProductController = catchAsync(async (req: JwtPayload, res: R
     await product.save()
     return successResponse(res, StatusCodes.OK, data);
 });
+
+export const addDiscountToProductController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user._id;
+    const {productId} = req.params;
+    const {discount} = req.body;
+
+    const product = await productService.fetchProductById(productId);
+    if(!product){
+        throw new NotFoundError("Product not found!");
+    }
+    if(String(product.userId) !== String(userId)){
+        throw new UnauthorizedError("Unauthorized!");
+    }
+
+    product.discountedPrice = discount;
+    product.isDiscounted = true;
+    await product.save();
+    return successResponse(res, StatusCodes.OK, "Discount added successfully!");
+});

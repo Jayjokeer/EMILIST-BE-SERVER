@@ -14,5 +14,7 @@ export interface IProduct {
     currency?: string;
     userId?: string;
     reviews?: string[];
+    discountedPrice?: number;
+    isDiscounted?: boolean;
     // orders?: string[];
 }
