@@ -50,6 +50,7 @@ const orderService = __importStar(require("../services/order.service"));
 const order_enum_1 = require("../enums/order.enum");
 const planService = __importStar(require("../services/plan.service"));
 const subscriptionService = __importStar(require("../services/subscription.service"));
+const userService = __importStar(require("../services/auth.service"));
 exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const userId = req.user._id;
@@ -290,6 +291,10 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
         if (!plan) {
             throw new error_1.NotFoundError("Plan not found");
         }
+        const user = yield userService.findUserById(String(transaction.userId));
+        if (!user) {
+            throw new error_1.NotFoundError("User not found");
+        }
         const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
         if (verifyPayment == "success") {
             transaction.status = transaction_enum_1.TransactionEnum.completed;
@@ -304,6 +309,8 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
                 startDate,
                 endDate,
             });
+            user.subscription = message._id;
+            yield user.save();
         }
         else {
             transaction.status = transaction_enum_1.TransactionEnum.failed;

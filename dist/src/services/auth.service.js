@@ -22,7 +22,8 @@ const findUserById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     return yield users_model_1.default.findById(id, { password: 0 }).populate({
         path: 'businesses',
         select: 'businessId businessName',
-    }).populate('wallets');
+    }).populate('wallets')
+        .populate('subscription');
 });
 exports.findUserById = findUserById;
 const createUser = (data) => __awaiter(void 0, void 0, void 0, function* () {

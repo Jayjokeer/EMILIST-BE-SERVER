@@ -57,5 +57,6 @@ const userSchema = new mongoose_1.default.Schema({
     role: { type: String, enum: user_enums_1.UserRolesEnum, default: user_enums_1.UserRolesEnum.user },
     isPrimeMember: { type: Boolean, default: false },
     invitedUsers: [{ type: String }],
+    subscription: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Subscription' },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Users', userSchema);
