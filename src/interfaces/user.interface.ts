@@ -27,6 +27,7 @@ export interface IUser {
     role?: UserRolesEnum;
     isPrimeMember: boolean;
     invitedUsers?: string[]; 
+    subscription?: any;
   }
   
 export interface ICreateUser {

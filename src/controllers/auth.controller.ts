@@ -20,6 +20,7 @@ import * as walletService from "../services/wallet.services";
 import * as subscriptionService from "../services/subscription.service";
 import * as planService from "../services/plan.service";
 import { PlanEnum } from "../enums/plan.enum";
+import { sub } from "date-fns";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -56,7 +57,9 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
    await data.save();
     const plan = await planService.getPlanByName(PlanEnum.basic); 
     if(!plan) throw new NotFoundError("Plan not found!");
-    await subscriptionService.createSubscription({userId: data._id, planId: plan._id, startDate: new Date(), perks: plan.perks});
+    const subscription = await subscriptionService.createSubscription({userId: data._id, planId: plan._id, startDate: new Date(), perks: plan.perks});
+    data.subscription = subscription._id;
+    await data.save();
     const {html, subject} = otpMessage(userName, otp);
     sendEmail(email, subject,html); 
    return successResponse(res,StatusCodes.CREATED, data);
@@ -340,7 +343,7 @@ export const inviteUserController = catchAsync(async (req: JwtPayload, res: Resp
   }
   loggedInUser.invitedUsers?.push(email);
   await loggedInUser.save();
-  
+
   const {html, subject} = sendInviteMessage(req.user.userName, config.frontendSignUpUrl);
   await sendEmail(email, subject,html); 
   return successResponse(res, StatusCodes.OK, "Invite sent successfully");

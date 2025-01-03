@@ -78,6 +78,7 @@ exports.fetchDynamicTargetMetrics = (0, error_handler_1.catchAsync)((req, res) =
         referrals: { current: totalReferrals, target: targetGoals.referrals, percentage: referralPercentage },
         invites: { current: totalInvites, target: targetGoals.invites, percentage: invitePercentage },
         totalTargetPercentage,
+        currency: target.currency,
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

@@ -59,6 +59,7 @@ export const fetchDynamicTargetMetrics = catchAsync(async (req: JwtPayload, res:
         referrals: { current: totalReferrals, target: targetGoals.referrals, percentage: referralPercentage },
         invites: { current: totalInvites, target: targetGoals.invites, percentage: invitePercentage },
         totalTargetPercentage,
+        currency: target.currency,
       };
 
     return successResponse(res, StatusCodes.OK, data);

@@ -35,6 +35,7 @@ const userSchema: Schema = new mongoose.Schema(
     role: {type: String, enum: UserRolesEnum, default: UserRolesEnum.user},
     isPrimeMember: {type: Boolean, default: false},
     invitedUsers: [{ type: String }],
+    subscription: { type: Schema.Types.ObjectId, ref: 'Subscription' },
   },
   { timestamps: true }
 

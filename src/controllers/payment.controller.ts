@@ -18,6 +18,8 @@ import * as orderService from '../services/order.service';
 import { OrderPaymentStatus } from "../enums/order.enum";
 import * as planService from '../services/plan.service';
 import * as subscriptionService from '../services/subscription.service';
+import * as userService from '../services/auth.service';
+
 export const payforProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
     const {cartId, paymentMethod, currency} = req.body;
@@ -258,8 +260,11 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
     if(!plan){
       throw new NotFoundError("Plan not found");
     }
-    
-    const verifyPayment = await  verifyPaystackPayment(reference);
+    const user = await userService.findUserById(String(transaction.userId!));
+    if(!user){
+      throw new NotFoundError("User not found");
+    }
+    const verifyPayment = await verifyPaystackPayment(reference);
     if(verifyPayment == "success"){
       transaction.status = TransactionEnum.completed;
       await transaction.save();
@@ -274,6 +279,8 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
         startDate,
         endDate,
       });
+      user.subscription = message._id;
+     await user.save();
     }else {
       transaction.status = TransactionEnum.failed;
       message = "Subscription payment failed"

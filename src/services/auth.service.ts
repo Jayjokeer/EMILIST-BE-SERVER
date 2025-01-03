@@ -7,7 +7,8 @@ export const findUserById = async (id: string)=>{
     return await Users.findById(id,{password: 0}).populate({
       path: 'businesses',
       select: 'businessId businessName', 
-    }).populate('wallets');
+    }).populate('wallets')
+    .populate('subscription');
 };
 export const createUser = async (data:  ICreateUser) =>{
     return await Users.create(data);
