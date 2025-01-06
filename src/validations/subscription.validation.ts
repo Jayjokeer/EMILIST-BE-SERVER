@@ -1,6 +1,7 @@
 import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
 import { PaymentMethodEnum, WalletEnum } from '../enums/transaction.enum';
+import { TargetEnum } from '../enums/target.enum';
 
 export const validateSubscriptionPayment = (req: Request, res: Response, next: NextFunction) => {
   const subscriptionPaymentValidation = Joi.object({
@@ -15,6 +16,14 @@ export const validateSubscriptionPayment = (req: Request, res: Response, next: N
       "string.base": "Payment Method must be a string",
       "any.only": "Payment Method must be one of: credit_card, debit_card, paypal, or bank_transfer",
       "string.empty": "Payment Method is required",
+    }),
+    durationType: Joi.string()
+    .valid(...Object.values(TargetEnum))
+    .required()
+    .messages({
+      "string.base": "Duration must be a string",
+      "any.only": "Duration must be one of: monthly or yearly",
+      "string.empty": "Duration is required",
     }),
     currency: Joi.string()
     .valid(...Object.values(WalletEnum))

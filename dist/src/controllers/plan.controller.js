@@ -37,12 +37,28 @@ const planService = __importStar(require("../services/plan.service"));
 const error_handler_1 = require("../errors/error-handler");
 const http_status_codes_1 = require("http-status-codes");
 const success_response_1 = require("../helpers/success-response");
+const plan_enum_1 = require("../enums/plan.enum");
 exports.createPlanController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, price, duration, perks, offers } = req.body;
     const data = yield planService.createPlan({ name, price, duration, perks, offers });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.getPlansController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const data = yield planService.getPlans();
+    const { duration } = req.query;
+    let data;
+    const plans = yield planService.getPlans();
+    if (duration === 'yearly') {
+        const data = plans.map((plan) => {
+            if (plan.name === plan_enum_1.PlanEnum.basic) {
+                return plan;
+            }
+            else {
+                plan.price = plan.price * 12;
+                return plan;
+            }
+        });
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    }
+    data = plans;
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

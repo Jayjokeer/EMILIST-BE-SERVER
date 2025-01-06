@@ -3,6 +3,7 @@ import * as planService from '../services/plan.service';
 import { catchAsync } from '../errors/error-handler';
 import { StatusCodes } from 'http-status-codes';
 import { successResponse } from '../helpers/success-response';
+import { PlanEnum } from '../enums/plan.enum';
 
 export const createPlanController = catchAsync(async (req: Request, res: Response) => {
     const { name, price, duration, perks, offers } = req.body;
@@ -12,6 +13,22 @@ export const createPlanController = catchAsync(async (req: Request, res: Respons
 });
 
 export const getPlansController = catchAsync(async (req: Request, res: Response) => {
-    const data = await planService.getPlans();
+    const {duration} = req.query;
+    let data; 
+    const plans = await planService.getPlans();
+    if (duration === 'yearly') {
+        const data = plans.map((plan) => {
+
+            if (plan.name === PlanEnum.basic){
+                return plan;
+            }else {
+                plan.price = plan.price * 12; 
+                return plan;
+            }
+        });
+
+        return successResponse(res, StatusCodes.OK, data);
+    }
+    data = plans;
     return successResponse(res,StatusCodes.OK, data);
 });

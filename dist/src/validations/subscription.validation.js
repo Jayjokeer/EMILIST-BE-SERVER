@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateSubscriptionPayment = void 0;
 const joi_1 = __importDefault(require("joi"));
 const transaction_enum_1 = require("../enums/transaction.enum");
+const target_enum_1 = require("../enums/target.enum");
 const validateSubscriptionPayment = (req, res, next) => {
     const subscriptionPaymentValidation = joi_1.default.object({
         planId: joi_1.default.string().required().messages({
@@ -19,6 +20,14 @@ const validateSubscriptionPayment = (req, res, next) => {
             "string.base": "Payment Method must be a string",
             "any.only": "Payment Method must be one of: credit_card, debit_card, paypal, or bank_transfer",
             "string.empty": "Payment Method is required",
+        }),
+        durationType: joi_1.default.string()
+            .valid(...Object.values(target_enum_1.TargetEnum))
+            .required()
+            .messages({
+            "string.base": "Duration must be a string",
+            "any.only": "Duration must be one of: monthly or yearly",
+            "string.empty": "Duration is required",
         }),
         currency: joi_1.default.string()
             .valid(...Object.values(transaction_enum_1.WalletEnum))

@@ -45,7 +45,7 @@ const transactionService = __importStar(require("../services/transaction.service
 const paystack_1 = require("../utils/paystack");
 const plan_enum_1 = require("../enums/plan.enum");
 exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { planId, paymentMethod, currency, isRenew } = req.body;
+    const { planId, paymentMethod, currency, isRenew, durationType } = req.body;
     const userId = req.user._id;
     let plan;
     if (isRenew) {
@@ -68,6 +68,15 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
             throw new error_1.BadRequestError('You already have an active subscription');
     }
     let data;
+    const startDate = new Date();
+    let endDate = new Date();
+    if (durationType === 'yearly') {
+        endDate.setFullYear(startDate.getFullYear() + 1);
+    }
+    else if (durationType === 'monthly') {
+        endDate.setMonth(startDate.getMonth() + 1);
+    }
+    ;
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
         const userWallet = yield walletService.findUserWalletByCurrency(userId, currency);
         if (!userWallet || userWallet.balance < plan.price) {
@@ -91,9 +100,6 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
         yield userWallet.save();
         transaction.balanceAfter = userWallet.balance;
         yield transaction.save();
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setDate(startDate.getDate() + plan.duration);
         data = yield subscriptionService.createSubscription({
             userId,
             planId,
