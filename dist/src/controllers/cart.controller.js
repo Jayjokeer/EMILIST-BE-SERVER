@@ -50,7 +50,7 @@ exports.addToCartController = (0, error_handler_1.catchAsync)((req, res) => __aw
     if (String(product.userId) === String(userId)) {
         throw new error_1.BadRequestError("You cannot add your product to the cart");
     }
-    const productPrice = product.price;
+    const productPrice = product.isDiscounted && product.discountedPrice ? product.discountedPrice : product.price;
     let cart = yield cartService.fetchCartByUser(userId);
     if (!cart) {
         const payload = {
@@ -78,7 +78,7 @@ exports.addToCartController = (0, error_handler_1.catchAsync)((req, res) => __aw
     const productsWithDetails = yield Promise.all(savedCart.products.map((item) => __awaiter(void 0, void 0, void 0, function* () {
         const productDetails = yield productService.fetchProductById(item.productId);
         return {
-            productId: productDetails || item.productId, // Include details or keep as ID
+            productId: productDetails || item.productId,
             quantity: item.quantity,
             price: item.price,
         };
@@ -107,6 +107,8 @@ exports.checkoutCartController = (0, error_handler_1.catchAsync)((req, res) => _
     if (!cart)
         throw new error_1.NotFoundError("Cart not found");
     let discountPercentage = 0;
+    let discountAmount = 0;
+    let finalTotalAmount = 0;
     if (code) {
         const validDiscountCode = yield cartService.fetchDiscountCode(code);
         if (!validDiscountCode) {
@@ -118,9 +120,9 @@ exports.checkoutCartController = (0, error_handler_1.catchAsync)((req, res) => _
             validDiscountCode.isActive = false;
         }
         yield validDiscountCode.save();
+        discountAmount = (cart.totalAmount * discountPercentage) / 100;
+        finalTotalAmount = cart.totalAmount - discountAmount;
     }
-    const discountAmount = (cart.totalAmount * discountPercentage) / 100;
-    const finalTotalAmount = cart.totalAmount - discountAmount;
     for (const cartItem of cart.products) {
         const product = yield productService.fetchProductById(cartItem.productId);
         if (!product || Number(product.availableQuantity) < cartItem.quantity) {
