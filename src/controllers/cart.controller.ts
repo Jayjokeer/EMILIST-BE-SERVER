@@ -23,7 +23,7 @@ export const addToCartController = catchAsync(async (req: JwtPayload, res: Respo
         throw new BadRequestError("You cannot add your product to the cart");
     }
 
-    const productPrice = product.price as number;
+    const productPrice = product.isDiscounted && product.discountedPrice ? product.discountedPrice : product.price as number;
 
     let cart = await cartService.fetchCartByUser(userId);
 
@@ -67,7 +67,7 @@ export const addToCartController = catchAsync(async (req: JwtPayload, res: Respo
         savedCart.products!.map(async (item) => {
             const productDetails = await productService.fetchProductById(item.productId);
             return {
-                productId: productDetails || item.productId, // Include details or keep as ID
+                productId: productDetails || item.productId, 
                 quantity: item.quantity,
                 price: item.price,
             };
@@ -106,6 +106,8 @@ export const checkoutCartController= catchAsync(async (req: JwtPayload, res: Res
     if (!cart) throw new NotFoundError("Cart not found");
 
     let discountPercentage = 0;
+    let discountAmount = 0;
+    let finalTotalAmount = 0; 
     if (code) {
         const validDiscountCode = await cartService.fetchDiscountCode(code);
 
@@ -119,10 +121,9 @@ export const checkoutCartController= catchAsync(async (req: JwtPayload, res: Res
             validDiscountCode.isActive = false;
         }
         await validDiscountCode.save();
+        discountAmount = (cart.totalAmount! * discountPercentage) / 100;
+        finalTotalAmount = cart.totalAmount! - discountAmount;
     }
-
-    const discountAmount = (cart.totalAmount! * discountPercentage) / 100;
-    const finalTotalAmount = cart.totalAmount! - discountAmount;
 
     for (const cartItem of cart.products!) {
         const product = await productService.fetchProductById(cartItem.productId);
