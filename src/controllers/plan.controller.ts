@@ -4,6 +4,7 @@ import { catchAsync } from '../errors/error-handler';
 import { StatusCodes } from 'http-status-codes';
 import { successResponse } from '../helpers/success-response';
 import { PlanEnum } from '../enums/plan.enum';
+import { BadRequestError } from '../errors/error';
 
 export const createPlanController = catchAsync(async (req: Request, res: Response) => {
     const { name, price, duration, perks, offers } = req.body;
@@ -14,6 +15,9 @@ export const createPlanController = catchAsync(async (req: Request, res: Respons
 
 export const getPlansController = catchAsync(async (req: Request, res: Response) => {
     const {duration} = req.query;
+    if(!duration){
+        throw new BadRequestError('Duration is required');
+    }
     let data; 
     const plans = await planService.getPlans();
     if (duration === 'yearly') {

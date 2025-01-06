@@ -38,6 +38,7 @@ const error_handler_1 = require("../errors/error-handler");
 const http_status_codes_1 = require("http-status-codes");
 const success_response_1 = require("../helpers/success-response");
 const plan_enum_1 = require("../enums/plan.enum");
+const error_1 = require("../errors/error");
 exports.createPlanController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, price, duration, perks, offers } = req.body;
     const data = yield planService.createPlan({ name, price, duration, perks, offers });
@@ -45,6 +46,9 @@ exports.createPlanController = (0, error_handler_1.catchAsync)((req, res) => __a
 }));
 exports.getPlansController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { duration } = req.query;
+    if (!duration) {
+        throw new error_1.BadRequestError('Duration is required');
+    }
     let data;
     const plans = yield planService.getPlans();
     if (duration === 'yearly') {
