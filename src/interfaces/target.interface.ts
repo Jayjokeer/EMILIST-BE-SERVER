@@ -1,3 +1,4 @@
+import { TargetEnum } from "../enums/target.enum";
 import { WalletEnum } from "../enums/transaction.enum";
 
 export interface ITarget {
@@ -7,4 +8,5 @@ export interface ITarget {
     invites: number;
     userId: any;
     currency: WalletEnum;
+    duration: TargetEnum
   }
