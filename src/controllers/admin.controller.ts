@@ -30,9 +30,9 @@ const data = {
   });
 
 export const fetchAllUsersAdminController = catchAsync(async (req: JwtPayload, res: Response) => {
-      const {page, limit} = req.query;
+      const {page, limit, q} = req.query;
     let userData = [];
-    const {users, totalUsers}= await userService.fetchAllUsersAdmin(page, limit);
+    const {users, totalUsers}= await userService.fetchAllUsersAdmin(page, limit, q);
         for (const user of users){
         const subcription = await subscriptionService.getSubscriptionById(String(user.subscription));
         const plan = await planService.getPlanById(String(subcription!.planId));
@@ -55,4 +55,12 @@ export const fetchAllUsersAdminController = catchAsync(async (req: JwtPayload, r
     };
     return successResponse(res, StatusCodes.CREATED, data);
   });
+
+export const verifyUserAdminController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const {userId} = req.params;
+    await userService.verifyUser(userId);
+    return successResponse(res, StatusCodes.CREATED, 'User verified successfully');
+  
+});
+
 

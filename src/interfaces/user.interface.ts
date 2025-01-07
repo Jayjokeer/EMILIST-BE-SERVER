@@ -29,6 +29,8 @@ export interface IUser {
     invitedUsers?: string[]; 
     subscription?: any;
     createdAt?: Date;
+    isVerified?: boolean;
+    requestedVerification?: boolean;
   }
   
 export interface ICreateUser {

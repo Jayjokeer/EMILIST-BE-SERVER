@@ -59,3 +59,4 @@ router.route("/current-user").get(current_user_1.userAuth, authController.curren
 router.route("/deactivate-user").patch(current_user_1.userAuth, authController.deactivateUserController);
 router.route("/get-specific-user").get(current_user_1.userAuth, authController.findUserController);
 router.route("/invite-user").get(current_user_1.userAuth, authController.inviteUserController);
+router.route("/request-verificaton").get(current_user_1.userAuth, authController.requestVerificationController);

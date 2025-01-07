@@ -58,13 +58,24 @@ export const fetchAllUsersAdminDashboard = async()=>{
   return await Users.countDocuments();
 };
 
-export const fetchAllUsersAdmin = async(page: number, limit: number)=>{
+export const fetchAllUsersAdmin = async(page: number, limit: number, q: string)=>{
   const skip = (page - 1) * limit;
+  let query: any = {};
+  if(q === "verified"){
+    query.isVerified = true;
+  }else if (q === "requestVerification"){
+    query.isVerified = false;
+    query.requestedVerification = true;
 
-  const totalUsers = await Users.countDocuments();
+  }
+  const totalUsers = await Users.countDocuments(query);
 
-  const users = await Users.find()
+  const users = await Users.find(query)
     .skip(skip)
     .limit(limit)
     return {users, totalUsers}
   };
+
+  export const verifyUser = async (userId: string)=>{
+    return await Users.findByIdAndUpdate(userId, { $set: { isVerified: true } }, { new: true });
+  }

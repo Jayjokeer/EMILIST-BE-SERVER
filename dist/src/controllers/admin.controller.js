@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
+exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -55,9 +55,9 @@ exports.adminDashboardController = (0, error_handler_1.catchAsync)((req, res) =>
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { page, limit } = req.query;
+    const { page, limit, q } = req.query;
     let userData = [];
-    const { users, totalUsers } = yield userService.fetchAllUsersAdmin(page, limit);
+    const { users, totalUsers } = yield userService.fetchAllUsersAdmin(page, limit, q);
     for (const user of users) {
         const subcription = yield subscriptionService.getSubscriptionById(String(user.subscription));
         const plan = yield planService.getPlanById(String(subcription.planId));
@@ -78,4 +78,9 @@ exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)((req, res
         page,
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+}));
+exports.verifyUserAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.params;
+    yield userService.verifyUser(userId);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, 'User verified successfully');
 }));

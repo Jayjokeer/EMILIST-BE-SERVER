@@ -349,3 +349,13 @@ export const inviteUserController = catchAsync(async (req: JwtPayload, res: Resp
   return successResponse(res, StatusCodes.OK, "Invite sent successfully");
 });
 
+export const requestVerificationController = catchAsync(async (req: JwtPayload, res: Response) => { 
+  const userId = req.user._id;
+  const user = await authService.findUserById(userId);
+  if(!user){
+    throw new NotFoundError("User not found!");
+  }
+  user.requestedVerification = true;
+  await user?.save();
+  return successResponse(res, StatusCodes.OK, "Verification request sent successfully");
+});

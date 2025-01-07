@@ -36,6 +36,8 @@ const userSchema: Schema = new mongoose.Schema(
     isPrimeMember: {type: Boolean, default: false},
     invitedUsers: [{ type: String }],
     subscription: { type: Schema.Types.ObjectId, ref: 'Subscription' },
+    isVerified: {type: Boolean, default: false},
+    requestedVerification: {type: Boolean, default: false},
   },
   { timestamps: true }
 

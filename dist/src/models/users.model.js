@@ -58,5 +58,7 @@ const userSchema = new mongoose_1.default.Schema({
     isPrimeMember: { type: Boolean, default: false },
     invitedUsers: [{ type: String }],
     subscription: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Subscription' },
+    isVerified: { type: Boolean, default: false },
+    requestedVerification: { type: Boolean, default: false },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Users', userSchema);
