@@ -611,6 +611,10 @@ export const projectAnalytics = async (year: number = moment().year(), month?: n
   return analyticsData;
 };
 
+export const fetchAllJobsForAdminDashboard = async () => {
+  return await Jobs.countDocuments();
+};
+
   // export const checkOverdueMilestones = async () => {
   //   const jobs = await Jobs.find({
   //     status: { $in: [JobStatusEnum.active, JobStatusEnum.paused] },

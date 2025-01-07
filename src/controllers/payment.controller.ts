@@ -246,6 +246,7 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
     let message;
     const verifyPayment = await  verifyPaystackPayment(reference);
     if(verifyPayment == "success"){
+      transaction.dateCompleted = new Date();
       transaction.status = TransactionEnum.completed;
       transaction.balanceAfter = wallet.balance + transaction.amount;
       await Promise.all([ transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
@@ -266,6 +267,7 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
     }
     const verifyPayment = await verifyPaystackPayment(reference);
     if(verifyPayment == "success"){
+      transaction.dateCompleted = new Date();
       transaction.status = TransactionEnum.completed;
       await transaction.save();
       const startDate = new Date();

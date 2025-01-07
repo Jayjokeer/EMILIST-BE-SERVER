@@ -54,3 +54,17 @@ export const fetchUserMutedJobs = async(userId: string)=>{
   return Users.findById(userId).select('mutedJobs').lean();
 };
 
+export const fetchAllUsersAdminDashboard = async()=>{
+  return await Users.countDocuments();
+};
+
+export const fetchAllUsersAdmin = async(page: number, limit: number)=>{
+  const skip = (page - 1) * limit;
+
+  const totalUsers = await Users.countDocuments();
+
+  const users = await Users.find()
+    .skip(skip)
+    .limit(limit)
+    return {users, totalUsers}
+  };

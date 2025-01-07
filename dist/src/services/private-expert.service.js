@@ -12,9 +12,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createPrivateExpert = void 0;
+exports.fetchAllPrivateExpertsAAdminDashboard = exports.createPrivateExpert = void 0;
 const private_expert_moodel_1 = __importDefault(require("../models/private-expert.moodel"));
 const createPrivateExpert = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     return yield private_expert_moodel_1.default.create(payload);
 });
 exports.createPrivateExpert = createPrivateExpert;
+const fetchAllPrivateExpertsAAdminDashboard = () => __awaiter(void 0, void 0, void 0, function* () {
+    return yield private_expert_moodel_1.default.countDocuments();
+});
+exports.fetchAllPrivateExpertsAAdminDashboard = fetchAllPrivateExpertsAAdminDashboard;

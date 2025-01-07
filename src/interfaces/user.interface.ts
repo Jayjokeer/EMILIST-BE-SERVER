@@ -28,6 +28,7 @@ export interface IUser {
     isPrimeMember: boolean;
     invitedUsers?: string[]; 
     subscription?: any;
+    createdAt?: Date;
   }
   
 export interface ICreateUser {

@@ -228,3 +228,6 @@ export const fetchLikedProducts = async (userId: string, page: number, limit: nu
     return result[0];
   };
   
+export const fetchAllProductsForAdmin = async () => {
+    return await Product.countDocuments();
+};

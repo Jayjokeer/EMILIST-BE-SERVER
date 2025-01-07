@@ -1,4 +1,5 @@
-import { PaymentMethodEnum, ServiceEnum, TransactionEnum } from "../enums/transaction.enum";
+import mongoose from "mongoose";
+import { PaymentMethodEnum, ServiceEnum, TransactionEnum, WalletEnum } from "../enums/transaction.enum";
 import Transaction from "../models/transaction.model";
 
 export const createTransaction = async (data: any)=>{
@@ -86,3 +87,100 @@ export const totalAmountByTransaction = async (userId: string)=>{
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]);
 };
+export const fetchTransactionChartAdminDashboard = async(year: number, currency: WalletEnum)=>{
+  const match: any = {};
+
+  if (year) {
+    match.dateCompleted = {
+      $gte: new Date(`${year}-01-01`),
+      $lt: new Date(`${year + 1}-01-01`),
+    };
+  } else {
+    match.dateCompleted = { $ne: null };
+  }
+
+  if (currency) {
+    match.currency = currency;
+  }
+
+  const aggregation = [
+    { $match: match },
+    {
+      $group: {
+        _id: {
+          month: { $month: '$dateCompleted' },
+          currency: '$currency',
+        },
+        totalTransactions: { $sum: '$amount' },
+      },
+    },
+    {
+      $group: {
+        _id: '$_id.currency',
+        transactionsByMonth: {
+          $push: {
+            month: '$_id.month',
+            totalTransactions: '$totalTransactions',
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        currency: '$_id',
+        _id: 0,
+        transactionsByMonth: {
+          $arrayToObject: {
+            $map: {
+              input: '$transactionsByMonth',
+              as: 'item',
+              in: {
+                k: {
+                  $let: {
+                    vars: { months: [null, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] },
+                    in: { $arrayElemAt: ['$$months', '$$item.month'] },
+                  },
+                },
+                v: '$$item.totalTransactions',
+              },
+            },
+          },
+        },
+      },
+    },
+  ];
+
+  const result = await Transaction.aggregate(aggregation);
+
+  if (currency) {
+    return result.find((item) => item.currency === currency)?.transactionsByMonth || {};
+  }
+
+  return result.reduce((acc, item) => {
+    acc[item.currency] = item.transactionsByMonth;
+    return acc;
+  }, {});}
+
+  export const fetchAllUserEarningsAdmin = async (userId: string) => {
+    return await Transaction.aggregate([
+      {
+        $match: {
+          recieverId: new mongoose.Types.ObjectId(userId), 
+        },
+      },
+      {
+        $group: {
+          _id: '$currency', 
+          totalEarnings: { $sum: '$amount' }, 
+        },
+      },
+      {
+        $project: {
+          _id: 0, 
+          currency: '$_id', 
+          totalEarnings: 1, 
+        },
+      },
+    ]);
+  };
+  

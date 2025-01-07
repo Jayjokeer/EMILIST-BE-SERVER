@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchUserMutedJobs = exports.findSpecificUser = exports.findUserByEmailOrUserName = exports.findUserByUniqueId = exports.findUserByIdWithPassword = exports.findUserByUserName = exports.updateUserById = exports.findTokenService = exports.createUser = exports.findUserById = exports.findUserByEmail = void 0;
+exports.fetchAllUsersAdmin = exports.fetchAllUsersAdminDashboard = exports.fetchUserMutedJobs = exports.findSpecificUser = exports.findUserByEmailOrUserName = exports.findUserByUniqueId = exports.findUserByIdWithPassword = exports.findUserByUserName = exports.updateUserById = exports.findTokenService = exports.createUser = exports.findUserById = exports.findUserByEmail = void 0;
 const users_model_1 = __importDefault(require("../models/users.model"));
 const findUserByEmail = (email) => __awaiter(void 0, void 0, void 0, function* () {
     return yield users_model_1.default.findOne({ email: email });
@@ -70,3 +70,16 @@ const fetchUserMutedJobs = (userId) => __awaiter(void 0, void 0, void 0, functio
     return users_model_1.default.findById(userId).select('mutedJobs').lean();
 });
 exports.fetchUserMutedJobs = fetchUserMutedJobs;
+const fetchAllUsersAdminDashboard = () => __awaiter(void 0, void 0, void 0, function* () {
+    return yield users_model_1.default.countDocuments();
+});
+exports.fetchAllUsersAdminDashboard = fetchAllUsersAdminDashboard;
+const fetchAllUsersAdmin = (page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+    const skip = (page - 1) * limit;
+    const totalUsers = yield users_model_1.default.countDocuments();
+    const users = yield users_model_1.default.find()
+        .skip(skip)
+        .limit(limit);
+    return { users, totalUsers };
+});
+exports.fetchAllUsersAdmin = fetchAllUsersAdmin;

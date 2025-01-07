@@ -11,6 +11,7 @@ import { TransactionRoute } from "./transaction.routes";
 import { ExpertRoute } from "./private-expert";
 import { TargetRoute } from "./target.routes";
 import { SubscribeRoute } from "./subscription.routes";
+import { AdminRoute } from "./admin.routes";
 const router = Router(); 
 
 router.use("/auth", AuthRoute);
@@ -25,5 +26,5 @@ router.use("/transaction", TransactionRoute);
 router.use("/expert", ExpertRoute);
 router.use("/target", TargetRoute);
 router.use("/subscription", SubscribeRoute);
-
+router.use("/admin", AdminRoute);
 export default router;

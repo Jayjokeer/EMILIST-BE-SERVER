@@ -275,6 +275,7 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
         let message;
         const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
         if (verifyPayment == "success") {
+            transaction.dateCompleted = new Date();
             transaction.status = transaction_enum_1.TransactionEnum.completed;
             transaction.balanceAfter = wallet.balance + transaction.amount;
             yield Promise.all([transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
@@ -297,6 +298,7 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
         }
         const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
         if (verifyPayment == "success") {
+            transaction.dateCompleted = new Date();
             transaction.status = transaction_enum_1.TransactionEnum.completed;
             yield transaction.save();
             const startDate = new Date();
