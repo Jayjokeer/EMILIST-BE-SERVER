@@ -48,6 +48,7 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
     const { planId, paymentMethod, currency, isRenew, durationType } = req.body;
     const userId = req.user._id;
     let plan;
+    let currentPlan;
     if (isRenew) {
         console.log('here');
         const subscription = yield subscriptionService.getActiveSubscriptionWithoutDetails(userId);
@@ -64,7 +65,8 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
         if (!plan)
             throw new error_1.NotFoundError('Plan not found');
         const subscription = yield subscriptionService.getActiveSubscription(userId);
-        if (subscription)
+        currentPlan = yield planService.getPlanById(String(subscription === null || subscription === void 0 ? void 0 : subscription.planId));
+        if (subscription && (currentPlan === null || currentPlan === void 0 ? void 0 : currentPlan.name) !== plan_enum_1.PlanEnum.basic)
             throw new error_1.BadRequestError('You already have an active subscription');
     }
     let data;
@@ -77,6 +79,8 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
         endDate.setMonth(startDate.getMonth() + 1);
     }
     ;
+    currentPlan.isActive = false;
+    yield currentPlan.save();
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
         const userWallet = yield walletService.findUserWalletByCurrency(userId, currency);
         if (!userWallet || userWallet.balance < plan.price) {

@@ -19,6 +19,7 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
     const { planId, paymentMethod, currency, isRenew, durationType } = req.body;
     const userId = req.user._id;
     let plan;
+    let currentPlan;
     if(isRenew){
         console.log('here')
         const subscription = await subscriptionService.getActiveSubscriptionWithoutDetails(userId);
@@ -31,8 +32,9 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
         plan = await planService.getPlanById(planId);
     if (!plan) throw new NotFoundError('Plan not found');
     const subscription = await subscriptionService.getActiveSubscription(userId);   
-     
-    if(subscription) throw new BadRequestError('You already have an active subscription');
+    currentPlan = await planService.getPlanById(String(subscription?.planId));
+
+    if(subscription && currentPlan?.name !== PlanEnum.basic) throw new BadRequestError('You already have an active subscription');
     }
     let data;
     const startDate = new Date();
@@ -42,7 +44,8 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
     } else if(durationType === 'monthly') {
         endDate.setMonth(startDate.getMonth() + 1);  
     };
-
+    currentPlan!.isActive = false;
+    await currentPlan!.save();
     if (paymentMethod === PaymentMethodEnum.wallet) {
         const userWallet = await walletService.findUserWalletByCurrency(userId, currency);
         if (!userWallet || userWallet.balance < plan.price) {
@@ -96,6 +99,7 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
             const paymentLink = await generatePaystackPaymentLink(transaction.reference, plan.price!, req.user.email);
             data = { paymentLink, transaction };
       }
+     
       return  successResponse(res,StatusCodes.CREATED, data);
     }
 
