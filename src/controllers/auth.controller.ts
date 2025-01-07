@@ -80,6 +80,9 @@ export const loginController = catchAsync(async (req: Request, res: Response) =>
   if(foundUser.status == UserStatus.deactivated){
     throw new UnauthorizedError("Account Deactivated!!")
   }
+  if(foundUser.status == UserStatus.suspended){
+    throw new UnauthorizedError("Account Suspended kindly Contact Admin!!")
+  }
   if(foundUser.isEmailVerified == false){
     throw new BadRequestError("Kindly verify your email!");
   }

@@ -106,6 +106,9 @@ exports.loginController = (0, error_handler_1.catchAsync)((req, res) => __awaite
     if (foundUser.status == user_enums_1.UserStatus.deactivated) {
         throw new error_1.UnauthorizedError("Account Deactivated!!");
     }
+    if (foundUser.status == user_enums_1.UserStatus.suspended) {
+        throw new error_1.UnauthorizedError("Account Suspended kindly Contact Admin!!");
+    }
     if (foundUser.isEmailVerified == false) {
         throw new error_1.BadRequestError("Kindly verify your email!");
     }

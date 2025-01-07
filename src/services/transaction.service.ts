@@ -183,4 +183,6 @@ export const fetchTransactionChartAdminDashboard = async(year: number, currency:
       },
     ]);
   };
-  
+export const fetchTransactionsByService = async (userId: string, serviceType: ServiceEnum, )=>{
+    return await Transaction.find({userId, serviceType});
+};

@@ -32,17 +32,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
+exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
 const http_status_codes_1 = require("http-status-codes");
+const error_1 = require("../errors/error");
 const subscriptionService = __importStar(require("../services/subscription.service"));
 const userService = __importStar(require("../services/auth.service"));
 const jobService = __importStar(require("../services/job.service"));
 const privateExpertService = __importStar(require("../services/private-expert.service"));
 const transactionService = __importStar(require("../services/transaction.service"));
+const transaction_enum_1 = require("../enums/transaction.enum");
 const planService = __importStar(require("../services/plan.service"));
+const user_enums_1 = require("../enums/user.enums");
+const businessService = __importStar(require("../services/business.service"));
+const projectService = __importStar(require("../services/project.service"));
 exports.adminDashboardController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { currency, year } = req.query;
     const data = {
@@ -83,4 +88,82 @@ exports.verifyUserAdminController = (0, error_handler_1.catchAsync)((req, res) =
     const { userId } = req.params;
     yield userService.verifyUser(userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, 'User verified successfully');
+}));
+exports.suspendUserAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.params;
+    const user = yield userService.findUserById(userId);
+    if (!user) {
+        throw new error_1.NotFoundError("User not found");
+    }
+    user.status = user_enums_1.UserStatus.suspended;
+    yield user.save();
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, 'User suspended successfully');
+}));
+exports.fetchUserDetails = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.params;
+    const { q } = req.query;
+    const user = yield userService.findUserById(userId);
+    if (!user) {
+        throw new error_1.NotFoundError("User not found");
+    }
+    let data = {
+        profileImage: user.profileImage,
+        name: user.fullName,
+        level: user.level,
+        uniqueId: user.uniqueId,
+    };
+    if (q === "userDetails") {
+        const payload = {
+            email: user.email,
+            userName: user.userName,
+            phoneNumber: [user.number1, user.number2],
+            whatsappNumber: user.whatsAppNo,
+            bio: user.bio,
+            languages: user.language,
+            location: user.location,
+        };
+        data = Object.assign(Object.assign({}, data), payload);
+    }
+    else if (q === "services") {
+        const business = yield businessService.fetchAllUserBusinessesAdmin(String(user._id));
+        const payload = {
+            businesses: business,
+        };
+        data = Object.assign(Object.assign({}, data), payload);
+    }
+    else if (q === "jobs") {
+        const jobs = yield jobService.fetchAllUserJobsAdmin(String(user._id));
+        const payload = {
+            jobs,
+        };
+        data = Object.assign(Object.assign({}, data), payload);
+    }
+    else if (q === "projects") {
+        const projects = yield projectService.fetchAllUserProjectsAdmin(String(user._id));
+        const payload = {
+            projects,
+        };
+        data = Object.assign(Object.assign({}, data), payload);
+    }
+    else if (q === "materials") {
+        const materials = yield productService.fetchAllUserProductsAdmin(String(user._id));
+        const payload = {
+            materials,
+        };
+        data = Object.assign(Object.assign({}, data), payload);
+    }
+    else if (q === "subscriptions") {
+        const subscription = yield subscriptionService.getActiveSubscriptionWithoutDetails(String(user._id));
+        const subscriptionTransactions = yield transactionService.fetchTransactionsByService(String(user._id), transaction_enum_1.ServiceEnum.subscription);
+        const plan = yield planService.getPlanById(String(subscription.planId));
+        console.log(plan);
+        const payload = {
+            subscription,
+            name: plan.name,
+            price: plan.price,
+            subscriptionTransactions,
+        };
+        data = Object.assign(Object.assign({}, data), payload);
+    }
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

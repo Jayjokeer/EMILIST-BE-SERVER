@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
+exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
 const business_model_1 = __importDefault(require("../models/business.model"));
 const createBusiness = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield business_model_1.default.create(data);
@@ -196,3 +196,10 @@ const deleteBusiness = (businessId) => __awaiter(void 0, void 0, void 0, functio
     return yield business_model_1.default.findByIdAndDelete(businessId);
 });
 exports.deleteBusiness = deleteBusiness;
+const fetchAllUserBusinessesAdmin = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield business_model_1.default.find({ userId: userId })
+        .sort({ createdAt: -1 })
+        .populate('reviews', 'rating')
+        .lean();
+});
+exports.fetchAllUserBusinessesAdmin = fetchAllUserBusinessesAdmin;

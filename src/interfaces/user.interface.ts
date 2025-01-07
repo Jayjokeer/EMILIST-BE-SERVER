@@ -1,3 +1,4 @@
+import { JobExpertLevel } from "../enums/jobs.enum";
 import { UserRolesEnum } from "../enums/user.enums";
 
 export interface IUser {
@@ -31,6 +32,7 @@ export interface IUser {
     createdAt?: Date;
     isVerified?: boolean;
     requestedVerification?: boolean;
+    level: JobExpertLevel;
   }
   
 export interface ICreateUser {

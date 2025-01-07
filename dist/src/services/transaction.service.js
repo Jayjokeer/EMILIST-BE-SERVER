@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllUserEarningsAdmin = exports.fetchTransactionChartAdminDashboard = exports.totalAmountByTransaction = exports.totalCompletedJobsByTransaction = exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
+exports.fetchTransactionsByService = exports.fetchAllUserEarningsAdmin = exports.fetchTransactionChartAdminDashboard = exports.totalAmountByTransaction = exports.totalCompletedJobsByTransaction = exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const transaction_model_1 = __importDefault(require("../models/transaction.model"));
@@ -199,3 +199,7 @@ const fetchAllUserEarningsAdmin = (userId) => __awaiter(void 0, void 0, void 0, 
     ]);
 });
 exports.fetchAllUserEarningsAdmin = fetchAllUserEarningsAdmin;
+const fetchTransactionsByService = (userId, serviceType) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield transaction_model_1.default.find({ userId, serviceType });
+});
+exports.fetchTransactionsByService = fetchTransactionsByService;

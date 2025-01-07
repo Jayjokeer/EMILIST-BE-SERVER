@@ -235,3 +235,9 @@ export const deleteBusiness = async (businessId: string)=>{
     return await Business.findByIdAndDelete(businessId);
 };
 
+export const fetchAllUserBusinessesAdmin = async (userId: string)=>{
+    return await Business.find({userId: userId})
+    .sort({ createdAt: -1 })
+    .populate('reviews', 'rating')
+    .lean();
+};

@@ -231,3 +231,7 @@ export const fetchLikedProducts = async (userId: string, page: number, limit: nu
 export const fetchAllProductsForAdmin = async () => {
     return await Product.countDocuments();
 };
+
+export const fetchAllUserProductsAdmin = async (userId: string) => {
+    return await Product.find({ userId });
+}

@@ -28,3 +28,9 @@ export const updateRejectProject = async (projectId: string, jobId: string ) =>{
       );
     
 };
+
+export const fetchAllUserProjectsAdmin = async (userId: string) =>{
+    return await Project.find({user: userId})
+    .populate('job', '_id title description budget')
+    .lean();
+};

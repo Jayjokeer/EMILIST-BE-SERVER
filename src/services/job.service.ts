@@ -615,6 +615,13 @@ export const fetchAllJobsForAdminDashboard = async () => {
   return await Jobs.countDocuments();
 };
 
+export const fetchAllUserJobsAdmin = async (userId: string) => {
+  return await Jobs.find({ userId })
+  .sort({ createdAt: -1 })
+  .populate('applications', 'title description status')
+  .lean();
+};
+
   // export const checkOverdueMilestones = async () => {
   //   const jobs = await Jobs.find({
   //     status: { $in: [JobStatusEnum.active, JobStatusEnum.paused] },
