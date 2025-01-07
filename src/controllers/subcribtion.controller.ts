@@ -31,7 +31,7 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
     }else {
         plan = await planService.getPlanById(planId);
     if (!plan) throw new NotFoundError('Plan not found');
-    const subscription = await subscriptionService.getActiveSubscription(userId);   
+    const subscription = await subscriptionService.getActiveSubscriptionWithoutDetails(userId);   
     currentPlan = await planService.getPlanById(String(subscription?.planId));
 
     if(subscription && currentPlan?.name !== PlanEnum.basic) throw new BadRequestError('You already have an active subscription');

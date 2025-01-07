@@ -64,7 +64,7 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
         plan = yield planService.getPlanById(planId);
         if (!plan)
             throw new error_1.NotFoundError('Plan not found');
-        const subscription = yield subscriptionService.getActiveSubscription(userId);
+        const subscription = yield subscriptionService.getActiveSubscriptionWithoutDetails(userId);
         currentPlan = yield planService.getPlanById(String(subscription === null || subscription === void 0 ? void 0 : subscription.planId));
         if (subscription && (currentPlan === null || currentPlan === void 0 ? void 0 : currentPlan.name) !== plan_enum_1.PlanEnum.basic)
             throw new error_1.BadRequestError('You already have an active subscription');
