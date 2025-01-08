@@ -29,6 +29,7 @@ const socket_io_1 = require("socket.io");
 const http_1 = __importDefault(require("http"));
 require("../src/utils/passport");
 const socket_1 = __importDefault(require("./socket"));
+require("./jobs/subscription.job");
 const PORT = config_1.config.port || 7000;
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);

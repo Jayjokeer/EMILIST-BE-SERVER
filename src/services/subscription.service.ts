@@ -14,3 +14,10 @@ export const getActiveSubscriptionWithoutDetails = async (userId: string) => {
 export const getSubscriptionById = async (subscriptionId: string) => {
     return await Subscription.findById(subscriptionId);
 };
+export const findExpiredSubscriptions = async () => {
+    const currentDate = new Date();
+    return await Subscription.find({
+        endDate: { $lte: currentDate },
+        status: SubscriptionStatusEnum.active,
+    });
+};

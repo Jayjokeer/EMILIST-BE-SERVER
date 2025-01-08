@@ -14,15 +14,17 @@ import { OrderPaymentStatus } from '../enums/order.enum';
 import * as transactionService from '../services/transaction.service';
 import { generatePaystackPaymentLink } from '../utils/paystack';
 import { PlanEnum } from '../enums/plan.enum';
+import { SubscriptionStatusEnum } from '../enums/suscribtion.enum';
 
 export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response) => {
     const { planId, paymentMethod, currency, isRenew, durationType } = req.body;
     const userId = req.user._id;
     let plan;
     let currentPlan;
+    let subscription;
     if(isRenew){
         console.log('here')
-        const subscription = await subscriptionService.getActiveSubscriptionWithoutDetails(userId);
+        subscription = await subscriptionService.getActiveSubscriptionWithoutDetails(userId);
         if(!subscription) throw new BadRequestError('You do not have an active subscription');
 
         plan = await planService.getPlanById(String(subscription.planId)); 
@@ -31,9 +33,11 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
     }else {
         plan = await planService.getPlanById(planId);
     if (!plan) throw new NotFoundError('Plan not found');
-    const subscription = await subscriptionService.getActiveSubscriptionWithoutDetails(userId);   
+    subscription = await subscriptionService.getActiveSubscriptionWithoutDetails(userId); 
+    console.log('here1')  
+    console.log(subscription)
     currentPlan = await planService.getPlanById(String(subscription?.planId));
-
+        console.log('here')
     if(subscription && currentPlan?.name !== PlanEnum.basic) throw new BadRequestError('You already have an active subscription');
     }
     let data;
@@ -44,8 +48,7 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
     } else if(durationType === 'monthly') {
         endDate.setMonth(startDate.getMonth() + 1);  
     };
-    currentPlan!.isActive = false;
-    await currentPlan!.save();
+ 
     if (paymentMethod === PaymentMethodEnum.wallet) {
         const userWallet = await walletService.findUserWalletByCurrency(userId, currency);
         if (!userWallet || userWallet.balance < plan.price) {
@@ -77,6 +80,9 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
           startDate,
           endDate,
         });
+        subscription!.status = SubscriptionStatusEnum.expired;
+        await subscription!.save();
+        
         return  successResponse(res,StatusCodes.CREATED, data);
 
     }else if (paymentMethod === PaymentMethodEnum.card) {

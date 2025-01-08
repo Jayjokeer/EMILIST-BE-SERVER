@@ -19,6 +19,7 @@ import { OrderPaymentStatus } from "../enums/order.enum";
 import * as planService from '../services/plan.service';
 import * as subscriptionService from '../services/subscription.service';
 import * as userService from '../services/auth.service';
+import { SubscriptionStatusEnum } from "../enums/suscribtion.enum";
 
 export const payforProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
@@ -282,6 +283,9 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
         endDate,
       });
       user.subscription = message._id;
+      const subscription = await subscriptionService.getActiveSubscriptionWithoutDetails(String(transaction.userId));   
+      subscription!.status = SubscriptionStatusEnum.expired;
+      await subscription!.save();
      await user.save();
     }else {
       transaction.status = TransactionEnum.failed;

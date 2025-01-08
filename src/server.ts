@@ -16,7 +16,7 @@ import http from "http";
 
 import "../src/utils/passport";
 import chatSocket from "./socket";
-
+import "./jobs/subscription.job";
 const PORT = config.port || 7000;
 const app: Application = express();
 const server = http.createServer(app);

@@ -51,6 +51,7 @@ const order_enum_1 = require("../enums/order.enum");
 const planService = __importStar(require("../services/plan.service"));
 const subscriptionService = __importStar(require("../services/subscription.service"));
 const userService = __importStar(require("../services/auth.service"));
+const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const userId = req.user._id;
@@ -312,6 +313,9 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
                 endDate,
             });
             user.subscription = message._id;
+            const subscription = yield subscriptionService.getActiveSubscriptionWithoutDetails(String(transaction.userId));
+            subscription.status = suscribtion_enum_1.SubscriptionStatusEnum.expired;
+            yield subscription.save();
             yield user.save();
         }
         else {
