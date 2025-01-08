@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
+exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -48,6 +48,12 @@ const planService = __importStar(require("../services/plan.service"));
 const user_enums_1 = require("../enums/user.enums");
 const businessService = __importStar(require("../services/business.service"));
 const projectService = __importStar(require("../services/project.service"));
+const authService = __importStar(require("../services/auth.service"));
+const walletService = __importStar(require("../services/wallet.services"));
+const plan_enum_1 = require("../enums/plan.enum");
+const send_email_1 = require("../utils/send_email");
+const templates_1 = require("../utils/templates");
+const utility_1 = require("../utils/utility");
 exports.adminDashboardController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { currency, year } = req.query;
     const data = {
@@ -166,4 +172,36 @@ exports.fetchUserDetails = (0, error_handler_1.catchAsync)((req, res) => __await
         data = Object.assign(Object.assign({}, data), payload);
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.addUserAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userName, email, } = req.body;
+    const isEmailExists = yield authService.findUserByEmail(email);
+    if (isEmailExists)
+        throw new error_1.BadRequestError("User with email already exists!");
+    const isUserNameExists = yield authService.findUserByUserName(userName);
+    if (isUserNameExists)
+        throw new error_1.BadRequestError("UserName already exists!");
+    const user = {
+        userName,
+        email: email.toLowerCase(),
+        uniqueId: (0, utility_1.generateShortUUID)()
+    };
+    const data = yield authService.createUser(user);
+    yield data.save();
+    const walletPayload = {
+        userId: data._id,
+        isDefault: true
+    };
+    const wallet = yield walletService.createWallet(walletPayload);
+    data.wallets.push(wallet._id);
+    yield data.save();
+    const plan = yield planService.getPlanByName(plan_enum_1.PlanEnum.basic);
+    if (!plan)
+        throw new error_1.NotFoundError("Plan not found!");
+    const subscription = yield subscriptionService.createSubscription({ userId: data._id, planId: plan._id, startDate: new Date(), perks: plan.perks });
+    data.subscription = subscription._id;
+    yield data.save();
+    const { html, subject } = (0, templates_1.welcomeMessageAdmin)(userName);
+    (0, send_email_1.sendEmail)(email, subject, html);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));

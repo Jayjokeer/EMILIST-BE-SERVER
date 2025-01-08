@@ -19,5 +19,6 @@ export const findExpiredSubscriptions = async () => {
     return await Subscription.find({
         endDate: { $lte: currentDate },
         status: SubscriptionStatusEnum.active,
+        
     });
 };

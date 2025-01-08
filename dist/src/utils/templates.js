@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.otpMessage = void 0;
+exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
+const config_1 = require("./config");
 const otpMessage = (name, otp) => {
     const subject = "Otp Email";
     const html = `
@@ -8,6 +9,13 @@ const otpMessage = (name, otp) => {
     return { html, subject };
 };
 exports.otpMessage = otpMessage;
+const welcomeMessageAdmin = (name) => {
+    const subject = "Welcome to Emilist";
+    const html = `
+        <strong>${name} welcome to Emilist,</strong> <br/>kindly go to the platform here ${config_1.config.frontendLoginUrl} and click on forgot password to reset your password and log in!`;
+    return { html, subject };
+};
+exports.welcomeMessageAdmin = welcomeMessageAdmin;
 const passwordResetMessage = (name, otp) => {
     const subject = "Password reset otp";
     const html = `

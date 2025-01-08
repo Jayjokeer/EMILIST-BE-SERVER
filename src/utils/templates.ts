@@ -1,8 +1,16 @@
+import { config } from "./config";
 
 export const otpMessage = (name: string, otp: string) => {
   const subject = "Otp Email";
   const html = `
         ${name} your otp is ${otp}, valid for 10 minutes!`;
+
+  return { html, subject };
+};
+export const welcomeMessageAdmin = (name: string) => {
+  const subject = "Welcome to Emilist";
+  const html = `
+        <strong>${name} welcome to Emilist,</strong> <br/>kindly go to the platform here ${config.frontendLoginUrl} and click on forgot password to reset your password and log in!`;
 
   return { html, subject };
 };

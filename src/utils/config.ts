@@ -25,4 +25,5 @@ export const config = {
   paystackSecretKey: process.env.PAYSTACK_SECRET_KEY as string,
   paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY as string,
   adminEmail: process.env.ADMIN_EMAIL as string,
+  frontendLoginUrl: process.env.FRONTEND_LOGIN as string,
 };

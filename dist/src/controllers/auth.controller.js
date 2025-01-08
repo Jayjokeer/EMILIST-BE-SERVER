@@ -173,6 +173,9 @@ exports.resetPasswordController = (0, error_handler_1.catchAsync)((req, res) => 
     foundUser.password = hashedPassword;
     foundUser.passwordResetOtp = undefined;
     foundUser.otpExpiresAt = undefined;
+    if (foundUser.isEmailVerified == false) {
+        foundUser.isEmailVerified = true;
+    }
     yield foundUser.save();
     const notificationPayload = {
         userId: foundUser._id,

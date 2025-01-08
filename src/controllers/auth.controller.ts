@@ -157,6 +157,9 @@ export const resetPasswordController = catchAsync(async (req: Request, res: Resp
   foundUser.password = hashedPassword;
   foundUser.passwordResetOtp = undefined;
   foundUser.otpExpiresAt = undefined;
+  if(foundUser.isEmailVerified == false){
+    foundUser.isEmailVerified = true;
+  }
   await foundUser.save();
   const notificationPayload = {
     userId: foundUser._id,

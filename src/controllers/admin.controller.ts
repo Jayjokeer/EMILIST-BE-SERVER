@@ -18,6 +18,14 @@ import * as planService from "../services/plan.service";
 import { UserStatus } from "../enums/user.enums";
 import * as businessService from "../services/business.service";
 import * as projectService from "../services/project.service";
+import * as authService from "../services/auth.service";
+import * as walletService from "../services/wallet.services";
+import { PlanEnum } from "../enums/plan.enum";
+import { ICreateUser } from "../interfaces/user.interface";
+import { hashPassword } from "../utils/hashing";
+import { sendEmail } from "../utils/send_email";
+import { otpMessage, welcomeMessageAdmin } from "../utils/templates";
+import { generateShortUUID, generateOTPData } from "../utils/utility";
 
 export const adminDashboardController = catchAsync(async (req: JwtPayload, res: Response) => {
 const {currency, year}= req.query; 
@@ -143,3 +151,39 @@ export const fetchUserDetails = catchAsync(async (req: JwtPayload, res: Response
     }
     return successResponse(res, StatusCodes.OK, data);
 }); 
+export const addUserAdminController = catchAsync(async (req: JwtPayload, res: Response) => {
+        const {
+          userName,
+          email,
+        } = req.body;
+        const isEmailExists = await authService.findUserByEmail(email);
+    
+        if(isEmailExists) throw new BadRequestError("User with email already exists!");
+    
+        const isUserNameExists = await authService.findUserByUserName(userName);
+        if(isUserNameExists) throw new BadRequestError("UserName already exists!");
+    
+        const user: ICreateUser= {
+          userName,
+          email: email.toLowerCase(),
+          uniqueId:generateShortUUID()
+        }
+        const data = await authService.createUser(user);
+        await data.save();
+        const walletPayload ={
+          userId: data._id,
+          isDefault: true
+        }
+       const wallet = await walletService.createWallet(walletPayload);
+       data.wallets.push(wallet._id);
+       await data.save();
+        const plan = await planService.getPlanByName(PlanEnum.basic); 
+        if(!plan) throw new NotFoundError("Plan not found!");
+        const subscription = await subscriptionService.createSubscription({userId: data._id, planId: plan._id, startDate: new Date(), perks: plan.perks});
+        data.subscription = subscription._id;
+        await data.save();
+        const {html, subject} = welcomeMessageAdmin(userName);
+        sendEmail(email, subject,html); 
+       return successResponse(res,StatusCodes.CREATED, data);
+    });
+    
