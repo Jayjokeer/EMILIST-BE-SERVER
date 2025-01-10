@@ -13,7 +13,7 @@ router.route("/fetch-user-business").get(userAuth,businesController.fetchUserBus
 router.route("/delete-business/:businessId/image/:imageId").delete(userAuth,businesController.deleteBusinessImageController);
 router.route("/fetch-all-business").get(businesController.fetchAllBusinessController);
 router.route("/delete-business/:businessId").delete(userAuth,businesController.deleteBusinessController);
-
-
+router.route("/compare-business/:businessId").patch(userAuth,businesController.compareBusinessController);
+router.route("/fetch-compared-business").get(userAuth,businesController.fetchAllComparedBusinessesController );
 export { router as BusinessRoute };
 

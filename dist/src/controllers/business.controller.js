@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
+exports.fetchAllComparedBusinessesController = exports.compareBusinessController = exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -110,7 +110,7 @@ exports.deleteBusinessImageController = (0, error_handler_1.catchAsync)((req, re
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchAllBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { page = 1, limit = 10, startPriceRange, expertType, minRating, minReviews, location, noticePeriod, } = req.query;
+    const { page = 1, limit = 10, startPriceRange, expertType, minRating, minReviews, location, noticePeriod, userId, } = req.query;
     const filters = {
         startPriceRange,
         expertType,
@@ -119,7 +119,7 @@ exports.fetchAllBusinessController = (0, error_handler_1.catchAsync)((req, res) 
         location,
         noticePeriod
     };
-    const data = yield businessService.fetchAllBusiness(Number(page), Number(limit), filters);
+    const data = yield businessService.fetchAllBusiness(userId, Number(page), Number(limit), filters);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.deleteBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -152,4 +152,39 @@ exports.reviewBusinessController = (0, error_handler_1.catchAsync)((req, res) =>
     (_a = business.reviews) === null || _a === void 0 ? void 0 : _a.push(String(data._id));
     yield business.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.compareBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user._id;
+    const { businessId } = req.params;
+    console.log(userId);
+    const business = yield businessService.fetchSingleBusiness(businessId);
+    if (!business) {
+        throw new error_1.NotFoundError("No service found!");
+    }
+    const user = yield authService.findUserById(userId);
+    if (!user) {
+        throw new error_1.NotFoundError("User not found");
+    }
+    const businessIndex = user.comparedBusinesses.findIndex((id) => id.toString() === businessId);
+    if (businessIndex !== -1) {
+        user.comparedBusinesses.splice(businessIndex, 1);
+    }
+    else {
+        user.comparedBusinesses.push(businessId);
+    }
+    yield user.save();
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        message: "Compared businesses updated successfully",
+        comparedBusinesses: user.comparedBusinesses,
+    });
+}));
+exports.fetchAllComparedBusinessesController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user._id;
+    const user = yield authService.findUserById(userId);
+    if (!user) {
+        throw new error_1.NotFoundError("User not found");
+    }
+    ;
+    const businesses = yield businessService.fetchAllComparedBusinesses(user.comparedBusinesses);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, businesses);
 }));

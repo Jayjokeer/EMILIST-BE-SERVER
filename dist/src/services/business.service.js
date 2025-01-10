@@ -1,4 +1,27 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -12,8 +35,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
+exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
+const error_1 = require("../errors/error");
 const business_model_1 = __importDefault(require("../models/business.model"));
+const userService = __importStar(require("./auth.service"));
 const createBusiness = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield business_model_1.default.create(data);
 });
@@ -139,7 +164,7 @@ const fetchSingleBusinessWithDetails = (businessId) => __awaiter(void 0, void 0,
     return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
 });
 exports.fetchSingleBusinessWithDetails = fetchSingleBusinessWithDetails;
-const fetchAllBusiness = (page, limit, filters) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllBusiness = (userId, page, limit, filters) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
     const query = {};
     if (filters.startPriceRange) {
@@ -161,6 +186,15 @@ const fetchAllBusiness = (page, limit, filters) => __awaiter(void 0, void 0, voi
     if (filters.noticePeriod) {
         query.noticePeriod = filters.noticePeriod;
     }
+    let user;
+    if (userId) {
+        user = yield userService.findUserById(userId);
+        if (!user) {
+            throw new error_1.NotFoundError('User not found');
+        }
+        ;
+    }
+    const comparedBusinesses = (user === null || user === void 0 ? void 0 : user.comparedBusinesses) || [];
     const businesses = yield business_model_1.default.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -173,7 +207,7 @@ const fetchAllBusiness = (page, limit, filters) => __awaiter(void 0, void 0, voi
         const averageRating = totalReviews > 0
             ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
-        return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
+        return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)), isCompared: comparedBusinesses.some((id) => String(id) == String(business._id)) });
     })
         .filter((business) => {
         if (filters.minRating && business.averageRating < filters.minRating) {
@@ -203,3 +237,8 @@ const fetchAllUserBusinessesAdmin = (userId) => __awaiter(void 0, void 0, void 0
         .lean();
 });
 exports.fetchAllUserBusinessesAdmin = fetchAllUserBusinessesAdmin;
+const fetchAllComparedBusinesses = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
+    const businesses = yield business_model_1.default.find({ _id: { $in: businessId } });
+    return businesses;
+});
+exports.fetchAllComparedBusinesses = fetchAllComparedBusinesses;

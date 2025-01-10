@@ -3,6 +3,7 @@ import { NotFoundError } from "../errors/error";
 import IBusiness from "../interfaces/business.interface";
 import Business from "../models/business.model";
 import Review from "../models/review.model";
+import * as userService from "./auth.service";
 
 export const createBusiness = async (data:  IBusiness) =>{
     return await Business.create(data);
@@ -152,6 +153,7 @@ export const fetchSingleBusinessWithDetails = async (businessId: string)=>{
 };
 
 export const fetchAllBusiness = async (
+  userId: string,
   page: number,
   limit: number,
   filters: {
@@ -189,6 +191,15 @@ export const fetchAllBusiness = async (
   if (filters.noticePeriod) {
     query.noticePeriod = filters.noticePeriod;
   }
+  let user;
+  if(userId){
+     user = await userService.findUserById(userId);
+    if (!user) {
+      throw new NotFoundError('User not found');
+    };  }
+  
+
+  const comparedBusinesses = user?.comparedBusinesses || []; 
 
   const businesses = await Business.find(query)
     .sort({ createdAt: -1 })
@@ -205,11 +216,14 @@ export const fetchAllBusiness = async (
         totalReviews > 0
           ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
           : 0;
-
       return {
         ...business.toObject(),
         totalReviews,
         averageRating: parseFloat(averageRating.toFixed(2)),
+        isCompared: comparedBusinesses.some(
+          (id: any) => String(id) == String(business._id)
+        ),
+
       };
     })
     .filter((business) => {
@@ -240,4 +254,8 @@ export const fetchAllUserBusinessesAdmin = async (userId: string)=>{
     .sort({ createdAt: -1 })
     .populate('reviews', 'rating')
     .lean();
+};
+export const fetchAllComparedBusinesses = async (businessId: string[])=>{
+  const businesses = await Business.find({ _id: { $in: businessId } });
+  return businesses;
 };

@@ -60,5 +60,6 @@ const userSchema = new mongoose_1.default.Schema({
     subscription: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Subscription' },
     isVerified: { type: Boolean, default: false },
     requestedVerification: { type: Boolean, default: false },
+    comparedBusinesses: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Business' }]
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Users', userSchema);

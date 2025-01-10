@@ -33,6 +33,7 @@ export interface IUser {
     isVerified?: boolean;
     requestedVerification?: boolean;
     level: JobExpertLevel;
+    comparedBusinesses? : any;
   }
   
 export interface ICreateUser {

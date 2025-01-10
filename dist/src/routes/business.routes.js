@@ -38,3 +38,5 @@ router.route("/fetch-user-business").get(current_user_1.userAuth, businesControl
 router.route("/delete-business/:businessId/image/:imageId").delete(current_user_1.userAuth, businesController.deleteBusinessImageController);
 router.route("/fetch-all-business").get(businesController.fetchAllBusinessController);
 router.route("/delete-business/:businessId").delete(current_user_1.userAuth, businesController.deleteBusinessController);
+router.route("/compare-business/:businessId").patch(current_user_1.userAuth, businesController.compareBusinessController);
+router.route("/fetch-compared-business").get(current_user_1.userAuth, businesController.fetchAllComparedBusinessesController);

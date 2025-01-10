@@ -102,8 +102,9 @@ export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, re
         minReviews,
         location,
         noticePeriod,
+        userId,
     } = req.query;
-
+    
     const filters=  {
         startPriceRange,
         expertType,
@@ -112,7 +113,8 @@ export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, re
         location,
         noticePeriod
       }
-    const data = await businessService.fetchAllBusiness(    
+    const data = await businessService.fetchAllBusiness( 
+    userId,   
     Number(page),
     Number(limit),
     filters,
@@ -150,4 +152,46 @@ export const reviewBusinessController = catchAsync(async (req: JwtPayload, res: 
     business.reviews?.push(String(data._id));
     await business.save();
     return successResponse(res, StatusCodes.OK, data);
+});
+export const compareBusinessController = catchAsync (async(req: JwtPayload, res: Response)=>{
+    const userId = req.user._id;
+const {businessId} = req.params;
+console.log(userId)
+const business = await businessService.fetchSingleBusiness(businessId);
+if(!business){
+
+    throw new NotFoundError("No service found!");
+}
+    const user = await authService.findUserById(userId);
+    if(!user){
+        throw new NotFoundError("User not found");
+    }
+
+    const businessIndex = user.comparedBusinesses.findIndex(
+        (id: any) => id.toString() === businessId
+      );
+    
+    if (businessIndex !== -1) {
+      user.comparedBusinesses.splice(businessIndex, 1);
+    } else {
+      user.comparedBusinesses.push(businessId);
+    }
+  
+    await user.save();
+  
+    return successResponse(res, StatusCodes.OK, {
+      message: "Compared businesses updated successfully",
+      comparedBusinesses: user.comparedBusinesses,
+    });
+
+});
+
+export const fetchAllComparedBusinessesController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user._id;
+    const user = await authService.findUserById(userId);
+    if(!user){
+        throw new NotFoundError("User not found");
+    };
+    const businesses = await businessService.fetchAllComparedBusinesses(user.comparedBusinesses);
+    return successResponse(res, StatusCodes.OK, businesses);
 });
