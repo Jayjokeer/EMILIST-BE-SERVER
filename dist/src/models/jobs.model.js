@@ -47,13 +47,6 @@ const MilestoneSchema = new mongoose_1.Schema({
         enum: jobs_enum_1.MilestonePaymentStatus,
         default: jobs_enum_1.MilestonePaymentStatus.unpaid,
     },
-    accountDetails: {
-        bank: { type: String },
-        accountNumber: { type: String },
-        accountName: { type: String },
-        paymentMethod: { type: String },
-        note: { type: String },
-    },
     paymentInfo: {
         amountPaid: { type: Number },
         paymentMethod: { type: String, enum: transaction_enum_1.PaymentMethodEnum },

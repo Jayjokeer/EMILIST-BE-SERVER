@@ -188,7 +188,7 @@ exports.resetPasswordController = (0, error_handler_1.catchAsync)((req, res) => 
 }));
 exports.updateUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
-    const { fullName, gender, language, number1, number2, whatsAppNo, location, bio, } = req.body;
+    const { fullName, gender, language, number1, number2, whatsAppNo, location, bio, accountDetails, } = req.body;
     const foundUser = yield authService.findUserById(userId);
     if (!foundUser)
         throw new error_1.NotFoundError("User not found!");
@@ -200,6 +200,7 @@ exports.updateUserController = (0, error_handler_1.catchAsync)((req, res) => __a
     foundUser.whatsAppNo = whatsAppNo || foundUser.whatsAppNo;
     foundUser.location = location || foundUser.location;
     foundUser.bio = bio || foundUser.bio;
+    foundUser.accountDetails = accountDetails || foundUser.accountDetails;
     if (req.file) {
         foundUser.profileImage = req.file.path;
     }

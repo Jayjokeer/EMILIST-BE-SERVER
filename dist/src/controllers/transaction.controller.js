@@ -32,11 +32,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllTransactionsByUsersController = exports.fetchAllTransactionsByStatusController = exports.fetchSingleTransactionController = void 0;
+exports.fetchUserEarningsController = exports.fetchAllTransactionsByUsersController = exports.fetchAllTransactionsByStatusController = exports.fetchSingleTransactionController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const transactionService = __importStar(require("../services/transaction.service"));
+const transaction_enum_1 = require("../enums/transaction.enum");
 exports.fetchSingleTransactionController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { transactionId } = req.params;
     const data = yield transactionService.fetchSingleTransactionWithDetails(transactionId);
@@ -51,5 +52,61 @@ exports.fetchAllTransactionsByUsersController = (0, error_handler_1.catchAsync)(
     const { page, limit, paymentMethod } = req.query;
     const userId = req.user._id;
     const data = yield transactionService.fetchAllTransactionsByUser(userId, page, limit, paymentMethod);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.fetchUserEarningsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user._id;
+    const { year, month } = req.query;
+    const reportYear = parseInt(year, 10);
+    const reportMonth = month ? parseInt(month, 10) : null;
+    let startDate;
+    let endDate;
+    if (reportMonth) {
+        startDate = new Date(reportYear, reportMonth - 1, 1);
+        endDate = new Date(reportYear, reportMonth, 0);
+    }
+    else {
+        startDate = new Date(reportYear, 0, 1);
+        endDate = new Date(reportYear, 11, 31);
+    }
+    const transactions = yield transactionService.fetchUserEarnings(userId, startDate, endDate);
+    let totalEarned = 0;
+    let totalSpent = 0;
+    transactions.forEach((transaction) => {
+        if (transaction.type === transaction_enum_1.TransactionType.CREDIT) {
+            totalEarned += transaction.amount;
+        }
+        else if (transaction.type === transaction_enum_1.TransactionType.DEBIT) {
+            totalSpent += transaction.amount;
+        }
+    });
+    const earningsStatistics = [];
+    if (!reportMonth) {
+        for (let i = 0; i < 12; i++) {
+            const monthlyStart = new Date(reportYear, i, 1);
+            const monthlyEnd = new Date(reportYear, i + 1, 0);
+            const monthlyTransactions = transactions.filter((transaction) => transaction.dateCompleted >= monthlyStart && transaction.dateCompleted <= monthlyEnd);
+            let monthlyEarned = 0;
+            let monthlySpent = 0;
+            monthlyTransactions.forEach((transaction) => {
+                if (transaction.type === transaction_enum_1.TransactionType.CREDIT) {
+                    monthlyEarned += transaction.amount;
+                }
+                else if (transaction.type === transaction_enum_1.TransactionType.DEBIT) {
+                    monthlySpent += transaction.amount;
+                }
+            });
+            earningsStatistics.push({
+                month: new Date(reportYear, i).toLocaleString('default', { month: 'short' }),
+                earned: monthlyEarned,
+                spent: monthlySpent,
+            });
+        }
+    }
+    const data = {
+        totalEarned,
+        totalSpent,
+        earningsStatistics: reportMonth ? [] : earningsStatistics,
+    };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
