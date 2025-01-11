@@ -38,7 +38,12 @@ const userSchema: Schema = new mongoose.Schema(
     subscription: { type: Schema.Types.ObjectId, ref: 'Subscription' },
     isVerified: {type: Boolean, default: false},
     requestedVerification: {type: Boolean, default: false},
-    comparedBusinesses:  [{ type: Schema.Types.ObjectId, ref: 'Business' }]
+    comparedBusinesses:  [{ type: Schema.Types.ObjectId, ref: 'Business' }],
+    accountDetails: {
+      number: {type: Number},
+      bank: {type: String},
+      holdersName: {type: String},
+    }
   },
   { timestamps: true }
 

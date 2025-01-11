@@ -34,6 +34,7 @@ export interface IUser {
     requestedVerification?: boolean;
     level: JobExpertLevel;
     comparedBusinesses? : any;
+    accountDetails?: any;
   }
   
 export interface ICreateUser {

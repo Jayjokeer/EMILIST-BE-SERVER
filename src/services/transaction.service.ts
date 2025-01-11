@@ -186,3 +186,11 @@ export const fetchTransactionChartAdminDashboard = async(year: number, currency:
 export const fetchTransactionsByService = async (userId: string, serviceType: ServiceEnum, )=>{
     return await Transaction.find({userId, serviceType});
 };
+
+export const fetchUserEarnings = async (userId: string, startDate: Date, endDate: Date )=>{
+  return await Transaction.find({
+    userId,
+    dateCompleted: { $gte: startDate, $lte: endDate },
+    status: TransactionEnum.completed,
+  });
+}

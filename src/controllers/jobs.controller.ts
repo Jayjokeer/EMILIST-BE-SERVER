@@ -534,7 +534,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   export const updateMilestoneStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
     const user = req.user;
     const {milestoneId, jobId} = req.params;
-    const {status, bank, accountNumber, accountName, paymentMethod, note} = req.body;
+    const {status} = req.body;
     const job = await jobService.fetchJobById(String(jobId));
     if(!job)  {
       throw new NotFoundError("Job not found!")
@@ -567,13 +567,6 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
         nextMilestone.status = MilestoneEnum.active;
       }
 
-      milestone.accountDetails = {
-        bank,
-        accountNumber,
-        accountName,
-        paymentMethod,
-        note
-      };
       const allMilestonesCompleted = job.milestones.every(
         (m: any) => m.status === MilestoneEnum.completed
       );

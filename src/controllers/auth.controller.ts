@@ -183,6 +183,7 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
     whatsAppNo,
     location,
     bio,
+    accountDetails,
   } = req.body;
 
   const foundUser = await authService.findUserById(userId);
@@ -197,6 +198,7 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
   foundUser.whatsAppNo = whatsAppNo || foundUser.whatsAppNo;
   foundUser.location = location || foundUser.location;
   foundUser.bio = bio || foundUser.bio;
+  foundUser.accountDetails = accountDetails || foundUser.accountDetails;
   if (req.file) {
      foundUser.profileImage = req.file.path;
   }

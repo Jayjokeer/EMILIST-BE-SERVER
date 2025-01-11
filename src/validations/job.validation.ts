@@ -229,33 +229,6 @@ export const validateMilestoneStatusUpdate = (req: Request, res: Response, next:
         'any.only': `Invalid status, must be one of: ${Object.values(MilestoneEnum).join(', ')}`,
         'any.required': 'Status is required',
       }),
-    bank: Joi.string().when('status', {
-      is: MilestoneEnum.completed,
-      then: Joi.required().messages({
-        'string.empty': 'Bank is required when status is completed',
-      }),
-      otherwise: Joi.forbidden(),
-    }),
-    accountNumber: Joi.string().when('status', {
-      is: MilestoneEnum.completed,
-      then: Joi.required().messages({
-        'string.empty': 'Account number is required when status is completed',
-      }),
-      otherwise: Joi.forbidden(),
-    }),
-    accountName: Joi.string().when('status', {
-      is: MilestoneEnum.completed,
-      then: Joi.required().messages({
-        'string.empty': 'Account name is required when status is completed',
-      }),
-      otherwise: Joi.forbidden(),
-    }),
-    paymentMethod: Joi.string().optional().messages({
-      'string.empty': 'Payment Method must be a string',
-    }),
-    note: Joi.string().optional().messages({
-      'string.empty': 'Note must be a string',
-    }),
   });
 
   const { error } = milestoneValidation.validate(req.body, { abortEarly: false });
