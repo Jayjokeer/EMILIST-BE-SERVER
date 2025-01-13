@@ -97,6 +97,9 @@ const validateJob = (req, res, next) => {
         email: joi_1.default.string().optional().messages({
             'string.empty': 'Email must be a string',
         }),
+        identifier: joi_1.default.string().optional().messages({
+            'string.empty': 'Identifier must be a string',
+        }),
     });
     const { error } = jobValidation.validate(req.body, { abortEarly: false });
     if (error) {

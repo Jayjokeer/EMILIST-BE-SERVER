@@ -73,7 +73,8 @@ exports.fetchUserEarningsController = (0, error_handler_1.catchAsync)((req, res)
     let totalEarned = 0;
     let totalSpent = 0;
     transactions.forEach((transaction) => {
-        if (transaction.type === transaction_enum_1.TransactionType.CREDIT) {
+        if (String(transaction.recieverId) === String(userId) &&
+            (transaction.serviceType === transaction_enum_1.ServiceEnum.job || transaction.serviceType === transaction_enum_1.ServiceEnum.material)) {
             totalEarned += transaction.amount;
         }
         else if (transaction.type === transaction_enum_1.TransactionType.DEBIT) {

@@ -24,8 +24,12 @@ import { PlanEnum } from "../enums/plan.enum";
 import { ICreateUser } from "../interfaces/user.interface";
 import { hashPassword } from "../utils/hashing";
 import { sendEmail } from "../utils/send_email";
-import { otpMessage, welcomeMessageAdmin } from "../utils/templates";
+import { directJobApplicationMessage, otpMessage, welcomeMessageAdmin } from "../utils/templates";
 import { generateShortUUID, generateOTPData } from "../utils/utility";
+import { IJob } from "../interfaces/jobs.interface";
+import mongoose from "mongoose";
+import { JobType } from "../enums/jobs.enum";
+import { ProjectStatusEnum } from "../enums/project.enum";
 
 export const adminDashboardController = catchAsync(async (req: JwtPayload, res: Response) => {
 const {currency, year}= req.query; 
@@ -187,3 +191,97 @@ export const addUserAdminController = catchAsync(async (req: JwtPayload, res: Re
        return successResponse(res,StatusCodes.CREATED, data);
     });
     
+
+export const fetchJobsAdminController = catchAsync(async(req: JwtPayload, res: Response) => {
+    const {status} = req.query;
+    let data =[];
+    const jobs = await jobService.fetchAllJobsAdmin(status);
+    for (const job of jobs){
+        const user = await userService.findUserById(job.userId)
+        data.push( {
+            jobId: job._id,
+            title: job.title,
+            poster: user?.fullName,
+            createdAt: job.createdAt,
+            status: job.status,
+            type: job.type,
+        });
+    }
+    
+    return successResponse(res,StatusCodes.OK, data);
+});
+
+export const fetchSingleJobAdminController = catchAsync(async(req: JwtPayload, res: Response) => {
+    const {jobId} = req.params;
+    const data = await jobService.fetchJobByIdWithDetails(jobId);
+    
+    return successResponse(res,StatusCodes.OK, data);
+});
+
+export const createJobAdminController = catchAsync( async (req: JwtPayload, res: Response) => {
+    const job: IJob = req.body;
+
+    const files = req.files as Express.Multer.File[];
+    if (files && files.length > 0) {
+      const fileObjects = files.map((file) => ({
+        id: new mongoose.Types.ObjectId(),
+        url: file.path, 
+      }));
+      job.jobFiles = fileObjects;
+    }
+let user;
+if (!req.body.identifier){
+    throw new BadRequestError('uniqueId, user ID or email is required!') 
+}
+user  = await authService.findUserUsingUniqueIdEmailUserId(req.body.identifier);    
+if(!user) throw new NotFoundError("User not found!");
+
+  if(job.type == JobType.direct && (job.email || job.userName)){
+
+      const userId = user.id;
+      job.userId = userId;
+
+      const data = await jobService.createJob(job);
+
+      const payload:any = {
+        job: data._id,
+        user: user._id,
+        creator: userId,
+        directJobStatus: ProjectStatusEnum.pending,
+      };
+       const project = await projectService.createProject(payload);
+       data.applications = [];
+       data.applications!.push(String(project._id));
+       data.acceptedApplicationId = String(project._id);
+       data.save();
+       const { html, subject } = directJobApplicationMessage(user.userName, req.user.userName, String(data._id));
+       await sendEmail(user.email, subject, html); 
+      successResponse(res,StatusCodes.CREATED, data);
+
+  } else {
+    
+    job.userId = String(user._id);
+    const data = await jobService.createJob(job);
+
+    successResponse(res,StatusCodes.CREATED, data);
+}
+});
+
+export const fetchAllMaterialsAdminController = catchAsync( async (req: JwtPayload, res: Response) => {
+    const {q} = req.query;
+
+    let data;
+
+    const products = await productService.fetchAllProductsAdmin();
+
+    if(q == 'inStock'){
+        data = products.filter((product: any) => product.availableQuantity > 0);
+        
+    }else if (q == 'outOfStock'){
+        data = products.filter((product: any)  => product.availableQuantity <= 0);
+    }else {
+        data = products;
+    }
+    successResponse(res,StatusCodes.OK, data);
+
+});

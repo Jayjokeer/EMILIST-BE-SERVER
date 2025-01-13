@@ -22,12 +22,12 @@ export interface IJob {
     acceptedApplicationId?: string;
     startDate?: Date;
     pausedDate?: Date;
-    email?: string;
+    email?: string; 
     userName?: string; 
     isRequestForQuote?: boolean; 
     isClosed?: boolean;
     review?: any;
-    
+    createdAt?: any;
 }
 
 export interface IMilestone {

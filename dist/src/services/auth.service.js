@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyUser = exports.fetchAllUsersAdmin = exports.fetchAllUsersAdminDashboard = exports.fetchUserMutedJobs = exports.findSpecificUser = exports.findUserByEmailOrUserName = exports.findUserByUniqueId = exports.findUserByIdWithPassword = exports.findUserByUserName = exports.updateUserById = exports.findTokenService = exports.createUser = exports.findUserById = exports.findUserByEmail = void 0;
+exports.findUserUsingUniqueIdEmailUserId = exports.verifyUser = exports.fetchAllUsersAdmin = exports.fetchAllUsersAdminDashboard = exports.fetchUserMutedJobs = exports.findSpecificUser = exports.findUserByEmailOrUserName = exports.findUserByUniqueId = exports.findUserByIdWithPassword = exports.findUserByUserName = exports.updateUserById = exports.findTokenService = exports.createUser = exports.findUserById = exports.findUserByEmail = void 0;
 const users_model_1 = __importDefault(require("../models/users.model"));
 const findUserByEmail = (email) => __awaiter(void 0, void 0, void 0, function* () {
     return yield users_model_1.default.findOne({ email: email });
@@ -95,3 +95,13 @@ const verifyUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     return yield users_model_1.default.findByIdAndUpdate(userId, { $set: { isVerified: true } }, { new: true });
 });
 exports.verifyUser = verifyUser;
+const findUserUsingUniqueIdEmailUserId = (identifier) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield users_model_1.default.findOne({
+        $or: [
+            { _id: identifier },
+            { username: identifier },
+            { uniqueId: identifier },
+        ],
+    });
+});
+exports.findUserUsingUniqueIdEmailUserId = findUserUsingUniqueIdEmailUserId;

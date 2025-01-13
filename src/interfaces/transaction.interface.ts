@@ -23,5 +23,6 @@ export interface ITransaction extends Document {
     orderId: any;
     serviceType: ServiceEnum;
     planId: any;
+    recieverId?: mongoose.Schema.Types.ObjectId;
   };
   

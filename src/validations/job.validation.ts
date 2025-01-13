@@ -93,6 +93,9 @@ export const validateJob = (req: Request, res: Response, next: NextFunction) => 
   email: Joi.string().optional().messages({
     'string.empty': 'Email must be a string',
   }),
+  identifier: Joi.string().optional().messages({
+    'string.empty': 'Identifier must be a string',
+  }),
 });
 
 const { error } = jobValidation.validate(req.body, { abortEarly: false });

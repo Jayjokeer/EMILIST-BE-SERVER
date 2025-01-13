@@ -78,4 +78,14 @@ export const fetchAllUsersAdmin = async(page: number, limit: number, q: string)=
 
   export const verifyUser = async (userId: string)=>{
     return await Users.findByIdAndUpdate(userId, { $set: { isVerified: true } }, { new: true });
+  };
+ 
+  export const findUserUsingUniqueIdEmailUserId = async(identifier: string)=>{
+   return  await Users.findOne({
+      $or: [
+        { _id: identifier }, 
+        { username: identifier }, 
+        { uniqueId: identifier }, 
+      ],
+    });
   }

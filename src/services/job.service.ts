@@ -621,6 +621,23 @@ export const fetchAllUserJobsAdmin = async (userId: string) => {
   .populate('applications', 'title description status')
   .lean();
 };
+export const fetchAllJobsAdmin = async (status: string)=>{
+  let data; 
+  if (status === 'notStarted'){
+    data = await Jobs.find({status: JobStatusEnum.pending});
+  }else if(status === 'inProgress'){
+    data = await Jobs.find({status: JobStatusEnum.active})
+  }else if (status === 'completed'){
+    data = await Jobs.find({status: JobStatusEnum.complete})
+  }
+  else{
+    data = await Jobs.find();
+  }
+  
+
+  return data;
+};
+
 
   // export const checkOverdueMilestones = async () => {
   //   const jobs = await Jobs.find({

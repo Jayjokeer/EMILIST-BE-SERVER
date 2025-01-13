@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllUserProductsAdmin = exports.fetchAllProductsForAdmin = exports.fetchReviewForProduct = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
+exports.fetchAllProductsAdmin = exports.fetchAllUserProductsAdmin = exports.fetchAllProductsForAdmin = exports.fetchReviewForProduct = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const product_model_1 = __importDefault(require("../models/product.model"));
 const productLike_model_1 = __importDefault(require("../models/productLike.model"));
@@ -208,3 +208,7 @@ const fetchAllUserProductsAdmin = (userId) => __awaiter(void 0, void 0, void 0, 
     return yield product_model_1.default.find({ userId });
 });
 exports.fetchAllUserProductsAdmin = fetchAllUserProductsAdmin;
+const fetchAllProductsAdmin = () => __awaiter(void 0, void 0, void 0, function* () {
+    return yield product_model_1.default.find().populate('userId', 'fullName');
+});
+exports.fetchAllProductsAdmin = fetchAllProductsAdmin;

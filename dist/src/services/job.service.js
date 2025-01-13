@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
+exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -557,6 +557,23 @@ const fetchAllUserJobsAdmin = (userId) => __awaiter(void 0, void 0, void 0, func
         .lean();
 });
 exports.fetchAllUserJobsAdmin = fetchAllUserJobsAdmin;
+const fetchAllJobsAdmin = (status) => __awaiter(void 0, void 0, void 0, function* () {
+    let data;
+    if (status === 'notStarted') {
+        data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.pending });
+    }
+    else if (status === 'inProgress') {
+        data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.active });
+    }
+    else if (status === 'completed') {
+        data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.complete });
+    }
+    else {
+        data = yield jobs_model_1.default.find();
+    }
+    return data;
+});
+exports.fetchAllJobsAdmin = fetchAllJobsAdmin;
 // export const checkOverdueMilestones = async () => {
 //   const jobs = await Jobs.find({
 //     status: { $in: [JobStatusEnum.active, JobStatusEnum.paused] },

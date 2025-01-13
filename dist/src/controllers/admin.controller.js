@@ -31,8 +31,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
+exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -54,6 +57,9 @@ const plan_enum_1 = require("../enums/plan.enum");
 const send_email_1 = require("../utils/send_email");
 const templates_1 = require("../utils/templates");
 const utility_1 = require("../utils/utility");
+const mongoose_1 = __importDefault(require("mongoose"));
+const jobs_enum_1 = require("../enums/jobs.enum");
+const project_enum_1 = require("../enums/project.enum");
 exports.adminDashboardController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { currency, year } = req.query;
     const data = {
@@ -204,4 +210,83 @@ exports.addUserAdminController = (0, error_handler_1.catchAsync)((req, res) => _
     const { html, subject } = (0, templates_1.welcomeMessageAdmin)(userName);
     (0, send_email_1.sendEmail)(email, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+}));
+exports.fetchJobsAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { status } = req.query;
+    let data = [];
+    const jobs = yield jobService.fetchAllJobsAdmin(status);
+    for (const job of jobs) {
+        const user = yield userService.findUserById(job.userId);
+        data.push({
+            jobId: job._id,
+            title: job.title,
+            poster: user === null || user === void 0 ? void 0 : user.fullName,
+            createdAt: job.createdAt,
+            status: job.status,
+            type: job.type,
+        });
+    }
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.fetchSingleJobAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { jobId } = req.params;
+    const data = yield jobService.fetchJobByIdWithDetails(jobId);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.createJobAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const job = req.body;
+    const files = req.files;
+    if (files && files.length > 0) {
+        const fileObjects = files.map((file) => ({
+            id: new mongoose_1.default.Types.ObjectId(),
+            url: file.path,
+        }));
+        job.jobFiles = fileObjects;
+    }
+    let user;
+    if (!req.body.identifier) {
+        throw new error_1.BadRequestError('uniqueId, user ID or email is required!');
+    }
+    user = yield authService.findUserUsingUniqueIdEmailUserId(req.body.identifier);
+    if (!user)
+        throw new error_1.NotFoundError("User not found!");
+    if (job.type == jobs_enum_1.JobType.direct && (job.email || job.userName)) {
+        const userId = user.id;
+        job.userId = userId;
+        const data = yield jobService.createJob(job);
+        const payload = {
+            job: data._id,
+            user: user._id,
+            creator: userId,
+            directJobStatus: project_enum_1.ProjectStatusEnum.pending,
+        };
+        const project = yield projectService.createProject(payload);
+        data.applications = [];
+        data.applications.push(String(project._id));
+        data.acceptedApplicationId = String(project._id);
+        data.save();
+        const { html, subject } = (0, templates_1.directJobApplicationMessage)(user.userName, req.user.userName, String(data._id));
+        yield (0, send_email_1.sendEmail)(user.email, subject, html);
+        (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    }
+    else {
+        job.userId = String(user._id);
+        const data = yield jobService.createJob(job);
+        (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    }
+}));
+exports.fetchAllMaterialsAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { q } = req.query;
+    let data;
+    const products = yield productService.fetchAllProductsAdmin();
+    if (q == 'inStock') {
+        data = products.filter((product) => product.availableQuantity > 0);
+    }
+    else if (q == 'outOfStock') {
+        data = products.filter((product) => product.availableQuantity <= 0);
+    }
+    else {
+        data = products;
+    }
+    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

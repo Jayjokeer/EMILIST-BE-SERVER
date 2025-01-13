@@ -4,7 +4,7 @@ import { catchAsync } from "../errors/error-handler";
 import { successResponse } from "../helpers/success-response";
 import * as transactionService from "../services/transaction.service";
 import { NextFunction, Request, Response } from "express";
-import { TransactionType } from "../enums/transaction.enum";
+import { ServiceEnum, TransactionType } from "../enums/transaction.enum";
 
 export const fetchSingleTransactionController =  catchAsync(async (req: JwtPayload, res: Response) => {
     const {transactionId} = req.params;
@@ -51,8 +51,9 @@ export const fetchUserEarningsController =  catchAsync(async (req: JwtPayload, r
   let totalSpent = 0;
 
   transactions.forEach((transaction) => {
-    if (transaction.type === TransactionType.CREDIT) {
-      totalEarned += transaction.amount;
+    if (String(transaction.recieverId) === String(userId) && 
+    (transaction.serviceType === ServiceEnum.job || transaction.serviceType === ServiceEnum.material)){
+          totalEarned += transaction.amount;
     } else if (transaction.type === TransactionType.DEBIT ) {
       totalSpent += transaction.amount;
     }

@@ -234,4 +234,9 @@ export const fetchAllProductsForAdmin = async () => {
 
 export const fetchAllUserProductsAdmin = async (userId: string) => {
     return await Product.find({ userId });
-}
+};
+
+export const fetchAllProductsAdmin = async () =>{
+
+  return  await Product.find().populate('userId', 'fullName');
+};

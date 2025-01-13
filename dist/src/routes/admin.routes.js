@@ -28,6 +28,8 @@ const express_1 = require("express");
 const current_user_1 = require("../middlewares/current-user");
 const adminController = __importStar(require("../controllers/admin.controller"));
 const admin_validation_1 = require("../validations/admin.validation");
+const image_upload_1 = require("../utils/image-upload");
+const job_validation_1 = require("../validations/job.validation");
 const router = (0, express_1.Router)();
 exports.AdminRoute = router;
 router.route("/dashboard").get(current_user_1.adminAuth, adminController.adminDashboardController);
@@ -36,3 +38,6 @@ router.route("/verify-user/:userId").patch(current_user_1.adminAuth, adminContro
 router.route("/fetch-userDetails/:userId").get(current_user_1.adminAuth, adminController.fetchUserDetails);
 router.route("/suspend-user/:userId").patch(current_user_1.adminAuth, adminController.suspendUserAdminController);
 router.route("/add-user").post(current_user_1.adminAuth, admin_validation_1.validateAddUserAdmin, adminController.addUserAdminController);
+router.route("/fetch-jobs").get(current_user_1.adminAuth, adminController.fetchJobsAdminController);
+router.route("/fetch-job/:jobId").get(current_user_1.adminAuth, adminController.fetchSingleJobAdminController);
+router.route("/create-job").post(current_user_1.adminAuth, image_upload_1.multipleUpload, job_validation_1.validateJob, adminController.createJobAdminController);
