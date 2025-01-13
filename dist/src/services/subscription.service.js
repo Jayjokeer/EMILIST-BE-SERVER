@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.findExpiredSubscriptions = exports.getSubscriptionById = exports.getActiveSubscriptionWithoutDetails = exports.getActiveSubscription = exports.createSubscription = void 0;
+exports.fetchAllSubscriptionsAdmin = exports.findExpiredSubscriptions = exports.getSubscriptionById = exports.getActiveSubscriptionWithoutDetails = exports.getActiveSubscription = exports.createSubscription = void 0;
 const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const subscription_model_1 = __importDefault(require("../models/subscription.model"));
 const createSubscription = (data) => __awaiter(void 0, void 0, void 0, function* () {
@@ -39,3 +39,10 @@ const findExpiredSubscriptions = () => __awaiter(void 0, void 0, void 0, functio
     });
 });
 exports.findExpiredSubscriptions = findExpiredSubscriptions;
+const fetchAllSubscriptionsAdmin = (limit, page) => __awaiter(void 0, void 0, void 0, function* () {
+    const skip = (page - 1) * limit;
+    const subscriptions = yield subscription_model_1.default.find().skip(skip).limit(limit);
+    const totalSubscriptions = yield subscription_model_1.default.countDocuments();
+    return { subscriptions, totalSubscriptions };
+});
+exports.fetchAllSubscriptionsAdmin = fetchAllSubscriptionsAdmin;

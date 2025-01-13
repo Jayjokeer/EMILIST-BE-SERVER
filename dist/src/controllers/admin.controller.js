@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
+exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -212,12 +212,12 @@ exports.addUserAdminController = (0, error_handler_1.catchAsync)((req, res) => _
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.fetchJobsAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { status } = req.query;
-    let data = [];
-    const jobs = yield jobService.fetchAllJobsAdmin(status);
+    const { status, page, limit } = req.query;
+    let allJobs = [];
+    const { totalJobs, jobs } = yield jobService.fetchAllJobsAdmin(status, page, limit);
     for (const job of jobs) {
         const user = yield userService.findUserById(job.userId);
-        data.push({
+        allJobs.push({
             jobId: job._id,
             title: job.title,
             poster: user === null || user === void 0 ? void 0 : user.fullName,
@@ -226,6 +226,11 @@ exports.fetchJobsAdminController = (0, error_handler_1.catchAsync)((req, res) =>
             type: job.type,
         });
     }
+    const data = {
+        jobs: allJobs,
+        totalJobs,
+        page,
+    };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchSingleJobAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -267,7 +272,7 @@ exports.createJobAdminController = (0, error_handler_1.catchAsync)((req, res) =>
         data.save();
         const { html, subject } = (0, templates_1.directJobApplicationMessage)(user.userName, req.user.userName, String(data._id));
         yield (0, send_email_1.sendEmail)(user.email, subject, html);
-        (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
     else {
         job.userId = String(user._id);
@@ -276,17 +281,37 @@ exports.createJobAdminController = (0, error_handler_1.catchAsync)((req, res) =>
     }
 }));
 exports.fetchAllMaterialsAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { q } = req.query;
-    let data;
-    const products = yield productService.fetchAllProductsAdmin();
+    const { q, page, limit } = req.query;
+    let products;
+    const { materials, totalMaterials } = yield productService.fetchAllProductsAdmin(page, limit);
     if (q == 'inStock') {
-        data = products.filter((product) => product.availableQuantity > 0);
+        products = materials.filter((material) => material.availableQuantity > 0);
     }
     else if (q == 'outOfStock') {
-        data = products.filter((product) => product.availableQuantity <= 0);
+        products = materials.filter((material) => material.availableQuantity <= 0);
     }
     else {
-        data = products;
+        products = materials;
     }
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    const data = {
+        materials,
+        totalMaterials,
+        page,
+    };
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.fetchSingleMaterialController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { materialId } = req.params;
+    const data = yield productService.fetchProductByIdWithDetails(materialId);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.fetchSubscriptionsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { limit, page } = req.query;
+    const { subscriptions, totalSubscriptions } = yield subscriptionService.fetchAllSubscriptionsAdmin(limit, page);
+    const data = {
+        subscriptions,
+        totalSubscriptions,
+        page,
+    };
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

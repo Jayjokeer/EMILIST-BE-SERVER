@@ -557,21 +557,24 @@ const fetchAllUserJobsAdmin = (userId) => __awaiter(void 0, void 0, void 0, func
         .lean();
 });
 exports.fetchAllUserJobsAdmin = fetchAllUserJobsAdmin;
-const fetchAllJobsAdmin = (status) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllJobsAdmin = (status, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+    const skip = (page - 1) * limit;
     let data;
     if (status === 'notStarted') {
-        data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.pending });
+        data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.pending }).skip(skip).limit(limit);
     }
     else if (status === 'inProgress') {
-        data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.active });
+        data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.active }).skip(skip).limit(limit);
     }
     else if (status === 'completed') {
-        data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.complete });
+        data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.complete }).skip(skip).limit(limit);
     }
     else {
         data = yield jobs_model_1.default.find();
     }
-    return data;
+    const totalJobs = yield jobs_model_1.default.countDocuments();
+    const jobs = data;
+    return { totalJobs, jobs };
 });
 exports.fetchAllJobsAdmin = fetchAllJobsAdmin;
 // export const checkOverdueMilestones = async () => {

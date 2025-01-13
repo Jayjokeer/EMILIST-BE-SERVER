@@ -621,21 +621,23 @@ export const fetchAllUserJobsAdmin = async (userId: string) => {
   .populate('applications', 'title description status')
   .lean();
 };
-export const fetchAllJobsAdmin = async (status: string)=>{
+export const fetchAllJobsAdmin = async (status: string, page: number, limit: number)=>{
+  const skip = (page - 1) * limit;
+
   let data; 
   if (status === 'notStarted'){
-    data = await Jobs.find({status: JobStatusEnum.pending});
+    data = await Jobs.find({status: JobStatusEnum.pending}).skip(skip).limit(limit);
   }else if(status === 'inProgress'){
-    data = await Jobs.find({status: JobStatusEnum.active})
+    data = await Jobs.find({status: JobStatusEnum.active}).skip(skip).limit(limit);
   }else if (status === 'completed'){
-    data = await Jobs.find({status: JobStatusEnum.complete})
+    data = await Jobs.find({status: JobStatusEnum.complete}).skip(skip).limit(limit);
   }
   else{
     data = await Jobs.find();
   }
-  
-
-  return data;
+  const totalJobs =  await Jobs.countDocuments();
+  const jobs = data;
+  return {totalJobs, jobs}
 };
 
 

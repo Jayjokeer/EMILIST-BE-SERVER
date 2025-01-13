@@ -193,12 +193,12 @@ export const addUserAdminController = catchAsync(async (req: JwtPayload, res: Re
     
 
 export const fetchJobsAdminController = catchAsync(async(req: JwtPayload, res: Response) => {
-    const {status} = req.query;
-    let data =[];
-    const jobs = await jobService.fetchAllJobsAdmin(status);
+    const {status, page, limit} = req.query;
+    let allJobs =[];
+    const {totalJobs, jobs} = await jobService.fetchAllJobsAdmin(status, page, limit);
     for (const job of jobs){
         const user = await userService.findUserById(job.userId)
-        data.push( {
+        allJobs.push( {
             jobId: job._id,
             title: job.title,
             poster: user?.fullName,
@@ -207,7 +207,11 @@ export const fetchJobsAdminController = catchAsync(async(req: JwtPayload, res: R
             type: job.type,
         });
     }
-    
+    const data = {
+        jobs: allJobs,
+        totalJobs,
+        page,
+    };
     return successResponse(res,StatusCodes.OK, data);
 });
 
@@ -256,7 +260,7 @@ if(!user) throw new NotFoundError("User not found!");
        data.save();
        const { html, subject } = directJobApplicationMessage(user.userName, req.user.userName, String(data._id));
        await sendEmail(user.email, subject, html); 
-      successResponse(res,StatusCodes.CREATED, data);
+    return  successResponse(res,StatusCodes.CREATED, data);
 
   } else {
     
@@ -268,20 +272,43 @@ if(!user) throw new NotFoundError("User not found!");
 });
 
 export const fetchAllMaterialsAdminController = catchAsync( async (req: JwtPayload, res: Response) => {
-    const {q} = req.query;
+    const {q, page, limit} = req.query;
 
-    let data;
+    let products;
 
-    const products = await productService.fetchAllProductsAdmin();
+    const {materials , totalMaterials} = await productService.fetchAllProductsAdmin(page, limit);
 
     if(q == 'inStock'){
-        data = products.filter((product: any) => product.availableQuantity > 0);
+       products = materials.filter((material: any) => material.availableQuantity > 0);
         
     }else if (q == 'outOfStock'){
-        data = products.filter((product: any)  => product.availableQuantity <= 0);
+        products = materials.filter((material: any)  => material.availableQuantity <= 0);
     }else {
-        data = products;
+        products= materials;
     }
-    successResponse(res,StatusCodes.OK, data);
+    const data = {
+        materials,
+        totalMaterials,
+        page,
+    };
+   return successResponse(res,StatusCodes.OK, data);
 
+});
+
+export const fetchSingleMaterialController = catchAsync(async(req: JwtPayload, res: Response)=>{
+    const {materialId} = req.params;
+
+    const data = await productService.fetchProductByIdWithDetails(materialId);
+   return successResponse(res,StatusCodes.OK, data);
+});
+
+export const fetchSubscriptionsController = catchAsync(async(req: JwtPayload, res: Response)=>{
+    const{limit, page} = req.query;
+    const {subscriptions ,  totalSubscriptions} = await subscriptionService.fetchAllSubscriptionsAdmin(limit, page);
+    const data = {
+        subscriptions,
+        totalSubscriptions,
+        page,
+    };
+   return successResponse(res,StatusCodes.OK, data);
 });

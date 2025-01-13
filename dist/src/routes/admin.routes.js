@@ -41,3 +41,5 @@ router.route("/add-user").post(current_user_1.adminAuth, admin_validation_1.vali
 router.route("/fetch-jobs").get(current_user_1.adminAuth, adminController.fetchJobsAdminController);
 router.route("/fetch-job/:jobId").get(current_user_1.adminAuth, adminController.fetchSingleJobAdminController);
 router.route("/create-job").post(current_user_1.adminAuth, image_upload_1.multipleUpload, job_validation_1.validateJob, adminController.createJobAdminController);
+router.route("/fetch-all-materials").get(current_user_1.adminAuth, adminController.fetchAllMaterialsAdminController);
+router.route("/fetch-material/:materialId").get(current_user_1.adminAuth, adminController.fetchSingleMaterialController);

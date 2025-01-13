@@ -236,7 +236,9 @@ export const fetchAllUserProductsAdmin = async (userId: string) => {
     return await Product.find({ userId });
 };
 
-export const fetchAllProductsAdmin = async () =>{
-
-  return  await Product.find().populate('userId', 'fullName');
+export const fetchAllProductsAdmin = async (page: number, limit: number) =>{
+  const skip = (page - 1) * limit;
+  const materials=   await Product.find().populate('userId', 'fullName').skip(skip).limit(limit);
+  const totalMaterials = await Product.countDocuments();
+  return {materials , totalMaterials};
 };

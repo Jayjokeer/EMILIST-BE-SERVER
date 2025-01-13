@@ -16,5 +16,7 @@ router.route("/add-user").post(adminAuth,validateAddUserAdmin, adminController.a
 router.route("/fetch-jobs").get(adminAuth, adminController.fetchJobsAdminController);
 router.route("/fetch-job/:jobId").get(adminAuth, adminController.fetchSingleJobAdminController);
 router.route("/create-job").post(adminAuth,multipleUpload,validateJob,adminController.createJobAdminController);
+router.route("/fetch-all-materials").get(adminAuth,adminController.fetchAllMaterialsAdminController);
+router.route("/fetch-material/:materialId").get(adminAuth,adminController.fetchSingleMaterialController);
 
 export { router as AdminRoute };

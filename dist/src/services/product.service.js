@@ -208,7 +208,10 @@ const fetchAllUserProductsAdmin = (userId) => __awaiter(void 0, void 0, void 0, 
     return yield product_model_1.default.find({ userId });
 });
 exports.fetchAllUserProductsAdmin = fetchAllUserProductsAdmin;
-const fetchAllProductsAdmin = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield product_model_1.default.find().populate('userId', 'fullName');
+const fetchAllProductsAdmin = (page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+    const skip = (page - 1) * limit;
+    const materials = yield product_model_1.default.find().populate('userId', 'fullName').skip(skip).limit(limit);
+    const totalMaterials = yield product_model_1.default.countDocuments();
+    return { materials, totalMaterials };
 });
 exports.fetchAllProductsAdmin = fetchAllProductsAdmin;

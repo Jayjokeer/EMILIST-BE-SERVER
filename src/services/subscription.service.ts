@@ -22,3 +22,10 @@ export const findExpiredSubscriptions = async () => {
         
     });
 };
+
+export const fetchAllSubscriptionsAdmin = async(limit: number, page: number)=>{
+    const skip = (page - 1) * limit;
+    const subscriptions = await Subscription.find().skip(skip).limit(limit);
+    const totalSubscriptions = await Subscription.countDocuments();
+    return {subscriptions ,  totalSubscriptions};
+};
