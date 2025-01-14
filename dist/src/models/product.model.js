@@ -43,6 +43,10 @@ const productSchema = new mongoose_1.default.Schema({
     discountedPrice: { type: Number },
     isDiscounted: { type: Boolean, default: false },
     // orders: [{type:  Schema.Types.ObjectId, ref: 'Order'}],
-    reviews: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Review' }]
+    reviews: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Review' }],
+    clicks: {
+        users: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Users' }],
+        clickCount: { type: Number, default: 0 }
+    },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Product', productSchema);

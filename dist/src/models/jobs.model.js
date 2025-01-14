@@ -103,6 +103,10 @@ const jobSchema = new mongoose_1.default.Schema({
         note: { type: String },
         rateCommunication: { type: String, enum: jobs_enum_1.RatingEnum },
         isRecommendVendor: { type: String },
-    }
+    },
+    clicks: {
+        users: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Users' }],
+        clickCount: { type: Number, default: 0 }
+    },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Jobs', jobSchema);

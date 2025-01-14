@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchUserNotifications = exports.findNotificationById = exports.createNotification = void 0;
+exports.deleteNotification = exports.fetchUserNotifications = exports.findNotificationById = exports.createNotification = void 0;
 const notification_model_1 = __importDefault(require("../models/notification.model"));
 const createNotification = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield notification_model_1.default.create(data);
@@ -26,3 +26,7 @@ const fetchUserNotifications = (userId) => __awaiter(void 0, void 0, void 0, fun
     return yield notification_model_1.default.find({ userId: userId });
 });
 exports.fetchUserNotifications = fetchUserNotifications;
+const deleteNotification = (notificationId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield notification_model_1.default.findByIdAndDelete(notificationId);
+});
+exports.deleteNotification = deleteNotification;

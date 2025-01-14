@@ -88,5 +88,9 @@ const businessSchema = new mongoose_1.default.Schema({
     businessImages: [{ type: BusinessImagesSchema }],
     expertType: { type: String, enum: business_enum_1.ExpertTypeEnum, default: business_enum_1.ExpertTypeEnum.verified },
     reviews: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Review' }],
+    clicks: {
+        users: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Users' }],
+        clickCount: { type: Number, default: 0 }
+    },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Business', businessSchema);

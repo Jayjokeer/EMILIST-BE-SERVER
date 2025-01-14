@@ -23,11 +23,8 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.NotificationRoute = void 0;
-const express_1 = require("express");
-const notificationController = __importStar(require("../controllers/notification.controller"));
-const current_user_1 = require("../middlewares/current-user");
-const router = (0, express_1.Router)();
-exports.NotificationRoute = router;
-router.route("/fetch-user-notification").get(current_user_1.userAuth, notificationController.getAllUserNotificationsController);
-router.route("/clear-notification/:notificationId").delete(current_user_1.userAuth, notificationController.clearNotificationController);
+const mongoose_1 = __importStar(require("mongoose"));
+const newsLetterSchema = new mongoose_1.Schema({
+    email: { type: String, required: true },
+}, { timestamps: true });
+exports.default = mongoose_1.default.model('Newsletter', newsLetterSchema);

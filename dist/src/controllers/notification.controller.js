@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllUserNotificationsController = void 0;
+exports.clearNotificationController = exports.getAllUserNotificationsController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -41,5 +41,10 @@ exports.getAllUserNotificationsController = (0, error_handler_1.catchAsync)((req
     const { page = 1, limit = 10 } = req.query;
     const userId = req.user._id;
     const data = yield notificationService.fetchUserNotifications(userId);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.clearNotificationController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { notificationId } = req.params;
+    const data = yield notificationService.deleteNotification(notificationId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requestVerificationController = exports.inviteUserController = exports.findUserController = exports.deactivateUserController = exports.logoutController = exports.googleRedirectController = exports.resendVerificationOtpController = exports.uploadMultipleFiles = exports.uploadImage = exports.currentUserController = exports.changePasswordController = exports.updateUserController = exports.resetPasswordController = exports.forgetPasswordController = exports.verifyEmailController = exports.loginController = exports.registerUserController = void 0;
+exports.subscribeNewsLetterController = exports.countClicksController = exports.insightsController = exports.requestVerificationController = exports.inviteUserController = exports.findUserController = exports.deactivateUserController = exports.logoutController = exports.googleRedirectController = exports.resendVerificationOtpController = exports.uploadMultipleFiles = exports.uploadImage = exports.currentUserController = exports.changePasswordController = exports.updateUserController = exports.resetPasswordController = exports.forgetPasswordController = exports.verifyEmailController = exports.loginController = exports.registerUserController = void 0;
 const success_response_1 = require("../helpers/success-response");
 const authService = __importStar(require("../services/auth.service"));
 const http_status_codes_1 = require("http-status-codes");
@@ -55,6 +55,10 @@ const walletService = __importStar(require("../services/wallet.services"));
 const subscriptionService = __importStar(require("../services/subscription.service"));
 const planService = __importStar(require("../services/plan.service"));
 const plan_enum_1 = require("../enums/plan.enum");
+const jobService = __importStar(require("../services/job.service"));
+const businessService = __importStar(require("../services/business.service"));
+const productService = __importStar(require("../services/product.service"));
+const newsLetterService = __importStar(require("../services/newsletter.service"));
 exports.registerUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userName, email, password, } = req.body;
     const isEmailExists = yield authService.findUserByEmail(email);
@@ -338,4 +342,112 @@ exports.requestVerificationController = (0, error_handler_1.catchAsync)((req, re
     user.requestedVerification = true;
     yield (user === null || user === void 0 ? void 0 : user.save());
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Verification request sent successfully");
+}));
+exports.insightsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user._id;
+    const user = yield authService.findUserById(userId);
+    if (!user) {
+        throw new error_1.NotFoundError("User not found!");
+    }
+    ;
+    let totalCount = 0;
+    const totalJobClicks = yield jobService.fetchAllUserJobsAdmin(userId);
+    for (const job of totalJobClicks) {
+        totalCount += Number(job.clicks.clickCount);
+    }
+    ;
+    const totalMaterialsClicks = yield productService.fetchAllUserProductsAdmin(userId);
+    for (const material of totalMaterialsClicks) {
+        totalCount += Number(material.clicks.clickCount);
+    }
+    ;
+    const totalBusinessClicks = yield businessService.fetchAllUserBusinessesAdmin(userId);
+    for (const business of totalBusinessClicks) {
+        totalCount += Number(business.clicks.clickCount);
+    }
+    ;
+    const subscription = yield subscriptionService.getSubscriptionById(String(user.subscription));
+    if (!subscription) {
+        throw new error_1.NotFoundError("subscription not found");
+    }
+    const startDate = subscription.startDate;
+    const endDate = subscription.endDate;
+    const planId = subscription.planId;
+    const plan = yield planService.getPlanById(String(planId));
+    if (!plan) {
+        throw new error_1.NotFoundError("No plan found");
+    }
+    let daysLeft = null;
+    let daysUsed = null;
+    if (plan.name !== plan_enum_1.PlanEnum.basic) {
+        const today = new Date();
+        const totalDays = Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)); // Total subscription period in days
+        const elapsedDays = Math.ceil((today.getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)); // Days since subscription started
+        daysUsed = elapsedDays;
+        daysLeft = totalDays - elapsedDays;
+        if (daysLeft < 0) {
+            daysLeft = 0;
+        }
+    }
+    const responseData = {
+        subscription: {
+            planName: plan.name,
+            status: subscription.status,
+        },
+        daysUsed,
+        daysLeft,
+    };
+    const data = {
+        clicks: totalCount,
+        promotionDuration: responseData
+    };
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.countClicksController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { service, serviceId, userId } = req.query;
+    if (!service || !serviceId) {
+        throw new error_1.BadRequestError('Service and serviceId are required!');
+    }
+    let user;
+    if (userId) {
+        user = yield authService.findUserById(userId);
+        if (!user) {
+            throw new error_1.NotFoundError("User not found!");
+        }
+    }
+    let data;
+    if (service === 'job') {
+        data = yield jobService.fetchJobById(serviceId);
+        if (!data) {
+            throw new error_1.NotFoundError("Job not found");
+        }
+    }
+    else if (service === 'business') {
+        data = yield businessService.fetchSingleBusiness(serviceId);
+        if (!data) {
+            throw new error_1.NotFoundError("Business not found");
+        }
+    }
+    else if (service === 'materials') {
+        data = yield productService.fetchProductById(serviceId);
+        if (!data) {
+            throw new error_1.NotFoundError("Material not found");
+        }
+    }
+    else {
+        throw new error_1.BadRequestError("Invalid service type!");
+    }
+    if (userId) {
+        if (!data.clicks.users.includes(userId)) {
+            data.clicks.users.push(userId);
+        }
+    }
+    data.clicks.clickCount = (data.clicks.clickCount || 0) + 1;
+    yield data.save();
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.subscribeNewsLetterController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email } = req.body;
+    yield newsLetterService.subscribeNewsLetter(email);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Newsletter subscribed successfully");
 }));

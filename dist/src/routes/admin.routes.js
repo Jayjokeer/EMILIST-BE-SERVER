@@ -43,3 +43,6 @@ router.route("/fetch-job/:jobId").get(current_user_1.adminAuth, adminController.
 router.route("/create-job").post(current_user_1.adminAuth, image_upload_1.multipleUpload, job_validation_1.validateJob, adminController.createJobAdminController);
 router.route("/fetch-all-materials").get(current_user_1.adminAuth, adminController.fetchAllMaterialsAdminController);
 router.route("/fetch-material/:materialId").get(current_user_1.adminAuth, adminController.fetchSingleMaterialController);
+router.route("/fetch-all-transactions").get(current_user_1.adminAuth, adminController.fetchAllTransactionsAdminController);
+router.route("/fetch-transaction/:transactionId").get(current_user_1.adminAuth, adminController.fetchSingleTransactionAdminController);
+router.route("/fetch-all-subscriptions").get(current_user_1.adminAuth, adminController.fetchSubscriptionsController);

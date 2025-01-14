@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchUserEarnings = exports.fetchTransactionsByService = exports.fetchAllUserEarningsAdmin = exports.fetchTransactionChartAdminDashboard = exports.totalAmountByTransaction = exports.totalCompletedJobsByTransaction = exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
+exports.fetchTransactionAdmin = exports.fetchAllTransactionsAdmin = exports.fetchUserEarnings = exports.fetchTransactionsByService = exports.fetchAllUserEarningsAdmin = exports.fetchTransactionChartAdminDashboard = exports.totalAmountByTransaction = exports.totalCompletedJobsByTransaction = exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const transaction_model_1 = __importDefault(require("../models/transaction.model"));
@@ -211,3 +211,43 @@ const fetchUserEarnings = (userId, startDate, endDate) => __awaiter(void 0, void
     });
 });
 exports.fetchUserEarnings = fetchUserEarnings;
+const fetchAllTransactionsAdmin = (limit, page, search) => __awaiter(void 0, void 0, void 0, function* () {
+    const skip = (page - 1) * limit;
+    // const searchQuery = search
+    //   ? { $or: [ 
+    //       { field1: { $regex: search, $options: "i" } }, 
+    //       { field2: { $regex: search, $options: "i" } }, 
+    //       { field3: { $regex: search, $options: "i" } }, 
+    //     ] }
+    //   : {};
+    const searchQuery = search
+        ? {
+            $or: Object.keys(transaction_model_1.default.schema.paths).map((field) => ({
+                [field]: { $regex: search, $options: "i" },
+            })),
+        }
+        : {};
+    const transactions = yield transaction_model_1.default.find(searchQuery).skip(skip).limit(limit)
+        .populate('jobId')
+        .populate('recieverId', '_id fullName')
+        .populate('milestoneId')
+        .populate('walletId', '_id')
+        .populate('orderId')
+        .populate('planId')
+        .populate('userId', '_id fullName');
+    const totalTransactions = yield transaction_model_1.default.countDocuments();
+    return { totalTransactions, transactions };
+});
+exports.fetchAllTransactionsAdmin = fetchAllTransactionsAdmin;
+const fetchTransactionAdmin = (transactionId) => __awaiter(void 0, void 0, void 0, function* () {
+    const transaction = yield transaction_model_1.default.findById(transactionId)
+        .populate('jobId')
+        .populate('recieverId', '_id fullName')
+        .populate('milestoneId')
+        .populate('walletId', '_id')
+        .populate('orderId')
+        .populate('planId')
+        .populate('userId', '_id fullName');
+    return transaction;
+});
+exports.fetchTransactionAdmin = fetchTransactionAdmin;
