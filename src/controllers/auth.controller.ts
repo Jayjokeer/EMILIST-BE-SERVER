@@ -21,6 +21,10 @@ import * as subscriptionService from "../services/subscription.service";
 import * as planService from "../services/plan.service";
 import { PlanEnum } from "../enums/plan.enum";
 import { sub } from "date-fns";
+import * as jobService from "../services/job.service";
+import * as businessService from "../services/business.service";
+import * as productService from "../services/product.service";
+import * as newsLetterService from "../services/newsletter.service";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -366,4 +370,120 @@ export const requestVerificationController = catchAsync(async (req: JwtPayload, 
   user.requestedVerification = true;
   await user?.save();
   return successResponse(res, StatusCodes.OK, "Verification request sent successfully");
+});
+
+export const insightsController = catchAsync(async (req: JwtPayload, res: Response) => { 
+  const userId = req.user._id;
+  const user = await authService.findUserById(userId);
+  if(!user){
+    throw new NotFoundError("User not found!");
+  };
+  let totalCount = 0;
+  const totalJobClicks = await jobService.fetchAllUserJobsAdmin(userId);
+  for (const job of totalJobClicks){
+    totalCount += Number(job.clicks.clickCount);
+  };
+  const totalMaterialsClicks = await productService.fetchAllUserProductsAdmin(userId);
+  for (const material of totalMaterialsClicks){
+    totalCount += Number(material.clicks.clickCount);
+  };
+  const totalBusinessClicks = await businessService.fetchAllUserBusinessesAdmin(userId);
+  for (const business of totalBusinessClicks ){
+    totalCount += Number( business.clicks.clickCount);
+  };
+
+  const subscription = await subscriptionService.getSubscriptionById(String(user.subscription));
+  if(!subscription){
+    throw new NotFoundError("subscription not found");
+  }
+    const startDate = subscription.startDate;
+    const endDate = subscription.endDate
+    const planId = subscription.planId;
+    
+  const plan = await planService.getPlanById(String(planId));
+  if(!plan){
+    throw new NotFoundError("No plan found")
+  }
+  let daysLeft = null;
+  let daysUsed = null;
+
+  if (plan.name !== PlanEnum.basic) {
+    const today = new Date();
+    const totalDays = Math.ceil((new Date(endDate!).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)); // Total subscription period in days
+    const elapsedDays = Math.ceil((today.getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)); // Days since subscription started
+    daysUsed = elapsedDays;
+    daysLeft = totalDays - elapsedDays;
+
+    if (daysLeft < 0) {
+      daysLeft = 0;
+    }
+  }
+
+  const responseData = {
+    subscription: {
+      planName: plan.name,
+      status: subscription.status,
+    },
+    daysUsed,
+    daysLeft,
+  };
+  const data = {
+    clicks: totalCount,
+    promotionDuration: responseData 
+  };
+  return successResponse(res, StatusCodes.OK, data);
+});
+
+export const countClicksController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const { service, serviceId, userId } = req.query;
+
+  if (!service || !serviceId) {
+    throw new BadRequestError('Service and serviceId are required!');
+  }
+
+  let user;
+  if (userId) {
+    user = await authService.findUserById(userId);
+    if (!user) {
+      throw new NotFoundError("User not found!");
+    }
+  }
+
+  let data;
+  if (service === 'job') {
+    data = await jobService.fetchJobById(serviceId);
+    if (!data) {
+      throw new NotFoundError("Job not found");
+    }
+  } else if (service === 'business') {
+    data = await businessService.fetchSingleBusiness(serviceId);
+    if (!data) {
+      throw new NotFoundError("Business not found");
+    }
+  } else if (service === 'materials') {
+    data = await productService.fetchProductById(serviceId);
+    if (!data) {
+      throw new NotFoundError("Material not found");
+    }
+  } else {
+    throw new BadRequestError("Invalid service type!");
+  }
+
+  if (userId) {
+    if (!data.clicks.users.includes(userId)) { 
+      data.clicks.users.push(userId);
+    }
+  }
+  data.clicks.clickCount = (data.clicks.clickCount || 0) + 1;
+
+  await data.save();
+
+  return successResponse(res, StatusCodes.OK, data);
+});
+
+export const subscribeNewsLetterController = catchAsync(async (req: JwtPayload, res: Response) => { 
+  const {email} = req.body;
+    await newsLetterService.subscribeNewsLetter(email);
+
+  return successResponse(res, StatusCodes.OK, "Newsletter subscribed successfully");
 });

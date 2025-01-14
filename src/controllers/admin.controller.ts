@@ -312,3 +312,21 @@ export const fetchSubscriptionsController = catchAsync(async(req: JwtPayload, re
     };
    return successResponse(res,StatusCodes.OK, data);
 });
+
+export const fetchAllTransactionsAdminController = catchAsync(async(req: JwtPayload, res: Response)=>{
+    const{limit, page, search} = req.query;
+    const {transactions ,  totalTransactions} = await transactionService.fetchAllTransactionsAdmin(limit, page, search);
+    const data = {
+        transactions,
+        totalTransactions,
+        page,
+    };
+   return successResponse(res,StatusCodes.OK, data);
+});
+
+export const fetchSingleTransactionAdminController = catchAsync(async(req: JwtPayload, res: Response)=>{
+    const{transactionId} = req.params;
+    const data = await transactionService.fetchTransactionAdmin(transactionId);
+
+   return successResponse(res,StatusCodes.OK, data);
+});

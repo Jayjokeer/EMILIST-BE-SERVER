@@ -13,3 +13,11 @@ export const getAllUserNotificationsController = catchAsync(async (req: JwtPaylo
     const data = await notificationService.fetchUserNotifications(userId);
     return successResponse(res, StatusCodes.OK, data);
 });
+
+export const clearNotificationController  = catchAsync (async (req: JwtPayload, res: Response) => {
+    const {notificationId} = req.params;
+
+
+    const data = await notificationService.deleteNotification(notificationId);
+    return successResponse(res, StatusCodes.OK, data);
+});

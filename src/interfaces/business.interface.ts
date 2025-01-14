@@ -61,7 +61,7 @@ export interface IBusiness extends Document {
   currency?: string; 
   expertType?: ExpertTypeEnum;
   reviews?: any;
-
+  clicks?: any;
 }
 
 export default IBusiness;

@@ -81,8 +81,12 @@ const jobSchema: Schema = new mongoose.Schema(
       note: {type: String},
       rateCommunication: {type: String, enum: RatingEnum},
       isRecommendVendor:{type: String },
-    }
-  },
+    },
+    clicks: {
+      users: [{type: Schema.Types.ObjectId, ref: 'Users'}],
+      clickCount: {type: Number, default: 0}
+     },
+      },
   { timestamps: true }
 
 );

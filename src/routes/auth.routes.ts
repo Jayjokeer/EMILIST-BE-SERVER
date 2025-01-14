@@ -26,6 +26,8 @@ router.route('/google').get( passport.authenticate('google', {
 }));
 
 router.route('/google/callback',).get( passport.authenticate('google'), authController.googleRedirectController);
+router.route("/add-click").patch(authController.countClicksController);
+
 //Protected routes
 router.route("/log-out").get(userAuth, authController.logoutController);
 router.route("/update-profile").patch(userAuth,singleUpload,authController.updateUserController);
@@ -35,5 +37,7 @@ router.route("/deactivate-user").patch(userAuth,authController.deactivateUserCon
 router.route("/get-specific-user").get(userAuth,authController.findUserController);
 router.route("/invite-user").get(userAuth,authController.inviteUserController);
 router.route("/request-verificaton").get(userAuth,authController.requestVerificationController);
+router.route("/insights").get(userAuth, authController.insightsController);
+router.route("/subscribe-newsletter").post(userAuth, authController.subscribeNewsLetterController);
 
 export { router as AuthRoute };

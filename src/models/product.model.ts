@@ -21,7 +21,12 @@ const productSchema: Schema = new mongoose.Schema(
     discountedPrice: {type: Number},
     isDiscounted: {type: Boolean, default: false}, 
     // orders: [{type:  Schema.Types.ObjectId, ref: 'Order'}],
-    reviews: [{type:  Schema.Types.ObjectId, ref: 'Review'}]
+    reviews: [{type:  Schema.Types.ObjectId, ref: 'Review'}],
+    clicks: {
+     users: [{type: Schema.Types.ObjectId, ref: 'Users'}],
+     clickCount: {type: Number, default: 0}
+    },
+
   },
   { timestamps: true }
 

@@ -68,6 +68,10 @@ const businessSchema: Schema = new mongoose.Schema(
     businessImages: [{type:  BusinessImagesSchema }],
     expertType: {type: String, enum: ExpertTypeEnum, default: ExpertTypeEnum.verified},
     reviews: [{type:  Schema.Types.ObjectId, ref: 'Review'}],
+    clicks: {
+      users: [{type: Schema.Types.ObjectId, ref: 'Users'}],
+      clickCount: {type: Number, default: 0}
+     },
   },
   { timestamps: true }
 

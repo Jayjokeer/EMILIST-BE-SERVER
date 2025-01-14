@@ -17,4 +17,6 @@ export interface IProduct {
     discountedPrice?: number;
     isDiscounted?: boolean;
     // orders?: string[];
+    clicks: any;
+
 }

@@ -193,4 +193,46 @@ export const fetchUserEarnings = async (userId: string, startDate: Date, endDate
     dateCompleted: { $gte: startDate, $lte: endDate },
     status: TransactionEnum.completed,
   });
-}
+};
+
+export const fetchAllTransactionsAdmin = async(limit:number, page: number, search: string) =>{
+  const skip = (page - 1) * limit;
+  // const searchQuery = search
+  //   ? { $or: [ 
+  //       { field1: { $regex: search, $options: "i" } }, 
+  //       { field2: { $regex: search, $options: "i" } }, 
+  //       { field3: { $regex: search, $options: "i" } }, 
+  //     ] }
+  //   : {};
+  const searchQuery = search
+    ? {
+        $or: Object.keys(Transaction.schema.paths).map((field) => ({
+          [field]: { $regex: search, $options: "i" }, 
+        })),
+      }
+    : {};
+const transactions = await Transaction.find(searchQuery).skip(skip).limit(limit)
+.populate('jobId')
+.populate('recieverId', '_id fullName')
+.populate('milestoneId')
+.populate('walletId', '_id')
+.populate('orderId')
+.populate('planId')
+.populate('userId', '_id fullName');
+const totalTransactions = await Transaction.countDocuments();
+
+return {totalTransactions, transactions};
+};
+
+export const fetchTransactionAdmin = async(transactionId: string) =>{
+const transaction = await Transaction.findById(transactionId)
+.populate('jobId')
+.populate('recieverId', '_id fullName')
+.populate('milestoneId')
+.populate('walletId', '_id')
+.populate('orderId')
+.populate('planId')
+.populate('userId', '_id fullName');
+
+return transaction;
+};

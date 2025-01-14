@@ -9,3 +9,6 @@ export const findNotificationById = async(id: string)=>{
 export const fetchUserNotifications = async(userId: string)=>{
     return await Notification.find({userId: userId});
 };
+export const deleteNotification = async(notificationId: string)=>{
+    return await Notification.findByIdAndDelete(notificationId);
+};

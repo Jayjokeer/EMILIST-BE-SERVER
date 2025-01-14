@@ -28,6 +28,7 @@ export interface IJob {
     isClosed?: boolean;
     review?: any;
     createdAt?: any;
+    clicks?: any;
 }
 
 export interface IMilestone {

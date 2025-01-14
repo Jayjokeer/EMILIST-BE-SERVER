@@ -18,5 +18,8 @@ router.route("/fetch-job/:jobId").get(adminAuth, adminController.fetchSingleJobA
 router.route("/create-job").post(adminAuth,multipleUpload,validateJob,adminController.createJobAdminController);
 router.route("/fetch-all-materials").get(adminAuth,adminController.fetchAllMaterialsAdminController);
 router.route("/fetch-material/:materialId").get(adminAuth,adminController.fetchSingleMaterialController);
+router.route("/fetch-all-transactions").get(adminAuth,adminController.fetchAllTransactionsAdminController);
+router.route("/fetch-transaction/:transactionId").get(adminAuth,adminController.fetchSingleTransactionAdminController);
+router.route("/fetch-all-subscriptions").get(adminAuth,adminController.fetchSubscriptionsController);
 
 export { router as AdminRoute };
