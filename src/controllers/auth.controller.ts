@@ -374,22 +374,23 @@ export const requestVerificationController = catchAsync(async (req: JwtPayload, 
 
 export const insightsController = catchAsync(async (req: JwtPayload, res: Response) => { 
   const userId = req.user._id;
-  const user = await authService.findUserById(userId);
+  const user = await authService.findUserWithoutDetailsById(userId);
   if(!user){
     throw new NotFoundError("User not found!");
   };
   let totalCount = 0;
   const totalJobClicks = await jobService.fetchAllUserJobsAdmin(userId);
   for (const job of totalJobClicks){
-    totalCount += Number(job.clicks.clickCount);
+    totalCount += Number(job?.clicks?.clickCount || 0);
+
   };
   const totalMaterialsClicks = await productService.fetchAllUserProductsAdmin(userId);
   for (const material of totalMaterialsClicks){
-    totalCount += Number(material.clicks.clickCount);
-  };
+    totalCount += Number(material?.clicks?.clickCount || 0);  };
+
   const totalBusinessClicks = await businessService.fetchAllUserBusinessesAdmin(userId);
   for (const business of totalBusinessClicks ){
-    totalCount += Number( business.clicks.clickCount);
+    totalCount += Number(business?.clicks?.clickCount || 0);     
   };
 
   const subscription = await subscriptionService.getSubscriptionById(String(user.subscription));

@@ -45,14 +45,15 @@ const transactionService = __importStar(require("../services/transaction.service
 const paystack_1 = require("../utils/paystack");
 const plan_enum_1 = require("../enums/plan.enum");
 const suscribtion_enum_1 = require("../enums/suscribtion.enum");
+const userService = __importStar(require("../services/auth.service"));
 exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { planId, paymentMethod, currency, isRenew, durationType } = req.body;
     const userId = req.user._id;
     let plan;
     let currentPlan;
     let subscription;
+    const user = yield userService.findUserWithoutDetailsById(userId);
     if (isRenew) {
-        console.log('here');
         subscription = yield subscriptionService.getActiveSubscriptionWithoutDetails(userId);
         if (!subscription)
             throw new error_1.BadRequestError('You do not have an active subscription');
@@ -67,13 +68,11 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
         if (!plan)
             throw new error_1.NotFoundError('Plan not found');
         subscription = yield subscriptionService.getActiveSubscriptionWithoutDetails(userId);
-        console.log('here1');
-        console.log(subscription);
         currentPlan = yield planService.getPlanById(String(subscription === null || subscription === void 0 ? void 0 : subscription.planId));
-        console.log('here');
         if (subscription && (currentPlan === null || currentPlan === void 0 ? void 0 : currentPlan.name) !== plan_enum_1.PlanEnum.basic)
             throw new error_1.BadRequestError('You already have an active subscription');
     }
+    ;
     let data;
     const startDate = new Date();
     let endDate = new Date();
@@ -114,6 +113,8 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
             startDate,
             endDate,
         });
+        user.subscription = data._id;
+        yield user.save();
         subscription.status = suscribtion_enum_1.SubscriptionStatusEnum.expired;
         yield subscription.save();
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);

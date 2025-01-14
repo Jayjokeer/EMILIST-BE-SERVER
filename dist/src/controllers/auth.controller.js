@@ -344,8 +344,9 @@ exports.requestVerificationController = (0, error_handler_1.catchAsync)((req, re
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Verification request sent successfully");
 }));
 exports.insightsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c;
     const userId = req.user._id;
-    const user = yield authService.findUserById(userId);
+    const user = yield authService.findUserWithoutDetailsById(userId);
     if (!user) {
         throw new error_1.NotFoundError("User not found!");
     }
@@ -353,17 +354,17 @@ exports.insightsController = (0, error_handler_1.catchAsync)((req, res) => __awa
     let totalCount = 0;
     const totalJobClicks = yield jobService.fetchAllUserJobsAdmin(userId);
     for (const job of totalJobClicks) {
-        totalCount += Number(job.clicks.clickCount);
+        totalCount += Number(((_a = job === null || job === void 0 ? void 0 : job.clicks) === null || _a === void 0 ? void 0 : _a.clickCount) || 0);
     }
     ;
     const totalMaterialsClicks = yield productService.fetchAllUserProductsAdmin(userId);
     for (const material of totalMaterialsClicks) {
-        totalCount += Number(material.clicks.clickCount);
+        totalCount += Number(((_b = material === null || material === void 0 ? void 0 : material.clicks) === null || _b === void 0 ? void 0 : _b.clickCount) || 0);
     }
     ;
     const totalBusinessClicks = yield businessService.fetchAllUserBusinessesAdmin(userId);
     for (const business of totalBusinessClicks) {
-        totalCount += Number(business.clicks.clickCount);
+        totalCount += Number(((_c = business === null || business === void 0 ? void 0 : business.clicks) === null || _c === void 0 ? void 0 : _c.clickCount) || 0);
     }
     ;
     const subscription = yield subscriptionService.getSubscriptionById(String(user.subscription));

@@ -89,3 +89,7 @@ export const fetchAllUsersAdmin = async(page: number, limit: number, q: string)=
       ],
     });
   }
+
+  export const findUserWithoutDetailsById = async (id: string)=>{
+    return await Users.findById(id,{password: 0})
+};

@@ -15,6 +15,7 @@ import * as transactionService from '../services/transaction.service';
 import { generatePaystackPaymentLink } from '../utils/paystack';
 import { PlanEnum } from '../enums/plan.enum';
 import { SubscriptionStatusEnum } from '../enums/suscribtion.enum';
+import * as userService from '../services/auth.service';
 
 export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response) => {
     const { planId, paymentMethod, currency, isRenew, durationType } = req.body;
@@ -22,24 +23,22 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
     let plan;
     let currentPlan;
     let subscription;
+    const user = await userService.findUserWithoutDetailsById(userId);
     if(isRenew){
-        console.log('here')
         subscription = await subscriptionService.getActiveSubscriptionWithoutDetails(userId);
         if(!subscription) throw new BadRequestError('You do not have an active subscription');
 
-        plan = await planService.getPlanById(String(subscription.planId)); 
+        plan = await planService.getPlanById(String(subscription.planId));
         if (!plan) throw new NotFoundError('Plan not found');
         if(plan.name === PlanEnum.basic) throw new BadRequestError('You cannot renew a free plan');
     }else {
         plan = await planService.getPlanById(planId);
+
     if (!plan) throw new NotFoundError('Plan not found');
     subscription = await subscriptionService.getActiveSubscriptionWithoutDetails(userId); 
-    console.log('here1')  
-    console.log(subscription)
     currentPlan = await planService.getPlanById(String(subscription?.planId));
-        console.log('here')
     if(subscription && currentPlan?.name !== PlanEnum.basic) throw new BadRequestError('You already have an active subscription');
-    }
+    };
     let data;
     const startDate = new Date();
     let endDate = new Date();
@@ -80,6 +79,8 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
           startDate,
           endDate,
         });
+        user!.subscription = data._id;
+        await user!.save();
         subscription!.status = SubscriptionStatusEnum.expired;
         await subscription!.save();
         

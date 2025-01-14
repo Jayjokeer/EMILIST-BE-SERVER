@@ -52,6 +52,7 @@ router.route('/google').get(passport_1.default.authenticate('google', {
 }));
 router.route('/google/callback').get(passport_1.default.authenticate('google'), authController.googleRedirectController);
 router.route("/add-click").patch(authController.countClicksController);
+router.route("/subscribe-newsletter").post(authController.subscribeNewsLetterController);
 //Protected routes
 router.route("/log-out").get(current_user_1.userAuth, authController.logoutController);
 router.route("/update-profile").patch(current_user_1.userAuth, image_upload_1.singleUpload, authController.updateUserController);
@@ -62,4 +63,3 @@ router.route("/get-specific-user").get(current_user_1.userAuth, authController.f
 router.route("/invite-user").get(current_user_1.userAuth, authController.inviteUserController);
 router.route("/request-verificaton").get(current_user_1.userAuth, authController.requestVerificationController);
 router.route("/insights").get(current_user_1.userAuth, authController.insightsController);
-router.route("/subscribe-newsletter").post(current_user_1.userAuth, authController.subscribeNewsLetterController);
