@@ -115,6 +115,8 @@ export const getAllProductsController = catchAsync(async (req: JwtPayload, res: 
         minRating,
         minReviews,
         isPrimeMember,
+        location,
+        search,
     } = req.query;
     const userId = req.query.userId ? req.query.userId : null; 
     const filters ={
@@ -122,8 +124,9 @@ export const getAllProductsController = catchAsync(async (req: JwtPayload, res: 
         minRating,
         minReviews,
         isPrimeMember,
+        location,
     };
-    const products = await productService.fetchAllProducts(Number(page), Number(limit), userId, filters);
+    const products = await productService.fetchAllProducts(Number(page), Number(limit),  userId, filters, search);
     const data = products;
     return successResponse(res, StatusCodes.OK, data);
 });

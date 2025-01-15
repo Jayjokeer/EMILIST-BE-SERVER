@@ -103,6 +103,7 @@ export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, re
         location,
         noticePeriod,
         userId,
+        search,
     } = req.query;
     
     const filters=  {
@@ -118,6 +119,7 @@ export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, re
     Number(page),
     Number(limit),
     filters,
+    search,
 );
     return  successResponse(res,StatusCodes.OK, data);
 });

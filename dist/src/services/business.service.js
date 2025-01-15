@@ -164,7 +164,7 @@ const fetchSingleBusinessWithDetails = (businessId) => __awaiter(void 0, void 0,
     return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
 });
 exports.fetchSingleBusinessWithDetails = fetchSingleBusinessWithDetails;
-const fetchAllBusiness = (userId, page, limit, filters) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
     const query = {};
     if (filters.startPriceRange) {
@@ -182,6 +182,13 @@ const fetchAllBusiness = (userId, page, limit, filters) => __awaiter(void 0, voi
             { state: { $regex: filters.location, $options: 'i' } },
             { country: { $regex: filters.location, $options: 'i' } },
         ];
+    }
+    if (search) {
+        query.$or = [];
+        const businessFields = ['services', 'businessName', 'location', 'businessName', 'bio', 'city', 'state', 'country'];
+        businessFields.forEach(field => {
+            query.$or.push({ [field]: { $regex: search, $options: 'i' } });
+        });
     }
     if (filters.noticePeriod) {
         query.noticePeriod = filters.noticePeriod;

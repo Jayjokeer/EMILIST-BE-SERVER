@@ -29,7 +29,7 @@ const fetchProductByIdWithDetails = (productId) => __awaiter(void 0, void 0, voi
     return yield product_model_1.default.findById(productId).populate('userId', 'fullName email userName profileImage level _id uniqueId');
 });
 exports.fetchProductByIdWithDetails = fetchProductByIdWithDetails;
-const fetchAllProducts = (page, limit, userId, filters) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllProducts = (page, limit, userId, filters, search) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
     const query = {};
     if (filters.priceRange) {
@@ -37,6 +37,16 @@ const fetchAllProducts = (page, limit, userId, filters) => __awaiter(void 0, voi
             $gte: filters.priceRange[0],
             $lte: filters.priceRange[1],
         };
+    }
+    if (filters.location) {
+        query.location = { $regex: filters.location, $options: 'i' };
+    }
+    if (search) {
+        query.$or = [];
+        const productFields = ['name', 'description', 'location', 'name', 'category', 'subCategory', 'storeName', 'brand'];
+        productFields.forEach(field => {
+            query.$or.push({ [field]: { $regex: search, $options: 'i' } });
+        });
     }
     const totalProducts = yield product_model_1.default.countDocuments(query);
     const products = yield product_model_1.default.find(query)

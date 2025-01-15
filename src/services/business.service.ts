@@ -163,7 +163,8 @@ export const fetchAllBusiness = async (
     minReviews?: number;
     location?: string;
     noticePeriod?: string;
-  }
+  },
+  search?: string,
 ) => {
   const skip = (page - 1) * limit;
 
@@ -186,6 +187,14 @@ export const fetchAllBusiness = async (
       { state: { $regex: filters.location, $options: 'i' } },
       { country: { $regex: filters.location, $options: 'i' } },
     ];
+  }
+  if (search) {
+    query.$or = [];
+
+    const businessFields = ['services', 'businessName', 'location', 'businessName', 'bio', 'city','state', 'country' ];
+    businessFields.forEach(field => {
+      query.$or.push({ [field]: { $regex: search, $options: 'i' } });
+    });
   }
 
   if (filters.noticePeriod) {

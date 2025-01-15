@@ -25,7 +25,10 @@ export const fetchAllProducts = async (
     minRating?: number;
     minReviews?: number;
     isPrimeMember?: boolean;
-  }
+    location?: string;
+  },
+  search?: string,
+
 ) => {
   const skip = (page - 1) * limit;
 
@@ -38,7 +41,17 @@ export const fetchAllProducts = async (
     };
   }
 
+  if (filters.location) {
+    query.location = { $regex: filters.location, $options: 'i' }; 
+  }
+  if (search) {
+    query.$or = [];
 
+    const productFields = ['name', 'description', 'location', 'name', 'category', 'subCategory','storeName', 'brand' ];
+    productFields.forEach(field => {
+      query.$or.push({ [field]: { $regex: search, $options: 'i' } });
+    });
+  }
   const totalProducts = await Product.countDocuments(query);
 
   const products = await Product.find(query)
