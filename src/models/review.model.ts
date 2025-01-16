@@ -11,7 +11,9 @@ import { IReview } from '../interfaces/review.interface';
       businessId: { type: Schema.Types.ObjectId, ref: "Business" },
       projectId: { type: Schema.Types.ObjectId, ref: "Project" },
       rateCommunication: { type: Number, required: true, min: 1, max: 5 },
-      isRecommendVendor: {type: Boolean}
+      isRecommendVendor: {type: Boolean},
+      helpfulUsers: { type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: [] },
+      helpfulCount: { type: Number, default: 0 },
     },
     { timestamps: true }
   );

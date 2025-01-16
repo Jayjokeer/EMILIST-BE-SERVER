@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchBusinessReviews = exports.fetchSimilarBusinesses = exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
+exports.markReviewHelpful = exports.fetchBusinessReviews = exports.fetchSimilarBusinesses = exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
 const error_1 = require("../errors/error");
 const business_model_1 = __importDefault(require("../models/business.model"));
 const review_model_1 = __importDefault(require("../models/review.model"));
@@ -326,3 +326,23 @@ const fetchBusinessReviews = (businessId, page, limit) => __awaiter(void 0, void
     return data;
 });
 exports.fetchBusinessReviews = fetchBusinessReviews;
+const markReviewHelpful = (reviewId, isHelpful, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const review = yield review_model_1.default.findById(reviewId);
+    if (!review) {
+        throw new error_1.NotFoundError('Review not found.');
+    }
+    if (!userId) {
+        review.helpfulCount += 1;
+    }
+    else {
+        const alreadyMarked = review.helpfulUsers.find((entry) => String(entry) === String(userId));
+        if (alreadyMarked) {
+            throw new error_1.BadRequestError('You have already marked this review.');
+        }
+        review.helpfulUsers.push(userId);
+        review.helpfulCount += 1;
+    }
+    yield review.save();
+    return review;
+});
+exports.markReviewHelpful = markReviewHelpful;

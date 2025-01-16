@@ -247,4 +247,10 @@ export const unlikeBusinessController = catchAsync(async (req: JwtPayload, res: 
      const data = await businessService.fetchBusinessReviews(businessId, Number(page), Number(limit));
     successResponse(res, StatusCodes.OK, data);
   });
-  
+export const markReviewController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const {reviewId} = req.params; 
+    const {userId, isHelpful } = req.body;
+
+     const data = await businessService.markReviewHelpful(reviewId, isHelpful, userId);
+    successResponse(res, StatusCodes.CREATED, data);
+  });

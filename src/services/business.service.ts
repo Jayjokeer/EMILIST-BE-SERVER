@@ -1,5 +1,5 @@
 import { ExpertTypeEnum } from "../enums/business.enum";
-import { NotFoundError } from "../errors/error";
+import { BadRequestError, NotFoundError } from "../errors/error";
 import IBusiness from "../interfaces/business.interface";
 import Business from "../models/business.model";
 import Review from "../models/review.model";
@@ -365,4 +365,33 @@ export const fetchBusinessReviews = async (businessId: string, page: number, lim
       totalPages: Math.ceil(totalRatings / Number(limit)),
     };
   return data;
+};
+
+export const markReviewHelpful = async (reviewId: string, isHelpful: boolean, userId?: string) => {
+
+
+    const review = await Review.findById(reviewId);
+    if (!review) {
+      throw new NotFoundError('Review not found.');
+    }
+
+    if (!userId) {
+
+      review.helpfulCount! +=1;
+    } else {
+      const alreadyMarked = review.helpfulUsers.find(
+        (entry: any) => String(entry)=== String(userId)
+      );
+      if (alreadyMarked) {
+        throw new BadRequestError('You have already marked this review.' );
+      }
+
+      review.helpfulUsers!.push(userId);
+      review.helpfulCount! +=1;
+    }
+
+    await review.save();
+
+    return review;
+
 };

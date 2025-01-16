@@ -301,3 +301,26 @@ export const validateBusinessRegistration = (req: Request, res: Response, next: 
   
     next();
   };
+
+
+  export const validateMarkBusinessReview = (req: Request, res: Response, next: NextFunction) => {
+    const businessReviewValidation = Joi.object({
+      isHelpful: Joi.boolean().messages({
+        'boolean.empty': 'isHelpful cannot be empty',
+        'boolean.base': 'isHelpful must be boolean'
+      }),
+      userId: Joi.string().optional().messages({
+        'string.base': 'Last name must be a string',
+      }),
+    });
+  
+    const { error } = businessReviewValidation .validate(req.body, { abortEarly: false });
+  
+    if (error) {
+      const errorMessages = error.details.map((detail) => detail.message);
+     res.status(400).json({ errors: errorMessages });
+     return;
+    }
+  
+    next();
+  };

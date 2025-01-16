@@ -5,5 +5,7 @@ export interface IReview extends Document {
     userId: mongoose.Types.ObjectId;
     rating: number;
     comment?: string;
+    helpfulCount?: number;
+    helpfulUsers?: any;
   }
   

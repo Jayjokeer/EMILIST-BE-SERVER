@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import * as businesController from "../controllers/business.controller";
 import { userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload, uploadBusinessImages } from "../utils/image-upload";
-import { validateBusinessRegistration, validateBusinessUpdate } from "../validations/business.validation";
+import { validateBusinessRegistration, validateBusinessUpdate, validateMarkBusinessReview } from "../validations/business.validation";
 
 const router = Router();
 
@@ -20,6 +20,7 @@ router.route("/unlike-business/:businessId").patch(userAuth, businesController.u
 router.route("/fetch-other-business-by-user/:userId").get(businesController.fetchOtherBusinessByUserController  );
 router.route("/fetch-similar-business-by-user/:businessId").get(businesController.fetchSimilarBusinessByUserController );
 router.route("/fetch-business-reviews/:businessId").get(businesController.fetchBusinessReviewsController );
+router.route("/mark-helpul-review/:reviewId").patch(validateMarkBusinessReview,businesController.markReviewController );
 
 export { router as BusinessRoute };
 

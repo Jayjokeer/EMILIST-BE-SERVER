@@ -45,3 +45,4 @@ router.route("/unlike-business/:businessId").patch(current_user_1.userAuth, busi
 router.route("/fetch-other-business-by-user/:userId").get(businesController.fetchOtherBusinessByUserController);
 router.route("/fetch-similar-business-by-user/:businessId").get(businesController.fetchSimilarBusinessByUserController);
 router.route("/fetch-business-reviews/:businessId").get(businesController.fetchBusinessReviewsController);
+router.route("/mark-helpul-review/:reviewId").patch(business_validation_1.validateMarkBusinessReview, businesController.markReviewController);

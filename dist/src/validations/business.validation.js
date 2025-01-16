@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateBusinessUpdate = exports.validateBusinessRegistration = void 0;
+exports.validateMarkBusinessReview = exports.validateBusinessUpdate = exports.validateBusinessRegistration = void 0;
 const joi_1 = __importDefault(require("joi"));
 const validateBusinessRegistration = (req, res, next) => {
     const businessValidation = joi_1.default.object({
@@ -284,3 +284,22 @@ const validateBusinessUpdate = (req, res, next) => {
     next();
 };
 exports.validateBusinessUpdate = validateBusinessUpdate;
+const validateMarkBusinessReview = (req, res, next) => {
+    const businessReviewValidation = joi_1.default.object({
+        isHelpful: joi_1.default.boolean().messages({
+            'boolean.empty': 'isHelpful cannot be empty',
+            'boolean.base': 'isHelpful must be boolean'
+        }),
+        userId: joi_1.default.string().optional().messages({
+            'string.base': 'Last name must be a string',
+        }),
+    });
+    const { error } = businessReviewValidation.validate(req.body, { abortEarly: false });
+    if (error) {
+        const errorMessages = error.details.map((detail) => detail.message);
+        res.status(400).json({ errors: errorMessages });
+        return;
+    }
+    next();
+};
+exports.validateMarkBusinessReview = validateMarkBusinessReview;
