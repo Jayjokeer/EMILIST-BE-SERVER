@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllComparedBusinessesController = exports.compareBusinessController = exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
+exports.unlikeBusinessController = exports.likeBusinessController = exports.fetchAllComparedBusinessesController = exports.compareBusinessController = exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -187,4 +187,26 @@ exports.fetchAllComparedBusinessesController = (0, error_handler_1.catchAsync)((
     ;
     const businesses = yield businessService.fetchAllComparedBusinesses(user.comparedBusinesses);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, businesses);
+}));
+exports.likeBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user.id;
+    const { businessId } = req.params;
+    const business = yield businessService.fetchSingleBusiness(businessId);
+    if (!business) {
+        throw new error_1.NotFoundError("Service not found!");
+    }
+    ;
+    const existingLike = yield businessService.ifLikedBusiness(businessId, userId);
+    if (existingLike) {
+        throw new error_1.BadRequestError("Service previously liked!");
+    }
+    ;
+    const data = yield businessService.createBusinessLike({ business: businessId, user: userId });
+    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+}));
+exports.unlikeBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user.id;
+    const { businessId } = req.params;
+    const data = yield businessService.unlikeBusiness(businessId, userId);
+    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

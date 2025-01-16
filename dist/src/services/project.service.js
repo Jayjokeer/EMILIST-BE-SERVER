@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllUserProjectsAdmin = exports.updateRejectProject = exports.deleteProject = exports.fetchAllUserProjects = exports.fetchProjectById = exports.createProject = void 0;
+exports.completedJobsCount = exports.fetchAllUserProjectsAdmin = exports.updateRejectProject = exports.deleteProject = exports.fetchAllUserProjects = exports.fetchProjectById = exports.createProject = void 0;
 const project_enum_1 = require("../enums/project.enum");
 const project_model_1 = __importDefault(require("../models/project.model"));
 const createProject = (data) => __awaiter(void 0, void 0, void 0, function* () {
@@ -41,3 +41,10 @@ const fetchAllUserProjectsAdmin = (userId) => __awaiter(void 0, void 0, void 0, 
         .lean();
 });
 exports.fetchAllUserProjectsAdmin = fetchAllUserProjectsAdmin;
+const completedJobsCount = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield project_model_1.default.countDocuments({
+        businessId: businessId,
+        status: project_enum_1.ProjectStatusEnum.completed,
+    });
+});
+exports.completedJobsCount = completedJobsCount;

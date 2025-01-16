@@ -34,3 +34,8 @@ export const fetchAllUserProjectsAdmin = async (userId: string) =>{
     .populate('job', '_id title description budget')
     .lean();
 };
+export const completedJobsCount = async (businessId: string) =>{
+       return await Project.countDocuments({
+    businessId: businessId,
+    status: ProjectStatusEnum.completed,
+  })};

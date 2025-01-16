@@ -15,5 +15,8 @@ router.route("/fetch-all-business").get(businesController.fetchAllBusinessContro
 router.route("/delete-business/:businessId").delete(userAuth,businesController.deleteBusinessController);
 router.route("/compare-business/:businessId").patch(userAuth,businesController.compareBusinessController);
 router.route("/fetch-compared-business").get(userAuth,businesController.fetchAllComparedBusinessesController );
+router.route("/like-business/:businessId").patch(userAuth, businesController.likeBusinessController);
+router.route("/unlike-business/:businessId").patch(userAuth, businesController.unlikeBusinessController);
+
 export { router as BusinessRoute };
 

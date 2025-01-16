@@ -197,3 +197,31 @@ export const fetchAllComparedBusinessesController = catchAsync(async (req: JwtPa
     const businesses = await businessService.fetchAllComparedBusinesses(user.comparedBusinesses);
     return successResponse(res, StatusCodes.OK, businesses);
 });
+
+export const likeBusinessController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id;
+  const { businessId} = req.params;
+
+    
+    const business = await businessService.fetchSingleBusiness(businessId)
+    if (!business ) {
+        throw new NotFoundError("Service not found!");
+    };
+
+
+    const existingLike = await businessService.ifLikedBusiness(businessId, userId);
+    if(existingLike) {
+        throw new BadRequestError("Service previously liked!");
+    };
+
+    const data = await businessService.createBusinessLike({business: businessId, user: userId});
+ 
+    successResponse(res,StatusCodes.CREATED, data);
+});
+
+export const unlikeBusinessController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id; 
+    const {businessId} = req.params;
+     const data = await businessService.unlikeBusiness(businessId, userId);
+    successResponse(res, StatusCodes.OK, data);
+  });

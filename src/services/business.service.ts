@@ -4,6 +4,8 @@ import IBusiness from "../interfaces/business.interface";
 import Business from "../models/business.model";
 import Review from "../models/review.model";
 import * as userService from "./auth.service";
+import * as projectService from "../services/project.service";
+import BusinessLike from "../models/businessLike.model";
 
 export const createBusiness = async (data:  IBusiness) =>{
     return await Business.create(data);
@@ -188,11 +190,11 @@ export const fetchAllBusiness = async (
       { country: { $regex: filters.location, $options: 'i' } },
     ];
   }
+
   if (search) {
     query.$or = [];
-
-    const businessFields = ['services', 'businessName', 'location', 'businessName', 'bio', 'city','state', 'country' ];
-    businessFields.forEach(field => {
+    const businessFields = ['services', 'businessName', 'location', 'bio', 'city', 'state', 'country'];
+    businessFields.forEach((field) => {
       query.$or.push({ [field]: { $regex: search, $options: 'i' } });
     });
   }
@@ -200,15 +202,6 @@ export const fetchAllBusiness = async (
   if (filters.noticePeriod) {
     query.noticePeriod = filters.noticePeriod;
   }
-  let user;
-  if(userId){
-     user = await userService.findUserById(userId);
-    if (!user) {
-      throw new NotFoundError('User not found');
-    };  }
-  
-
-  const comparedBusinesses = user?.comparedBusinesses || []; 
 
   const businesses = await Business.find(query)
     .sort({ createdAt: -1 })
@@ -218,35 +211,45 @@ export const fetchAllBusiness = async (
 
   const totalBusinesses = await Business.countDocuments(query);
 
-  const enhancedBusinesses = businesses
-    .map((business: any) => {
+  let likedBusinessIds: string[] = [];
+  if (userId) {
+    const likedBusinesses = await BusinessLike.find({ user: userId }).select('business').lean();
+    likedBusinessIds = likedBusinesses.map((like) => like.business.toString());
+  }
+
+  const enhancedBusinesses = await Promise.all(
+    businesses.map(async (business: any) => {
       const totalReviews = business.reviews.length;
       const averageRating =
         totalReviews > 0
           ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
           : 0;
+
+      const completedJobs = await projectService.completedJobsCount(String(business._id));
+
       return {
         ...business.toObject(),
         totalReviews,
         averageRating: parseFloat(averageRating.toFixed(2)),
-        isCompared: comparedBusinesses.some(
-          (id: any) => String(id) == String(business._id)
-        ),
-
+        isCompared: userId ? likedBusinessIds.includes(String(business._id)) : false,
+        completedJobs,
+        liked: likedBusinessIds.includes(String(business._id)),
       };
     })
-    .filter((business) => {
-      if (filters.minRating && business.averageRating < filters.minRating) {
-        return false;
-      }
-      if (filters.minReviews && business.totalReviews < filters.minReviews) {
-        return false;
-      }
-      return true;
-    });
+  );
+
+  const filteredBusinesses = enhancedBusinesses.filter((business) => {
+    if (filters.minRating && business.averageRating < filters.minRating) {
+      return false;
+    }
+    if (filters.minReviews && business.totalReviews < filters.minReviews) {
+      return false;
+    }
+    return true;
+  });
 
   return {
-    business: enhancedBusinesses,
+    business: filteredBusinesses,
     totalPages: Math.ceil(totalBusinesses / limit),
     currentPage: page,
     totalBusinesses,
@@ -267,4 +270,16 @@ export const fetchAllUserBusinessesAdmin = async (userId: string)=>{
 export const fetchAllComparedBusinesses = async (businessId: string[])=>{
   const businesses = await Business.find({ _id: { $in: businessId } });
   return businesses;
+};
+export const ifLikedBusiness = async (businessId: string, userId: string)=>{
+  return await BusinessLike.findOne({ business: businessId, user: userId });
+};
+
+export const createBusinessLike = async (data: any)=>{
+  return await BusinessLike.create(data);
+};
+
+export const unlikeBusiness = async (businessId: string, userId: string ) =>{
+    
+  return await BusinessLike.findOneAndDelete({user: userId, business: businessId});
 };

@@ -35,10 +35,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
-const error_1 = require("../errors/error");
+exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
 const business_model_1 = __importDefault(require("../models/business.model"));
-const userService = __importStar(require("./auth.service"));
+const projectService = __importStar(require("../services/project.service"));
+const businessLike_model_1 = __importDefault(require("../models/businessLike.model"));
 const createBusiness = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield business_model_1.default.create(data);
 });
@@ -185,38 +185,34 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
     }
     if (search) {
         query.$or = [];
-        const businessFields = ['services', 'businessName', 'location', 'businessName', 'bio', 'city', 'state', 'country'];
-        businessFields.forEach(field => {
+        const businessFields = ['services', 'businessName', 'location', 'bio', 'city', 'state', 'country'];
+        businessFields.forEach((field) => {
             query.$or.push({ [field]: { $regex: search, $options: 'i' } });
         });
     }
     if (filters.noticePeriod) {
         query.noticePeriod = filters.noticePeriod;
     }
-    let user;
-    if (userId) {
-        user = yield userService.findUserById(userId);
-        if (!user) {
-            throw new error_1.NotFoundError('User not found');
-        }
-        ;
-    }
-    const comparedBusinesses = (user === null || user === void 0 ? void 0 : user.comparedBusinesses) || [];
     const businesses = yield business_model_1.default.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .populate('reviews', 'rating');
     const totalBusinesses = yield business_model_1.default.countDocuments(query);
-    const enhancedBusinesses = businesses
-        .map((business) => {
+    let likedBusinessIds = [];
+    if (userId) {
+        const likedBusinesses = yield businessLike_model_1.default.find({ user: userId }).select('business').lean();
+        likedBusinessIds = likedBusinesses.map((like) => like.business.toString());
+    }
+    const enhancedBusinesses = yield Promise.all(businesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
         const totalReviews = business.reviews.length;
         const averageRating = totalReviews > 0
             ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
-        return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)), isCompared: comparedBusinesses.some((id) => String(id) == String(business._id)) });
-    })
-        .filter((business) => {
+        const completedJobs = yield projectService.completedJobsCount(String(business._id));
+        return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)), isCompared: userId ? likedBusinessIds.includes(String(business._id)) : false, completedJobs, liked: likedBusinessIds.includes(String(business._id)) });
+    })));
+    const filteredBusinesses = enhancedBusinesses.filter((business) => {
         if (filters.minRating && business.averageRating < filters.minRating) {
             return false;
         }
@@ -226,7 +222,7 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
         return true;
     });
     return {
-        business: enhancedBusinesses,
+        business: filteredBusinesses,
         totalPages: Math.ceil(totalBusinesses / limit),
         currentPage: page,
         totalBusinesses,
@@ -249,3 +245,15 @@ const fetchAllComparedBusinesses = (businessId) => __awaiter(void 0, void 0, voi
     return businesses;
 });
 exports.fetchAllComparedBusinesses = fetchAllComparedBusinesses;
+const ifLikedBusiness = (businessId, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield businessLike_model_1.default.findOne({ business: businessId, user: userId });
+});
+exports.ifLikedBusiness = ifLikedBusiness;
+const createBusinessLike = (data) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield businessLike_model_1.default.create(data);
+});
+exports.createBusinessLike = createBusinessLike;
+const unlikeBusiness = (businessId, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield businessLike_model_1.default.findOneAndDelete({ user: userId, business: businessId });
+});
+exports.unlikeBusiness = unlikeBusiness;
