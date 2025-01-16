@@ -10,7 +10,7 @@ import { IReview } from '../interfaces/review.interface';
       comment: { type: String, trim: true },
       businessId: { type: Schema.Types.ObjectId, ref: "Business" },
       projectId: { type: Schema.Types.ObjectId, ref: "Project" },
-      rateCommunication: { type: Number, required: true, min: 1, max: 5 },
+      rateCommunication: { type: Number,  min: 1, max: 5 },
       isRecommendVendor: {type: Boolean},
       helpfulUsers: { type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: [] },
       helpfulCount: { type: Number, default: 0 },

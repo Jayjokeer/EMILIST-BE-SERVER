@@ -31,7 +31,7 @@ const reviewSchema = new mongoose_1.default.Schema({
     comment: { type: String, trim: true },
     businessId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Business" },
     projectId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Project" },
-    rateCommunication: { type: Number, required: true, min: 1, max: 5 },
+    rateCommunication: { type: Number, min: 1, max: 5 },
     isRecommendVendor: { type: Boolean },
     helpfulUsers: { type: [mongoose_1.default.Schema.Types.ObjectId], ref: 'User', default: [] },
     helpfulCount: { type: Number, default: 0 },

@@ -305,7 +305,7 @@ export const validateBusinessRegistration = (req: Request, res: Response, next: 
 
   export const validateMarkBusinessReview = (req: Request, res: Response, next: NextFunction) => {
     const businessReviewValidation = Joi.object({
-      isHelpful: Joi.boolean().messages({
+      isHelpful: Joi.boolean().required().messages({
         'boolean.empty': 'isHelpful cannot be empty',
         'boolean.base': 'isHelpful must be boolean'
       }),
