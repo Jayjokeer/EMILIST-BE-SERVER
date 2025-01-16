@@ -225,3 +225,10 @@ export const unlikeBusinessController = catchAsync(async (req: JwtPayload, res: 
      const data = await businessService.unlikeBusiness(businessId, userId);
     successResponse(res, StatusCodes.OK, data);
   });
+
+  export const fetchOtherBusinessByUserController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const {userId} = req.params; 
+
+     const data = await businessService.otherBusinessesByUser(userId);
+    successResponse(res, StatusCodes.OK, data);
+  });

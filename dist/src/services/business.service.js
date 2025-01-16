@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
+exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
 const business_model_1 = __importDefault(require("../models/business.model"));
 const projectService = __importStar(require("../services/project.service"));
 const businessLike_model_1 = __importDefault(require("../models/businessLike.model"));
@@ -257,3 +257,9 @@ const unlikeBusiness = (businessId, userId) => __awaiter(void 0, void 0, void 0,
     return yield businessLike_model_1.default.findOneAndDelete({ user: userId, business: businessId });
 });
 exports.unlikeBusiness = unlikeBusiness;
+const otherBusinessesByUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield business_model_1.default.find({ userId })
+        .sort({ createdAt: -1 })
+        .populate('reviews', 'rating');
+});
+exports.otherBusinessesByUser = otherBusinessesByUser;

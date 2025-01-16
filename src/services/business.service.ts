@@ -283,3 +283,8 @@ export const unlikeBusiness = async (businessId: string, userId: string ) =>{
     
   return await BusinessLike.findOneAndDelete({user: userId, business: businessId});
 };
+export const otherBusinessesByUser = async(userId: string)=>{
+  return await  Business.find({userId})
+  .sort({ createdAt: -1 })
+  .populate('reviews', 'rating');
+}
