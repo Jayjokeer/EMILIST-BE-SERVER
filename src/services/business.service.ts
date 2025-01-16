@@ -287,4 +287,82 @@ export const otherBusinessesByUser = async(userId: string)=>{
   return await  Business.find({userId})
   .sort({ createdAt: -1 })
   .populate('reviews', 'rating');
-}
+};
+
+
+export const fetchSimilarBusinesses = async (businessId: string) => {
+    const limit = 10; 
+
+    const targetBusiness = await Business.findById(businessId);
+    if (!targetBusiness) {
+      throw new NotFoundError('Service not found' );
+    }
+    console.log(targetBusiness)
+    const query: Record<string, any> = {
+      _id: { $ne: businessId }, 
+    };
+
+    if (targetBusiness.city || targetBusiness.state || targetBusiness.country) {
+      query.$or = [
+        { businessCity: targetBusiness.businessCity },
+        { businessState: targetBusiness.businessState},
+        { businessCountry: targetBusiness.businessCountry},
+      ];
+    };
+
+    if (targetBusiness.services?.length) {
+      query.services = { $in: targetBusiness.services };
+    }
+
+    const similarBusinesses = await Business.find(query)
+      .limit(Number(limit))
+      .populate('reviews', 'rating');
+    console.log(similarBusinesses);
+    const enhancedBusinesses = await Promise.all(
+      similarBusinesses.map(async (business: any) => {
+        const totalReviews = business.reviews.length;
+        const averageRating =
+          totalReviews > 0
+            ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
+            : 0;
+
+        return {
+          ...business.toObject(),
+          totalReviews,
+          averageRating: parseFloat(averageRating.toFixed(2)),
+        };
+      })
+    );
+  
+return enhancedBusinesses
+};
+export const fetchBusinessReviews = async (businessId: string, page: number, limit: number) => {
+
+    const business = await Business.findById(businessId);
+    if (!business) {
+      throw new NotFoundError('Service not found!');
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const reviews = await Review.find({ businessId: businessId }) 
+      .skip(skip)
+      .limit(Number(limit))
+      .sort({ createdAt: -1 }) 
+      .lean();
+
+    const totalRatings = reviews.length;
+    const averageRating =
+      totalRatings > 0
+        ? reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalRatings
+        : 0;
+
+    const data = {
+      averageRating: parseFloat(averageRating.toFixed(2)),
+      numberOfRatings: totalRatings,
+      reviews,
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalRatings / Number(limit)),
+    };
+  return data;
+};

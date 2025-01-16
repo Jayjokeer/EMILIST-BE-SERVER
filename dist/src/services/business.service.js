@@ -35,8 +35,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
+exports.fetchBusinessReviews = exports.fetchSimilarBusinesses = exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
+const error_1 = require("../errors/error");
 const business_model_1 = __importDefault(require("../models/business.model"));
+const review_model_1 = __importDefault(require("../models/review.model"));
 const projectService = __importStar(require("../services/project.service"));
 const businessLike_model_1 = __importDefault(require("../models/businessLike.model"));
 const createBusiness = (data) => __awaiter(void 0, void 0, void 0, function* () {
@@ -263,3 +265,64 @@ const otherBusinessesByUser = (userId) => __awaiter(void 0, void 0, void 0, func
         .populate('reviews', 'rating');
 });
 exports.otherBusinessesByUser = otherBusinessesByUser;
+const fetchSimilarBusinesses = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const limit = 10;
+    const targetBusiness = yield business_model_1.default.findById(businessId);
+    if (!targetBusiness) {
+        throw new error_1.NotFoundError('Service not found');
+    }
+    console.log(targetBusiness);
+    const query = {
+        _id: { $ne: businessId },
+    };
+    if (targetBusiness.city || targetBusiness.state || targetBusiness.country) {
+        query.$or = [
+            { businessCity: targetBusiness.businessCity },
+            { businessState: targetBusiness.businessState },
+            { businessCountry: targetBusiness.businessCountry },
+        ];
+    }
+    ;
+    if ((_a = targetBusiness.services) === null || _a === void 0 ? void 0 : _a.length) {
+        query.services = { $in: targetBusiness.services };
+    }
+    const similarBusinesses = yield business_model_1.default.find(query)
+        .limit(Number(limit))
+        .populate('reviews', 'rating');
+    console.log(similarBusinesses);
+    const enhancedBusinesses = yield Promise.all(similarBusinesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
+        const totalReviews = business.reviews.length;
+        const averageRating = totalReviews > 0
+            ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+            : 0;
+        return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
+    })));
+    return enhancedBusinesses;
+});
+exports.fetchSimilarBusinesses = fetchSimilarBusinesses;
+const fetchBusinessReviews = (businessId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+    const business = yield business_model_1.default.findById(businessId);
+    if (!business) {
+        throw new error_1.NotFoundError('Service not found!');
+    }
+    const skip = (Number(page) - 1) * Number(limit);
+    const reviews = yield review_model_1.default.find({ businessId: businessId })
+        .skip(skip)
+        .limit(Number(limit))
+        .sort({ createdAt: -1 })
+        .lean();
+    const totalRatings = reviews.length;
+    const averageRating = totalRatings > 0
+        ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalRatings
+        : 0;
+    const data = {
+        averageRating: parseFloat(averageRating.toFixed(2)),
+        numberOfRatings: totalRatings,
+        reviews,
+        currentPage: Number(page),
+        totalPages: Math.ceil(totalRatings / Number(limit)),
+    };
+    return data;
+});
+exports.fetchBusinessReviews = fetchBusinessReviews;

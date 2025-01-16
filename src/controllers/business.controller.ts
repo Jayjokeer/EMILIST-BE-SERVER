@@ -232,3 +232,19 @@ export const unlikeBusinessController = catchAsync(async (req: JwtPayload, res: 
      const data = await businessService.otherBusinessesByUser(userId);
     successResponse(res, StatusCodes.OK, data);
   });
+
+  export const fetchSimilarBusinessByUserController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const {businessId} = req.params; 
+
+     const data = await businessService.fetchSimilarBusinesses(businessId);
+    successResponse(res, StatusCodes.OK, data);
+  });
+
+  export const fetchBusinessReviewsController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const {businessId} = req.params; 
+    const {page, limit } = req.query;
+
+     const data = await businessService.fetchBusinessReviews(businessId, Number(page), Number(limit));
+    successResponse(res, StatusCodes.OK, data);
+  });
+  
