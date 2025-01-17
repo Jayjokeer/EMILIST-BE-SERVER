@@ -3,6 +3,7 @@ import { IProduct } from "../interfaces/product.interface";
 import Product from "../models/product.model";
 import ProductLike from "../models/productLike.model";
 import Review from "../models/review.model";
+import { NotFoundError } from "../errors/error";
 
 export const createProduct = async (data: IProduct)=>{
     return await Product.create(data);
@@ -254,4 +255,53 @@ export const fetchAllProductsAdmin = async (page: number, limit: number) =>{
   const materials=   await Product.find().populate('userId', 'fullName').skip(skip).limit(limit);
   const totalMaterials = await Product.countDocuments();
   return {materials , totalMaterials};
+};
+export const otherProductsByUser = async(userId: string)=>{
+  return await  Product.find({userId})
+  .sort({ createdAt: -1 })
+  .populate('reviews', 'rating');
+};
+
+export const fetchSimilarProducts = async (productId: string) => {
+  const limit = 10;
+  const targetProduct  = await Product.findById(productId);
+
+  if(!targetProduct){
+    throw new NotFoundError("Product not found!");
+  }
+  const query: Record<string, any> = {
+    _id: { $ne: productId }, 
+  };
+
+  if (targetProduct.location || targetProduct.category || targetProduct.subCategory || targetProduct.brand || targetProduct.name) {
+    query.$or = [
+      { location : targetProduct.location },
+      { category: targetProduct.category},
+      { subCategory: targetProduct.subCategory},
+      { brand: targetProduct.brand},
+      { name: targetProduct.name},
+
+    ];
+  };
+  const similarProducts =  await Product.find(query)
+  .limit(Number(limit))
+  .populate('reviews', 'rating');
+  
+  const enhancedProducts = await Promise.all(
+    similarProducts.map(async (product: any) => {
+      const totalReviews = product.reviews.length;
+      const averageRating =
+        totalReviews > 0
+          ? product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
+          : 0;
+
+      return {
+        ...product.toObject(),
+        totalReviews,
+        averageRating: parseFloat(averageRating.toFixed(2)),
+      };
+    })
+  );
+
+  return enhancedProducts; 
 };

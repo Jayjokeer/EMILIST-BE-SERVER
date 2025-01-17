@@ -20,4 +20,8 @@ router.route("/fetch-liked-products").get( userAuth, productController.fetchAllL
 router.route("/add-review").post(userAuth,validateReviewProduct , productController.reviewProductController);
 router.route("/pay-for-product").post(userAuth,validatePayForProduct , paymentController.payforProductController);
 router.route("/add-product-discount/:productId").patch(userAuth,addDiscountToProductValidator, productController.addDiscountToProductController);
+router.route("/fetch-similar-products/:productId").get( productController.fetchSimilarProductByUserController);
+router.route("/fetch-other-products-by-user/:userId").get( productController.fetchOtherProductByUserController);
+
+
 export { router as ProductRoute };

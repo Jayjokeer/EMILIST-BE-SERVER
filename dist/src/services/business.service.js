@@ -272,7 +272,6 @@ const fetchSimilarBusinesses = (businessId) => __awaiter(void 0, void 0, void 0,
     if (!targetBusiness) {
         throw new error_1.NotFoundError('Service not found');
     }
-    console.log(targetBusiness);
     const query = {
         _id: { $ne: businessId },
     };
@@ -290,7 +289,6 @@ const fetchSimilarBusinesses = (businessId) => __awaiter(void 0, void 0, void 0,
     const similarBusinesses = yield business_model_1.default.find(query)
         .limit(Number(limit))
         .populate('reviews', 'rating');
-    console.log(similarBusinesses);
     const enhancedBusinesses = yield Promise.all(similarBusinesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
         const totalReviews = business.reviews.length;
         const averageRating = totalReviews > 0

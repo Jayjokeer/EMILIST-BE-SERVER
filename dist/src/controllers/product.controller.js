@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.addDiscountToProductController = exports.reviewProductController = exports.unlikeProductsController = exports.fetchAllLikedProductsController = exports.likeProductsController = exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
+exports.fetchSimilarProductByUserController = exports.fetchOtherProductByUserController = exports.addDiscountToProductController = exports.reviewProductController = exports.unlikeProductsController = exports.fetchAllLikedProductsController = exports.likeProductsController = exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -243,4 +243,14 @@ exports.addDiscountToProductController = (0, error_handler_1.catchAsync)((req, r
     product.isDiscounted = true;
     yield product.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Discount added successfully!");
+}));
+exports.fetchOtherProductByUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.params;
+    const data = yield productService.otherProductsByUser(userId);
+    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.fetchSimilarProductByUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { productId } = req.params;
+    const data = yield productService.fetchSimilarProducts(productId);
+    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

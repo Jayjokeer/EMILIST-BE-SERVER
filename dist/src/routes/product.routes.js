@@ -45,3 +45,5 @@ router.route("/fetch-liked-products").get(current_user_1.userAuth, productContro
 router.route("/add-review").post(current_user_1.userAuth, product_validation_1.validateReviewProduct, productController.reviewProductController);
 router.route("/pay-for-product").post(current_user_1.userAuth, product_validation_1.validatePayForProduct, paymentController.payforProductController);
 router.route("/add-product-discount/:productId").patch(current_user_1.userAuth, product_validation_1.addDiscountToProductValidator, productController.addDiscountToProductController);
+router.route("/fetch-similar-products/:productId").get(productController.fetchSimilarProductByUserController);
+router.route("/fetch-other-products-by-user/:userId").get(productController.fetchOtherProductByUserController);

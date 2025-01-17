@@ -297,7 +297,6 @@ export const fetchSimilarBusinesses = async (businessId: string) => {
     if (!targetBusiness) {
       throw new NotFoundError('Service not found' );
     }
-    console.log(targetBusiness)
     const query: Record<string, any> = {
       _id: { $ne: businessId }, 
     };
@@ -317,7 +316,7 @@ export const fetchSimilarBusinesses = async (businessId: string) => {
     const similarBusinesses = await Business.find(query)
       .limit(Number(limit))
       .populate('reviews', 'rating');
-    console.log(similarBusinesses);
+      
     const enhancedBusinesses = await Promise.all(
       similarBusinesses.map(async (business: any) => {
         const totalReviews = business.reviews.length;

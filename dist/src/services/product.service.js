@@ -12,11 +12,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllProductsAdmin = exports.fetchAllUserProductsAdmin = exports.fetchAllProductsForAdmin = exports.fetchReviewForProduct = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
+exports.fetchSimilarProducts = exports.otherProductsByUser = exports.fetchAllProductsAdmin = exports.fetchAllUserProductsAdmin = exports.fetchAllProductsForAdmin = exports.fetchReviewForProduct = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const product_model_1 = __importDefault(require("../models/product.model"));
 const productLike_model_1 = __importDefault(require("../models/productLike.model"));
 const review_model_1 = __importDefault(require("../models/review.model"));
+const error_1 = require("../errors/error");
 const createProduct = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield product_model_1.default.create(data);
 });
@@ -225,3 +226,41 @@ const fetchAllProductsAdmin = (page, limit) => __awaiter(void 0, void 0, void 0,
     return { materials, totalMaterials };
 });
 exports.fetchAllProductsAdmin = fetchAllProductsAdmin;
+const otherProductsByUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield product_model_1.default.find({ userId })
+        .sort({ createdAt: -1 })
+        .populate('reviews', 'rating');
+});
+exports.otherProductsByUser = otherProductsByUser;
+const fetchSimilarProducts = (productId) => __awaiter(void 0, void 0, void 0, function* () {
+    const limit = 10;
+    const targetProduct = yield product_model_1.default.findById(productId);
+    if (!targetProduct) {
+        throw new error_1.NotFoundError("Product not found!");
+    }
+    const query = {
+        _id: { $ne: productId },
+    };
+    if (targetProduct.location || targetProduct.category || targetProduct.subCategory || targetProduct.brand || targetProduct.name) {
+        query.$or = [
+            { location: targetProduct.location },
+            { category: targetProduct.category },
+            { subCategory: targetProduct.subCategory },
+            { brand: targetProduct.brand },
+            { name: targetProduct.name },
+        ];
+    }
+    ;
+    const similarProducts = yield product_model_1.default.find(query)
+        .limit(Number(limit))
+        .populate('reviews', 'rating');
+    const enhancedProducts = yield Promise.all(similarProducts.map((product) => __awaiter(void 0, void 0, void 0, function* () {
+        const totalReviews = product.reviews.length;
+        const averageRating = totalReviews > 0
+            ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+            : 0;
+        return Object.assign(Object.assign({}, product.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
+    })));
+    return enhancedProducts;
+});
+exports.fetchSimilarProducts = fetchSimilarProducts;

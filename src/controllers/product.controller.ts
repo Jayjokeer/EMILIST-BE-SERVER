@@ -262,3 +262,17 @@ export const addDiscountToProductController = catchAsync(async (req: JwtPayload,
     await product.save();
     return successResponse(res, StatusCodes.OK, "Discount added successfully!");
 });
+
+export const fetchOtherProductByUserController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const {userId} = req.params; 
+
+     const data = await productService.otherProductsByUser(userId);
+    successResponse(res, StatusCodes.OK, data);
+  });
+
+  export const fetchSimilarProductByUserController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const {productId} = req.params; 
+
+     const data = await productService.fetchSimilarProducts(productId); 
+    successResponse(res, StatusCodes.OK, data);
+  });
