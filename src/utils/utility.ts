@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import {totp}  from "otplib";
 import { config } from './config';
+import * as transactionService from "../services/transaction.service";
 const secret = config.otpSecret || "";
 export const generateShortUUID = (): string => {
     return uuidv4().slice(0, 6);
@@ -32,3 +33,13 @@ export const generateShortUUID = (): string => {
     const percentage = (currentValue / targetValue) * 100;
     return Math.min(Math.max(percentage, 0), 100); 
   };
+  
+  export const calculateVat = async( amount: number)=>{
+    const data = await transactionService.getVat();
+    const vatRate = data!.vat / 100;
+    const vatAmount = amount * vatRate;
+    return {
+      vatAmount,
+      totalAmount:  parseFloat((amount + vatAmount).toFixed(2))
+    }; 
+    };

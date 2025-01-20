@@ -35,3 +35,4 @@ router.route("/fetch-all-transactions-by-status").get(current_user_1.adminAuth, 
 router.route("/fetch-all-user-transactions").get(current_user_1.userAuth, transactionController.fetchAllTransactionsByUsersController);
 router.route("/verify-paystack-payment/:reference").get(paymentController.verifyPaystackPaymentController);
 router.route("/fetch-user-earning").get(current_user_1.userAuth, transactionController.fetchUserEarningsController);
+router.route("/fetch-vat").get(transactionController.fetchVatController);

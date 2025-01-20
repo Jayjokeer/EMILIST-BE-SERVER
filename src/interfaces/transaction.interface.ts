@@ -24,5 +24,6 @@ export interface ITransaction extends Document {
     serviceType: ServiceEnum;
     planId: any;
     recieverId?: mongoose.Schema.Types.ObjectId;
+    vat?: number;
   };
   

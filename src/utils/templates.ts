@@ -58,7 +58,7 @@ export const sendMessage = (name: string, posterName: string,) => {
 export const sendJobApplicationMessage = (name: string, user: string,title: string,) => {
   const subject = "New Job Application";
   const html = `
-        Hi ${name}!, ${user} applied to your job titled: ${title}. kindly log into to your account to view`;
+        Hi ${name}!, ${user} applied to your job titled: ${title}. kindly log into to your account to view ${config.frontendLoginUrl}`;
 
   return { html, subject };
 };

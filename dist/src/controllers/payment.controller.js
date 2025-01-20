@@ -52,21 +52,25 @@ const planService = __importStar(require("../services/plan.service"));
 const subscriptionService = __importStar(require("../services/subscription.service"));
 const userService = __importStar(require("../services/auth.service"));
 const suscribtion_enum_1 = require("../enums/suscribtion.enum");
+const utility_1 = require("../utils/utility");
 exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const userId = req.user._id;
     const { cartId, paymentMethod, currency } = req.body;
     let data;
     const cart = yield cartService.fetchCartByIdPayment(cartId, userId);
-    if (!cart || ((_a = cart.userId) === null || _a === void 0 ? void 0 : _a.toString()) !== userId.toString()) {
-        throw new error_1.NotFoundError("Cart not found or unauthorized access");
+    if (!cart) {
+        throw new error_1.NotFoundError("Cart not found");
     }
     ;
+    if (((_a = cart.userId) === null || _a === void 0 ? void 0 : _a.toString()) !== userId.toString()) {
+        throw new error_1.UnauthorizedError("Unauthorized access!");
+    }
     const order = yield orderService.fetchOrderByCartId(cartId);
     if (!order) {
         throw new error_1.NotFoundError("Your order cannot be found");
     }
-    const totalAmount = order.totalAmount;
+    const { vatAmount, totalAmount } = yield (0, utility_1.calculateVat)(order.totalAmount);
     for (const item of cart.products) {
         const product = item.productId;
         if (product.availableQuantity < item.quantity) {
@@ -91,6 +95,7 @@ exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => 
             cartId: cart._id,
             orderId: order._id,
             serviceType: transaction_enum_1.ServiceEnum.material,
+            vat: vatAmount,
         };
         const transaction = yield transactionService.createTransaction(transactionPayload);
         userWallet.balance -= totalAmount;
@@ -118,6 +123,7 @@ exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => 
                 cartId: cart._id,
                 orderId: order._id,
                 serviceType: transaction_enum_1.ServiceEnum.material,
+                vat: vatAmount,
             };
             const transaction = yield transactionService.createTransaction(transactionPayload);
             transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
@@ -148,6 +154,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
     if (!project) {
         throw new error_1.NotFoundError("Application not found");
     }
+    const { vatAmount, totalAmount } = yield (0, utility_1.calculateVat)(milestone.amount);
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
         const userWallet = yield walletService.findUserWalletByCurrency(userId, currency);
         if (!userWallet || userWallet.balance < milestone.amount) {
@@ -156,7 +163,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         const transactionPayload = {
             userId,
             type: transaction_enum_1.TransactionType.DEBIT,
-            amount: milestone.amount,
+            amount: totalAmount,
             description: `Job payment via wallet`,
             paymentMethod: paymentMethod,
             balanceBefore: userWallet.balance,
@@ -167,6 +174,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
             milestoneId,
             recieverId: project.user,
             serviceType: transaction_enum_1.ServiceEnum.job,
+            vat: vatAmount,
         };
         const transaction = yield transactionService.createTransaction(transactionPayload);
         userWallet.balance -= milestone.amount;
@@ -183,8 +191,8 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency === transaction_enum_1.WalletEnum.NGN) {
             const transactionPayload = {
                 userId,
+                amount: totalAmount,
                 type: transaction_enum_1.TransactionType.DEBIT,
-                amount: milestone.amount,
                 description: `Job payment via card`,
                 paymentMethod: paymentMethod,
                 currency: currency,
@@ -194,6 +202,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
                 milestoneId,
                 recieverId: project.user,
                 serviceType: transaction_enum_1.ServiceEnum.job,
+                vat: vatAmount,
             };
             const transaction = yield transactionService.createTransaction(transactionPayload);
             transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;

@@ -108,7 +108,7 @@ exports.checkoutCartController = (0, error_handler_1.catchAsync)((req, res) => _
         throw new error_1.NotFoundError("Cart not found");
     let discountPercentage = 0;
     let discountAmount = 0;
-    let finalTotalAmount = 0;
+    let finalTotalAmount = cart.totalAmount;
     if (code) {
         const validDiscountCode = yield cartService.fetchDiscountCode(code);
         if (!validDiscountCode) {

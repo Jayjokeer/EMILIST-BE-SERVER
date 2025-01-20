@@ -28,6 +28,7 @@ const transactionSchema = new Schema(
     orderId: { type: Schema.Types.ObjectId, ref: 'Order'},
     serviceType: {type: String, enum: ServiceEnum},
     planId: { type: Schema.Types.ObjectId, ref: 'Plan'},
+    vat: {type: Number}
   },
   { timestamps: true }
 );

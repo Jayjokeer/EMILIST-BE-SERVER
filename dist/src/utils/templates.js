@@ -54,7 +54,7 @@ exports.sendMessage = sendMessage;
 const sendJobApplicationMessage = (name, user, title) => {
     const subject = "New Job Application";
     const html = `
-        Hi ${name}!, ${user} applied to your job titled: ${title}. kindly log into to your account to view`;
+        Hi ${name}!, ${user} applied to your job titled: ${title}. kindly log into to your account to view ${config_1.config.frontendLoginUrl}`;
     return { html, subject };
 };
 exports.sendJobApplicationMessage = sendJobApplicationMessage;

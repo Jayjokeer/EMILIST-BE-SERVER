@@ -46,3 +46,4 @@ router.route("/fetch-material/:materialId").get(current_user_1.adminAuth, adminC
 router.route("/fetch-all-transactions").get(current_user_1.adminAuth, adminController.fetchAllTransactionsAdminController);
 router.route("/fetch-transaction/:transactionId").get(current_user_1.adminAuth, adminController.fetchSingleTransactionAdminController);
 router.route("/fetch-all-subscriptions").get(current_user_1.adminAuth, adminController.fetchSubscriptionsController);
+router.route("/update-vat").patch(current_user_1.adminAuth, adminController.updateVatController);

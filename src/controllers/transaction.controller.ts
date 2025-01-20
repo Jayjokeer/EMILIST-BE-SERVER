@@ -98,3 +98,10 @@ export const fetchUserEarningsController =  catchAsync(async (req: JwtPayload, r
   return successResponse(res, StatusCodes.OK, data);
 
 });
+
+export const fetchVatController =  catchAsync(async (req: JwtPayload, res: Response) => {
+  const vat = await transactionService.getVat();
+  const data = vat!.vat;
+
+  return successResponse(res, StatusCodes.OK, data);
+});

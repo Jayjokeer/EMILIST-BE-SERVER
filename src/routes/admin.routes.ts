@@ -21,5 +21,6 @@ router.route("/fetch-material/:materialId").get(adminAuth,adminController.fetchS
 router.route("/fetch-all-transactions").get(adminAuth,adminController.fetchAllTransactionsAdminController);
 router.route("/fetch-transaction/:transactionId").get(adminAuth,adminController.fetchSingleTransactionAdminController);
 router.route("/fetch-all-subscriptions").get(adminAuth,adminController.fetchSubscriptionsController);
+router.route("/update-vat").patch(adminAuth, adminController.updateVatController);
 
 export { router as AdminRoute };

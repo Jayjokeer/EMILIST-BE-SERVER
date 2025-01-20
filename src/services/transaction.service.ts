@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { PaymentMethodEnum, ServiceEnum, TransactionEnum, WalletEnum } from "../enums/transaction.enum";
 import Transaction from "../models/transaction.model";
+import AppConfig from "../models/app-config.model";
 
 export const createTransaction = async (data: any)=>{
     return await Transaction.create(data);
@@ -235,4 +236,12 @@ const transaction = await Transaction.findById(transactionId)
 .populate('userId', '_id fullName');
 
 return transaction;
+};
+
+export const changeVatServiceAdmin  = async (vat: number)=>{
+  return await AppConfig.updateOne({}, { $set: { vat } });
+};
+
+export const getVat = async ()=>{
+  return await AppConfig.findOne();
 };

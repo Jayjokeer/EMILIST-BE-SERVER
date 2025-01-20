@@ -107,7 +107,7 @@ export const checkoutCartController= catchAsync(async (req: JwtPayload, res: Res
 
     let discountPercentage = 0;
     let discountAmount = 0;
-    let finalTotalAmount = 0; 
+    let finalTotalAmount = cart.totalAmount;
     if (code) {
         const validDiscountCode = await cartService.fetchDiscountCode(code);
 

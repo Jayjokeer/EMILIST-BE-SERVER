@@ -330,3 +330,10 @@ export const fetchSingleTransactionAdminController = catchAsync(async(req: JwtPa
 
    return successResponse(res,StatusCodes.OK, data);
 });
+
+export const updateVatController = catchAsync(async(req: JwtPayload, res: Response)=>{
+    const{vat} = req.body;
+    const data = await transactionService.changeVatServiceAdmin(vat);
+
+   return successResponse(res,StatusCodes.OK, data);
+});

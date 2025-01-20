@@ -20,6 +20,7 @@ import * as planService from '../services/plan.service';
 import * as subscriptionService from '../services/subscription.service';
 import * as userService from '../services/auth.service';
 import { SubscriptionStatusEnum } from "../enums/suscribtion.enum";
+import { calculateVat } from "../utils/utility";
 
 export const payforProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
@@ -27,16 +28,19 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
     let data;
 
     const cart = await cartService.fetchCartByIdPayment(cartId, userId);
-    if(!cart || cart.userId?.toString() !== userId.toString()){
-        throw new NotFoundError("Cart not found or unauthorized access");
+    if(!cart ){
+        throw new NotFoundError("Cart not found");
     };
+    if(cart.userId?.toString() !== userId.toString()){
+      throw new UnauthorizedError("Unauthorized access!");
+
+    }
     const order = await orderService.fetchOrderByCartId(cartId);
     if(!order){
       throw new NotFoundError("Your order cannot be found");
     }
 
-
-    const totalAmount = order.totalAmount!;
+    const {vatAmount,totalAmount } = await calculateVat(order.totalAmount!);
 
     for (const item of cart.products!) {
       const product = item.productId as any; 
@@ -62,6 +66,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
             cartId: cart._id,
             orderId: order._id,
             serviceType: ServiceEnum.material,
+            vat: vatAmount,
           };
         const transaction = await transactionService.createTransaction(transactionPayload);
         userWallet.balance -= totalAmount;
@@ -88,6 +93,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
                 cartId: cart._id,
                 orderId: order._id,
                 serviceType: ServiceEnum.material,
+                vat: vatAmount,
               };
             const transaction = await transactionService.createTransaction(transactionPayload);
             transaction.paymentService = PaymentServiceEnum.paystack;
@@ -122,6 +128,8 @@ const project = await projectService.fetchProjectById(String(job.acceptedApplica
 if(!project){
   throw new NotFoundError("Application not found");
 }
+const {vatAmount,totalAmount } = await calculateVat(milestone.amount);
+
     if (paymentMethod === PaymentMethodEnum.wallet) {
       const userWallet = await walletService.findUserWalletByCurrency(userId, currency);
       if (!userWallet || userWallet.balance < milestone.amount) {
@@ -130,7 +138,7 @@ if(!project){
       const transactionPayload = {
           userId,
           type: TransactionType.DEBIT,
-          amount:milestone.amount,
+          amount:totalAmount,
           description: `Job payment via wallet`,
           paymentMethod: paymentMethod,
           balanceBefore: userWallet.balance,
@@ -141,7 +149,7 @@ if(!project){
           milestoneId,
           recieverId: project.user, 
           serviceType: ServiceEnum.job,
-
+          vat: vatAmount,
         };
       const transaction = await transactionService.createTransaction(transactionPayload);
       userWallet.balance -= milestone.amount;
@@ -157,8 +165,8 @@ if(!project){
       if (paymentMethod === PaymentMethodEnum.card && currency === WalletEnum.NGN ) {
           const transactionPayload = {
               userId,
+              amount:totalAmount,
               type: TransactionType.DEBIT,
-              amount:milestone.amount,
               description: `Job payment via card`,
               paymentMethod: paymentMethod,
               currency: currency,
@@ -168,6 +176,7 @@ if(!project){
               milestoneId,
               recieverId: project.user, 
               serviceType: ServiceEnum.job,
+              vat: vatAmount,
              };
           const transaction = await transactionService.createTransaction(transactionPayload);
           transaction.paymentService = PaymentServiceEnum.paystack;

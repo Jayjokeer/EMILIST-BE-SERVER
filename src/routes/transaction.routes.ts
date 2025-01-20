@@ -9,5 +9,6 @@ router.route("/fetch-single-transaction/:transactionId").get(adminAuth,transacti
 router.route("/fetch-all-transactions-by-status").get(adminAuth,transactionController.fetchAllTransactionsByStatusController);
 router.route("/fetch-all-user-transactions").get(userAuth,transactionController.fetchAllTransactionsByUsersController);
 router.route("/verify-paystack-payment/:reference").get(paymentController.verifyPaystackPaymentController);
-router.route("/fetch-user-earning" ).get(userAuth,transactionController.fetchUserEarningsController)
+router.route("/fetch-user-earning" ).get(userAuth,transactionController.fetchUserEarningsController);
+router.route("/fetch-vat").get(transactionController.fetchVatController);
 export { router as TransactionRoute };
