@@ -212,9 +212,12 @@ export const fetchAllBusiness = async (
   const totalBusinesses = await Business.countDocuments(query);
 
   let likedBusinessIds: string[] = [];
+  let user: any;
+
   if (userId) {
     const likedBusinesses = await BusinessLike.find({ user: userId }).select('business').lean();
     likedBusinessIds = likedBusinesses.map((like) => like.business.toString());
+    user = await userService.findUserWithoutDetailsById(userId);
   }
 
   const enhancedBusinesses = await Promise.all(
@@ -226,12 +229,11 @@ export const fetchAllBusiness = async (
           : 0;
 
       const completedJobs = await projectService.completedJobsCount(String(business._id));
-
       return {
         ...business.toObject(),
         totalReviews,
         averageRating: parseFloat(averageRating.toFixed(2)),
-        isCompared: userId ? likedBusinessIds.includes(String(business._id)) : false,
+        isCompared: userId ? user.comparedBusinesses.includes(String(business._id)) : false,
         completedJobs,
         liked: likedBusinessIds.includes(String(business._id)),
       };
@@ -267,10 +269,12 @@ export const fetchAllUserBusinessesAdmin = async (userId: string)=>{
     .populate('reviews', 'rating')
     .lean();
 };
+
 export const fetchAllComparedBusinesses = async (businessId: string[])=>{
-  const businesses = await Business.find({ _id: { $in: businessId } });
+  const businesses = await Business.find({ _id: { $in: businessId } }).populate('userId', 'fullName email userName uniqueId profileImage level gender');
   return businesses;
 };
+
 export const ifLikedBusiness = async (businessId: string, userId: string)=>{
   return await BusinessLike.findOne({ business: businessId, user: userId });
 };
@@ -316,7 +320,7 @@ export const fetchSimilarBusinesses = async (businessId: string) => {
     const similarBusinesses = await Business.find(query)
       .limit(Number(limit))
       .populate('reviews', 'rating');
-      
+
     const enhancedBusinesses = await Promise.all(
       similarBusinesses.map(async (business: any) => {
         const totalReviews = business.reviews.length;

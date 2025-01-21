@@ -158,7 +158,6 @@ export const reviewBusinessController = catchAsync(async (req: JwtPayload, res: 
 export const compareBusinessController = catchAsync (async(req: JwtPayload, res: Response)=>{
     const userId = req.user._id;
 const {businessId} = req.params;
-console.log(userId)
 const business = await businessService.fetchSingleBusiness(businessId);
 if(!business){
 

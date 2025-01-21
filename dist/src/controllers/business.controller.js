@@ -156,7 +156,6 @@ exports.reviewBusinessController = (0, error_handler_1.catchAsync)((req, res) =>
 exports.compareBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user._id;
     const { businessId } = req.params;
-    console.log(userId);
     const business = yield businessService.fetchSingleBusiness(businessId);
     if (!business) {
         throw new error_1.NotFoundError("No service found!");

@@ -39,6 +39,7 @@ exports.markReviewHelpful = exports.fetchBusinessReviews = exports.fetchSimilarB
 const error_1 = require("../errors/error");
 const business_model_1 = __importDefault(require("../models/business.model"));
 const review_model_1 = __importDefault(require("../models/review.model"));
+const userService = __importStar(require("./auth.service"));
 const projectService = __importStar(require("../services/project.service"));
 const businessLike_model_1 = __importDefault(require("../models/businessLike.model"));
 const createBusiness = (data) => __awaiter(void 0, void 0, void 0, function* () {
@@ -202,9 +203,11 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
         .populate('reviews', 'rating');
     const totalBusinesses = yield business_model_1.default.countDocuments(query);
     let likedBusinessIds = [];
+    let user;
     if (userId) {
         const likedBusinesses = yield businessLike_model_1.default.find({ user: userId }).select('business').lean();
         likedBusinessIds = likedBusinesses.map((like) => like.business.toString());
+        user = yield userService.findUserWithoutDetailsById(userId);
     }
     const enhancedBusinesses = yield Promise.all(businesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
         const totalReviews = business.reviews.length;
@@ -212,7 +215,7 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
             ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
         const completedJobs = yield projectService.completedJobsCount(String(business._id));
-        return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)), isCompared: userId ? likedBusinessIds.includes(String(business._id)) : false, completedJobs, liked: likedBusinessIds.includes(String(business._id)) });
+        return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)), isCompared: userId ? user.comparedBusinesses.includes(String(business._id)) : false, completedJobs, liked: likedBusinessIds.includes(String(business._id)) });
     })));
     const filteredBusinesses = enhancedBusinesses.filter((business) => {
         if (filters.minRating && business.averageRating < filters.minRating) {
@@ -243,7 +246,7 @@ const fetchAllUserBusinessesAdmin = (userId) => __awaiter(void 0, void 0, void 0
 });
 exports.fetchAllUserBusinessesAdmin = fetchAllUserBusinessesAdmin;
 const fetchAllComparedBusinesses = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
-    const businesses = yield business_model_1.default.find({ _id: { $in: businessId } });
+    const businesses = yield business_model_1.default.find({ _id: { $in: businessId } }).populate('userId', 'fullName email userName uniqueId profileImage level gender');
     return businesses;
 });
 exports.fetchAllComparedBusinesses = fetchAllComparedBusinesses;
