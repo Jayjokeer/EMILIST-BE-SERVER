@@ -30,6 +30,7 @@ const adminController = __importStar(require("../controllers/admin.controller"))
 const admin_validation_1 = require("../validations/admin.validation");
 const image_upload_1 = require("../utils/image-upload");
 const job_validation_1 = require("../validations/job.validation");
+const walletController = __importStar(require("../controllers/wallet.controller"));
 const router = (0, express_1.Router)();
 exports.AdminRoute = router;
 router.route("/dashboard").get(current_user_1.adminAuth, adminController.adminDashboardController);
@@ -47,3 +48,4 @@ router.route("/fetch-all-transactions").get(current_user_1.adminAuth, adminContr
 router.route("/fetch-transaction/:transactionId").get(current_user_1.adminAuth, adminController.fetchSingleTransactionAdminController);
 router.route("/fetch-all-subscriptions").get(current_user_1.adminAuth, adminController.fetchSubscriptionsController);
 router.route("/update-vat").patch(current_user_1.adminAuth, adminController.updateVatController);
+router.route("/verify-bank-transfer").post(current_user_1.adminAuth, walletController.verifyBankTransferWalletFunding);

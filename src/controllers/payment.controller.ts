@@ -128,7 +128,7 @@ const project = await projectService.fetchProjectById(String(job.acceptedApplica
 if(!project){
   throw new NotFoundError("Application not found");
 }
-const {vatAmount,totalAmount } = await calculateVat(milestone.amount);
+// const {vatAmount,totalAmount } = await calculateVat(milestone.amount);
 
     if (paymentMethod === PaymentMethodEnum.wallet) {
       const userWallet = await walletService.findUserWalletByCurrency(userId, currency);
@@ -138,7 +138,7 @@ const {vatAmount,totalAmount } = await calculateVat(milestone.amount);
       const transactionPayload = {
           userId,
           type: TransactionType.DEBIT,
-          amount:totalAmount,
+          amount:milestone.amount,
           description: `Job payment via wallet`,
           paymentMethod: paymentMethod,
           balanceBefore: userWallet.balance,
@@ -149,7 +149,7 @@ const {vatAmount,totalAmount } = await calculateVat(milestone.amount);
           milestoneId,
           recieverId: project.user, 
           serviceType: ServiceEnum.job,
-          vat: vatAmount,
+          // vat: vatAmount,
         };
       const transaction = await transactionService.createTransaction(transactionPayload);
       userWallet.balance -= milestone.amount;
@@ -165,7 +165,7 @@ const {vatAmount,totalAmount } = await calculateVat(milestone.amount);
       if (paymentMethod === PaymentMethodEnum.card && currency === WalletEnum.NGN ) {
           const transactionPayload = {
               userId,
-              amount:totalAmount,
+              amount:milestone.amount,
               type: TransactionType.DEBIT,
               description: `Job payment via card`,
               paymentMethod: paymentMethod,
@@ -176,7 +176,7 @@ const {vatAmount,totalAmount } = await calculateVat(milestone.amount);
               milestoneId,
               recieverId: project.user, 
               serviceType: ServiceEnum.job,
-              vat: vatAmount,
+              // vat: vatAmount,
              };
           const transaction = await transactionService.createTransaction(transactionPayload);
           transaction.paymentService = PaymentServiceEnum.paystack;

@@ -4,6 +4,8 @@ import * as adminController from "../controllers/admin.controller";
 import { validateAddUserAdmin } from "../validations/admin.validation";
 import { multipleUpload } from "../utils/image-upload";
 import { validateJob } from "../validations/job.validation";
+import * as walletController from "../controllers/wallet.controller";
+
 
 const router = Router();
 
@@ -22,5 +24,6 @@ router.route("/fetch-all-transactions").get(adminAuth,adminController.fetchAllTr
 router.route("/fetch-transaction/:transactionId").get(adminAuth,adminController.fetchSingleTransactionAdminController);
 router.route("/fetch-all-subscriptions").get(adminAuth,adminController.fetchSubscriptionsController);
 router.route("/update-vat").patch(adminAuth, adminController.updateVatController);
+router.route("/verify-bank-transfer").post(adminAuth,walletController.verifyBankTransferWalletFunding);
 
 export { router as AdminRoute };

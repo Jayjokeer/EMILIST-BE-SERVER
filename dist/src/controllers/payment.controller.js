@@ -154,7 +154,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
     if (!project) {
         throw new error_1.NotFoundError("Application not found");
     }
-    const { vatAmount, totalAmount } = yield (0, utility_1.calculateVat)(milestone.amount);
+    // const {vatAmount,totalAmount } = await calculateVat(milestone.amount);
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
         const userWallet = yield walletService.findUserWalletByCurrency(userId, currency);
         if (!userWallet || userWallet.balance < milestone.amount) {
@@ -163,7 +163,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         const transactionPayload = {
             userId,
             type: transaction_enum_1.TransactionType.DEBIT,
-            amount: totalAmount,
+            amount: milestone.amount,
             description: `Job payment via wallet`,
             paymentMethod: paymentMethod,
             balanceBefore: userWallet.balance,
@@ -174,7 +174,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
             milestoneId,
             recieverId: project.user,
             serviceType: transaction_enum_1.ServiceEnum.job,
-            vat: vatAmount,
+            // vat: vatAmount,
         };
         const transaction = yield transactionService.createTransaction(transactionPayload);
         userWallet.balance -= milestone.amount;
@@ -191,7 +191,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency === transaction_enum_1.WalletEnum.NGN) {
             const transactionPayload = {
                 userId,
-                amount: totalAmount,
+                amount: milestone.amount,
                 type: transaction_enum_1.TransactionType.DEBIT,
                 description: `Job payment via card`,
                 paymentMethod: paymentMethod,
@@ -202,7 +202,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
                 milestoneId,
                 recieverId: project.user,
                 serviceType: transaction_enum_1.ServiceEnum.job,
-                vat: vatAmount,
+                // vat: vatAmount,
             };
             const transaction = yield transactionService.createTransaction(transactionPayload);
             transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;

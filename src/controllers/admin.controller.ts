@@ -13,7 +13,7 @@ import * as userService from "../services/auth.service";
 import * as jobService from "../services/job.service";
 import * as privateExpertService from "../services/private-expert.service";
 import * as transactionService from "../services/transaction.service";
-import { ServiceEnum, WalletEnum } from "../enums/transaction.enum";
+import { ServiceEnum, TransactionEnum, WalletEnum } from "../enums/transaction.enum";
 import * as planService from "../services/plan.service";
 import { UserStatus } from "../enums/user.enums";
 import * as businessService from "../services/business.service";
