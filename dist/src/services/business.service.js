@@ -349,7 +349,7 @@ const fetchBusinessReviews = (businessId_1, page_1, limit_1, ...args_1) => __awa
     const data = {
         averageRating: parseFloat(averageRating.toFixed(2)),
         averageCommunicationRating: parseFloat(averageCommunicationRating.toFixed(2)),
-        averageIsRecommended: parseFloat(averageIsRecommended.toFixed(2)),
+        serviceAsSeen: parseFloat(averageIsRecommended.toFixed(2)),
         numberOfRatings: totalRatings,
         starCounts,
         reviews,

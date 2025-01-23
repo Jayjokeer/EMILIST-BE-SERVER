@@ -417,7 +417,7 @@ export const fetchBusinessReviews = async (
     averageCommunicationRating: parseFloat(
       averageCommunicationRating.toFixed(2)
     ),
-    averageIsRecommended: parseFloat(averageIsRecommended.toFixed(2)), 
+    serviceAsSeen: parseFloat(averageIsRecommended.toFixed(2)), 
     numberOfRatings: totalRatings,
     starCounts,
     reviews,
