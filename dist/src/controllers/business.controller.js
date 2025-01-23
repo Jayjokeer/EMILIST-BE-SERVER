@@ -201,33 +201,33 @@ exports.likeBusinessController = (0, error_handler_1.catchAsync)((req, res) => _
     }
     ;
     const data = yield businessService.createBusinessLike({ business: businessId, user: userId });
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.unlikeBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
     const { businessId } = req.params;
     const data = yield businessService.unlikeBusiness(businessId, userId);
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchOtherBusinessByUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.params;
     const data = yield businessService.otherBusinessesByUser(userId);
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchSimilarBusinessByUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { businessId } = req.params;
     const data = yield businessService.fetchSimilarBusinesses(businessId);
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchBusinessReviewsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { businessId } = req.params;
     const { page = 1, limit = 10, sortBy } = req.query;
     const data = yield businessService.fetchBusinessReviews(businessId, Number(page), Number(limit), sortBy);
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.markReviewController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { reviewId } = req.params;
     const { userId, isHelpful } = req.body;
     const data = yield businessService.markReviewHelpful(reviewId, isHelpful, userId);
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));

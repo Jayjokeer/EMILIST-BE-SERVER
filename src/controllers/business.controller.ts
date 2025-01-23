@@ -215,28 +215,28 @@ export const likeBusinessController = catchAsync(async (req: JwtPayload, res: Re
 
     const data = await businessService.createBusinessLike({business: businessId, user: userId});
  
-    successResponse(res,StatusCodes.CREATED, data);
+   return successResponse(res,StatusCodes.CREATED, data);
 });
 
 export const unlikeBusinessController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user.id; 
     const {businessId} = req.params;
      const data = await businessService.unlikeBusiness(businessId, userId);
-    successResponse(res, StatusCodes.OK, data);
+   return successResponse(res, StatusCodes.OK, data);
   });
 
   export const fetchOtherBusinessByUserController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {userId} = req.params; 
 
      const data = await businessService.otherBusinessesByUser(userId);
-    successResponse(res, StatusCodes.OK, data);
+    return successResponse(res, StatusCodes.OK, data);
   });
 
   export const fetchSimilarBusinessByUserController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {businessId} = req.params; 
 
      const data = await businessService.fetchSimilarBusinesses(businessId);
-    successResponse(res, StatusCodes.OK, data);
+   return successResponse(res, StatusCodes.OK, data);
   });
 
   export const fetchBusinessReviewsController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -244,12 +244,13 @@ export const unlikeBusinessController = catchAsync(async (req: JwtPayload, res: 
     const {page = 1, limit = 10, sortBy } = req.query;
 
      const data = await businessService.fetchBusinessReviews(businessId, Number(page), Number(limit), sortBy);
-    successResponse(res, StatusCodes.OK, data);
+    return successResponse(res, StatusCodes.OK, data);
   });
+  
 export const markReviewController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {reviewId} = req.params; 
     const {userId, isHelpful } = req.body;
 
      const data = await businessService.markReviewHelpful(reviewId, isHelpful, userId);
-    successResponse(res, StatusCodes.CREATED, data);
+   return successResponse(res, StatusCodes.CREATED, data);
   });
