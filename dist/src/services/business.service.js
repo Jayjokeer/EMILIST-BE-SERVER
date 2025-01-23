@@ -160,7 +160,8 @@ const fetchSingleBusinessWithDetails = (businessId) => __awaiter(void 0, void 0,
     if (!business) {
         return null;
     }
-    const totalReviews = business.reviews.length;
+    const reviews = business.reviews || [];
+    const totalReviews = reviews.length;
     const averageRating = totalReviews > 0
         ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
         : 0;
@@ -210,7 +211,8 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
         user = yield userService.findUserWithoutDetailsById(userId);
     }
     const enhancedBusinesses = yield Promise.all(businesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
-        const totalReviews = business.reviews.length;
+        const reviews = business.reviews || [];
+        const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
             ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
@@ -308,7 +310,8 @@ const fetchSimilarBusinesses = (businessId) => __awaiter(void 0, void 0, void 0,
         .limit(Number(limit))
         .populate('reviews', 'rating');
     const enhancedBusinesses = yield Promise.all(similarBusinesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
-        const totalReviews = business.reviews.length;
+        const reviews = business.reviews || [];
+        const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
             ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;

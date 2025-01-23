@@ -141,7 +141,8 @@ export const fetchSingleBusinessWithDetails = async (businessId: string)=>{
     if(!business){
         return null;
     }
-    const totalReviews = business.reviews.length;
+    const reviews = business.reviews || []; 
+    const totalReviews = reviews.length;
     const averageRating =
       totalReviews > 0
         ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
@@ -222,7 +223,8 @@ export const fetchAllBusiness = async (
 
   const enhancedBusinesses = await Promise.all(
     businesses.map(async (business: any) => {
-      const totalReviews = business.reviews.length;
+      const reviews = business.reviews || []; 
+      const totalReviews = reviews.length;
       const averageRating =
         totalReviews > 0
           ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
@@ -346,7 +348,8 @@ export const fetchSimilarBusinesses = async (businessId: string) => {
 
     const enhancedBusinesses = await Promise.all(
       similarBusinesses.map(async (business: any) => {
-        const totalReviews = business.reviews.length;
+        const reviews = business.reviews || []; 
+        const totalReviews = reviews.length;
         const averageRating =
           totalReviews > 0
             ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
