@@ -250,18 +250,17 @@ exports.fetchAllUserBusinessesAdmin = fetchAllUserBusinessesAdmin;
 const fetchAllComparedBusinesses = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
     const businesses = yield business_model_1.default.find({ _id: { $in: businessId } })
         .populate('userId', 'fullName email userName uniqueId profileImage level gender')
-        .populate('reviews', 'rating')
-        .lean();
-    const enhancedBusinesses = businesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
+        .populate('reviews', 'rating').lean();
+    const enhancedBusinesses = yield Promise.all(businesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
         const reviews = business.reviews || [];
         const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
-            ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+            ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
         const completedJobs = yield projectService.completedJobsCount(String(business._id));
         return Object.assign(Object.assign({}, business), { completedJobs,
             totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
-    }));
+    })));
     return {
         enhancedBusinesses
     };

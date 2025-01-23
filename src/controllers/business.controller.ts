@@ -194,6 +194,7 @@ export const fetchAllComparedBusinessesController = catchAsync(async (req: JwtPa
         throw new NotFoundError("User not found");
     };
     const businesses = await businessService.fetchAllComparedBusinesses(user.comparedBusinesses);
+    
     return successResponse(res, StatusCodes.OK, businesses);
 });
 
@@ -246,7 +247,7 @@ export const unlikeBusinessController = catchAsync(async (req: JwtPayload, res: 
      const data = await businessService.fetchBusinessReviews(businessId, Number(page), Number(limit), sortBy);
     return successResponse(res, StatusCodes.OK, data);
   });
-  
+
 export const markReviewController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {reviewId} = req.params; 
     const {userId, isHelpful } = req.body;

@@ -275,25 +275,27 @@ export const fetchAllUserBusinessesAdmin = async (userId: string)=>{
 export const fetchAllComparedBusinesses = async (businessId: string[])=>{
   const businesses = await Business.find({ _id: { $in: businessId } })
   .populate('userId', 'fullName email userName uniqueId profileImage level gender')
-  .populate('reviews', 'rating')
-  .lean();
-  const enhancedBusinesses = businesses.map(async (business: any) => {
-    const reviews = business.reviews || []; 
-    const totalReviews = reviews.length;
-    const averageRating =
-      totalReviews > 0
-        ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
-        : 0;
+  .populate('reviews', 'rating').lean()
+  const enhancedBusinesses = await Promise.all(
+    businesses.map(async (business: any) => {
+      const reviews = business.reviews || [];
+      const totalReviews = reviews.length;
 
-    const completedJobs = await projectService.completedJobsCount(String(business._id));
-    return {
-      ...business,
-      completedJobs,
-      totalReviews,
-      averageRating: parseFloat(averageRating.toFixed(2)),
+      const averageRating =
+        totalReviews > 0
+          ? reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
+          : 0;
 
-    };
-  })
+      const completedJobs = await projectService.completedJobsCount(String(business._id));
+
+      return {
+        ...business,
+        completedJobs,
+        totalReviews,
+        averageRating: parseFloat(averageRating.toFixed(2)),
+      };
+    })
+  );
 
 return {
   enhancedBusinesses
