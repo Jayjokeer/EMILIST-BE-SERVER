@@ -21,7 +21,7 @@ router.route("/fetch-other-business-by-user/:userId").get(businesController.fetc
 router.route("/fetch-similar-business-by-user/:businessId").get(businesController.fetchSimilarBusinessByUserController );
 router.route("/fetch-business-reviews/:businessId").get(businesController.fetchBusinessReviewsController );
 router.route("/mark-helpul-review/:reviewId").patch(validateMarkBusinessReview,businesController.markReviewController );
-router.route("/review-business").post(userAuth,validateReviewBusiness,businesController.reviewBusinessController);
+// router.route("/review-business").post(userAuth,validateReviewBusiness,businesController.reviewBusinessController);
 
 export { router as BusinessRoute };
 

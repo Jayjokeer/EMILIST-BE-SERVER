@@ -397,9 +397,27 @@ export const fetchBusinessReviews = async (
     totalRatings > 0
       ? allReviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalRatings
       : 0;
+      const averageCommunicationRating =
+      totalRatings > 0
+        ? allReviews.reduce(
+            (sum: number, review: any) => sum + review.rateCommunication,
+            0
+          ) / totalRatings
+        : 0;
+  
+    const averageIsRecommended =
+      totalRatings > 0
+        ? (allReviews.filter((review) => review.isRecommendVendor).length /
+            totalRatings) *
+          100
+        : 0;
 
   const data = {
     averageRating: parseFloat(averageRating.toFixed(2)),
+    averageCommunicationRating: parseFloat(
+      averageCommunicationRating.toFixed(2)
+    ),
+    averageIsRecommended: parseFloat(averageIsRecommended.toFixed(2)), 
     numberOfRatings: totalRatings,
     starCounts,
     reviews,
