@@ -381,7 +381,9 @@ export const fetchBusinessReviews = async (
     .skip(skip)
     .limit(Number(limit))
     .sort(sortCriteria)
-    .lean();
+    .populate('userId', 'profileImage fullName userName uniqueId gender level')
+    .lean()
+    ;
 
   const allReviews = await Review.find({ businessId }).lean();
 

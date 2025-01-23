@@ -327,6 +327,7 @@ const fetchBusinessReviews = (businessId_1, page_1, limit_1, ...args_1) => __awa
         .skip(skip)
         .limit(Number(limit))
         .sort(sortCriteria)
+        .populate('userId', 'profileImage fullName userName uniqueId gender level')
         .lean();
     const allReviews = yield review_model_1.default.find({ businessId }).lean();
     const starCounts = [1, 2, 3, 4, 5].reduce((acc, star) => {

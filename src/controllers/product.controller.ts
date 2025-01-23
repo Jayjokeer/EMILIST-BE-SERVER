@@ -276,3 +276,4 @@ export const fetchOtherProductByUserController = catchAsync(async (req: JwtPaylo
      const data = await productService.fetchSimilarProducts(productId); 
     successResponse(res, StatusCodes.OK, data);
   });
+  

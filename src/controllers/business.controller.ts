@@ -241,7 +241,7 @@ export const unlikeBusinessController = catchAsync(async (req: JwtPayload, res: 
 
   export const fetchBusinessReviewsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {businessId} = req.params; 
-    const {page, limit, sortBy } = req.query;
+    const {page = 1, limit = 10, sortBy } = req.query;
 
      const data = await businessService.fetchBusinessReviews(businessId, Number(page), Number(limit), sortBy);
     successResponse(res, StatusCodes.OK, data);

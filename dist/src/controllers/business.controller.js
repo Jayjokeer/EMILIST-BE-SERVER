@@ -221,7 +221,7 @@ exports.fetchSimilarBusinessByUserController = (0, error_handler_1.catchAsync)((
 }));
 exports.fetchBusinessReviewsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { businessId } = req.params;
-    const { page, limit, sortBy } = req.query;
+    const { page = 1, limit = 10, sortBy } = req.query;
     const data = yield businessService.fetchBusinessReviews(businessId, Number(page), Number(limit), sortBy);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
