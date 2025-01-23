@@ -251,12 +251,13 @@ const fetchAllComparedBusinesses = (businessId) => __awaiter(void 0, void 0, voi
         .populate('reviews', 'rating')
         .lean();
     const enhancedBusinesses = businesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
-        const totalReviews = business.reviews.length;
+        const reviews = business.reviews || [];
+        const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
             ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
         const completedJobs = yield projectService.completedJobsCount(String(business._id));
-        return Object.assign(Object.assign({}, business.toObject()), { completedJobs,
+        return Object.assign(Object.assign({}, business), { completedJobs,
             totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
     }));
     return {

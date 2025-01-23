@@ -276,7 +276,8 @@ export const fetchAllComparedBusinesses = async (businessId: string[])=>{
   .populate('reviews', 'rating')
   .lean();
   const enhancedBusinesses = businesses.map(async (business: any) => {
-    const totalReviews = business.reviews.length;
+    const reviews = business.reviews || []; 
+    const totalReviews = reviews.length;
     const averageRating =
       totalReviews > 0
         ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
@@ -284,7 +285,7 @@ export const fetchAllComparedBusinesses = async (businessId: string[])=>{
 
     const completedJobs = await projectService.completedJobsCount(String(business._id));
     return {
-      ...business.toObject(),
+      ...business,
       completedJobs,
       totalReviews,
       averageRating: parseFloat(averageRating.toFixed(2)),
