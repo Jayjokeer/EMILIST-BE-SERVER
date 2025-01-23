@@ -7,5 +7,6 @@ export interface IReview extends Document {
     comment?: string;
     helpfulCount?: number;
     helpfulUsers?: any;
+    createdAt?: any;
   }
   

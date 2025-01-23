@@ -314,7 +314,33 @@ export const validateBusinessRegistration = (req: Request, res: Response, next: 
       }),
     });
   
-    const { error } = businessReviewValidation .validate(req.body, { abortEarly: false });
+    const { error } = businessReviewValidation.validate(req.body, { abortEarly: false });
+  
+    if (error) {
+      const errorMessages = error.details.map((detail) => detail.message);
+     res.status(400).json({ errors: errorMessages });
+     return;
+    }
+  
+    next();
+  };
+
+  export const validateReviewBusiness = (req: Request, res: Response, next: NextFunction) => {
+    const businessCreateReviewValidation = Joi.object({
+      businessId: Joi.string().required().messages({
+        'string.empty': 'Business ID cannot be empty',
+        'string.base': 'Business ID must be a string'
+      }),
+      comment: Joi.string().optional().messages({
+        'string.base': 'Comment must be a string',
+      }),
+      rating: Joi.number().required().messages({
+        'number.empty': 'Rating cannot be empty',
+        'number.base': 'Rating must be a number'
+      }),
+    });
+  
+    const { error } = businessCreateReviewValidation.validate(req.body, { abortEarly: false });
   
     if (error) {
       const errorMessages = error.details.map((detail) => detail.message);

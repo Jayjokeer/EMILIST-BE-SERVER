@@ -316,24 +316,31 @@ const fetchSimilarBusinesses = (businessId) => __awaiter(void 0, void 0, void 0,
     return enhancedBusinesses;
 });
 exports.fetchSimilarBusinesses = fetchSimilarBusinesses;
-const fetchBusinessReviews = (businessId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchBusinessReviews = (businessId_1, page_1, limit_1, ...args_1) => __awaiter(void 0, [businessId_1, page_1, limit_1, ...args_1], void 0, function* (businessId, page, limit, sortBy = 'newest') {
     const business = yield business_model_1.default.findById(businessId);
     if (!business) {
         throw new error_1.NotFoundError('Service not found!');
     }
     const skip = (Number(page) - 1) * Number(limit);
-    const reviews = yield review_model_1.default.find({ businessId: businessId })
+    const sortCriteria = sortBy === 'mostRelevant' ? { helpfulCount: -1, createdAt: -1 } : { createdAt: -1 };
+    const reviews = yield review_model_1.default.find({ businessId })
         .skip(skip)
         .limit(Number(limit))
-        .sort({ createdAt: -1 })
+        .sort(sortCriteria)
         .lean();
-    const totalRatings = reviews.length;
+    const allReviews = yield review_model_1.default.find({ businessId }).lean();
+    const starCounts = [1, 2, 3, 4, 5].reduce((acc, star) => {
+        acc[star] = allReviews.filter((review) => review.rating === star).length;
+        return acc;
+    }, {});
+    const totalRatings = allReviews.length;
     const averageRating = totalRatings > 0
-        ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalRatings
+        ? allReviews.reduce((sum, review) => sum + review.rating, 0) / totalRatings
         : 0;
     const data = {
         averageRating: parseFloat(averageRating.toFixed(2)),
         numberOfRatings: totalRatings,
+        starCounts,
         reviews,
         currentPage: Number(page),
         totalPages: Math.ceil(totalRatings / Number(limit)),

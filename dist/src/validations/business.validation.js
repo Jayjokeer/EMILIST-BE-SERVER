@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateMarkBusinessReview = exports.validateBusinessUpdate = exports.validateBusinessRegistration = void 0;
+exports.validateReviewBusiness = exports.validateMarkBusinessReview = exports.validateBusinessUpdate = exports.validateBusinessRegistration = void 0;
 const joi_1 = __importDefault(require("joi"));
 const validateBusinessRegistration = (req, res, next) => {
     const businessValidation = joi_1.default.object({
@@ -303,3 +303,26 @@ const validateMarkBusinessReview = (req, res, next) => {
     next();
 };
 exports.validateMarkBusinessReview = validateMarkBusinessReview;
+const validateReviewBusiness = (req, res, next) => {
+    const businessCreateReviewValidation = joi_1.default.object({
+        businessId: joi_1.default.string().required().messages({
+            'string.empty': 'Business ID cannot be empty',
+            'string.base': 'Business ID must be a string'
+        }),
+        comment: joi_1.default.string().optional().messages({
+            'string.base': 'Comment must be a string',
+        }),
+        rating: joi_1.default.number().required().messages({
+            'number.empty': 'Rating cannot be empty',
+            'number.base': 'Rating must be a number'
+        }),
+    });
+    const { error } = businessCreateReviewValidation.validate(req.body, { abortEarly: false });
+    if (error) {
+        const errorMessages = error.details.map((detail) => detail.message);
+        res.status(400).json({ errors: errorMessages });
+        return;
+    }
+    next();
+};
+exports.validateReviewBusiness = validateReviewBusiness;

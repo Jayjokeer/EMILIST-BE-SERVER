@@ -361,34 +361,50 @@ export const fetchSimilarBusinesses = async (businessId: string) => {
   
 return enhancedBusinesses
 };
-export const fetchBusinessReviews = async (businessId: string, page: number, limit: number) => {
+export const fetchBusinessReviews = async (
+  businessId: string,
+  page: number,
+  limit: number,
+  sortBy: 'mostRelevant' | 'newest' = 'newest'
+) => {
+  const business = await Business.findById(businessId);
+  if (!business) {
+    throw new NotFoundError('Service not found!');
+  }
 
-    const business = await Business.findById(businessId);
-    if (!business) {
-      throw new NotFoundError('Service not found!');
-    }
+  const skip = (Number(page) - 1) * Number(limit);
 
-    const skip = (Number(page) - 1) * Number(limit);
+  const sortCriteria: { [key: string]: 1 | -1 } =
+  sortBy === 'mostRelevant' ? { helpfulCount: -1, createdAt: -1 } : { createdAt: -1 };
 
-    const reviews = await Review.find({ businessId: businessId }) 
-      .skip(skip)
-      .limit(Number(limit))
-      .sort({ createdAt: -1 }) 
-      .lean();
+  const reviews = await Review.find({ businessId })
+    .skip(skip)
+    .limit(Number(limit))
+    .sort(sortCriteria)
+    .lean();
 
-    const totalRatings = reviews.length;
-    const averageRating =
-      totalRatings > 0
-        ? reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalRatings
-        : 0;
+  const allReviews = await Review.find({ businessId }).lean();
 
-    const data = {
-      averageRating: parseFloat(averageRating.toFixed(2)),
-      numberOfRatings: totalRatings,
-      reviews,
-      currentPage: Number(page),
-      totalPages: Math.ceil(totalRatings / Number(limit)),
-    };
+  const starCounts = [1, 2, 3, 4, 5].reduce((acc, star) => {
+    acc[star] = allReviews.filter((review) => review.rating === star).length;
+    return acc;
+  }, {} as Record<number, number>);
+
+  const totalRatings = allReviews.length;
+  const averageRating =
+    totalRatings > 0
+      ? allReviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalRatings
+      : 0;
+
+  const data = {
+    averageRating: parseFloat(averageRating.toFixed(2)),
+    numberOfRatings: totalRatings,
+    starCounts,
+    reviews,
+    currentPage: Number(page),
+    totalPages: Math.ceil(totalRatings / Number(limit)),
+  };
+
   return data;
 };
 
