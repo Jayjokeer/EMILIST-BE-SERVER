@@ -53,6 +53,7 @@ router.route('/google').get(passport_1.default.authenticate('google', {
 router.route('/google/callback').get(passport_1.default.authenticate('google'), authController.googleRedirectController);
 router.route("/add-click").patch(authController.countClicksController);
 router.route("/subscribe-newsletter").post(authController.subscribeNewsLetterController);
+router.route("/user-details/:userId").get(authController.getUserDetailsController);
 //Protected routes
 router.route("/log-out").get(current_user_1.userAuth, authController.logoutController);
 router.route("/update-profile").patch(current_user_1.userAuth, image_upload_1.singleUpload, authController.updateUserController);

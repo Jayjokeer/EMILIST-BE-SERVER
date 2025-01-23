@@ -491,3 +491,10 @@ export const subscribeNewsLetterController = catchAsync(async (req: JwtPayload, 
 
   return successResponse(res, StatusCodes.OK, "Newsletter subscribed successfully");
 });
+
+export const getUserDetailsController = catchAsync(async (req: JwtPayload, res: Response) => { 
+  const {userId} = req.params;
+   const data = await authService.findUserWithoutPhoneNumberDetailsById(userId);
+
+  return successResponse(res, StatusCodes.OK, data);
+});
