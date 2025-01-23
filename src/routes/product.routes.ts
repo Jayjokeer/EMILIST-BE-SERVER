@@ -22,6 +22,6 @@ router.route("/pay-for-product").post(userAuth,validatePayForProduct , paymentCo
 router.route("/add-product-discount/:productId").patch(userAuth,addDiscountToProductValidator, productController.addDiscountToProductController);
 router.route("/fetch-similar-products/:productId").get( productController.fetchSimilarProductByUserController);
 router.route("/fetch-other-products-by-user/:userId").get( productController.fetchOtherProductByUserController);
-
+router.route("/fetch-product-reviews/:productId").get( productController.fetchProductReviewsController);
 
 export { router as ProductRoute };

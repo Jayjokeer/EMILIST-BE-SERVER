@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchSimilarProductByUserController = exports.fetchOtherProductByUserController = exports.addDiscountToProductController = exports.reviewProductController = exports.unlikeProductsController = exports.fetchAllLikedProductsController = exports.likeProductsController = exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
+exports.fetchProductReviewsController = exports.fetchSimilarProductByUserController = exports.fetchOtherProductByUserController = exports.addDiscountToProductController = exports.reviewProductController = exports.unlikeProductsController = exports.fetchAllLikedProductsController = exports.likeProductsController = exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -252,5 +252,11 @@ exports.fetchOtherProductByUserController = (0, error_handler_1.catchAsync)((req
 exports.fetchSimilarProductByUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { productId } = req.params;
     const data = yield productService.fetchSimilarProducts(productId);
+    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.fetchProductReviewsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { productId } = req.params;
+    const { page = 1, limit = 10, sortBy } = req.query;
+    const data = yield productService.fetchProductReviews(productId, Number(page), Number(limit), sortBy);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

@@ -47,3 +47,4 @@ router.route("/pay-for-product").post(current_user_1.userAuth, product_validatio
 router.route("/add-product-discount/:productId").patch(current_user_1.userAuth, product_validation_1.addDiscountToProductValidator, productController.addDiscountToProductController);
 router.route("/fetch-similar-products/:productId").get(productController.fetchSimilarProductByUserController);
 router.route("/fetch-other-products-by-user/:userId").get(productController.fetchOtherProductByUserController);
+router.route("/fetch-product-reviews/:productId").get(productController.fetchProductReviewsController);

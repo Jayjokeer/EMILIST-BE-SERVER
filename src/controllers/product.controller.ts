@@ -276,4 +276,10 @@ export const fetchOtherProductByUserController = catchAsync(async (req: JwtPaylo
      const data = await productService.fetchSimilarProducts(productId); 
     successResponse(res, StatusCodes.OK, data);
   });
-  
+  export const fetchProductReviewsController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const {productId} = req.params; 
+    const {page = 1, limit = 10, sortBy } = req.query;
+
+     const data = await productService.fetchProductReviews(productId, Number(page), Number(limit), sortBy);
+    successResponse(res, StatusCodes.OK, data);
+  });

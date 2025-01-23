@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchSimilarProducts = exports.otherProductsByUser = exports.fetchAllProductsAdmin = exports.fetchAllUserProductsAdmin = exports.fetchAllProductsForAdmin = exports.fetchReviewForProduct = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
+exports.fetchProductReviews = exports.fetchSimilarProducts = exports.otherProductsByUser = exports.fetchAllProductsAdmin = exports.fetchAllUserProductsAdmin = exports.fetchAllProductsForAdmin = exports.fetchReviewForProduct = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const product_model_1 = __importDefault(require("../models/product.model"));
 const productLike_model_1 = __importDefault(require("../models/productLike.model"));
@@ -264,3 +264,36 @@ const fetchSimilarProducts = (productId) => __awaiter(void 0, void 0, void 0, fu
     return enhancedProducts;
 });
 exports.fetchSimilarProducts = fetchSimilarProducts;
+const fetchProductReviews = (productId_1, page_1, limit_1, ...args_1) => __awaiter(void 0, [productId_1, page_1, limit_1, ...args_1], void 0, function* (productId, page, limit, sortBy = 'newest') {
+    const product = yield product_model_1.default.findById(productId);
+    if (!product) {
+        throw new error_1.NotFoundError('Material not found!');
+    }
+    const skip = (Number(page) - 1) * Number(limit);
+    const sortCriteria = sortBy === 'mostRelevant' ? { helpfulCount: -1, createdAt: -1 } : { createdAt: -1 };
+    const reviews = yield review_model_1.default.find({ productId })
+        .skip(skip)
+        .limit(Number(limit))
+        .sort(sortCriteria)
+        .populate('userId', 'profileImage fullName userName uniqueId gender level')
+        .lean();
+    const allReviews = yield review_model_1.default.find({ productId }).lean();
+    const starCounts = [1, 2, 3, 4, 5].reduce((acc, star) => {
+        acc[star] = allReviews.filter((review) => review.rating === star).length;
+        return acc;
+    }, {});
+    const totalRatings = allReviews.length;
+    const averageRating = totalRatings > 0
+        ? allReviews.reduce((sum, review) => sum + review.rating, 0) / totalRatings
+        : 0;
+    const data = {
+        averageRating: parseFloat(averageRating.toFixed(2)),
+        numberOfRatings: totalRatings,
+        starCounts,
+        reviews,
+        currentPage: Number(page),
+        totalPages: Math.ceil(totalRatings / Number(limit)),
+    };
+    return data;
+});
+exports.fetchProductReviews = fetchProductReviews;
