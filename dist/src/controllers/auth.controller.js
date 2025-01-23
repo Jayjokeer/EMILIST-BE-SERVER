@@ -409,8 +409,10 @@ exports.countClicksController = (0, error_handler_1.catchAsync)((req, res) => __
     if (!service || !serviceId) {
         throw new error_1.BadRequestError('Service and serviceId are required!');
     }
+    console.log(req.query);
     let user;
     if (userId) {
+        console.log('here');
         user = yield authService.findUserById(userId);
         if (!user) {
             throw new error_1.NotFoundError("User not found!");
@@ -418,7 +420,9 @@ exports.countClicksController = (0, error_handler_1.catchAsync)((req, res) => __
     }
     let data;
     if (service === 'job') {
-        data = yield jobService.fetchJobById(serviceId);
+        const jobId = serviceId;
+        data = yield jobService.fetchJobById(jobId);
+        console.log(data);
         if (!data) {
             throw new error_1.NotFoundError("Job not found");
         }

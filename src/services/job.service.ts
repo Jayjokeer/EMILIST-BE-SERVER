@@ -120,7 +120,8 @@ export const fetchAllJobs = async (
   
 
 export const fetchJobById = async (jobId: string)=>{
-  return await Jobs.findById(jobId)
+  return await Jobs.findById(jobId);
+  
 };
 
 

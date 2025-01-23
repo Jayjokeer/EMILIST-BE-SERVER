@@ -441,9 +441,10 @@ export const countClicksController = catchAsync(async (req: JwtPayload, res: Res
   if (!service || !serviceId) {
     throw new BadRequestError('Service and serviceId are required!');
   }
-
+console.log(req.query)
   let user;
   if (userId) {
+    console.log('here')
     user = await authService.findUserById(userId);
     if (!user) {
       throw new NotFoundError("User not found!");
@@ -452,7 +453,9 @@ export const countClicksController = catchAsync(async (req: JwtPayload, res: Res
 
   let data;
   if (service === 'job') {
-    data = await jobService.fetchJobById(serviceId);
+    const jobId = serviceId as string
+    data = await jobService.fetchJobById(jobId);
+    console.log(data)
     if (!data) {
       throw new NotFoundError("Job not found");
     }

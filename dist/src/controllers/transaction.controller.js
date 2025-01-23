@@ -70,15 +70,18 @@ exports.fetchUserEarningsController = (0, error_handler_1.catchAsync)((req, res)
         endDate = new Date(reportYear, 11, 31);
     }
     const transactions = yield transactionService.fetchUserEarnings(userId, startDate, endDate);
-    let totalEarned = 0;
-    let totalSpent = 0;
+    const totalsByCurrency = {};
     transactions.forEach((transaction) => {
+        const currency = transaction.currency;
+        if (!totalsByCurrency[currency]) {
+            totalsByCurrency[currency] = { earned: 0, expenses: 0 };
+        }
         if (String(transaction.recieverId) === String(userId) &&
             (transaction.serviceType === transaction_enum_1.ServiceEnum.job || transaction.serviceType === transaction_enum_1.ServiceEnum.material)) {
-            totalEarned += transaction.amount;
+            totalsByCurrency[currency].earned += transaction.amount;
         }
         else if (transaction.type === transaction_enum_1.TransactionType.DEBIT) {
-            totalSpent += transaction.amount;
+            totalsByCurrency[currency].expenses += transaction.amount;
         }
     });
     const earningsStatistics = [];
@@ -87,26 +90,27 @@ exports.fetchUserEarningsController = (0, error_handler_1.catchAsync)((req, res)
             const monthlyStart = new Date(reportYear, i, 1);
             const monthlyEnd = new Date(reportYear, i + 1, 0);
             const monthlyTransactions = transactions.filter((transaction) => transaction.dateCompleted >= monthlyStart && transaction.dateCompleted <= monthlyEnd);
-            let monthlyEarned = 0;
-            let monthlySpent = 0;
+            const monthlyTotalsByCurrency = {};
             monthlyTransactions.forEach((transaction) => {
+                const currency = transaction.currency || "unknown";
+                if (!monthlyTotalsByCurrency[currency]) {
+                    monthlyTotalsByCurrency[currency] = { earned: 0, expenses: 0 };
+                }
                 if (transaction.type === transaction_enum_1.TransactionType.CREDIT) {
-                    monthlyEarned += transaction.amount;
+                    monthlyTotalsByCurrency[currency].earned += transaction.amount;
                 }
                 else if (transaction.type === transaction_enum_1.TransactionType.DEBIT) {
-                    monthlySpent += transaction.amount;
+                    monthlyTotalsByCurrency[currency].expenses += transaction.amount;
                 }
             });
             earningsStatistics.push({
-                month: new Date(reportYear, i).toLocaleString('default', { month: 'short' }),
-                earned: monthlyEarned,
-                spent: monthlySpent,
+                month: new Date(reportYear, i).toLocaleString("default", { month: "short" }),
+                currencies: monthlyTotalsByCurrency,
             });
         }
     }
     const data = {
-        totalEarned,
-        totalSpent,
+        totalsByCurrency,
         earningsStatistics: reportMonth ? [] : earningsStatistics,
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
