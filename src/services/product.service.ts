@@ -353,3 +353,32 @@ export const fetchProductReviews = async (
 
   return data;
 };
+
+export const fetchAllComparedProducts = async (productIds: string[])=>{
+  const products = await Product.find({ _id: { $in: productIds } })
+  .populate('userId', 'fullName email userName uniqueId profileImage level gender')
+  .populate('reviews', 'rating').lean()
+
+  const enhancedProducts = await Promise.all(
+    products.map(async (product: any) => {
+      const reviews = product.reviews || [];
+      const totalReviews = reviews.length;
+
+      const averageRating =
+        totalReviews > 0
+          ? reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
+          : 0;
+
+
+      return {
+        ...product,
+        totalReviews,
+        averageRating: parseFloat(averageRating.toFixed(2)),
+      };
+    })
+  );
+
+return {
+  enhancedProducts
+}
+};

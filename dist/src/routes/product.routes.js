@@ -48,3 +48,5 @@ router.route("/add-product-discount/:productId").patch(current_user_1.userAuth, 
 router.route("/fetch-similar-products/:productId").get(productController.fetchSimilarProductByUserController);
 router.route("/fetch-other-products-by-user/:userId").get(productController.fetchOtherProductByUserController);
 router.route("/fetch-product-reviews/:productId").get(productController.fetchProductReviewsController);
+router.route("/compare-product/:productId").patch(current_user_1.userAuth, productController.compareProductController);
+router.route("/fetch-compared-products").get(current_user_1.userAuth, productController.fetchAllComparedProductsController);

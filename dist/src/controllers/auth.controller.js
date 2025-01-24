@@ -344,7 +344,7 @@ exports.requestVerificationController = (0, error_handler_1.catchAsync)((req, re
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Verification request sent successfully");
 }));
 exports.insightsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
+    var _a, _b, _c, _d, _e, _f;
     const userId = req.user._id;
     const user = yield authService.findUserWithoutDetailsById(userId);
     if (!user) {
@@ -352,19 +352,29 @@ exports.insightsController = (0, error_handler_1.catchAsync)((req, res) => __awa
     }
     ;
     let totalCount = 0;
+    const uniqueClicks = new Set();
     const totalJobClicks = yield jobService.fetchAllUserJobsAdmin(userId);
     for (const job of totalJobClicks) {
         totalCount += Number(((_a = job === null || job === void 0 ? void 0 : job.clicks) === null || _a === void 0 ? void 0 : _a.clickCount) || 0);
+        if ((_b = job === null || job === void 0 ? void 0 : job.clicks) === null || _b === void 0 ? void 0 : _b.userId) {
+            uniqueClicks.add(String(job.clicks.userId));
+        }
     }
     ;
     const totalMaterialsClicks = yield productService.fetchAllUserProductsAdmin(userId);
     for (const material of totalMaterialsClicks) {
-        totalCount += Number(((_b = material === null || material === void 0 ? void 0 : material.clicks) === null || _b === void 0 ? void 0 : _b.clickCount) || 0);
+        totalCount += Number(((_c = material === null || material === void 0 ? void 0 : material.clicks) === null || _c === void 0 ? void 0 : _c.clickCount) || 0);
+        if ((_d = material === null || material === void 0 ? void 0 : material.clicks) === null || _d === void 0 ? void 0 : _d.userId) {
+            uniqueClicks.add(String(material.clicks.userId));
+        }
     }
     ;
     const totalBusinessClicks = yield businessService.fetchAllUserBusinessesAdmin(userId);
     for (const business of totalBusinessClicks) {
-        totalCount += Number(((_c = business === null || business === void 0 ? void 0 : business.clicks) === null || _c === void 0 ? void 0 : _c.clickCount) || 0);
+        totalCount += Number(((_e = business === null || business === void 0 ? void 0 : business.clicks) === null || _e === void 0 ? void 0 : _e.clickCount) || 0);
+        if ((_f = business === null || business === void 0 ? void 0 : business.clicks) === null || _f === void 0 ? void 0 : _f.userId) {
+            uniqueClicks.add(String(business.clicks.userId));
+        }
     }
     ;
     const subscription = yield subscriptionService.getSubscriptionById(String(user.subscription));
@@ -400,6 +410,7 @@ exports.insightsController = (0, error_handler_1.catchAsync)((req, res) => __awa
     };
     const data = {
         clicks: totalCount,
+        reached: uniqueClicks.size,
         promotionDuration: responseData
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);

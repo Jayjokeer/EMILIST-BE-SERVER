@@ -379,18 +379,30 @@ export const insightsController = catchAsync(async (req: JwtPayload, res: Respon
     throw new NotFoundError("User not found!");
   };
   let totalCount = 0;
+  const uniqueClicks = new Set<string>();
+
   const totalJobClicks = await jobService.fetchAllUserJobsAdmin(userId);
   for (const job of totalJobClicks){
     totalCount += Number(job?.clicks?.clickCount || 0);
-
+    if (job?.clicks?.userId) {
+      uniqueClicks.add(String(job.clicks.userId));
+    }
   };
+
   const totalMaterialsClicks = await productService.fetchAllUserProductsAdmin(userId);
   for (const material of totalMaterialsClicks){
-    totalCount += Number(material?.clicks?.clickCount || 0);  };
+    totalCount += Number(material?.clicks?.clickCount || 0);
+    if (material?.clicks?.userId) {
+      uniqueClicks.add(String(material.clicks.userId));
+    }
+  };
 
   const totalBusinessClicks = await businessService.fetchAllUserBusinessesAdmin(userId);
   for (const business of totalBusinessClicks ){
-    totalCount += Number(business?.clicks?.clickCount || 0);     
+    totalCount += Number(business?.clicks?.clickCount || 0);
+    if (business?.clicks?.userId) {
+      uniqueClicks.add(String(business.clicks.userId));
+    }
   };
 
   const subscription = await subscriptionService.getSubscriptionById(String(user.subscription));
@@ -430,6 +442,7 @@ export const insightsController = catchAsync(async (req: JwtPayload, res: Respon
   };
   const data = {
     clicks: totalCount,
+    reached: uniqueClicks.size,
     promotionDuration: responseData 
   };
   return successResponse(res, StatusCodes.OK, data);

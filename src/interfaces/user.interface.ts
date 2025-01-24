@@ -35,6 +35,7 @@ export interface IUser {
     level: JobExpertLevel;
     comparedBusinesses? : any;
     accountDetails?: any;
+    comparedProducts?: any;
   }
   
 export interface ICreateUser {

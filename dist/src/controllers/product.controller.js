@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchProductReviewsController = exports.fetchSimilarProductByUserController = exports.fetchOtherProductByUserController = exports.addDiscountToProductController = exports.reviewProductController = exports.unlikeProductsController = exports.fetchAllLikedProductsController = exports.likeProductsController = exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
+exports.fetchAllComparedProductsController = exports.compareProductController = exports.fetchProductReviewsController = exports.fetchSimilarProductByUserController = exports.fetchOtherProductByUserController = exports.addDiscountToProductController = exports.reviewProductController = exports.unlikeProductsController = exports.fetchAllLikedProductsController = exports.likeProductsController = exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -41,6 +41,7 @@ const error_1 = require("../errors/error");
 const reviewService = __importStar(require("../services/review.service"));
 const subscriptionService = __importStar(require("../services/subscription.service"));
 const suscribtion_enum_1 = require("../enums/suscribtion.enum");
+const userService = __importStar(require("../services/auth.service"));
 exports.createProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user._id;
     const payload = req.body;
@@ -247,16 +248,51 @@ exports.addDiscountToProductController = (0, error_handler_1.catchAsync)((req, r
 exports.fetchOtherProductByUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.params;
     const data = yield productService.otherProductsByUser(userId);
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchSimilarProductByUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { productId } = req.params;
     const data = yield productService.fetchSimilarProducts(productId);
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchProductReviewsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { productId } = req.params;
     const { page = 1, limit = 10, sortBy } = req.query;
     const data = yield productService.fetchProductReviews(productId, Number(page), Number(limit), sortBy);
-    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.compareProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user._id;
+    const { productId } = req.params;
+    const product = yield productService.fetchProductById(productId);
+    if (!product) {
+        throw new error_1.NotFoundError("No product found!");
+    }
+    ;
+    const user = yield userService.findUserById(userId);
+    if (!user) {
+        throw new error_1.NotFoundError("User not found");
+    }
+    const productIndex = user.comparedProducts.findIndex((id) => id.toString() === productId);
+    if (productIndex !== -1) {
+        user.comparedProducts.splice(productIndex, 1);
+    }
+    else {
+        user.comparedProducts.push(productId);
+    }
+    yield user.save();
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        message: "Compared products updated successfully",
+        comparedProducts: user.comparedProducts,
+    });
+}));
+exports.fetchAllComparedProductsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user._id;
+    const user = yield userService.findUserById(userId);
+    if (!user) {
+        throw new error_1.NotFoundError("User not found");
+    }
+    ;
+    const products = yield productService.fetchAllComparedProducts(user.comparedProducts);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, products);
 }));

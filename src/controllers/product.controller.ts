@@ -9,6 +9,7 @@ import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/err
 import * as reviewService from "../services/review.service";
 import * as subscriptionService from "../services/subscription.service";
 import { SubscriptionPerksEnum } from "../enums/suscribtion.enum";
+import * as userService from "../services/auth.service";
 
 export const createProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
@@ -267,19 +268,62 @@ export const fetchOtherProductByUserController = catchAsync(async (req: JwtPaylo
     const {userId} = req.params; 
 
      const data = await productService.otherProductsByUser(userId);
-    successResponse(res, StatusCodes.OK, data);
+   return successResponse(res, StatusCodes.OK, data);
   });
 
   export const fetchSimilarProductByUserController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {productId} = req.params; 
 
      const data = await productService.fetchSimilarProducts(productId); 
-    successResponse(res, StatusCodes.OK, data);
+   return successResponse(res, StatusCodes.OK, data);
   });
   export const fetchProductReviewsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {productId} = req.params; 
     const {page = 1, limit = 10, sortBy } = req.query;
 
      const data = await productService.fetchProductReviews(productId, Number(page), Number(limit), sortBy);
-    successResponse(res, StatusCodes.OK, data);
+  return  successResponse(res, StatusCodes.OK, data);
   });
+
+  export const compareProductController = catchAsync (async(req: JwtPayload, res: Response)=>{
+    const userId = req.user._id;
+const {productId} = req.params;
+const product = await productService.fetchProductById(productId);
+if(!product){
+
+    throw new NotFoundError("No product found!");
+};
+    const user = await userService.findUserById(userId);
+    if(!user){
+        throw new NotFoundError("User not found");
+    }
+
+    const productIndex = user.comparedProducts.findIndex(
+        (id: any) => id.toString() === productId
+      );
+    
+    if (productIndex  !== -1) {
+      user.comparedProducts.splice(productIndex , 1);
+    } else {
+      user.comparedProducts.push(productId);
+    }
+  
+    await user.save();
+  
+    return successResponse(res, StatusCodes.OK, {
+      message: "Compared products updated successfully",
+      comparedProducts: user.comparedProducts,
+    });
+
+});
+
+export const fetchAllComparedProductsController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user._id;
+    const user = await userService.findUserById(userId);
+    if(!user){
+        throw new NotFoundError("User not found");
+    };
+    const products = await productService.fetchAllComparedProducts(user.comparedProducts);
+    
+    return successResponse(res, StatusCodes.OK, products);
+});
