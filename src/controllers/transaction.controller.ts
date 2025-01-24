@@ -29,10 +29,11 @@ export const fetchAllTransactionsByUsersController =  catchAsync(async (req: Jwt
 
 export const fetchUserEarningsController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user._id;
-  const { year, month } = req.query;
+  const { year, month, currency } = req.query;
 
   const reportYear = parseInt(year as string, 10);
   const reportMonth = month ? parseInt(month as string, 10) : null;
+  const selectedCurrency = currency ? currency.toString().toUpperCase() : null;
 
   let startDate: Date;
   let endDate: Date;
@@ -52,21 +53,26 @@ export const fetchUserEarningsController = catchAsync(async (req: JwtPayload, re
   } = {};
 
   transactions.forEach((transaction) => {
-    const currency = transaction.currency
+    const currency = transaction.currency;
 
     if (!totalsByCurrency[currency]) {
       totalsByCurrency[currency] = { earned: 0, expenses: 0 };
     }
 
-    if (String(transaction.recieverId) === String(userId) && 
-        (transaction.serviceType === ServiceEnum.job || transaction.serviceType === ServiceEnum.material)) {
+    if (
+      String(transaction.recieverId) === String(userId) &&
+      (transaction.serviceType === ServiceEnum.job || transaction.serviceType === ServiceEnum.material)
+    ) {
       totalsByCurrency[currency].earned += transaction.amount;
     } else if (transaction.type === TransactionType.DEBIT) {
       totalsByCurrency[currency].expenses += transaction.amount;
     }
   });
 
-  const earningsStatistics: { month: string; currencies: { [currency: string]: { earned: number; expenses: number } } }[] = [];
+  const earningsStatistics: {
+    period: string;
+    [currency: string]: number | string;
+  }[] = [];
 
   if (!reportMonth) {
     for (let i = 0; i < 12; i++) {
@@ -89,27 +95,45 @@ export const fetchUserEarningsController = catchAsync(async (req: JwtPayload, re
           monthlyTotalsByCurrency[currency] = { earned: 0, expenses: 0 };
         }
 
-        if (transaction.type === TransactionType.CREDIT) {
+        if (
+          String(transaction.recieverId) === String(userId) &&
+          (transaction.serviceType === ServiceEnum.job || transaction.serviceType === ServiceEnum.material)
+        ) {
           monthlyTotalsByCurrency[currency].earned += transaction.amount;
         } else if (transaction.type === TransactionType.DEBIT) {
           monthlyTotalsByCurrency[currency].expenses += transaction.amount;
         }
       });
 
-      earningsStatistics.push({
-        month: new Date(reportYear, i).toLocaleString("default", { month: "short" }),
-        currencies: monthlyTotalsByCurrency,
-      });
+      const monthlyData: { period: string; [currency: string]: number | string } = {
+        period: `${new Date(reportYear, i).toLocaleString("default", { month: "short" })} ${reportYear}`,
+      };
+
+      if (selectedCurrency) {
+        monthlyData[selectedCurrency] = monthlyTotalsByCurrency[selectedCurrency]?.earned || 0;
+        monthlyData[`${selectedCurrency}_expenses`] = monthlyTotalsByCurrency[selectedCurrency]?.expenses || 0;
+      } else {
+        ["NGN", "USD", "GBP", "EUR"].forEach((currency) => {
+          monthlyData[currency] = monthlyTotalsByCurrency[currency]?.earned || 0;
+          monthlyData[`${currency}_expenses`] = monthlyTotalsByCurrency[currency]?.expenses || 0;
+        });
+      }
+
+      earningsStatistics.push(monthlyData);
     }
   }
 
   const data = {
-    totalsByCurrency,
+    totalsByCurrency: selectedCurrency
+      ? { [selectedCurrency]: totalsByCurrency[selectedCurrency] || { earned: 0, expenses: 0 } }
+      : totalsByCurrency,
     earningsStatistics: reportMonth ? [] : earningsStatistics,
   };
 
   return successResponse(res, StatusCodes.OK, data);
 });
+
+
 
 
 export const fetchVatController =  catchAsync(async (req: JwtPayload, res: Response) => {

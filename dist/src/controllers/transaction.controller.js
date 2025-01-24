@@ -55,10 +55,12 @@ exports.fetchAllTransactionsByUsersController = (0, error_handler_1.catchAsync)(
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchUserEarningsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     const userId = req.user._id;
-    const { year, month } = req.query;
+    const { year, month, currency } = req.query;
     const reportYear = parseInt(year, 10);
     const reportMonth = month ? parseInt(month, 10) : null;
+    const selectedCurrency = currency ? currency.toString().toUpperCase() : null;
     let startDate;
     let endDate;
     if (reportMonth) {
@@ -96,21 +98,35 @@ exports.fetchUserEarningsController = (0, error_handler_1.catchAsync)((req, res)
                 if (!monthlyTotalsByCurrency[currency]) {
                     monthlyTotalsByCurrency[currency] = { earned: 0, expenses: 0 };
                 }
-                if (transaction.type === transaction_enum_1.TransactionType.CREDIT) {
+                if (String(transaction.recieverId) === String(userId) &&
+                    (transaction.serviceType === transaction_enum_1.ServiceEnum.job || transaction.serviceType === transaction_enum_1.ServiceEnum.material)) {
                     monthlyTotalsByCurrency[currency].earned += transaction.amount;
                 }
                 else if (transaction.type === transaction_enum_1.TransactionType.DEBIT) {
                     monthlyTotalsByCurrency[currency].expenses += transaction.amount;
                 }
             });
-            earningsStatistics.push({
-                month: new Date(reportYear, i).toLocaleString("default", { month: "short" }),
-                currencies: monthlyTotalsByCurrency,
-            });
+            const monthlyData = {
+                period: `${new Date(reportYear, i).toLocaleString("default", { month: "short" })} ${reportYear}`,
+            };
+            if (selectedCurrency) {
+                monthlyData[selectedCurrency] = ((_a = monthlyTotalsByCurrency[selectedCurrency]) === null || _a === void 0 ? void 0 : _a.earned) || 0;
+                monthlyData[`${selectedCurrency}_expenses`] = ((_b = monthlyTotalsByCurrency[selectedCurrency]) === null || _b === void 0 ? void 0 : _b.expenses) || 0;
+            }
+            else {
+                ["NGN", "USD", "GBP", "EUR"].forEach((currency) => {
+                    var _a, _b;
+                    monthlyData[currency] = ((_a = monthlyTotalsByCurrency[currency]) === null || _a === void 0 ? void 0 : _a.earned) || 0;
+                    monthlyData[`${currency}_expenses`] = ((_b = monthlyTotalsByCurrency[currency]) === null || _b === void 0 ? void 0 : _b.expenses) || 0;
+                });
+            }
+            earningsStatistics.push(monthlyData);
         }
     }
     const data = {
-        totalsByCurrency,
+        totalsByCurrency: selectedCurrency
+            ? { [selectedCurrency]: totalsByCurrency[selectedCurrency] || { earned: 0, expenses: 0 } }
+            : totalsByCurrency,
         earningsStatistics: reportMonth ? [] : earningsStatistics,
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
