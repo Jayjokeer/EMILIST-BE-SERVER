@@ -641,6 +641,15 @@ export const fetchAllJobsAdmin = async (status: string, page: number, limit: num
   return {totalJobs, jobs}
 };
 
+export const fetchAllLikedJobs = async (userId: string) => {
+
+  
+  const likedJobs = await JobLike.countDocuments({ user: userId });
+
+  return {
+    totalLikedJobs: likedJobs,
+  };
+};
 
   // export const checkOverdueMilestones = async () => {
   //   const jobs = await Jobs.find({

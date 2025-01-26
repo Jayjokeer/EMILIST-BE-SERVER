@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
+exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -577,6 +577,13 @@ const fetchAllJobsAdmin = (status, page, limit) => __awaiter(void 0, void 0, voi
     return { totalJobs, jobs };
 });
 exports.fetchAllJobsAdmin = fetchAllJobsAdmin;
+const fetchAllLikedJobs = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const likedJobs = yield joblike_model_1.default.countDocuments({ user: userId });
+    return {
+        totalLikedJobs: likedJobs,
+    };
+});
+exports.fetchAllLikedJobs = fetchAllLikedJobs;
 // export const checkOverdueMilestones = async () => {
 //   const jobs = await Jobs.find({
 //     status: { $in: [JobStatusEnum.active, JobStatusEnum.paused] },

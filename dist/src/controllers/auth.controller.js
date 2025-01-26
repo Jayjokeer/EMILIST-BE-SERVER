@@ -408,7 +408,12 @@ exports.insightsController = (0, error_handler_1.catchAsync)((req, res) => __awa
         daysUsed,
         daysLeft,
     };
+    const jobLikes = yield jobService.fetchAllLikedJobs(String(user._id));
+    const productLikes = yield productService.fetchAllLikedProducts(String(user._id));
+    const businessLikes = yield businessService.fetchAllLikedBusinesses(String(user._id));
+    const totalSaved = jobLikes.totalLikedJobs + productLikes.totalProductsLikes + businessLikes.totalLikedBusinesses;
     const data = {
+        saved: totalSaved,
         contact: (_g = user.invitedUsers) === null || _g === void 0 ? void 0 : _g.length,
         shared: user.sharedCount,
         clicks: totalCount,

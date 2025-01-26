@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.markReviewHelpful = exports.fetchBusinessReviews = exports.fetchSimilarBusinesses = exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
+exports.fetchAllLikedBusinesses = exports.markReviewHelpful = exports.fetchBusinessReviews = exports.fetchSimilarBusinesses = exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
 const error_1 = require("../errors/error");
 const business_model_1 = __importDefault(require("../models/business.model"));
 const review_model_1 = __importDefault(require("../models/review.model"));
@@ -382,3 +382,10 @@ const markReviewHelpful = (reviewId, isHelpful, userId) => __awaiter(void 0, voi
     return review;
 });
 exports.markReviewHelpful = markReviewHelpful;
+const fetchAllLikedBusinesses = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const likedBusinesses = yield businessLike_model_1.default.countDocuments({ user: userId });
+    return {
+        totalLikedBusinesses: likedBusinesses,
+    };
+});
+exports.fetchAllLikedBusinesses = fetchAllLikedBusinesses;

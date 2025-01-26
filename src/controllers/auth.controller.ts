@@ -440,7 +440,13 @@ export const insightsController = catchAsync(async (req: JwtPayload, res: Respon
     daysUsed,
     daysLeft,
   };
+
+  const jobLikes = await jobService.fetchAllLikedJobs(String(user._id));
+  const productLikes = await productService.fetchAllLikedProducts(String(user._id));
+  const businessLikes = await businessService.fetchAllLikedBusinesses(String(user._id));
+  const totalSaved = jobLikes.totalLikedJobs + productLikes.totalProductsLikes + businessLikes.totalLikedBusinesses;
   const data = {
+    saved: totalSaved,
     contact: user.invitedUsers?.length,
     shared: user.sharedCount,
     clicks: totalCount,

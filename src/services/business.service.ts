@@ -462,3 +462,12 @@ export const markReviewHelpful = async (reviewId: string, isHelpful: boolean, us
     return review;
 
 };
+export const fetchAllLikedBusinesses = async (userId: string) => {
+
+  
+  const likedBusinesses = await BusinessLike.countDocuments({ user: userId });
+
+  return {
+    totalLikedBusinesses: likedBusinesses,
+  };
+};

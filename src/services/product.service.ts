@@ -383,3 +383,10 @@ return {
   enhancedProducts
 }
 };
+
+export const fetchAllLikedProducts = async(userId: string)=>{
+  const likedProducts = await ProductLike.countDocuments({ user: userId });
+  return {
+    totalProductsLikes: likedProducts,
+  };
+};
