@@ -65,7 +65,26 @@ export const fetchUserBusinessController = catchAsync( async (req: JwtPayload, r
 });
 export const fetchSingleBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
     const {businessId} = req.params;
-    const data = await businessService.fetchSingleBusinessWithDetails(String(businessId));
+    const {userId} = req.query;
+    let liked = false;
+    let isCompared = false;
+
+    const business = await businessService.fetchSingleBusinessWithDetails(String(businessId));
+        if (userId) {
+        const likedBusiness = await businessService.ifLikedBusiness(businessId, userId);
+        liked = !!likedBusiness;
+  
+        const user = await authService.findUserById(userId);
+        if (user) {
+          isCompared = user.comparedBusinesses.some((id: any) => id.toString() === businessId);
+        }
+    
+      }
+    const data = {
+        business,
+        liked,
+        isCompared
+    } 
     return  successResponse(res,StatusCodes.OK, data);
 });
 export const deleteBusinessImageController = catchAsync( async (req: JwtPayload, res: Response) => {

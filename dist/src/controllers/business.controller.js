@@ -87,7 +87,23 @@ exports.fetchUserBusinessController = (0, error_handler_1.catchAsync)((req, res)
 }));
 exports.fetchSingleBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { businessId } = req.params;
-    const data = yield businessService.fetchSingleBusinessWithDetails(String(businessId));
+    const { userId } = req.query;
+    let liked = false;
+    let isCompared = false;
+    const business = yield businessService.fetchSingleBusinessWithDetails(String(businessId));
+    if (userId) {
+        const likedBusiness = yield businessService.ifLikedBusiness(businessId, userId);
+        liked = !!likedBusiness;
+        const user = yield authService.findUserById(userId);
+        if (user) {
+            isCompared = user.comparedBusinesses.some((id) => id.toString() === businessId);
+        }
+    }
+    const data = {
+        business,
+        liked,
+        isCompared
+    };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.deleteBusinessImageController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

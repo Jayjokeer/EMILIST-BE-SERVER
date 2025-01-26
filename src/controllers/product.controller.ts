@@ -88,9 +88,17 @@ export const updateProductController = catchAsync(async (req: JwtPayload, res: R
     }
   
     let liked = false;
+    let isCompared = false;
+
     if (userId) {
       const likedProduct = await productService.ifLikedProduct(productId, userId);
       liked = !!likedProduct;
+
+      const user = await userService.findUserById(userId);
+      if (user) {
+        isCompared = user.comparedProducts.some((id: any) => id.toString() === productId);
+      }
+  
     }
   
     const reviewAggregation = await productService.fetchReviewForProduct(productId);
@@ -99,6 +107,7 @@ export const updateProductController = catchAsync(async (req: JwtPayload, res: R
     const data = {
       product,
       liked,
+      isCompared,
       averageRating: review.averageRating || 0,
       numberOfRatings: review.numberOfRatings || 0,
       reviewsData: review.reviews || [], 

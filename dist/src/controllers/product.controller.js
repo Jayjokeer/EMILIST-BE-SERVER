@@ -100,15 +100,21 @@ exports.getSingleProductController = (0, error_handler_1.catchAsync)((req, res) 
         throw new error_1.NotFoundError("Product not found!");
     }
     let liked = false;
+    let isCompared = false;
     if (userId) {
         const likedProduct = yield productService.ifLikedProduct(productId, userId);
         liked = !!likedProduct;
+        const user = yield userService.findUserById(userId);
+        if (user) {
+            isCompared = user.comparedProducts.some((id) => id.toString() === productId);
+        }
     }
     const reviewAggregation = yield productService.fetchReviewForProduct(productId);
     const review = reviewAggregation[0] || { averageRating: 0, numberOfRatings: 0, reviews: [] };
     const data = {
         product,
         liked,
+        isCompared,
         averageRating: review.averageRating || 0,
         numberOfRatings: review.numberOfRatings || 0,
         reviewsData: review.reviews || [],

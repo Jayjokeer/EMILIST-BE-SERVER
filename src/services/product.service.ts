@@ -11,6 +11,7 @@ export const createProduct = async (data: IProduct)=>{
 
 export const fetchProductById = async (productId: any) =>{
     return await Product.findById(productId);
+    
 };
 export const fetchProductByIdWithDetails = async (productId: any) =>{
     return await Product.findById(productId).populate('userId', 'fullName email userName profileImage level _id uniqueId');
