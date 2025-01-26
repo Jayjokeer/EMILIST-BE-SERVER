@@ -441,6 +441,8 @@ export const insightsController = catchAsync(async (req: JwtPayload, res: Respon
     daysLeft,
   };
   const data = {
+    contact: user.invitedUsers?.length,
+    shared: user.sharedCount,
     clicks: totalCount,
     reached: uniqueClicks.size,
     promotionDuration: responseData 
@@ -451,13 +453,15 @@ export const insightsController = catchAsync(async (req: JwtPayload, res: Respon
 export const countClicksController = catchAsync(async (req: JwtPayload, res: Response) => {
   const { service, serviceId, userId } = req.query;
 
-  if (!service || !serviceId) {
-    throw new BadRequestError('Service and serviceId are required!');
+  if (!service ) {
+    throw new BadRequestError('Service is required!');
   }
-console.log(req.query)
+  if(! ['business', 'material', 'job', 'shared'].includes(service)){
+    throw new BadRequestError("Invalid service type!");
+  
+  }
   let user;
   if (userId) {
-    console.log('here')
     user = await authService.findUserById(userId);
     if (!user) {
       throw new NotFoundError("User not found!");
@@ -482,20 +486,24 @@ console.log(req.query)
     if (!data) {
       throw new NotFoundError("Material not found");
     }
-  } else {
-    throw new BadRequestError("Invalid service type!");
+
+  }else if(service === 'shared'){
+    user!.sharedCount+=1;
+    await user?.save();
   }
 
-  if (userId) {
-    if (!data.clicks.users.includes(userId)) { 
-      data.clicks.users.push(userId);
+   if(service !== 'shared'){
+    if (userId ) {
+    if (!data!.clicks.users.includes(userId)) { 
+      data!.clicks.users.push(userId);
     }
   }
-  data.clicks.clickCount = (data.clicks.clickCount || 0) + 1;
+  data!.clicks.clickCount = (data!.clicks.clickCount || 0) + 1;
 
-  await data.save();
+  await data!.save();
+   };
 
-  return successResponse(res, StatusCodes.OK, data);
+  return successResponse(res, StatusCodes.OK, "Successful");
 });
 
 export const subscribeNewsLetterController = catchAsync(async (req: JwtPayload, res: Response) => { 

@@ -44,7 +44,8 @@ const userSchema: Schema = new mongoose.Schema(
       number: {type: Number},
       bank: {type: String},
       holdersName: {type: String},
-    }
+    },
+    sharedCount: {type: Number, default: 0},
   },
   { timestamps: true }
 

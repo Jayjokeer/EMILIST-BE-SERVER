@@ -344,7 +344,7 @@ exports.requestVerificationController = (0, error_handler_1.catchAsync)((req, re
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Verification request sent successfully");
 }));
 exports.insightsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g;
     const userId = req.user._id;
     const user = yield authService.findUserWithoutDetailsById(userId);
     if (!user) {
@@ -409,6 +409,8 @@ exports.insightsController = (0, error_handler_1.catchAsync)((req, res) => __awa
         daysLeft,
     };
     const data = {
+        contact: (_g = user.invitedUsers) === null || _g === void 0 ? void 0 : _g.length,
+        shared: user.sharedCount,
         clicks: totalCount,
         reached: uniqueClicks.size,
         promotionDuration: responseData
@@ -417,13 +419,14 @@ exports.insightsController = (0, error_handler_1.catchAsync)((req, res) => __awa
 }));
 exports.countClicksController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { service, serviceId, userId } = req.query;
-    if (!service || !serviceId) {
-        throw new error_1.BadRequestError('Service and serviceId are required!');
+    if (!service) {
+        throw new error_1.BadRequestError('Service is required!');
     }
-    console.log(req.query);
+    if (!['business', 'material', 'job', 'shared'].includes(service)) {
+        throw new error_1.BadRequestError("Invalid service type!");
+    }
     let user;
     if (userId) {
-        console.log('here');
         user = yield authService.findUserById(userId);
         if (!user) {
             throw new error_1.NotFoundError("User not found!");
@@ -450,17 +453,21 @@ exports.countClicksController = (0, error_handler_1.catchAsync)((req, res) => __
             throw new error_1.NotFoundError("Material not found");
         }
     }
-    else {
-        throw new error_1.BadRequestError("Invalid service type!");
+    else if (service === 'shared') {
+        user.sharedCount += 1;
+        yield (user === null || user === void 0 ? void 0 : user.save());
     }
-    if (userId) {
-        if (!data.clicks.users.includes(userId)) {
-            data.clicks.users.push(userId);
+    if (service !== 'shared') {
+        if (userId) {
+            if (!data.clicks.users.includes(userId)) {
+                data.clicks.users.push(userId);
+            }
         }
+        data.clicks.clickCount = (data.clicks.clickCount || 0) + 1;
+        yield data.save();
     }
-    data.clicks.clickCount = (data.clicks.clickCount || 0) + 1;
-    yield data.save();
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    ;
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Successful");
 }));
 exports.subscribeNewsLetterController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email } = req.body;

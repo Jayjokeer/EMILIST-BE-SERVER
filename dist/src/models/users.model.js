@@ -66,6 +66,7 @@ const userSchema = new mongoose_1.default.Schema({
         number: { type: Number },
         bank: { type: String },
         holdersName: { type: String },
-    }
+    },
+    sharedCount: { type: Number, default: 0 },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Users', userSchema);
