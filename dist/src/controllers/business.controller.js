@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.markReviewController = exports.fetchBusinessReviewsController = exports.fetchSimilarBusinessByUserController = exports.fetchOtherBusinessByUserController = exports.unlikeBusinessController = exports.likeBusinessController = exports.fetchAllComparedBusinessesController = exports.compareBusinessController = exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
+exports.muteBusinessController = exports.markReviewController = exports.fetchBusinessReviewsController = exports.fetchSimilarBusinessByUserController = exports.fetchOtherBusinessByUserController = exports.unlikeBusinessController = exports.likeBusinessController = exports.fetchAllComparedBusinessesController = exports.compareBusinessController = exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -246,4 +246,23 @@ exports.markReviewController = (0, error_handler_1.catchAsync)((req, res) => __a
     const { userId, isHelpful } = req.body;
     const data = yield businessService.markReviewHelpful(reviewId, isHelpful, userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+}));
+exports.muteBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { businessId } = req.params;
+    const userId = req.user._id;
+    const business = yield businessService.fetchSingleBusiness(businessId);
+    if (!business) {
+        throw new error_1.NotFoundError("Service not found!");
+    }
+    if (String(userId) === String(business.userId)) {
+        throw new error_1.BadRequestError("You cannot mute your own business!");
+    }
+    const user = yield authService.findUserById(userId);
+    const isMuted = user === null || user === void 0 ? void 0 : user.mutedBusinesses.includes(businessId);
+    if (isMuted) {
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Business is already muted.");
+    }
+    user.mutedBusinesses.push(businessId);
+    yield (user === null || user === void 0 ? void 0 : user.save());
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Business muted successfully");
 }));

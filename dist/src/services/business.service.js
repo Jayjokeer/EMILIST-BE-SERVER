@@ -197,6 +197,12 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
     if (filters.noticePeriod) {
         query.noticePeriod = filters.noticePeriod;
     }
+    if (userId) {
+        const user = yield userService.fetchUserMutedBusinesses(userId);
+        if (user && user.mutedBusinesses && user.mutedBusinesses.length > 0) {
+            query._id = { $nin: user.mutedJobs };
+        }
+    }
     const businesses = yield business_model_1.default.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)

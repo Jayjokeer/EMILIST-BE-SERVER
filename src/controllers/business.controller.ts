@@ -274,3 +274,26 @@ export const markReviewController = catchAsync(async (req: JwtPayload, res: Resp
      const data = await businessService.markReviewHelpful(reviewId, isHelpful, userId);
    return successResponse(res, StatusCodes.CREATED, data);
   });
+  export const muteBusinessController = catchAsync( async(req:JwtPayload, res: Response) =>{
+    const { businessId } = req.params;
+    const userId = req.user._id;
+  
+    const business = await businessService.fetchSingleBusiness(businessId);
+    if(!business) {
+      throw new NotFoundError("Service not found!");
+    }
+  if(String(userId) === String(business.userId)){
+    throw new BadRequestError("You cannot mute your own business!");
+  }
+  const user = await authService.findUserById(userId);
+  const isMuted = user?.mutedBusinesses.includes(businessId);
+  
+  if (isMuted) {
+    return successResponse(res, StatusCodes.OK, "Business is already muted.");
+  }
+  
+    user!.mutedBusinesses.push(businessId)
+    await user?.save()
+    return successResponse(res,StatusCodes.OK, "Business muted successfully");
+  
+  });

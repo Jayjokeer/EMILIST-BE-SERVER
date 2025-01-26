@@ -494,7 +494,7 @@ export const countClicksController = catchAsync(async (req: JwtPayload, res: Res
     }
 
   }else if(service === 'shared'){
-    user!.sharedCount+=1;
+    user!.sharedCount!+=1;
     await user?.save();
   }
 

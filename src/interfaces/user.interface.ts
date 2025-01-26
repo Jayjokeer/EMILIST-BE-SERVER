@@ -36,7 +36,8 @@ export interface IUser {
     comparedBusinesses? : any;
     accountDetails?: any;
     comparedProducts?: any;
-    sharedCount: number;
+    sharedCount?: number;
+    mutedBusinesses?: any;
   }
   
 export interface ICreateUser {

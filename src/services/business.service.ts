@@ -203,7 +203,12 @@ export const fetchAllBusiness = async (
   if (filters.noticePeriod) {
     query.noticePeriod = filters.noticePeriod;
   }
-
+  if (userId) {
+    const user = await userService.fetchUserMutedBusinesses(userId)
+    if (user && user.mutedBusinesses && user.mutedBusinesses.length > 0) {
+      query._id = { $nin: user.mutedJobs };
+    }
+  }
   const businesses = await Business.find(query)
     .sort({ createdAt: -1 })
     .skip(skip)

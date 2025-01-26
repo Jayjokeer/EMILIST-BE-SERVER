@@ -53,7 +53,9 @@ export const findSpecificUser = async (query: string)=>{
 export const fetchUserMutedJobs = async(userId: string)=>{
   return Users.findById(userId).select('mutedJobs').lean();
 };
-
+export const fetchUserMutedBusinesses = async(userId: string)=>{
+  return Users.findById(userId).select('mutedBusinesses').lean();
+};
 export const fetchAllUsersAdminDashboard = async()=>{
   return await Users.countDocuments();
 };
