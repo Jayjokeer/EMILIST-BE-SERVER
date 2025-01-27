@@ -4,6 +4,7 @@ import Product from "../models/product.model";
 import ProductLike from "../models/productLike.model";
 import Review from "../models/review.model";
 import { NotFoundError } from "../errors/error";
+import User from "../models/users.model";
 
 export const createProduct = async (data: IProduct)=>{
     return await Product.create(data);
@@ -107,15 +108,19 @@ export const fetchAllProducts = async (
   if (userId) {
     const likedProducts = await ProductLike.find({ user: userId }).select('product').lean();
     const likedProductIds = likedProducts.map((like) => like.product.toString());
-
+      const user = await User.findById(userId);
+      const comparedProductIds = user?.comparedProducts.map((id: any) => id.toString()) || [];
+      
     productsWithDetails = enhancedProducts.map((product) => ({
       ...product,
       liked: likedProductIds.includes(product._id.toString()),
+      isCompared: comparedProductIds.includes(product._id.toString()),
     }));
   } else {
     productsWithDetails = enhancedProducts.map((product) => ({
       ...product,
       liked: false,
+      isCompared: false,
     }));
   }
 

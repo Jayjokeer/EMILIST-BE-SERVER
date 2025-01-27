@@ -18,6 +18,7 @@ const product_model_1 = __importDefault(require("../models/product.model"));
 const productLike_model_1 = __importDefault(require("../models/productLike.model"));
 const review_model_1 = __importDefault(require("../models/review.model"));
 const error_1 = require("../errors/error");
+const users_model_1 = __importDefault(require("../models/users.model"));
 const createProduct = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield product_model_1.default.create(data);
 });
@@ -96,10 +97,12 @@ const fetchAllProducts = (page, limit, userId, filters, search) => __awaiter(voi
     if (userId) {
         const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();
         const likedProductIds = likedProducts.map((like) => like.product.toString());
-        productsWithDetails = enhancedProducts.map((product) => (Object.assign(Object.assign({}, product), { liked: likedProductIds.includes(product._id.toString()) })));
+        const user = yield users_model_1.default.findById(userId);
+        const comparedProductIds = (user === null || user === void 0 ? void 0 : user.comparedProducts.map((id) => id.toString())) || [];
+        productsWithDetails = enhancedProducts.map((product) => (Object.assign(Object.assign({}, product), { liked: likedProductIds.includes(product._id.toString()), isCompared: comparedProductIds.includes(product._id.toString()) })));
     }
     else {
-        productsWithDetails = enhancedProducts.map((product) => (Object.assign(Object.assign({}, product), { liked: false })));
+        productsWithDetails = enhancedProducts.map((product) => (Object.assign(Object.assign({}, product), { liked: false, isCompared: false })));
     }
     return {
         products: productsWithDetails,
