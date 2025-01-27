@@ -43,13 +43,13 @@ export const findUserByUniqueId = async (id: string)=>{
 export const findUserByEmailOrUserName = async(email: string | undefined, userName: string | undefined)=>{
 
   return await Users.findOne({ $or: [{ email }, { userName }] });
-}   
+};   
 export const findSpecificUser = async (query: string)=>{
   return await  Users.findOne({
     $or: [{ userName: query }, { email: query }],
   }).select('-password');
 
-}
+};
 export const fetchUserMutedJobs = async(userId: string)=>{
   return Users.findById(userId).select('mutedJobs').lean();
 };

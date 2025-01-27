@@ -134,11 +134,30 @@ export const deleteProduct = async(productId: string)=>{
 
 export const fetchUserProducts = async(userId: string, page: number, limit: number)=>{
     const skip = (page - 1) * limit;
-    const totalProducts = await Product.countDocuments({userId: userId}).skip(skip).limit(limit);
+    const totalProducts = await Product.countDocuments({userId: userId});
 
-    const products = await Product.find({userId: userId});
+    const products = await Product.find({userId: userId})
+    .skip(skip)
+    .limit(limit)
+    .populate('reviews', 'rating');
+    
+    const enhancedProducts = await Promise.all(
+      products.map(async (product: any) => {
+        const totalReviews = product.reviews.length;
+        const averageRating =
+          totalReviews > 0
+            ? product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
+            : 0;
+  
+        return {
+          ...product.toObject(),
+          totalReviews,
+          averageRating: parseFloat(averageRating.toFixed(2)),
+        };
+      })
+    );
    return {
-    products,
+    products: enhancedProducts,
     totalPages: Math.ceil(totalProducts/ limit),
     currentPage: page,
     totalProducts  

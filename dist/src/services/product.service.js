@@ -115,10 +115,20 @@ const deleteProduct = (productId) => __awaiter(void 0, void 0, void 0, function*
 exports.deleteProduct = deleteProduct;
 const fetchUserProducts = (userId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
-    const totalProducts = yield product_model_1.default.countDocuments({ userId: userId }).skip(skip).limit(limit);
-    const products = yield product_model_1.default.find({ userId: userId });
+    const totalProducts = yield product_model_1.default.countDocuments({ userId: userId });
+    const products = yield product_model_1.default.find({ userId: userId })
+        .skip(skip)
+        .limit(limit)
+        .populate('reviews', 'rating');
+    const enhancedProducts = yield Promise.all(products.map((product) => __awaiter(void 0, void 0, void 0, function* () {
+        const totalReviews = product.reviews.length;
+        const averageRating = totalReviews > 0
+            ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+            : 0;
+        return Object.assign(Object.assign({}, product.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
+    })));
     return {
-        products,
+        products: enhancedProducts,
         totalPages: Math.ceil(totalProducts / limit),
         currentPage: page,
         totalProducts
