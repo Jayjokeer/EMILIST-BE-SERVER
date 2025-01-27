@@ -95,7 +95,7 @@ interface Transaction {
 }
 
 export const fetchTransactionChartAdminDashboard = async (
-  year?: number,
+  year?: number, 
   currency?: WalletEnum 
 ) => {
   const filter: any = {};
@@ -105,8 +105,8 @@ export const fetchTransactionChartAdminDashboard = async (
       throw new Error("Invalid year provided");
     }
 
-    const startOfYear = new Date(year, 0, 1); // January 1st of the given year
-    const endOfYear = new Date(year + 1, 0, 1); // January 1st of the next year (exclusive)
+    const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`); 
+    const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`); 
 
     filter.createdAt = {
       $gte: startOfYear,
@@ -114,8 +114,8 @@ export const fetchTransactionChartAdminDashboard = async (
     };
   } else {
     const currentYear = new Date().getFullYear();
-    const startOfYear = new Date(currentYear, 0, 1); // January 1st of the current year
-    const endOfYear = new Date(currentYear + 1, 0, 1); // January 1st of the next year (exclusive)
+    const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`);
+    const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
 
     filter.createdAt = {
       $gte: startOfYear,
@@ -126,70 +126,73 @@ export const fetchTransactionChartAdminDashboard = async (
   if (currency) {
     filter.currency = currency;
   }
-
   try {
     const transactions = await Transaction.find(filter).lean();
 
     const totalsByCurrency: Record<string, number> = {};
     const transactionsByMonth: Record<string, Record<string, number>> = {};
-
+  
     const months = [
       "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     ];
-
+  
     transactions.forEach((transaction) => {
       const { amount, currency, createdAt } = transaction;
-
+  
       if (!currency || !amount) {
         console.warn("Missing currency or amount for transaction", transaction);
         return; 
       }
-
+  
       const standardizedCurrency = currency.toUpperCase(); 
       const amountNumber = Number(amount); 
       const date = new Date(createdAt);
-
+  
       if (isNaN(date.getTime())) {
         console.warn("Invalid date in transaction", transaction);
         return; 
       }
-
+  
       const month = date.toLocaleString("default", { month: "short" });
       const period = `${month} ${date.getFullYear()}`;
-
-      totalsByCurrency[standardizedCurrency] = (totalsByCurrency[standardizedCurrency] || 0) + amountNumber;
-
+  
+      totalsByCurrency[standardizedCurrency] =
+        (totalsByCurrency[standardizedCurrency] || 0) + amountNumber;
+  
       if (!transactionsByMonth[period]) {
         transactionsByMonth[period] = {};
       }
       transactionsByMonth[period][standardizedCurrency] =
         (transactionsByMonth[period][standardizedCurrency] || 0) + amountNumber;
     });
-
-    const yearPeriod = year ? year : new Date().getFullYear();
+  
+    const yearPeriod = year ? year : new Date().getFullYear(); 
     const transactionsArray = months.map((month, index) => {
-      let period = `${month} ${yearPeriod}`;
+      const period = `${month} ${yearPeriod}`;
       const amounts = transactionsByMonth[period] || {}; 
-      const result: Record<string, any > = { period };
+  
+      const result: Record<string, any> = { period };
       if (currency) {
         result[currency] = amounts[currency] || 0;
       } else {
+        
         for (const curr of Object.keys(totalsByCurrency)) {
           result[curr] = amounts[curr] || 0;
         }
       }
-
+  
       return result;
     });
-
+  
     return {
-      totalsByCurrency,
+      totalsByCurrency, 
       transactions: transactionsArray,
     };
   } catch (error) {
     console.error("Error fetching transactions:", error);
     throw new Error("Unable to fetch transactions");
   }
+  
 };
 
 

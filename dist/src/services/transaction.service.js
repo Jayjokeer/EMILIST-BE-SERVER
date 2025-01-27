@@ -112,8 +112,8 @@ const fetchTransactionChartAdminDashboard = (year, currency) => __awaiter(void 0
         if (isNaN(year) || year < 1970 || year > new Date().getFullYear()) {
             throw new Error("Invalid year provided");
         }
-        const startOfYear = new Date(year, 0, 1); // January 1st of the given year
-        const endOfYear = new Date(year + 1, 0, 1); // January 1st of the next year (exclusive)
+        const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`);
+        const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
         filter.createdAt = {
             $gte: startOfYear,
             $lt: endOfYear,
@@ -121,8 +121,8 @@ const fetchTransactionChartAdminDashboard = (year, currency) => __awaiter(void 0
     }
     else {
         const currentYear = new Date().getFullYear();
-        const startOfYear = new Date(currentYear, 0, 1); // January 1st of the current year
-        const endOfYear = new Date(currentYear + 1, 0, 1); // January 1st of the next year (exclusive)
+        const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`);
+        const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
         filter.createdAt = {
             $gte: startOfYear,
             $lt: endOfYear,
@@ -153,7 +153,8 @@ const fetchTransactionChartAdminDashboard = (year, currency) => __awaiter(void 0
             }
             const month = date.toLocaleString("default", { month: "short" });
             const period = `${month} ${date.getFullYear()}`;
-            totalsByCurrency[standardizedCurrency] = (totalsByCurrency[standardizedCurrency] || 0) + amountNumber;
+            totalsByCurrency[standardizedCurrency] =
+                (totalsByCurrency[standardizedCurrency] || 0) + amountNumber;
             if (!transactionsByMonth[period]) {
                 transactionsByMonth[period] = {};
             }
@@ -162,7 +163,7 @@ const fetchTransactionChartAdminDashboard = (year, currency) => __awaiter(void 0
         });
         const yearPeriod = year ? year : new Date().getFullYear();
         const transactionsArray = months.map((month, index) => {
-            let period = `${month} ${yearPeriod}`;
+            const period = `${month} ${yearPeriod}`;
             const amounts = transactionsByMonth[period] || {};
             const result = { period };
             if (currency) {
