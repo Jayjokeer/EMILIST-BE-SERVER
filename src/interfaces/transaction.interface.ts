@@ -25,5 +25,6 @@ export interface ITransaction extends Document {
     planId: any;
     recieverId?: mongoose.Schema.Types.ObjectId;
     vat?: number;
+    createdAt: Date;
   };
   
