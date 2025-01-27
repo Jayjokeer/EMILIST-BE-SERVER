@@ -96,5 +96,30 @@ export const fetchAllUsersAdmin = async(page: number, limit: number, q: string)=
     return await Users.findById(id,{password: 0})
 };
 export const findUserWithoutPhoneNumberDetailsById = async (id: string)=>{
-  return await Users.findById(id,{password: 0, number1: 0, number2: 0, whatsAppNo: 0});
+  return await Users.findById(id,{password: 0, 
+    number1: 0, 
+    number2: 0, 
+    whatsAppNo: 0,
+    registrationOtp: 0,
+    email: 0,
+    otpExpiresAt:0,
+    passwordResetOtp: 0,
+    googleId:0,
+    accessToken: 0,
+    businesses: 0,
+    mutedJobs: 0,
+    wallets: 0,
+    role: 0,
+    invitedUsers: 0,
+    subscription: 0,
+    requestedVerification: 0,
+    comparedBusinesses: 0,
+    comparedProducts: 0,
+    accountDetails: 0,
+    sharedCount: 0,
+    mutedBusinesses: 0,
+    isEmailVerified: 0,
+    createdAt: 0,
+    updatedAt: 0,
+  });
 };
