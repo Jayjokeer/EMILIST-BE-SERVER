@@ -112,22 +112,14 @@ const fetchTransactionChartAdminDashboard = (year, currency) => __awaiter(void 0
         if (isNaN(year) || year < 1970 || year > new Date().getFullYear()) {
             throw new Error("Invalid year provided");
         }
-        const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`);
-        const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
-        filter.createdAt = {
-            $gte: startOfYear,
-            $lt: endOfYear,
-        };
     }
-    else {
-        const currentYear = new Date().getFullYear();
-        const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`);
-        const endOfYear = new Date(`${year}-12-31T23:59:59.999Z`);
-        filter.createdAt = {
-            $gte: startOfYear,
-            $lt: endOfYear,
-        };
-    }
+    const targetYear = year || new Date().getFullYear();
+    const startOfYear = new Date(`${targetYear}-01-01T00:00:00.000Z`);
+    const endOfYear = new Date(`${targetYear}-12-31T23:59:59.999Z`);
+    filter.createdAt = {
+        $gte: startOfYear,
+        $lt: endOfYear,
+    };
     if (currency) {
         filter.currency = currency;
     }
@@ -136,8 +128,12 @@ const fetchTransactionChartAdminDashboard = (year, currency) => __awaiter(void 0
         const totalsByCurrency = {};
         const transactionsByMonth = {};
         const months = [
-            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
         ];
+        Object.values(transaction_enum_1.WalletEnum).forEach(curr => {
+            totalsByCurrency[curr] = 0;
+        });
         transactions.forEach((transaction) => {
             const { amount, currency, createdAt } = transaction;
             if (!currency || !amount) {
@@ -153,26 +149,27 @@ const fetchTransactionChartAdminDashboard = (year, currency) => __awaiter(void 0
             }
             const month = date.toLocaleString("default", { month: "short" });
             const period = `${month} ${date.getFullYear()}`;
-            totalsByCurrency[standardizedCurrency] =
-                (totalsByCurrency[standardizedCurrency] || 0) + amountNumber;
+            totalsByCurrency[standardizedCurrency] = (totalsByCurrency[standardizedCurrency] || 0) + amountNumber;
             if (!transactionsByMonth[period]) {
                 transactionsByMonth[period] = {};
+                Object.values(transaction_enum_1.WalletEnum).forEach(curr => {
+                    transactionsByMonth[period][curr] = 0;
+                });
             }
             transactionsByMonth[period][standardizedCurrency] =
                 (transactionsByMonth[period][standardizedCurrency] || 0) + amountNumber;
         });
-        const yearPeriod = year ? year : new Date().getFullYear();
-        const transactionsArray = months.map((month, index) => {
-            const period = `${month} ${yearPeriod}`;
+        const transactionsArray = months.map((month) => {
+            const period = `${month} ${targetYear}`;
             const amounts = transactionsByMonth[period] || {};
             const result = { period };
             if (currency) {
                 result[currency] = amounts[currency] || 0;
             }
             else {
-                for (const curr of Object.keys(totalsByCurrency)) {
+                Object.values(transaction_enum_1.WalletEnum).forEach(curr => {
                     result[curr] = amounts[curr] || 0;
-                }
+                });
             }
             return result;
         });
