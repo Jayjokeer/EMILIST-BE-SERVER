@@ -38,7 +38,7 @@ const data = {
     totalProducts: await productService.fetchAllProductsForAdmin(),
     totalUsers: await userService.fetchAllUsersAdminDashboard(),
     totalJobs: await jobService.fetchAllJobsForAdminDashboard(),
-    totalPrivateExperts: await privateExpertService.fetchAllPrivateExpertsAAdminDashboard(),
+    totalPrivateExperts: await privateExpertService.fetchCountPrivateExpertsAdminDashboard(),
     totalTransactions: await transactionService.fetchTransactionChartAdminDashboard(year, currency),
 }
 
@@ -336,6 +336,14 @@ export const fetchSingleTransactionAdminController = catchAsync(async(req: JwtPa
 export const updateVatController = catchAsync(async(req: JwtPayload, res: Response)=>{
     const{vat} = req.body;
     const data = await transactionService.changeVatServiceAdmin(vat);
+
+   return successResponse(res,StatusCodes.OK, data);
+});
+
+export const fetchAllPrivateExpertsController = catchAsync(async(req: JwtPayload, res: Response)=>{
+    const {page =1, limit= 10} = req.query;
+
+    const data = await privateExpertService.fetchAllPrivateExpertsAdminDashboard(page, limit);
 
    return successResponse(res,StatusCodes.OK, data);
 });

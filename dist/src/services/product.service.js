@@ -234,7 +234,7 @@ const fetchAllUserProductsAdmin = (userId) => __awaiter(void 0, void 0, void 0, 
 exports.fetchAllUserProductsAdmin = fetchAllUserProductsAdmin;
 const fetchAllProductsAdmin = (page, limit) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
-    const materials = yield product_model_1.default.find().populate('userId', 'fullName').skip(skip).limit(limit);
+    const materials = yield product_model_1.default.find().populate('userId', 'fullName userName').skip(skip).limit(limit);
     const totalMaterials = yield product_model_1.default.countDocuments();
     return { materials, totalMaterials };
 });

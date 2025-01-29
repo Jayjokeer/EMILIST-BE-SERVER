@@ -25,5 +25,6 @@ router.route("/fetch-transaction/:transactionId").get(adminAuth,adminController.
 router.route("/fetch-all-subscriptions").get(adminAuth,adminController.fetchSubscriptionsController);
 router.route("/update-vat").patch(adminAuth, adminController.updateVatController);
 router.route("/verify-bank-transfer").post(adminAuth,walletController.verifyBankTransferWalletFunding);
+router.route("/fetch-private-experts").get(adminAuth,adminController.fetchAllPrivateExpertsController);
 
 export { router as AdminRoute };

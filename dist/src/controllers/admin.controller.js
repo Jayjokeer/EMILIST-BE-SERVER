@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
+exports.fetchAllPrivateExpertsController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -66,7 +66,7 @@ exports.adminDashboardController = (0, error_handler_1.catchAsync)((req, res) =>
         totalProducts: yield productService.fetchAllProductsForAdmin(),
         totalUsers: yield userService.fetchAllUsersAdminDashboard(),
         totalJobs: yield jobService.fetchAllJobsForAdminDashboard(),
-        totalPrivateExperts: yield privateExpertService.fetchAllPrivateExpertsAAdminDashboard(),
+        totalPrivateExperts: yield privateExpertService.fetchCountPrivateExpertsAdminDashboard(),
         totalTransactions: yield transactionService.fetchTransactionChartAdminDashboard(year, currency),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
@@ -335,5 +335,10 @@ exports.fetchSingleTransactionAdminController = (0, error_handler_1.catchAsync)(
 exports.updateVatController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { vat } = req.body;
     const data = yield transactionService.changeVatServiceAdmin(vat);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.fetchAllPrivateExpertsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page = 1, limit = 10 } = req.query;
+    const data = yield privateExpertService.fetchAllPrivateExpertsAdminDashboard(page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

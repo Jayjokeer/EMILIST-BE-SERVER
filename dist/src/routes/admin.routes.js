@@ -49,3 +49,4 @@ router.route("/fetch-transaction/:transactionId").get(current_user_1.adminAuth, 
 router.route("/fetch-all-subscriptions").get(current_user_1.adminAuth, adminController.fetchSubscriptionsController);
 router.route("/update-vat").patch(current_user_1.adminAuth, adminController.updateVatController);
 router.route("/verify-bank-transfer").post(current_user_1.adminAuth, walletController.verifyBankTransferWalletFunding);
+router.route("/fetch-private-experts").get(current_user_1.adminAuth, adminController.fetchAllPrivateExpertsController);
