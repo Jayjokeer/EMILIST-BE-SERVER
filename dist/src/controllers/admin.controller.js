@@ -80,6 +80,7 @@ exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)((req, res
         const plan = yield planService.getPlanById(String(subcription.planId));
         const transactions = yield transactionService.fetchAllUserEarningsAdmin(String(user._id));
         userData.push({
+            userName: user.userName,
             name: user.fullName,
             email: user.email,
             status: user.status,

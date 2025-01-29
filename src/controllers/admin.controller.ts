@@ -55,6 +55,7 @@ export const fetchAllUsersAdminController = catchAsync(async (req: JwtPayload, r
 
         const transactions = await transactionService.fetchAllUserEarningsAdmin(String(user._id));
          userData.push({
+            userName: user.userName,
             name: user.fullName,
             email: user.email,
             status: user.status,
