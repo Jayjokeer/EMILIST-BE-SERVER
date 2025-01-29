@@ -88,11 +88,7 @@ export const totalAmountByTransaction = async (userId: string)=>{
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]);
 };
-interface Transaction {
-  amount: number;
-  currency: string;
-  createdAt: string;
-}
+
 
 export const fetchTransactionChartAdminDashboard = async (
   year?: number,
