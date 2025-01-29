@@ -38,6 +38,7 @@ app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)());
+// require('../src/utils/script')
 app.use((0, express_session_1.default)({
     secret: process.env.SESSION_SECRET,
     resave: false,

@@ -18,4 +18,5 @@ var SubscriptionPerksEnum;
     SubscriptionPerksEnum["expert"] = "expert";
     SubscriptionPerksEnum["analytics"] = "analytics";
     SubscriptionPerksEnum["support"] = "support";
+    SubscriptionPerksEnum["jobApplication"] = "jobApplication";
 })(SubscriptionPerksEnum || (exports.SubscriptionPerksEnum = SubscriptionPerksEnum = {}));

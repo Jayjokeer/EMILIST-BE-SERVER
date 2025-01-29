@@ -13,5 +13,6 @@ export enum SubscriptionPerksEnum {
     expert = "expert",
     analytics= "analytics",
     support = "support",
+    jobApplication= "jobApplication",
 }
 

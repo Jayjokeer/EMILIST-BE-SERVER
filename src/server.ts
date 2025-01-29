@@ -26,7 +26,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(helmet());
 app.use(cors());
-
+// require('../src/utils/script')
 app.use(session({
     secret: process.env.SESSION_SECRET as string,
     resave: false,
