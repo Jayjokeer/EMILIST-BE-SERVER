@@ -28,7 +28,9 @@ const fetchProductById = (productId) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.fetchProductById = fetchProductById;
 const fetchProductByIdWithDetails = (productId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield product_model_1.default.findById(productId).populate('userId', 'fullName email userName profileImage level _id uniqueId');
+    return yield product_model_1.default.findById(productId)
+        .populate('userId', 'fullName email userName profileImage level _id uniqueId')
+        .populate('reviews', 'rating');
 });
 exports.fetchProductByIdWithDetails = fetchProductByIdWithDetails;
 const fetchAllProducts = (page, limit, userId, filters, search) => __awaiter(void 0, void 0, void 0, function* () {
