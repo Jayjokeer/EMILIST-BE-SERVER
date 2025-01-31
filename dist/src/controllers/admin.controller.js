@@ -125,6 +125,7 @@ exports.fetchUserDetails = (0, error_handler_1.catchAsync)((req, res) => __await
         name: user.fullName,
         level: user.level,
         uniqueId: user.uniqueId,
+        fullName: user.fullName,
     };
     if (q === "userDetails") {
         const payload = {
@@ -223,6 +224,7 @@ exports.fetchJobsAdminController = (0, error_handler_1.catchAsync)((req, res) =>
             jobId: job._id,
             title: job.title,
             poster: user === null || user === void 0 ? void 0 : user.fullName,
+            userName: user === null || user === void 0 ? void 0 : user.userName,
             createdAt: job.createdAt,
             status: job.status,
             type: job.type,

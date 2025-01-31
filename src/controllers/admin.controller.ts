@@ -103,6 +103,7 @@ export const fetchUserDetails = catchAsync(async (req: JwtPayload, res: Response
         name: user.fullName,
         level: user.level,
         uniqueId: user.uniqueId,
+        fullName: user.fullName,
     };
     if(q ==="userDetails"){
     const payload = {
@@ -204,6 +205,7 @@ export const fetchJobsAdminController = catchAsync(async(req: JwtPayload, res: R
             jobId: job._id,
             title: job.title,
             poster: user?.fullName,
+            userName: user?.userName, 
             createdAt: job.createdAt,
             status: job.status,
             type: job.type,
