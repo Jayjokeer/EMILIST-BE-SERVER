@@ -28,6 +28,8 @@ const express_1 = require("express");
 const expertController = __importStar(require("../controllers/private-expert.controller"));
 const private_expert_validation_1 = require("../validations/private-expert.validation");
 const image_upload_1 = require("../utils/image-upload");
+const current_user_1 = require("../middlewares/current-user");
 const router = (0, express_1.Router)();
 exports.ExpertRoute = router;
 router.route("/create-private-expert").post(image_upload_1.singleUpload, private_expert_validation_1.validateExpert, expertController.createExpertController);
+router.route("/fetch-private-expert/:id").get(current_user_1.adminAuth, expertController.fetchPrivateExpertByIdController);

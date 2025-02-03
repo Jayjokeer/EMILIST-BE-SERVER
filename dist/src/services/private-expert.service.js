@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllPrivateExpertsAdminDashboard = exports.fetchCountPrivateExpertsAdminDashboard = exports.createPrivateExpert = void 0;
+exports.fetchPrivateExpertById = exports.fetchAllPrivateExpertsAdminDashboard = exports.fetchCountPrivateExpertsAdminDashboard = exports.createPrivateExpert = void 0;
 const private_expert_moodel_1 = __importDefault(require("../models/private-expert.moodel"));
 const createPrivateExpert = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     return yield private_expert_moodel_1.default.create(payload);
@@ -25,7 +25,12 @@ exports.fetchCountPrivateExpertsAdminDashboard = fetchCountPrivateExpertsAdminDa
 const fetchAllPrivateExpertsAdminDashboard = (page, limit) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
     return yield private_expert_moodel_1.default.find()
+        .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
 });
 exports.fetchAllPrivateExpertsAdminDashboard = fetchAllPrivateExpertsAdminDashboard;
+const fetchPrivateExpertById = (id) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield private_expert_moodel_1.default.findById(id);
+});
+exports.fetchPrivateExpertById = fetchPrivateExpertById;

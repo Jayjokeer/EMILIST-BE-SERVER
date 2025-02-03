@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createExpertController = void 0;
+exports.fetchPrivateExpertByIdController = exports.createExpertController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -52,4 +52,9 @@ exports.createExpertController = (0, error_handler_1.catchAsync)((req, res) => _
     const { html, subject } = (0, templates_1.sendPrivateExpertMessage)(fullName, phoneNumber, email, typeOfExpert, details, location, time, date);
     yield (0, send_email_1.sendEmail)(config_1.config.adminEmail, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+}));
+exports.fetchPrivateExpertByIdController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    const data = yield expertService.fetchPrivateExpertById(id);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
