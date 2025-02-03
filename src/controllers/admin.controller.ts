@@ -215,6 +215,7 @@ export const fetchJobsAdminController = catchAsync(async(req: JwtPayload, res: R
         jobs: allJobs,
         totalJobs,
         page,
+        totalPages: Math.ceil(totalJobs / limit),
     };
     return successResponse(res,StatusCodes.OK, data);
 });

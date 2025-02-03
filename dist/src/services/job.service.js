@@ -570,7 +570,7 @@ const fetchAllJobsAdmin = (status, page, limit) => __awaiter(void 0, void 0, voi
         data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.complete }).skip(skip).limit(limit);
     }
     else {
-        data = yield jobs_model_1.default.find();
+        data = yield jobs_model_1.default.find().skip(skip).limit(limit);
     }
     const totalJobs = yield jobs_model_1.default.countDocuments();
     const jobs = data;

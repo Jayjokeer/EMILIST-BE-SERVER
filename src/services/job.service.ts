@@ -634,7 +634,7 @@ export const fetchAllJobsAdmin = async (status: string, page: number, limit: num
     data = await Jobs.find({status: JobStatusEnum.complete}).skip(skip).limit(limit);
   }
   else{
-    data = await Jobs.find();
+    data = await Jobs.find().skip(skip).limit(limit);
   }
   const totalJobs =  await Jobs.countDocuments();
   const jobs = data;
