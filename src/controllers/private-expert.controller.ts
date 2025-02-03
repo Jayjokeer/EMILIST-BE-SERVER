@@ -41,8 +41,3 @@ export const createExpertController = catchAsync( async (req: Request, res: Resp
    return successResponse(res,StatusCodes.CREATED, data);
 });
 
-export const fetchPrivateExpertByIdController = catchAsync( async (req: Request, res: Response) => {
-    const {id} = req.params;
-    const data = await expertService.fetchPrivateExpertById(id);
-    return successResponse(res,StatusCodes.OK, data);
-});

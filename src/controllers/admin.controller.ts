@@ -345,7 +345,21 @@ export const updateVatController = catchAsync(async(req: JwtPayload, res: Respon
 export const fetchAllPrivateExpertsController = catchAsync(async(req: JwtPayload, res: Response)=>{
     const {page =1, limit= 10} = req.query;
 
-    const data = await privateExpertService.fetchAllPrivateExpertsAdminDashboard(page, limit);
+    const experts = await privateExpertService.fetchAllPrivateExpertsAdminDashboard(page, limit);
+    const totalExperts = await privateExpertService.fetchCountPrivateExpertsAdminDashboard();
+    const totalLikedExperts = experts.length;
+    const data = {
+        experts,
+        totalPages: Math.ceil(totalLikedExperts / limit),
+        totalExperts,
+        page,
+    };
 
    return successResponse(res,StatusCodes.OK, data);
+});
+
+export const fetchPrivateExpertByIdController = catchAsync( async (req: Request, res: Response) => {
+    const {id} = req.params;
+    const data = await privateExpertService.fetchPrivateExpertById(id);
+    return successResponse(res,StatusCodes.OK, data);
 });
