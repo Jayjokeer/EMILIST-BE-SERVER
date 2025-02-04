@@ -70,6 +70,7 @@ export const fetchAllUsersAdminController = catchAsync(async (req: JwtPayload, r
         users: userData,
         totalUsers,
         page,
+        totalPages: Math.ceil(totalUsers / limit),
     };
     return successResponse(res, StatusCodes.CREATED, data);
   });
@@ -196,9 +197,9 @@ export const addUserAdminController = catchAsync(async (req: JwtPayload, res: Re
     
 
 export const fetchJobsAdminController = catchAsync(async(req: JwtPayload, res: Response) => {
-    const {status, page, limit} = req.query;
+    const {status, page =1 , limit = 10 , search} = req.query;
     let allJobs =[];
-    const {totalJobs, jobs} = await jobService.fetchAllJobsAdmin(status, page, limit);
+    const {totalJobs, jobs} = await jobService.fetchAllJobsAdmin(status, page, limit, search);
     for (const job of jobs){
         const user = await userService.findUserById(job.userId)
         allJobs.push( {

@@ -8,6 +8,8 @@ import { ProjectStatusEnum } from "../enums/project.enum";
 import { add } from 'date-fns';
 import moment from "moment";
 import * as userService from './auth.service';
+import { PipelineStage } from 'mongoose';
+
 
 export const createJob = async (data:  IJob) =>{
     return await Jobs.create(data);
@@ -622,25 +624,80 @@ export const fetchAllUserJobsAdmin = async (userId: string) => {
   .populate('applications', 'title description status')
   .lean();
 };
-export const fetchAllJobsAdmin = async (status: string, page: number, limit: number)=>{
-  const skip = (page - 1) * limit;
 
-  let data; 
-  if (status === 'notStarted'){
-    data = await Jobs.find({status: JobStatusEnum.pending}).skip(skip).limit(limit);
-  }else if(status === 'inProgress'){
-    data = await Jobs.find({status: JobStatusEnum.active}).skip(skip).limit(limit);
-  }else if (status === 'completed'){
-    data = await Jobs.find({status: JobStatusEnum.complete}).skip(skip).limit(limit);
+
+export const fetchAllJobsAdmin = async (status: string, page: number, limit: number, search: any) => {
+  const pageNum = Math.max(1, Number(page));
+  const limitNum = Math.max(1, Number(limit));
+  const skip = (pageNum - 1) * limitNum;
+
+  let matchQuery: any = {};
+
+  if (status === 'notStarted') {
+    matchQuery.status = JobStatusEnum.pending;
+  } else if (status === 'inProgress') {
+    matchQuery.status = JobStatusEnum.active;
+  } else if (status === 'completed') {
+    matchQuery.status = JobStatusEnum.complete;
   }
-  else{
-    data = await Jobs.find().skip(skip).limit(limit);
-  }
-  const totalJobs =  await Jobs.countDocuments();
-  const jobs = data;
-  return {totalJobs, jobs}
+
+  const pipeline: PipelineStage[] = [
+    {
+      $lookup: {
+        from: 'Users',
+        localField: 'userId',
+        foreignField: '_id',
+        as: 'user'
+      }
+    } as PipelineStage,
+    {
+      $unwind: {
+        path: '$user',
+        preserveNullAndEmptyArrays: true
+      }
+    } as PipelineStage,
+    {
+      $match: {
+        ...matchQuery,
+        ...(search ? {
+          $or: [
+            { title: { $regex: search, $options: 'i' } },
+            { description: { $regex: search, $options: 'i' } },
+            { jobId: { $regex: search, $options: 'i' } },
+            { 'user.userName': { $regex: search, $options: 'i' } },
+            { 'user.fullName': { $regex: search, $options: 'i' } }
+          ]
+        } : {})
+      }
+    } as PipelineStage
+  ];
+
+  const jobsPipeline: PipelineStage[] = [
+    ...pipeline,
+    { $sort: { createdAt: -1 } } as PipelineStage,
+    { $skip: Number(skip) } as PipelineStage,
+    { $limit: Number(limitNum) } as PipelineStage
+  ];
+
+  const countPipeline: PipelineStage[] = [
+    ...pipeline,
+    { $count: 'total' } as PipelineStage
+  ];
+
+  const [jobs, countResult] = await Promise.all([
+    Jobs.aggregate(jobsPipeline),
+    Jobs.aggregate(countPipeline)
+  ]);
+
+  const totalJobs = countResult[0]?.total || 0;
+
+  return {
+    totalJobs,
+    jobs,
+    page: pageNum,
+    totalPages: Math.ceil(totalJobs / limitNum)
+  };
 };
-
 export const fetchAllLikedJobs = async (userId: string) => {
 
   

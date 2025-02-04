@@ -95,6 +95,7 @@ exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)((req, res
         users: userData,
         totalUsers,
         page,
+        totalPages: Math.ceil(totalUsers / limit),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
@@ -215,9 +216,9 @@ exports.addUserAdminController = (0, error_handler_1.catchAsync)((req, res) => _
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.fetchJobsAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { status, page, limit } = req.query;
+    const { status, page = 1, limit = 10, search } = req.query;
     let allJobs = [];
-    const { totalJobs, jobs } = yield jobService.fetchAllJobsAdmin(status, page, limit);
+    const { totalJobs, jobs } = yield jobService.fetchAllJobsAdmin(status, page, limit, search);
     for (const job of jobs) {
         const user = yield userService.findUserById(job.userId);
         allJobs.push({

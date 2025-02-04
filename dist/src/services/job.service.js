@@ -557,24 +557,69 @@ const fetchAllUserJobsAdmin = (userId) => __awaiter(void 0, void 0, void 0, func
         .lean();
 });
 exports.fetchAllUserJobsAdmin = fetchAllUserJobsAdmin;
-const fetchAllJobsAdmin = (status, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
-    const skip = (page - 1) * limit;
-    let data;
+const fetchAllJobsAdmin = (status, page, limit, search) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.max(1, Number(limit));
+    const skip = (pageNum - 1) * limitNum;
+    let matchQuery = {};
     if (status === 'notStarted') {
-        data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.pending }).skip(skip).limit(limit);
+        matchQuery.status = jobs_enum_1.JobStatusEnum.pending;
     }
     else if (status === 'inProgress') {
-        data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.active }).skip(skip).limit(limit);
+        matchQuery.status = jobs_enum_1.JobStatusEnum.active;
     }
     else if (status === 'completed') {
-        data = yield jobs_model_1.default.find({ status: jobs_enum_1.JobStatusEnum.complete }).skip(skip).limit(limit);
+        matchQuery.status = jobs_enum_1.JobStatusEnum.complete;
     }
-    else {
-        data = yield jobs_model_1.default.find().skip(skip).limit(limit);
-    }
-    const totalJobs = yield jobs_model_1.default.countDocuments();
-    const jobs = data;
-    return { totalJobs, jobs };
+    const pipeline = [
+        {
+            $lookup: {
+                from: 'Users',
+                localField: 'userId',
+                foreignField: '_id',
+                as: 'user'
+            }
+        },
+        {
+            $unwind: {
+                path: '$user',
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $match: Object.assign(Object.assign({}, matchQuery), (search ? {
+                $or: [
+                    { title: { $regex: search, $options: 'i' } },
+                    { description: { $regex: search, $options: 'i' } },
+                    { jobId: { $regex: search, $options: 'i' } },
+                    { 'user.userName': { $regex: search, $options: 'i' } },
+                    { 'user.fullName': { $regex: search, $options: 'i' } }
+                ]
+            } : {}))
+        }
+    ];
+    const jobsPipeline = [
+        ...pipeline,
+        { $sort: { createdAt: -1 } },
+        { $skip: Number(skip) },
+        { $limit: Number(limitNum) }
+    ];
+    const countPipeline = [
+        ...pipeline,
+        { $count: 'total' }
+    ];
+    const [jobs, countResult] = yield Promise.all([
+        jobs_model_1.default.aggregate(jobsPipeline),
+        jobs_model_1.default.aggregate(countPipeline)
+    ]);
+    const totalJobs = ((_a = countResult[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
+    return {
+        totalJobs,
+        jobs,
+        page: pageNum,
+        totalPages: Math.ceil(totalJobs / limitNum)
+    };
 });
 exports.fetchAllJobsAdmin = fetchAllJobsAdmin;
 const fetchAllLikedJobs = (userId) => __awaiter(void 0, void 0, void 0, function* () {
