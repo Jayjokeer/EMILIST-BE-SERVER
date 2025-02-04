@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { SubscriptionPerksEnum, SubscriptionStatusEnum } from '../enums/suscribtion.enum';
+import { SubscriptionPeriodEnum, SubscriptionPerksEnum, SubscriptionStatusEnum } from '../enums/suscribtion.enum';
 import { ISubscription } from '../interfaces/subscription.interface';
 import { IPerk } from '../interfaces/plans.interface';
 
@@ -25,6 +25,7 @@ const SubscriptionSchema = new Schema<ISubscription>(
     startDate: { type: Date, required: true },
     endDate: { type: Date},
     perks: [PerkSchema],
+    subscriptionPeriod: { type: String, enum: SubscriptionPeriodEnum },
   },
   { timestamps: true }
 );

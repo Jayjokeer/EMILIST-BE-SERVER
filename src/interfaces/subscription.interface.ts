@@ -8,4 +8,5 @@ export interface ISubscription extends Document {
     startDate: Date;
     endDate: Date;
     perks : IPerk[];
+    subscriptionPeriod: string;
   }

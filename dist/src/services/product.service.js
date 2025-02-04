@@ -264,7 +264,6 @@ const fetchAllProductsAdmin = (page, limit, search) => __awaiter(void 0, void 0,
     return {
         materials,
         totalMaterials,
-        totalPages: Math.ceil(totalMaterials / limitNum)
     };
 });
 exports.fetchAllProductsAdmin = fetchAllProductsAdmin;

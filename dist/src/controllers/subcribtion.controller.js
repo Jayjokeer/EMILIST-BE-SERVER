@@ -76,11 +76,14 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
     let data;
     const startDate = new Date();
     let endDate = new Date();
+    let price;
     if (durationType === 'yearly') {
         endDate.setFullYear(startDate.getFullYear() + 1);
+        price = plan.price * 12;
     }
     else if (durationType === 'monthly') {
         endDate.setMonth(startDate.getMonth() + 1);
+        price = plan.price;
     }
     ;
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
@@ -91,7 +94,7 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
         const transactionPayload = {
             userId,
             type: transaction_enum_1.TransactionType.DEBIT,
-            amount: plan.price,
+            amount: price,
             description: `Subscription payment via wallet`,
             paymentMethod: paymentMethod,
             balanceBefore: userWallet.balance,
@@ -124,7 +127,7 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
             const transactionPayload = {
                 userId,
                 type: transaction_enum_1.TransactionType.DEBIT,
-                amount: plan.price,
+                amount: price,
                 description: `Subscription payment via card`,
                 paymentMethod: paymentMethod,
                 currency: currency,

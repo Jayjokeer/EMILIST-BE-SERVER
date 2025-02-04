@@ -14,5 +14,10 @@ export enum SubscriptionPerksEnum {
     analytics= "analytics",
     support = "support",
     jobApplication= "jobApplication",
-}
+};
+
+export enum SubscriptionPeriodEnum {
+    monthly = "monthly",
+    yearly = "yearly"
+};
 

@@ -14,7 +14,7 @@ import { OrderPaymentStatus } from '../enums/order.enum';
 import * as transactionService from '../services/transaction.service';
 import { generatePaystackPaymentLink } from '../utils/paystack';
 import { PlanEnum } from '../enums/plan.enum';
-import { SubscriptionStatusEnum } from '../enums/suscribtion.enum';
+import { SubscriptionPeriodEnum, SubscriptionStatusEnum } from '../enums/suscribtion.enum';
 import * as userService from '../services/auth.service';
 
 export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response) => {
@@ -42,10 +42,16 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
     let data;
     const startDate = new Date();
     let endDate = new Date();
+    let price;
+    let period;
     if (durationType === 'yearly') {
-        endDate.setFullYear(startDate.getFullYear() + 1);  
+        endDate.setFullYear(startDate.getFullYear() + 1);
+        price = plan.price * 12; 
+        period = SubscriptionPeriodEnum.yearly;
     } else if(durationType === 'monthly') {
-        endDate.setMonth(startDate.getMonth() + 1);  
+        endDate.setMonth(startDate.getMonth() + 1); 
+        price = plan.price; 
+        period = SubscriptionPeriodEnum.monthly;
     };
  
     if (paymentMethod === PaymentMethodEnum.wallet) {
@@ -56,7 +62,7 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
         const transactionPayload = {
             userId,
             type: TransactionType.DEBIT,
-            amount:plan.price,
+            amount: price,
             description: `Subscription payment via wallet`,
             paymentMethod: paymentMethod,
             balanceBefore: userWallet.balance,
@@ -65,6 +71,7 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
             status: TransactionEnum.completed,
             serviceType: ServiceEnum.subscription,
             planId: plan._id,
+            
         };
         const transaction = await transactionService.createTransaction(transactionPayload);
         userWallet.balance -= plan.price;
@@ -78,6 +85,7 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
           perks: plan.perks,
           startDate,
           endDate,
+          subscriptionPeriod: period,
         });
         user!.subscription = data._id;
         await user!.save();
@@ -91,7 +99,7 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
             const transactionPayload = {
                 userId,
                 type: TransactionType.DEBIT,
-                amount: plan.price,
+                amount: price,
                 description: `Subscription payment via card`,
                 paymentMethod: paymentMethod,
                 currency: currency,
