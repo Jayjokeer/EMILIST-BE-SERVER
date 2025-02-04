@@ -278,11 +278,40 @@ export const fetchAllUserProductsAdmin = async (userId: string) => {
     return await Product.find({ userId });
 };
 
-export const fetchAllProductsAdmin = async (page: number, limit: number) =>{
-  const skip = (page - 1) * limit;
-  const materials=   await Product.find().populate('userId', 'fullName userName').skip(skip).limit(limit);
-  const totalMaterials = await Product.countDocuments();
-  return {materials , totalMaterials};
+export const fetchAllProductsAdmin = async (page: number, limit: number, search: string) => {
+  const pageNum = Math.max(1, Number(page));
+  const limitNum = Math.max(1, Number(limit));
+  const skip = (pageNum - 1) * limitNum;
+
+  let query = {};
+  if (search) {
+    query = {
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } },
+        { subCategory: { $regex: search, $options: 'i' } },
+        { brand: { $regex: search, $options: 'i' } },
+        { storeName: { $regex: search, $options: 'i' } },
+        { location: { $regex: search, $options: 'i' } },
+      ]
+    };
+  }
+
+  const [materials, totalMaterials] = await Promise.all([
+    Product.find(query)
+      .populate('userId', 'fullName userName')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean(),
+    Product.countDocuments(query)
+  ]);
+
+  return {
+    materials,
+    totalMaterials,
+  };
 };
 export const otherProductsByUser = async(userId: string)=>{
   return await  Product.find({userId})

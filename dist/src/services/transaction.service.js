@@ -220,31 +220,42 @@ const fetchUserEarnings = (userId, startDate, endDate) => __awaiter(void 0, void
 });
 exports.fetchUserEarnings = fetchUserEarnings;
 const fetchAllTransactionsAdmin = (limit, page, search) => __awaiter(void 0, void 0, void 0, function* () {
-    const skip = (page - 1) * limit;
-    // const searchQuery = search
-    //   ? { $or: [ 
-    //       { field1: { $regex: search, $options: "i" } }, 
-    //       { field2: { $regex: search, $options: "i" } }, 
-    //       { field3: { $regex: search, $options: "i" } }, 
-    //     ] }
-    //   : {};
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.max(1, Number(limit));
+    const skip = (pageNum - 1) * limitNum;
+    const searchableFields = [
+        'transactionId',
+        'status',
+        'type',
+        'description',
+        'currency',
+    ];
     const searchQuery = search
         ? {
-            $or: Object.keys(transaction_model_1.default.schema.paths).map((field) => ({
-                [field]: { $regex: search, $options: "i" },
-            })),
+            $or: searchableFields.map((field) => ({
+                [field]: { $regex: search, $options: 'i' }
+            }))
         }
         : {};
-    const transactions = yield transaction_model_1.default.find(searchQuery).skip(skip).limit(limit)
-        .populate('jobId')
-        .populate('recieverId', '_id fullName')
-        .populate('milestoneId')
-        .populate('walletId', '_id')
-        .populate('orderId')
-        .populate('planId')
-        .populate('userId', '_id fullName');
-    const totalTransactions = yield transaction_model_1.default.countDocuments();
-    return { totalTransactions, transactions };
+    const [transactions, totalTransactions] = yield Promise.all([
+        transaction_model_1.default.find(searchQuery)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .populate('jobId')
+            .populate('recieverId', '_id fullName')
+            .populate('milestoneId')
+            .populate('walletId', '_id')
+            .populate('orderId')
+            .populate('planId')
+            .populate('userId', '_id fullName')
+            .lean(),
+        transaction_model_1.default.countDocuments(searchQuery)
+    ]);
+    return {
+        transactions,
+        totalTransactions,
+    };
 });
 exports.fetchAllTransactionsAdmin = fetchAllTransactionsAdmin;
 const fetchTransactionAdmin = (transactionId) => __awaiter(void 0, void 0, void 0, function* () {

@@ -225,35 +225,48 @@ export const fetchUserEarnings = async (userId: string, startDate: Date, endDate
   });
 };
 
-export const fetchAllTransactionsAdmin = async(limit:number, page: number, search: string) =>{
-  const skip = (page - 1) * limit;
-  // const searchQuery = search
-  //   ? { $or: [ 
-  //       { field1: { $regex: search, $options: "i" } }, 
-  //       { field2: { $regex: search, $options: "i" } }, 
-  //       { field3: { $regex: search, $options: "i" } }, 
-  //     ] }
-  //   : {};
+export const fetchAllTransactionsAdmin = async (limit: number, page: number, search: string) => {
+  const pageNum = Math.max(1, Number(page));
+  const limitNum = Math.max(1, Number(limit));
+  const skip = (pageNum - 1) * limitNum;
+
+  const searchableFields = [
+    'transactionId',
+    'status',
+    'type',
+    'description',
+    'currency',
+  ];
+
   const searchQuery = search
     ? {
-        $or: Object.keys(Transaction.schema.paths).map((field) => ({
-          [field]: { $regex: search, $options: "i" }, 
-        })),
+        $or: searchableFields.map((field) => ({
+          [field]: { $regex: search, $options: 'i' }
+        }))
       }
     : {};
-const transactions = await Transaction.find(searchQuery).skip(skip).limit(limit)
-.populate('jobId')
-.populate('recieverId', '_id fullName')
-.populate('milestoneId')
-.populate('walletId', '_id')
-.populate('orderId')
-.populate('planId')
-.populate('userId', '_id fullName');
-const totalTransactions = await Transaction.countDocuments();
 
-return {totalTransactions, transactions};
+  const [transactions, totalTransactions] = await Promise.all([
+    Transaction.find(searchQuery)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .populate('jobId')
+      .populate('recieverId', '_id fullName')
+      .populate('milestoneId')
+      .populate('walletId', '_id')
+      .populate('orderId')
+      .populate('planId')
+      .populate('userId', '_id fullName')
+      .lean(),
+    Transaction.countDocuments(searchQuery)
+  ]);
+
+  return {
+    transactions,
+    totalTransactions,
+  };
 };
-
 export const fetchTransactionAdmin = async(transactionId: string) =>{
 const transaction = await Transaction.findById(transactionId)
 .populate('jobId')

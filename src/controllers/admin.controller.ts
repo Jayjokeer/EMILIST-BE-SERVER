@@ -278,24 +278,25 @@ if(!user) throw new NotFoundError("User not found!");
 });
 
 export const fetchAllMaterialsAdminController = catchAsync( async (req: JwtPayload, res: Response) => {
-    const {q, page, limit} = req.query;
+    const {q, page= 1, limit = 10, search} = req.query;
 
     let products;
 
-    const {materials , totalMaterials} = await productService.fetchAllProductsAdmin(page, limit);
+    const {materials , totalMaterials} = await productService.fetchAllProductsAdmin(page, limit, search);
 
     if(q == 'inStock'){
        products = materials.filter((material: any) => material.availableQuantity > 0);
         
-    }else if (q == 'outOfStock'){
+    }else if (q == 'outOfStock'){ 
         products = materials.filter((material: any)  => material.availableQuantity <= 0);
     }else {
         products= materials;
     }
     const data = {
-        materials,
+        materials: products,
         totalMaterials,
         page,
+        totalPages: Math.ceil(totalMaterials / limit),
     };
    return successResponse(res,StatusCodes.OK, data);
 
@@ -315,6 +316,7 @@ export const fetchSubscriptionsController = catchAsync(async(req: JwtPayload, re
         subscriptions,
         totalSubscriptions,
         page,
+        totalPages: Math.ceil(totalSubscriptions / limit),
     };
    return successResponse(res,StatusCodes.OK, data);
 });
@@ -326,6 +328,7 @@ export const fetchAllTransactionsAdminController = catchAsync(async(req: JwtPayl
         transactions,
         totalTransactions,
         page,
+        totalPages: Math.ceil(totalTransactions / limit),
     };
    return successResponse(res,StatusCodes.OK, data);
 });

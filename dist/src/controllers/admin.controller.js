@@ -287,9 +287,9 @@ exports.createJobAdminController = (0, error_handler_1.catchAsync)((req, res) =>
     }
 }));
 exports.fetchAllMaterialsAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { q, page, limit } = req.query;
+    const { q, page = 1, limit = 10, search } = req.query;
     let products;
-    const { materials, totalMaterials } = yield productService.fetchAllProductsAdmin(page, limit);
+    const { materials, totalMaterials } = yield productService.fetchAllProductsAdmin(page, limit, search);
     if (q == 'inStock') {
         products = materials.filter((material) => material.availableQuantity > 0);
     }
@@ -300,9 +300,10 @@ exports.fetchAllMaterialsAdminController = (0, error_handler_1.catchAsync)((req,
         products = materials;
     }
     const data = {
-        materials,
+        materials: products,
         totalMaterials,
         page,
+        totalPages: Math.ceil(totalMaterials / limit),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
@@ -318,6 +319,7 @@ exports.fetchSubscriptionsController = (0, error_handler_1.catchAsync)((req, res
         subscriptions,
         totalSubscriptions,
         page,
+        totalPages: Math.ceil(totalSubscriptions / limit),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
@@ -328,6 +330,7 @@ exports.fetchAllTransactionsAdminController = (0, error_handler_1.catchAsync)((r
         transactions,
         totalTransactions,
         page,
+        totalPages: Math.ceil(totalTransactions / limit),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

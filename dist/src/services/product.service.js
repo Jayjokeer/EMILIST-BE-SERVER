@@ -234,11 +234,38 @@ const fetchAllUserProductsAdmin = (userId) => __awaiter(void 0, void 0, void 0, 
     return yield product_model_1.default.find({ userId });
 });
 exports.fetchAllUserProductsAdmin = fetchAllUserProductsAdmin;
-const fetchAllProductsAdmin = (page, limit) => __awaiter(void 0, void 0, void 0, function* () {
-    const skip = (page - 1) * limit;
-    const materials = yield product_model_1.default.find().populate('userId', 'fullName userName').skip(skip).limit(limit);
-    const totalMaterials = yield product_model_1.default.countDocuments();
-    return { materials, totalMaterials };
+const fetchAllProductsAdmin = (page, limit, search) => __awaiter(void 0, void 0, void 0, function* () {
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.max(1, Number(limit));
+    const skip = (pageNum - 1) * limitNum;
+    let query = {};
+    if (search) {
+        query = {
+            $or: [
+                { name: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } },
+                { category: { $regex: search, $options: 'i' } },
+                { subCategory: { $regex: search, $options: 'i' } },
+                { brand: { $regex: search, $options: 'i' } },
+                { storeName: { $regex: search, $options: 'i' } },
+                { location: { $regex: search, $options: 'i' } },
+            ]
+        };
+    }
+    const [materials, totalMaterials] = yield Promise.all([
+        product_model_1.default.find(query)
+            .populate('userId', 'fullName userName')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .lean(),
+        product_model_1.default.countDocuments(query)
+    ]);
+    return {
+        materials,
+        totalMaterials,
+        totalPages: Math.ceil(totalMaterials / limitNum)
+    };
 });
 exports.fetchAllProductsAdmin = fetchAllProductsAdmin;
 const otherProductsByUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
