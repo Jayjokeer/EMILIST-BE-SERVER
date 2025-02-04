@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { PaymentMethodEnum, PaymentServiceEnum, ServiceEnum, TransactionEnum, TransactionType, WalletEnum } from "../enums/transaction.enum";
+import { SubscriptionPeriodEnum } from "../enums/suscribtion.enum";
 
 export interface ITransaction extends Document {
     userId: mongoose.Schema.Types.ObjectId;
@@ -26,5 +27,6 @@ export interface ITransaction extends Document {
     recieverId?: mongoose.Schema.Types.ObjectId;
     vat?: number;
     createdAt: Date;
+    durationType?: SubscriptionPeriodEnum;
   };
   

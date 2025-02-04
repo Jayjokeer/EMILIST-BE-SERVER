@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { ITransaction } from '../interfaces/transaction.interface';
 import { PaymentMethodEnum, PaymentServiceEnum, ServiceEnum, TransactionEnum, TransactionType, WalletEnum } from '../enums/transaction.enum';
+import { SubscriptionPeriodEnum } from '../enums/suscribtion.enum';
 
 
 const transactionSchema = new Schema(
@@ -28,7 +29,8 @@ const transactionSchema = new Schema(
     orderId: { type: Schema.Types.ObjectId, ref: 'Order'},
     serviceType: {type: String, enum: ServiceEnum},
     planId: { type: Schema.Types.ObjectId, ref: 'Plan'},
-    vat: {type: Number}
+    vat: {type: Number},
+    durationType: {type: String, enum: SubscriptionPeriodEnum}, 
   },
   { timestamps: true }
 );

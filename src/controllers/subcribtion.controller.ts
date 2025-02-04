@@ -71,7 +71,7 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
             status: TransactionEnum.completed,
             serviceType: ServiceEnum.subscription,
             planId: plan._id,
-            
+            durationType: period,
         };
         const transaction = await transactionService.createTransaction(transactionPayload);
         userWallet.balance -= plan.price;
@@ -107,11 +107,12 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
                 reference:`PS-${Date.now()}`,
                 serviceType: ServiceEnum.subscription,
                 planId: plan._id,
+                durationType: period,
               };
             const transaction = await transactionService.createTransaction(transactionPayload);
             transaction.paymentService = PaymentServiceEnum.paystack;
             await transaction.save();
-            const paymentLink = await generatePaystackPaymentLink(transaction.reference, plan.price!, req.user.email);
+            const paymentLink = await generatePaystackPaymentLink(transaction.reference, price!, req.user.email);
             data = { paymentLink, transaction };
       }
      

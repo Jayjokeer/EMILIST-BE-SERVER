@@ -19,7 +19,7 @@ import { OrderPaymentStatus } from "../enums/order.enum";
 import * as planService from '../services/plan.service';
 import * as subscriptionService from '../services/subscription.service';
 import * as userService from '../services/auth.service';
-import { SubscriptionStatusEnum } from "../enums/suscribtion.enum";
+import { SubscriptionPeriodEnum, SubscriptionStatusEnum } from "../enums/suscribtion.enum";
 import { calculateVat } from "../utils/utility";
 
 export const payforProductController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -281,15 +281,20 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
       transaction.status = TransactionEnum.completed;
       await transaction.save();
       const startDate = new Date();
-      const endDate = new Date();
+      let endDate = new Date();
       endDate.setDate(startDate.getDate() + plan.duration);
-  
-      message =  await subscriptionService.createSubscription({
+      if(transaction.durationType === SubscriptionPeriodEnum.yearly){
+        endDate.setFullYear(startDate.getFullYear() + 1);
+      }else{
+        endDate.setMonth(startDate.getMonth() + 1); 
+      }
+        message =  await subscriptionService.createSubscription({
         userId: transaction.userId,
         planId: transaction.planId,
         perks: plan.perks,
         startDate,
         endDate,
+        subscriptionPeriod: transaction.durationType,
       });
       user.subscription = message._id;
       const subscription = await subscriptionService.getActiveSubscriptionWithoutDetails(String(transaction.userId));   

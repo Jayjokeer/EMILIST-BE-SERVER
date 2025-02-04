@@ -25,6 +25,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const transaction_enum_1 = require("../enums/transaction.enum");
+const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const transactionSchema = new mongoose_1.Schema({
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users', required: true },
     type: { type: String, enum: transaction_enum_1.TransactionType, required: true },
@@ -49,6 +50,7 @@ const transactionSchema = new mongoose_1.Schema({
     orderId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Order' },
     serviceType: { type: String, enum: transaction_enum_1.ServiceEnum },
     planId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Plan' },
-    vat: { type: Number }
+    vat: { type: Number },
+    durationType: { type: String, enum: suscribtion_enum_1.SubscriptionPeriodEnum },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Transaction', transactionSchema);

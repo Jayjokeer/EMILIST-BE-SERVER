@@ -77,13 +77,16 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
     const startDate = new Date();
     let endDate = new Date();
     let price;
+    let period;
     if (durationType === 'yearly') {
         endDate.setFullYear(startDate.getFullYear() + 1);
         price = plan.price * 12;
+        period = suscribtion_enum_1.SubscriptionPeriodEnum.yearly;
     }
     else if (durationType === 'monthly') {
         endDate.setMonth(startDate.getMonth() + 1);
         price = plan.price;
+        period = suscribtion_enum_1.SubscriptionPeriodEnum.monthly;
     }
     ;
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
@@ -103,6 +106,7 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
             status: transaction_enum_1.TransactionEnum.completed,
             serviceType: transaction_enum_1.ServiceEnum.subscription,
             planId: plan._id,
+            durationType: period,
         };
         const transaction = yield transactionService.createTransaction(transactionPayload);
         userWallet.balance -= plan.price;
@@ -115,6 +119,7 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
             perks: plan.perks,
             startDate,
             endDate,
+            subscriptionPeriod: period,
         });
         user.subscription = data._id;
         yield user.save();
@@ -135,11 +140,12 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)((req, res) => __awaite
                 reference: `PS-${Date.now()}`,
                 serviceType: transaction_enum_1.ServiceEnum.subscription,
                 planId: plan._id,
+                durationType: period,
             };
             const transaction = yield transactionService.createTransaction(transactionPayload);
             transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
             yield transaction.save();
-            const paymentLink = yield (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, plan.price, req.user.email);
+            const paymentLink = yield (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, price, req.user.email);
             data = { paymentLink, transaction };
         }
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);

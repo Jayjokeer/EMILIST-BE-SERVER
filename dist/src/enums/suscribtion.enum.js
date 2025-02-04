@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SubscriptionPerksEnum = exports.SubscriptionStatusEnum = void 0;
+exports.SubscriptionPeriodEnum = exports.SubscriptionPerksEnum = exports.SubscriptionStatusEnum = void 0;
 var SubscriptionStatusEnum;
 (function (SubscriptionStatusEnum) {
     SubscriptionStatusEnum["active"] = "active";
@@ -20,3 +20,10 @@ var SubscriptionPerksEnum;
     SubscriptionPerksEnum["support"] = "support";
     SubscriptionPerksEnum["jobApplication"] = "jobApplication";
 })(SubscriptionPerksEnum || (exports.SubscriptionPerksEnum = SubscriptionPerksEnum = {}));
+;
+var SubscriptionPeriodEnum;
+(function (SubscriptionPeriodEnum) {
+    SubscriptionPeriodEnum["monthly"] = "monthly";
+    SubscriptionPeriodEnum["yearly"] = "yearly";
+})(SubscriptionPeriodEnum || (exports.SubscriptionPeriodEnum = SubscriptionPeriodEnum = {}));
+;

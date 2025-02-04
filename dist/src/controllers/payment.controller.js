@@ -312,14 +312,21 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
             transaction.status = transaction_enum_1.TransactionEnum.completed;
             yield transaction.save();
             const startDate = new Date();
-            const endDate = new Date();
+            let endDate = new Date();
             endDate.setDate(startDate.getDate() + plan.duration);
+            if (transaction.durationType === suscribtion_enum_1.SubscriptionPeriodEnum.yearly) {
+                endDate.setFullYear(startDate.getFullYear() + 1);
+            }
+            else {
+                endDate.setMonth(startDate.getMonth() + 1);
+            }
             message = yield subscriptionService.createSubscription({
                 userId: transaction.userId,
                 planId: transaction.planId,
                 perks: plan.perks,
                 startDate,
                 endDate,
+                subscriptionPeriod: transaction.durationType,
             });
             user.subscription = message._id;
             const subscription = yield subscriptionService.getActiveSubscriptionWithoutDetails(String(transaction.userId));

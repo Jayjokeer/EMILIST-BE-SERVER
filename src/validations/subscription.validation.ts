@@ -14,7 +14,7 @@ export const validateSubscriptionPayment = (req: Request, res: Response, next: N
     .required()
     .messages({
       "string.base": "Payment Method must be a string",
-      "any.only": "Payment Method must be one of: credit_card, debit_card, paypal, or bank_transfer",
+      "any.only": "Payment Method must be one of: Card, Wallet, or bankTransfer",
       "string.empty": "Payment Method is required",
     }),
     durationType: Joi.string()
