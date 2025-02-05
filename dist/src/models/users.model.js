@@ -63,7 +63,7 @@ const userSchema = new mongoose_1.default.Schema({
     comparedBusinesses: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Business' }],
     comparedProducts: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Product' }],
     accountDetails: {
-        number: { type: Number },
+        number: { type: String },
         bank: { type: String },
         holdersName: { type: String },
     },

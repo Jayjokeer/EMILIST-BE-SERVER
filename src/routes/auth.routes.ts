@@ -40,5 +40,6 @@ router.route("/get-specific-user").get(userAuth,authController.findUserControlle
 router.route("/invite-user").get(userAuth,authController.inviteUserController);
 router.route("/request-verificaton").get(userAuth,authController.requestVerificationController);
 router.route("/insights").get(userAuth, authController.insightsController);
+router.route("/update-account-details").patch(userAuth, authController.updateAccountDetailsController);
 
 export { router as AuthRoute };

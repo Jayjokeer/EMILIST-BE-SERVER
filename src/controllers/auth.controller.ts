@@ -187,7 +187,6 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
     whatsAppNo,
     location,
     bio,
-    accountDetails,
   } = req.body;
 
   const foundUser = await authService.findUserById(userId);
@@ -202,7 +201,6 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
   foundUser.whatsAppNo = whatsAppNo || foundUser.whatsAppNo;
   foundUser.location = location || foundUser.location;
   foundUser.bio = bio || foundUser.bio;
-  foundUser.accountDetails = accountDetails || foundUser.accountDetails;
   if (req.file) {
      foundUser.profileImage = req.file.path;
   }
@@ -211,7 +209,29 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
 
   return successResponse(res, StatusCodes.OK, foundUser);
 });
+export const updateAccountDetailsController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const email = req.user.email;
+  
+  const {
+    password,
+    number,
+    holdersName,
+    bank,
+  } = req.body;
+  const foundUser = await authService.findUserByEmail(email);
+  if (!foundUser) throw new NotFoundError("User not found!");
+  const pwdCompare = await comparePassword(password, foundUser.password);
+  if(!pwdCompare) throw new NotFoundError("Invalid credentials!");
 
+  foundUser.accountDetails.number = number;
+  foundUser.accountDetails.holdersName = holdersName;
+  foundUser.accountDetails.bank = bank;
+
+
+  await foundUser.save();
+
+  return successResponse(res, StatusCodes.OK, foundUser);
+});
 export const changePasswordController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId  = req.user.id;
   const { currentPassword, newPassword } = req.body;

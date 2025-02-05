@@ -41,7 +41,7 @@ const userSchema: Schema = new mongoose.Schema(
     comparedBusinesses:  [{ type: Schema.Types.ObjectId, ref: 'Business' }],
     comparedProducts:  [{ type: Schema.Types.ObjectId, ref: 'Product' }],
     accountDetails: {
-      number: {type: Number},
+      number: {type: String},
       bank: {type: String},
       holdersName: {type: String},
     },

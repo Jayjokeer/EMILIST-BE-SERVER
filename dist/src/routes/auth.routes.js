@@ -64,3 +64,4 @@ router.route("/get-specific-user").get(current_user_1.userAuth, authController.f
 router.route("/invite-user").get(current_user_1.userAuth, authController.inviteUserController);
 router.route("/request-verificaton").get(current_user_1.userAuth, authController.requestVerificationController);
 router.route("/insights").get(current_user_1.userAuth, authController.insightsController);
+router.route("/update-account-details").patch(current_user_1.userAuth, authController.updateAccountDetailsController);

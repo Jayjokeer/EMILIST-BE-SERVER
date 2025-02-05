@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserDetailsController = exports.subscribeNewsLetterController = exports.countClicksController = exports.insightsController = exports.requestVerificationController = exports.inviteUserController = exports.findUserController = exports.deactivateUserController = exports.logoutController = exports.googleRedirectController = exports.resendVerificationOtpController = exports.uploadMultipleFiles = exports.uploadImage = exports.currentUserController = exports.changePasswordController = exports.updateUserController = exports.resetPasswordController = exports.forgetPasswordController = exports.verifyEmailController = exports.loginController = exports.registerUserController = void 0;
+exports.getUserDetailsController = exports.subscribeNewsLetterController = exports.countClicksController = exports.insightsController = exports.requestVerificationController = exports.inviteUserController = exports.findUserController = exports.deactivateUserController = exports.logoutController = exports.googleRedirectController = exports.resendVerificationOtpController = exports.uploadMultipleFiles = exports.uploadImage = exports.currentUserController = exports.changePasswordController = exports.updateAccountDetailsController = exports.updateUserController = exports.resetPasswordController = exports.forgetPasswordController = exports.verifyEmailController = exports.loginController = exports.registerUserController = void 0;
 const success_response_1 = require("../helpers/success-response");
 const authService = __importStar(require("../services/auth.service"));
 const http_status_codes_1 = require("http-status-codes");
@@ -192,7 +192,7 @@ exports.resetPasswordController = (0, error_handler_1.catchAsync)((req, res) => 
 }));
 exports.updateUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
-    const { fullName, gender, language, number1, number2, whatsAppNo, location, bio, accountDetails, } = req.body;
+    const { fullName, gender, language, number1, number2, whatsAppNo, location, bio, } = req.body;
     const foundUser = yield authService.findUserById(userId);
     if (!foundUser)
         throw new error_1.NotFoundError("User not found!");
@@ -204,10 +204,24 @@ exports.updateUserController = (0, error_handler_1.catchAsync)((req, res) => __a
     foundUser.whatsAppNo = whatsAppNo || foundUser.whatsAppNo;
     foundUser.location = location || foundUser.location;
     foundUser.bio = bio || foundUser.bio;
-    foundUser.accountDetails = accountDetails || foundUser.accountDetails;
     if (req.file) {
         foundUser.profileImage = req.file.path;
     }
+    yield foundUser.save();
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, foundUser);
+}));
+exports.updateAccountDetailsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const email = req.user.email;
+    const { password, number, holdersName, bank, } = req.body;
+    const foundUser = yield authService.findUserByEmail(email);
+    if (!foundUser)
+        throw new error_1.NotFoundError("User not found!");
+    const pwdCompare = yield (0, hashing_1.comparePassword)(password, foundUser.password);
+    if (!pwdCompare)
+        throw new error_1.NotFoundError("Invalid credentials!");
+    foundUser.accountDetails.number = number;
+    foundUser.accountDetails.holdersName = holdersName;
+    foundUser.accountDetails.bank = bank;
     yield foundUser.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, foundUser);
 }));
