@@ -46,9 +46,9 @@ const data = {
   });
 
 export const fetchAllUsersAdminController = catchAsync(async (req: JwtPayload, res: Response) => {
-      const {page, limit, q} = req.query;
+      const {page, limit, q, search} = req.query;
     let userData = [];
-    const {users, totalUsers}= await userService.fetchAllUsersAdmin(page, limit, q);
+    const {users, totalUsers}= await userService.fetchAllUsersAdmin(page, limit, q, search);
         for (const user of users){
         const subcription = await subscriptionService.getSubscriptionById(String(user.subscription));
         const plan = await planService.getPlanById(String(subcription!.planId));

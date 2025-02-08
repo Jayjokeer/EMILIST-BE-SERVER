@@ -60,7 +60,7 @@ export const fetchAllUsersAdminDashboard = async()=>{
   return await Users.countDocuments();
 };
 
-export const fetchAllUsersAdmin = async(page: number, limit: number, q: string)=>{
+export const fetchAllUsersAdmin = async(page: number, limit: number, q: string, search: string)=>{
   const skip = (page - 1) * limit;
   let query: any = {};
   if(q === "verified"){
@@ -69,6 +69,17 @@ export const fetchAllUsersAdmin = async(page: number, limit: number, q: string)=
     query.isVerified = false;
     query.requestedVerification = true;
 
+  }
+  if (search && search.trim() !== '') {
+    const searchRegex = new RegExp(search, 'i');
+    query.$or = [
+      { fullName: searchRegex },
+      { email: searchRegex },
+      { userName: searchRegex },
+      { gender: searchRegex },
+      { location: searchRegex },
+      { uniqueId: searchRegex },
+    ];
   }
   const totalUsers = await Users.countDocuments(query);
 

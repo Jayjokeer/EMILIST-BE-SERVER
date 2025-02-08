@@ -78,7 +78,7 @@ const fetchAllUsersAdminDashboard = () => __awaiter(void 0, void 0, void 0, func
     return yield users_model_1.default.countDocuments();
 });
 exports.fetchAllUsersAdminDashboard = fetchAllUsersAdminDashboard;
-const fetchAllUsersAdmin = (page, limit, q) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllUsersAdmin = (page, limit, q, search) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
     let query = {};
     if (q === "verified") {
@@ -87,6 +87,17 @@ const fetchAllUsersAdmin = (page, limit, q) => __awaiter(void 0, void 0, void 0,
     else if (q === "requestVerification") {
         query.isVerified = false;
         query.requestedVerification = true;
+    }
+    if (search && search.trim() !== '') {
+        const searchRegex = new RegExp(search, 'i');
+        query.$or = [
+            { fullName: searchRegex },
+            { email: searchRegex },
+            { userName: searchRegex },
+            { gender: searchRegex },
+            { location: searchRegex },
+            { uniqueId: searchRegex },
+        ];
     }
     const totalUsers = yield users_model_1.default.countDocuments(query);
     const users = yield users_model_1.default.find(query)

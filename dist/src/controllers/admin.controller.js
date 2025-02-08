@@ -82,9 +82,9 @@ exports.adminDashboardController = (0, error_handler_1.catchAsync)((req, res) =>
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { page, limit, q } = req.query;
+    const { page, limit, q, search } = req.query;
     let userData = [];
-    const { users, totalUsers } = yield userService.fetchAllUsersAdmin(page, limit, q);
+    const { users, totalUsers } = yield userService.fetchAllUsersAdmin(page, limit, q, search);
     for (const user of users) {
         const subcription = yield subscriptionService.getSubscriptionById(String(user.subscription));
         const plan = yield planService.getPlanById(String(subcription.planId));
