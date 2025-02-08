@@ -831,6 +831,15 @@ if (isMuted) {
   return successResponse(res,StatusCodes.OK, "Job muted successfully");
 
 });
+
+export const jobLeadsController = catchAsync( async(req:JwtPayload, res: Response)=>{
+  const {page, limit} = req.query;
+  const userId = req.user._id;
+const data = await jobService.fetchJobLeads(userId,page , limit );
+return successResponse(res,StatusCodes.OK, data);
+
+
+})
   // export const checkOverdueMilestones = async () => {
   //   const job = await jobs.find({ 'milestones.status': MilestoneEnum.pending });
   //   const now = new Date();

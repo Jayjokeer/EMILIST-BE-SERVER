@@ -15,13 +15,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -35,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
+exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -737,6 +747,12 @@ exports.muteJobController = (0, error_handler_1.catchAsync)((req, res) => __awai
     user.mutedJobs.push(jobId);
     yield (user === null || user === void 0 ? void 0 : user.save());
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job muted successfully");
+}));
+exports.jobLeadsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page, limit } = req.query;
+    const userId = req.user._id;
+    const data = yield jobService.fetchJobLeads(userId, page, limit);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 // export const checkOverdueMilestones = async () => {
 //   const job = await jobs.find({ 'milestones.status': MilestoneEnum.pending });

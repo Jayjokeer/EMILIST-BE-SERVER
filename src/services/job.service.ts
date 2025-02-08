@@ -708,6 +708,29 @@ export const fetchAllLikedJobs = async (userId: string) => {
   };
 };
 
+export const fetchJobLeads = async (userId: string, page: number, limit: number)=>{
+  const query = {
+    status: JobStatusEnum.pending,
+    isClosed: false,
+    userId: { $ne: userId },
+  };
+  const skip = (page - 1) * limit;
+
+  const leadJobs = await Jobs.find(query)
+    .skip(skip)
+    .limit(limit)
+    .sort({ createdAt: -1 }); 
+
+  const totalLeads = await Jobs.countDocuments(query);
+
+  return {
+    leadJobs,
+    page,
+    totalPages: Math.ceil(totalLeads / limit),
+    totalLeads,
+  };
+}
+
   // export const checkOverdueMilestones = async () => {
   //   const jobs = await Jobs.find({
   //     status: { $in: [JobStatusEnum.active, JobStatusEnum.paused] },
