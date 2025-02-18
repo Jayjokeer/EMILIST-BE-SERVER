@@ -61,3 +61,4 @@ router.route("/update-vat").patch(current_user_1.adminAuth, adminController.upda
 router.route("/verify-bank-transfer").post(current_user_1.adminAuth, walletController.verifyBankTransferWalletFunding);
 router.route("/fetch-private-experts").get(current_user_1.adminAuth, adminController.fetchAllPrivateExpertsController);
 router.route("/fetch-private-expert/:id").get(current_user_1.adminAuth, adminController.fetchPrivateExpertByIdController);
+router.route("/update-job-payment/:jobId").patch(current_user_1.adminAuth, admin_validation_1.validateJobPaymentAdmin, adminController.updateJobPaymentStatusController);

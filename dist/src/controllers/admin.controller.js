@@ -373,7 +373,8 @@ exports.fetchPrivateExpertByIdController = (0, error_handler_1.catchAsync)((req,
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.updateJobPaymentStatusController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { jobId, milestoneId, status } = req.params;
+    const { jobId } = req.params;
+    const { status, milestoneId } = req.body;
     if (!jobId && !milestoneId) {
         throw new error_1.NotFoundError("Ids required!");
     }
@@ -386,6 +387,9 @@ exports.updateJobPaymentStatusController = (0, error_handler_1.catchAsync)((req,
         throw new error_1.NotFoundError("Milestone not found within this job!");
     }
     milestone.paymentStatus = status;
+    if (status === jobs_enum_1.MilestonePaymentStatus.paid) {
+        milestone.datePaid = new Date();
+    }
     yield job.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, job);
 }));

@@ -64,6 +64,9 @@ const MilestoneSchema = new mongoose_1.Schema({
         paymentReciept: { type: String },
         note: { type: String },
     },
+    datePaid: {
+        type: Date
+    }
 });
 const jobSchema = new mongoose_1.default.Schema({
     category: { type: String },
