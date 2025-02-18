@@ -29,7 +29,9 @@ export enum JobExpertLevel {
   export enum MilestonePaymentStatus {
     paid= "paid",
     processing= "processing",
-    unpaid= "unpaid"
+    unpaid= "unpaid",
+    canceled= "canceled",
+
 }
 
 export enum JobStatusEnum {

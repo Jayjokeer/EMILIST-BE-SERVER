@@ -28,7 +28,7 @@ import { directJobApplicationMessage, otpMessage, welcomeMessageAdmin } from "..
 import { generateShortUUID, generateOTPData } from "../utils/utility";
 import { IJob } from "../interfaces/jobs.interface";
 import mongoose from "mongoose";
-import { JobType } from "../enums/jobs.enum";
+import { JobType, MilestonePaymentStatus } from "../enums/jobs.enum";
 import { ProjectStatusEnum } from "../enums/project.enum";
 
 export const adminDashboardController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -367,4 +367,28 @@ export const fetchPrivateExpertByIdController = catchAsync( async (req: Request,
     const {id} = req.params;
     const data = await privateExpertService.fetchPrivateExpertById(id);
     return successResponse(res,StatusCodes.OK, data);
+});
+
+export const updateJobPaymentStatusController = catchAsync( async (req: Request, res: Response) => {
+    const {jobId} = req.params;
+    const {status, milestoneId } = req.body;
+
+    if(!jobId && !milestoneId){
+        throw new NotFoundError("Ids required!");
+    };
+    const job = await jobService.fetchJobById(String(jobId));
+    if(!job) throw new NotFoundError("Job not found!");
+    const milestone = job.milestones.find((milestone: any) => String(milestone._id) === milestoneId);
+    if (!milestone) {
+        throw new NotFoundError("Milestone not found within this job!");
+    }    
+    milestone.paymentStatus = status;
+    if(status === MilestonePaymentStatus.paid){
+        milestone.datePaid =new Date();
+
+    }
+    
+    await job.save();
+
+    return successResponse(res,StatusCodes.OK, job);
 });

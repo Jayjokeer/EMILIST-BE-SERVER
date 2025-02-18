@@ -39,6 +39,7 @@ export interface IMilestone {
     paymentStatus: MilestonePaymentStatus;
     paymentReciept: string;
     paymentInfo: any;
+    datePaid: Date;
   }
 
 

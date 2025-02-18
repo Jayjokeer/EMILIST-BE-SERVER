@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { adminAuth } from "../middlewares/current-user";
 import * as adminController from "../controllers/admin.controller";
-import { validateAddUserAdmin } from "../validations/admin.validation";
+import { validateAddUserAdmin, validateJobPaymentAdmin } from "../validations/admin.validation";
 import { multipleUpload } from "../utils/image-upload";
 import { validateJob } from "../validations/job.validation";
 import * as walletController from "../controllers/wallet.controller";
@@ -27,5 +27,6 @@ router.route("/update-vat").patch(adminAuth, adminController.updateVatController
 router.route("/verify-bank-transfer").post(adminAuth,walletController.verifyBankTransferWalletFunding);
 router.route("/fetch-private-experts").get(adminAuth,adminController.fetchAllPrivateExpertsController);
 router.route("/fetch-private-expert/:id").get(adminAuth,adminController.fetchPrivateExpertByIdController);
+router.route("/update-job-payment/:jobId").patch(adminAuth,validateJobPaymentAdmin, adminController.updateJobPaymentStatusController);
 
 export { router as AdminRoute };

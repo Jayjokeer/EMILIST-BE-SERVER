@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchPrivateExpertByIdController = exports.fetchAllPrivateExpertsController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
+exports.updateJobPaymentStatusController = exports.fetchPrivateExpertByIdController = exports.fetchAllPrivateExpertsController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -371,4 +371,21 @@ exports.fetchPrivateExpertByIdController = (0, error_handler_1.catchAsync)((req,
     const { id } = req.params;
     const data = yield privateExpertService.fetchPrivateExpertById(id);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.updateJobPaymentStatusController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { jobId, milestoneId, status } = req.params;
+    if (!jobId && !milestoneId) {
+        throw new error_1.NotFoundError("Ids required!");
+    }
+    ;
+    const job = yield jobService.fetchJobById(String(jobId));
+    if (!job)
+        throw new error_1.NotFoundError("Job not found!");
+    const milestone = job.milestones.find((milestone) => String(milestone._id) === milestoneId);
+    if (!milestone) {
+        throw new error_1.NotFoundError("Milestone not found within this job!");
+    }
+    milestone.paymentStatus = status;
+    yield job.save();
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, job);
 }));
