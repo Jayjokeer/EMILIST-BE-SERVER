@@ -28,7 +28,6 @@ export const userAuth = async (req: JwtPayload, res: Response, next: NextFunctio
     }
 
     const user = await authService.findUserByEmail(decode.email.toLowerCase());
-    
     if (!user) {
       throw new UnauthorizedError("No user found");
     }
@@ -36,7 +35,6 @@ export const userAuth = async (req: JwtPayload, res: Response, next: NextFunctio
     if (!user.isEmailVerified) {
       throw new UnauthorizedError("Access Denied! Your account is disabled, please contact admin.");
     }
-
     req.user = user;
     
     next();

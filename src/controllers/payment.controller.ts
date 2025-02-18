@@ -155,7 +155,7 @@ if(!project){
       userWallet.balance -= milestone.amount;
       await userWallet.save();
       transaction.balanceAfter = userWallet.balance;
-      milestone.paymentStatus =  MilestonePaymentStatus.paid;
+      milestone.paymentStatus =  MilestonePaymentStatus.processing;
       milestone.paymentInfo.amountPaid = milestone.amount;
       milestone.paymentInfo.paymentMethod = PaymentMethodEnum.wallet;  
       milestone.paymentInfo.date = new Date();
@@ -209,7 +209,7 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
   
     const verifyPayment = await  verifyPaystackPayment(reference);
     if(verifyPayment == "success"){
-      milestone.paymentStatus =  MilestonePaymentStatus.paid;
+      milestone.paymentStatus =  MilestonePaymentStatus.processing;
       milestone.paymentInfo.amountPaid = milestone.amount;
       milestone.paymentInfo.paymentMethod = PaymentMethodEnum.card;  
       milestone.paymentInfo.date = new Date();

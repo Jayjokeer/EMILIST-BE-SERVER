@@ -190,7 +190,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         userWallet.balance -= milestone.amount;
         yield userWallet.save();
         transaction.balanceAfter = userWallet.balance;
-        milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.paid;
+        milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.processing;
         milestone.paymentInfo.amountPaid = milestone.amount;
         milestone.paymentInfo.paymentMethod = transaction_enum_1.PaymentMethodEnum.wallet;
         milestone.paymentInfo.date = new Date();
@@ -242,7 +242,7 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
         }
         const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
         if (verifyPayment == "success") {
-            milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.paid;
+            milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.processing;
             milestone.paymentInfo.amountPaid = milestone.amount;
             milestone.paymentInfo.paymentMethod = transaction_enum_1.PaymentMethodEnum.card;
             milestone.paymentInfo.date = new Date();

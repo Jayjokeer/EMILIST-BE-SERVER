@@ -33,6 +33,7 @@ var MilestoneEnum;
 var MilestonePaymentStatus;
 (function (MilestonePaymentStatus) {
     MilestonePaymentStatus["paid"] = "paid";
+    MilestonePaymentStatus["processing"] = "processing";
     MilestonePaymentStatus["unpaid"] = "unpaid";
 })(MilestonePaymentStatus || (exports.MilestonePaymentStatus = MilestonePaymentStatus = {}));
 var JobStatusEnum;
