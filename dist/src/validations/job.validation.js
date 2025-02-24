@@ -225,6 +225,12 @@ const validateMilestoneStatusUpdate = (req, res, next) => {
             'any.only': `Invalid status, must be one of: ${Object.values(jobs_enum_1.MilestoneEnum).join(', ')}`,
             'any.required': 'Status is required',
         }),
+        additionalAmount: joi_1.default.number().optional().messages({
+            'number.base': 'Additional amount must be a number',
+        }),
+        note: joi_1.default.string().optional().messages({
+            'string.base': 'Note must be a string',
+        }),
     });
     const { error } = milestoneValidation.validate(req.body, { abortEarly: false });
     if (error) {

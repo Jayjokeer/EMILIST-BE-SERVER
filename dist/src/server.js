@@ -27,6 +27,7 @@ const express_session_1 = __importDefault(require("express-session"));
 const connect_mongo_1 = __importDefault(require("connect-mongo"));
 const socket_io_1 = require("socket.io");
 const http_1 = __importDefault(require("http"));
+const morgan_1 = __importDefault(require("morgan"));
 require("../src/utils/passport");
 const socket_1 = __importDefault(require("./socket"));
 require("./jobs/subscription.job");
@@ -38,6 +39,7 @@ app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)());
+app.use((0, morgan_1.default)("combined"));
 // require('../src/utils/script')
 app.use((0, express_session_1.default)({
     secret: process.env.SESSION_SECRET,

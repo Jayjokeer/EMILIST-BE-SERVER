@@ -66,6 +66,11 @@ const MilestoneSchema = new mongoose_1.Schema({
     },
     datePaid: {
         type: Date
+    },
+    invoice: {
+        note: { type: String },
+        additionalAmount: { type: Number, default: 0 },
+        invoiceRaised: { type: Boolean, default: false }
     }
 });
 const jobSchema = new mongoose_1.default.Schema({

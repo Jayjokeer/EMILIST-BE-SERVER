@@ -55,6 +55,7 @@ const project_enum_1 = require("../enums/project.enum");
 const date_fns_1 = require("date-fns");
 const moment_1 = __importDefault(require("moment"));
 const userService = __importStar(require("./auth.service"));
+const business_model_1 = __importDefault(require("../models/business.model"));
 const createJob = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield jobs_model_1.default.create(data);
 });
@@ -640,22 +641,29 @@ const fetchAllLikedJobs = (userId) => __awaiter(void 0, void 0, void 0, function
 });
 exports.fetchAllLikedJobs = fetchAllLikedJobs;
 const fetchJobLeads = (userId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
-    const query = {
-        status: jobs_enum_1.JobStatusEnum.pending,
-        isClosed: false,
-        userId: { $ne: userId },
-    };
     const skip = (page - 1) * limit;
-    const leadJobs = yield jobs_model_1.default.find(query)
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 });
-    const totalLeads = yield jobs_model_1.default.countDocuments(query);
+    const businesses = yield business_model_1.default.find({ userId: userId }).exec();
+    let offeredServices = [];
+    businesses.forEach(business => {
+        if (business.services && business.services.length) {
+            offeredServices = offeredServices.concat(business.services);
+        }
+    });
+    offeredServices = Array.from(new Set(offeredServices));
+    const filter = {
+        service: { $in: offeredServices },
+        isClosed: false,
+        userId: { $ne: userId }
+    };
+    const [jobs, total] = yield Promise.all([
+        jobs_model_1.default.find(filter).skip(skip).limit(limit).exec(),
+        jobs_model_1.default.countDocuments(filter)
+    ]);
     return {
-        leadJobs,
+        leadJobs: jobs,
         page,
-        totalPages: Math.ceil(totalLeads / limit),
-        totalLeads,
+        totalPages: Math.ceil(total / limit),
+        totalLeads: total,
     };
 });
 exports.fetchJobLeads = fetchJobLeads;

@@ -9,7 +9,7 @@ import { add } from 'date-fns';
 import moment from "moment";
 import * as userService from './auth.service';
 import { PipelineStage } from 'mongoose';
-
+import Business from "../models/business.model";
 
 export const createJob = async (data:  IJob) =>{
     return await Jobs.create(data);
@@ -709,25 +709,34 @@ export const fetchAllLikedJobs = async (userId: string) => {
 };
 
 export const fetchJobLeads = async (userId: string, page: number, limit: number)=>{
-  const query = {
-    status: JobStatusEnum.pending,
-    isClosed: false,
-    userId: { $ne: userId },
-  };
   const skip = (page - 1) * limit;
 
-  const leadJobs = await Jobs.find(query)
-    .skip(skip)
-    .limit(limit)
-    .sort({ createdAt: -1 }); 
+  const businesses = await Business.find({ userId: userId }).exec();
 
-  const totalLeads = await Jobs.countDocuments(query);
+    let offeredServices: string[] = [];
+  businesses.forEach(business => {
+    if (business.services && business.services.length) {
+      offeredServices = offeredServices.concat(business.services);
+    }
+  });
+  offeredServices = Array.from(new Set(offeredServices));
+
+  const filter = {
+    service: { $in: offeredServices },
+    isClosed: false,
+    userId: { $ne: userId }
+  };
+
+  const [jobs, total] = await Promise.all([
+    Jobs.find(filter).skip(skip).limit(limit).exec(),
+    Jobs.countDocuments(filter)
+  ]);
 
   return {
-    leadJobs,
+    leadJobs: jobs,
     page,
-    totalPages: Math.ceil(totalLeads / limit),
-    totalLeads,
+    totalPages: Math.ceil(total / limit),
+    totalLeads: total,
   };
 }
 

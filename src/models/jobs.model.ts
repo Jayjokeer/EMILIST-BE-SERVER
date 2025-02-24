@@ -33,7 +33,12 @@ const MilestoneSchema = new Schema<IMilestone>({
     },
     datePaid: {
       type: Date
-    }
+    },
+    invoice: {
+      note: {type: String},
+      additionalAmount: {type: Number, default: 0},
+      invoiceRaised: {type: Boolean, default: false}
+      }
   });
 const jobSchema: Schema = new mongoose.Schema(
   {

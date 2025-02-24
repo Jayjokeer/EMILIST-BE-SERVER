@@ -490,7 +490,7 @@ exports.fetchApplicationByStatusController = (0, error_handler_1.catchAsync)((re
 exports.updateMilestoneStatusController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
     const { milestoneId, jobId } = req.params;
-    const { status } = req.body;
+    const { status, note, additionalAmount } = req.body;
     const job = yield jobService.fetchJobById(String(jobId));
     if (!job) {
         throw new error_1.NotFoundError("Job not found!");
@@ -522,6 +522,13 @@ exports.updateMilestoneStatusController = (0, error_handler_1.catchAsync)((req, 
             project.status = project_enum_1.ProjectStatusEnum.completed;
             yield project.save();
         }
+        if (note) {
+            milestone.invoice.note = note;
+        }
+        if (additionalAmount) {
+            milestone.invoice.additionalAmount = additionalAmount;
+        }
+        milestone.invoice.invoiceRaised = true;
     }
     if (!milestone)
         throw new error_1.NotFoundError("Milestone not found");

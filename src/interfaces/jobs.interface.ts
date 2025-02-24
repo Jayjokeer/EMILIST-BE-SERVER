@@ -40,6 +40,7 @@ export interface IMilestone {
     paymentReciept: string;
     paymentInfo: any;
     datePaid: Date;
+    invoice: any;
   }
 
 
