@@ -19,7 +19,9 @@ import * as notificationService from "../services/notification.service";
 import { NotificationTypeEnum } from "../enums/notification.enum";
 import * as userService from "../services/auth.service";
 import * as reviewService from "../services/review.service";
-
+import * as subscriptionService from "../services/subscription.service";
+import * as planService from "../services/plan.service";
+import { PlanEnum } from "../enums/plan.enum";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const job: IJob = req.body;
@@ -841,6 +843,16 @@ if (isMuted) {
 export const jobLeadsController = catchAsync( async(req:JwtPayload, res: Response)=>{
   const {page, limit} = req.query;
   const userId = req.user._id;
+   const subscription = await subscriptionService.getActiveSubscription(userId);
+    
+      if (!subscription) {
+          throw new BadRequestError("You do not have an active subscription.");
+      }
+      const plan = subscription.planId.name; 
+    if(plan === PlanEnum.basic){
+       throw new BadRequestError("Basic subscription does not include the ability to fetch leads.");
+    }      
+
 const data = await jobService.fetchJobLeads(userId,page , limit );
 return successResponse(res,StatusCodes.OK, data);
 

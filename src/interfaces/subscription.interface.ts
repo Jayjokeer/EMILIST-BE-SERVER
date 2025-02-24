@@ -3,7 +3,7 @@ import { IOffers, IPerk } from "./plans.interface";
 
 export interface ISubscription extends Document {
     userId: Schema.Types.ObjectId;
-    planId: Schema.Types.ObjectId;
+    planId: any;
     status: string; 
     startDate: Date;
     endDate: Date;
