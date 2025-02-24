@@ -857,27 +857,4 @@ const data = await jobService.fetchJobLeads(userId,page , limit );
 return successResponse(res,StatusCodes.OK, data);
 
 
-})
-  // export const checkOverdueMilestones = async () => {
-  //   const job = await jobs.find({ 'milestones.status': MilestoneEnum.pending });
-  //   const now = new Date();
-  
-  //   job.forEach(async (job: IJob) => {
-  //     let milestonesUpdated = false;
-  
-  //     job.milestones.forEach((milestone: IMilestone) => {
-  //       if (milestone.status === MilestoneEnum.pending && milestone.timeFrame && job.startDate) {
-  //         const dueDate = new Date(job.startDate);
-  //         dueDate.setDate(dueDate.getDate() + Number(milestone.timeFrame.number));
-  //         if (dueDate < now) {
-  //           milestone.status = MilestoneEnum.overdue;
-  //           milestonesUpdated = true;
-  //         }
-  //       }
-  //     });
-  
-  //     if (milestonesUpdated) {
-  //       await job.save();
-  //     }
-  //   });
-  // };
+});

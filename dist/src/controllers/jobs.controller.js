@@ -771,23 +771,3 @@ exports.jobLeadsController = (0, error_handler_1.catchAsync)((req, res) => __awa
     const data = yield jobService.fetchJobLeads(userId, page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
-// export const checkOverdueMilestones = async () => {
-//   const job = await jobs.find({ 'milestones.status': MilestoneEnum.pending });
-//   const now = new Date();
-//   job.forEach(async (job: IJob) => {
-//     let milestonesUpdated = false;
-//     job.milestones.forEach((milestone: IMilestone) => {
-//       if (milestone.status === MilestoneEnum.pending && milestone.timeFrame && job.startDate) {
-//         const dueDate = new Date(job.startDate);
-//         dueDate.setDate(dueDate.getDate() + Number(milestone.timeFrame.number));
-//         if (dueDate < now) {
-//           milestone.status = MilestoneEnum.overdue;
-//           milestonesUpdated = true;
-//         }
-//       }
-//     });
-//     if (milestonesUpdated) {
-//       await job.save();
-//     }
-//   });
-// };
