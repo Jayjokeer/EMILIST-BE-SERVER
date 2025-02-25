@@ -12,13 +12,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllLikedProducts = exports.fetchAllComparedProducts = exports.fetchProductReviews = exports.fetchSimilarProducts = exports.otherProductsByUser = exports.fetchAllProductsAdmin = exports.fetchAllUserProductsAdmin = exports.fetchAllProductsForAdmin = exports.fetchReviewForProduct = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
+exports.fetchAllCategories = exports.fetchSingleCategory = exports.deleteCategory = exports.createCategory = exports.fetchAllLikedProducts = exports.fetchAllComparedProducts = exports.fetchProductReviews = exports.fetchSimilarProducts = exports.otherProductsByUser = exports.fetchAllProductsAdmin = exports.fetchAllUserProductsAdmin = exports.fetchAllProductsForAdmin = exports.fetchReviewForProduct = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const product_model_1 = __importDefault(require("../models/product.model"));
 const productLike_model_1 = __importDefault(require("../models/productLike.model"));
 const review_model_1 = __importDefault(require("../models/review.model"));
 const error_1 = require("../errors/error");
 const users_model_1 = __importDefault(require("../models/users.model"));
+const categories_model_1 = __importDefault(require("../models/categories.model"));
 const createProduct = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield product_model_1.default.create(data);
 });
@@ -362,3 +363,19 @@ const fetchAllLikedProducts = (userId) => __awaiter(void 0, void 0, void 0, func
     };
 });
 exports.fetchAllLikedProducts = fetchAllLikedProducts;
+const createCategory = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield categories_model_1.default.create(payload);
+});
+exports.createCategory = createCategory;
+const deleteCategory = (id) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield categories_model_1.default.findByIdAndDelete(id);
+});
+exports.deleteCategory = deleteCategory;
+const fetchSingleCategory = (id) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield categories_model_1.default.findById(id);
+});
+exports.fetchSingleCategory = fetchSingleCategory;
+const fetchAllCategories = () => __awaiter(void 0, void 0, void 0, function* () {
+    return yield categories_model_1.default.find({ isActive: true });
+});
+exports.fetchAllCategories = fetchAllCategories;

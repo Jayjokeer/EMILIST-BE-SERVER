@@ -5,6 +5,7 @@ import ProductLike from "../models/productLike.model";
 import Review from "../models/review.model";
 import { NotFoundError } from "../errors/error";
 import User from "../models/users.model";
+import Category from "../models/categories.model";
 
 export const createProduct = async (data: IProduct)=>{
     return await Product.create(data);
@@ -445,4 +446,20 @@ export const fetchAllLikedProducts = async(userId: string)=>{
   return {
     totalProductsLikes: likedProducts,
   };
+};
+
+export const createCategory = async(payload: any)=>{
+  return await Category.create(payload);
+};
+
+export const deleteCategory = async(id: string)=>{
+  return await Category.findByIdAndDelete(id);
+};
+
+export const fetchSingleCategory = async(id: string)=>{
+  return await Category.findById(id);
+};
+
+export const fetchAllCategories = async()=>{
+  return await Category.find({isActive: true});
 };

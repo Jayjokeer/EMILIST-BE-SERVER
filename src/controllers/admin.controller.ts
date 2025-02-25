@@ -392,3 +392,36 @@ export const updateJobPaymentStatusController = catchAsync( async (req: Request,
 
     return successResponse(res,StatusCodes.OK, job);
 });
+
+export const addCategoriesController = catchAsync( async (req: Request, res: Response) => {
+    const {category } = req.body;
+    const payload = {
+        category,
+    };
+    const data = await productService.createCategory(payload);
+
+    return successResponse(res,StatusCodes.CREATED, data);
+});
+
+export const deleteCategoryController = catchAsync( async (req: Request, res: Response) => {
+    const {id } = req.params;
+
+    await productService.deleteCategory(id);
+
+    return successResponse(res,StatusCodes.OK, "Category deleted successfully");
+});
+
+export const fetchSingleCategoryController = catchAsync( async (req: Request, res: Response) => {
+    const {id} = req.params;
+
+    const data = await productService.fetchSingleCategory(id);
+
+    return successResponse(res,StatusCodes.OK, data);
+});
+
+export const fetchAllCategoriesController = catchAsync( async (req: Request, res: Response) => {
+
+    const data = await productService.fetchAllCategories();
+
+    return successResponse(res,StatusCodes.OK, data);
+});
