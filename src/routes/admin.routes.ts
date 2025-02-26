@@ -30,7 +30,7 @@ router.route("/fetch-private-expert/:id").get(adminAuth,adminController.fetchPri
 router.route("/update-job-payment/:jobId").patch(adminAuth,validateJobPaymentAdmin, adminController.updateJobPaymentStatusController);
 router.route("/add-category").post(adminAuth,adminController.addCategoriesController);
 router.route("/fetch-category/:id").get(adminController.fetchSingleCategoryController);
-router.route("/delete-category/:id").patch(adminAuth,adminController.deleteCategoryController);
+router.route("/delete-category/:id").delete(adminAuth,adminController.deleteCategoryController);
 router.route("/fetch-all-categories").get(adminController.fetchAllCategoriesController );
 
 export { router as AdminRoute };

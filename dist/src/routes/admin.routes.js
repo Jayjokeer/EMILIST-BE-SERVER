@@ -64,5 +64,5 @@ router.route("/fetch-private-expert/:id").get(current_user_1.adminAuth, adminCon
 router.route("/update-job-payment/:jobId").patch(current_user_1.adminAuth, admin_validation_1.validateJobPaymentAdmin, adminController.updateJobPaymentStatusController);
 router.route("/add-category").post(current_user_1.adminAuth, adminController.addCategoriesController);
 router.route("/fetch-category/:id").get(adminController.fetchSingleCategoryController);
-router.route("/delete-category/:id").patch(current_user_1.adminAuth, adminController.deleteCategoryController);
+router.route("/delete-category/:id").delete(current_user_1.adminAuth, adminController.deleteCategoryController);
 router.route("/fetch-all-categories").get(adminController.fetchAllCategoriesController);

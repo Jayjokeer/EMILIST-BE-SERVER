@@ -235,7 +235,7 @@ export const validateMilestoneStatusUpdate = (req: Request, res: Response, next:
       additionalAmount: Joi.number().optional().messages({
         'number.base': 'Additional amount must be a number',
       }),
-      note: Joi.string().optional().messages({
+      note: Joi.string().optional().allow("").messages({
         'string.base': 'Note must be a string',
       }),
   });
