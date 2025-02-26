@@ -250,7 +250,7 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
         const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
         if (verifyPayment == "success") {
             milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.processing;
-            milestone.paymentInfo.amountPaid = milestone.amount;
+            milestone.paymentInfo.amountPaid = transaction.amount;
             milestone.paymentInfo.paymentMethod = transaction_enum_1.PaymentMethodEnum.card;
             milestone.paymentInfo.date = new Date();
             transaction.status = transaction_enum_1.TransactionEnum.completed;

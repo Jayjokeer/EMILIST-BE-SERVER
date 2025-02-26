@@ -215,7 +215,7 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
     const verifyPayment = await  verifyPaystackPayment(reference);
     if(verifyPayment == "success"){
       milestone.paymentStatus =  MilestonePaymentStatus.processing;
-      milestone.paymentInfo.amountPaid = milestone.amount;
+      milestone.paymentInfo.amountPaid = transaction.amount;
       milestone.paymentInfo.paymentMethod = PaymentMethodEnum.card;  
       milestone.paymentInfo.date = new Date();
       transaction.status = TransactionEnum.completed;
