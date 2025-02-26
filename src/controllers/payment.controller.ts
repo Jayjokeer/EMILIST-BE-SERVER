@@ -108,7 +108,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
 
 export const payforJobController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user._id;
-  const {paymentMethod, currency, milestoneId, jobId, note} = req.body;
+  const {paymentMethod, currency, milestoneId, jobId, note, isAdditionalAmount} = req.body;
   let data;
 const job = await jobService.fetchJobById(jobId);
 if(!job){
@@ -122,8 +122,13 @@ if(note){
   milestone.paymentInfo.note = note;
   await job.save();
 }
+let jobAmount = milestone.amount;
 
-
+if(isAdditionalAmount){
+  if(milestone.invoice.additionalAmount > 0){
+    jobAmount+= milestone.invoice.additionalAmount;
+  }
+};
 const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
 if(!project){
   throw new NotFoundError("Application not found");
@@ -138,7 +143,7 @@ if(!project){
       const transactionPayload = {
           userId,
           type: TransactionType.DEBIT,
-          amount:milestone.amount,
+          amount: jobAmount,
           description: `Job payment via wallet`,
           paymentMethod: paymentMethod,
           balanceBefore: userWallet.balance,
@@ -165,7 +170,7 @@ if(!project){
       if (paymentMethod === PaymentMethodEnum.card && currency === WalletEnum.NGN ) {
           const transactionPayload = {
               userId,
-              amount:milestone.amount,
+              amount: jobAmount,
               type: TransactionType.DEBIT,
               description: `Job payment via card`,
               paymentMethod: paymentMethod,

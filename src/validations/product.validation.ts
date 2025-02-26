@@ -189,6 +189,9 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
           'any.only': 'Currency must be one of the allowed values',
           'string.empty': 'Currency is required',
         }),
+        isAdditionalAmount: Joi.boolean().optional().messages({
+          'boolean.base': 'isAdditionalAmount must be a boolean',
+        }),
     });
   
     const { error } = jobValidationSchema.validate(req.body, { abortEarly: false });

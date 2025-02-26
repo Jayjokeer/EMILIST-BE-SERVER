@@ -16,6 +16,8 @@ import { generatePaystackPaymentLink } from '../utils/paystack';
 import { PlanEnum } from '../enums/plan.enum';
 import { SubscriptionPeriodEnum, SubscriptionStatusEnum } from '../enums/suscribtion.enum';
 import * as userService from '../services/auth.service';
+import * as jobService from '../services/job.service';
+import * as businessService from '../services/business.service';
 
 export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response) => {
     const { planId, paymentMethod, currency, isRenew, durationType } = req.body;
@@ -131,3 +133,55 @@ export const getUserSubscription = catchAsync( async (req: JwtPayload, res: Resp
 return successResponse(res, StatusCodes.OK, data);
 });
 
+export const promoteJobAndBusinessController = catchAsync( async(req:JwtPayload, res: Response)=>{
+    const {target, startDate, endDate, type} = req.body;
+    const {id }= req.params;
+    const userId = req.user._id;
+
+    if(type === "job"){
+        const job = await jobService.fetchJobById(id);
+        if (!job) {
+            throw new NotFoundError( 'Job not found.');
+          }
+    }else if(type === "service"){
+        const business = await businessService.fetchSingleBusiness(id);
+        if(!business){
+            throw new NotFoundError('Service not found');
+        }
+    }
+    
+    
+
+    // 3. Ensure the job belongs to the authenticated user.
+    // if (job.userId?.toString() !== user._id.toString()) {
+    //   return res.status(403).json({ message: 'Forbidden. You do not own this job.' });
+    // }
+
+    if (!target || !startDate || !endDate) {
+      return res.status(400).json({ message: 'Missing required promotion details: target, startDate, endDate.' });
+    }
+
+    // 5. Calculate promotion values (these can be dynamic based on your business logic).
+    const cost = 11500;          // Example: Fixed cost for the promotion.
+    const expectedClicks = 2000; // Example: Expected clicks count.
+    const costPerClick = 1;      // Example: Calculated as cost / expectedClicks.
+
+//     // 6. Create a new Promotion document.
+//     const promotion = new Promotion({
+//       jobId: job._id,
+//       userId: userId,
+//       target,
+//       startDate,
+//       endDate,
+//       cost,
+//       clicks: expectedClicks, // You may update this later based on actual performance.
+//       costPerClick,
+//       isActive: true,
+//       paymentStatus: 'pending'
+//     });
+
+//     await promotion.save();
+//   return successResponse(res,StatusCodes.OK, data);
+  
+  
+  });

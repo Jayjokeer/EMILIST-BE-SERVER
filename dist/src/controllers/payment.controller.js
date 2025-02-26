@@ -146,7 +146,7 @@ exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => 
 }));
 exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user._id;
-    const { paymentMethod, currency, milestoneId, jobId, note } = req.body;
+    const { paymentMethod, currency, milestoneId, jobId, note, isAdditionalAmount } = req.body;
     let data;
     const job = yield jobService.fetchJobById(jobId);
     if (!job) {
@@ -160,6 +160,13 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         milestone.paymentInfo.note = note;
         yield job.save();
     }
+    let jobAmount = milestone.amount;
+    if (isAdditionalAmount) {
+        if (milestone.invoice.additionalAmount > 0) {
+            jobAmount += milestone.invoice.additionalAmount;
+        }
+    }
+    ;
     const project = yield projectService.fetchProjectById(String(job.acceptedApplicationId));
     if (!project) {
         throw new error_1.NotFoundError("Application not found");
@@ -173,7 +180,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         const transactionPayload = {
             userId,
             type: transaction_enum_1.TransactionType.DEBIT,
-            amount: milestone.amount,
+            amount: jobAmount,
             description: `Job payment via wallet`,
             paymentMethod: paymentMethod,
             balanceBefore: userWallet.balance,
@@ -201,7 +208,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency === transaction_enum_1.WalletEnum.NGN) {
             const transactionPayload = {
                 userId,
-                amount: milestone.amount,
+                amount: jobAmount,
                 type: transaction_enum_1.TransactionType.DEBIT,
                 description: `Job payment via card`,
                 paymentMethod: paymentMethod,
