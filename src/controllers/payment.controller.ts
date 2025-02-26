@@ -118,6 +118,9 @@ const milestone = job.milestones.find((milestone: any)=> milestone._id.toString(
 if(!milestone){
   throw new NotFoundError("No milestone");
 }
+if(milestone.paymentStatus !== MilestonePaymentStatus.unpaid){
+  throw new BadRequestError("Job has been paid")
+}
 if(note){
   milestone.paymentInfo.note = note;
   await job.save();

@@ -156,6 +156,9 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
     if (!milestone) {
         throw new error_1.NotFoundError("No milestone");
     }
+    if (milestone.paymentStatus !== jobs_enum_1.MilestonePaymentStatus.unpaid) {
+        throw new error_1.BadRequestError("Job has been paid");
+    }
     if (note) {
         milestone.paymentInfo.note = note;
         yield job.save();
