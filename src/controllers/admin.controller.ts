@@ -425,3 +425,18 @@ export const fetchAllCategoriesController = catchAsync( async (req: Request, res
 
     return successResponse(res,StatusCodes.OK, data);
 });
+
+export const fetchUserAccountDetailsController = catchAsync( async (req: Request, res: Response) => {
+    const {userId} = req.params;
+
+    const user = await userService.findUserById(userId);
+    if(!user){
+        throw  new NotFoundError("user not found")
+    }
+    const data = {
+        accountNumber: user?.accountDetails.number,
+        bank: user?.accountDetails.bank,
+        holderName:  user?.accountDetails.holdersName
+    }
+    return successResponse(res,StatusCodes.OK, data);
+});

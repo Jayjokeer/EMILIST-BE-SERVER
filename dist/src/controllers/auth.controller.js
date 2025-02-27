@@ -310,8 +310,6 @@ exports.googleRedirectController = (0, error_handler_1.catchAsync)((req, res) =>
 }));
 exports.logoutController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield authService.findUserById(req.user.id);
-    console.log(user);
-    console.log(req.user.accessToken);
     if (user && user.accessToken) {
         yield axios_1.default.get(`https://accounts.google.com/o/oauth2/revoke?token=${user.accessToken}`);
         user.accessToken = undefined;

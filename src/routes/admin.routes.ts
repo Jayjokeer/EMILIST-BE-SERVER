@@ -32,5 +32,6 @@ router.route("/add-category").post(adminAuth,adminController.addCategoriesContro
 router.route("/fetch-category/:id").get(adminController.fetchSingleCategoryController);
 router.route("/delete-category/:id").delete(adminAuth,adminController.deleteCategoryController);
 router.route("/fetch-all-categories").get(adminController.fetchAllCategoriesController );
+router.route("/fetch-user-account-details/:userId").get(adminAuth, adminController.fetchUserAccountDetailsController );
 
 export { router as AdminRoute };

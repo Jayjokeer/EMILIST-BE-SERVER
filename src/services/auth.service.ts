@@ -138,3 +138,4 @@ export const findUserWithoutPhoneNumberDetailsById = async (id: string)=>{
     updatedAt: 0,
   });
 };
+

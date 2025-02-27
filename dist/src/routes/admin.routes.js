@@ -66,3 +66,4 @@ router.route("/add-category").post(current_user_1.adminAuth, adminController.add
 router.route("/fetch-category/:id").get(adminController.fetchSingleCategoryController);
 router.route("/delete-category/:id").delete(current_user_1.adminAuth, adminController.deleteCategoryController);
 router.route("/fetch-all-categories").get(adminController.fetchAllCategoriesController);
+router.route("/fetch-user-account-details/:userId").get(current_user_1.adminAuth, adminController.fetchUserAccountDetailsController);

@@ -329,8 +329,7 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
 
 export const logoutController = catchAsync(async (req: JwtPayload, res: Response) => {
   const user = await authService.findUserById(req.user.id);
-console.log(user)
-console.log(req.user.accessToken)
+
   if (user && user.accessToken) {
     await axios.get(`https://accounts.google.com/o/oauth2/revoke?token=${user.accessToken}`);
 
