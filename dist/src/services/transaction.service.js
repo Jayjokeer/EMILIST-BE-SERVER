@@ -58,17 +58,21 @@ exports.adminFetchAllTransactionsByStatus = adminFetchAllTransactionsByStatus;
 const fetchAllTransactionsByUser = (userId, page, limit, paymentMethod) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
     let queryPayload = {
-        userId: userId
+        $or: [{ userId: userId }, { recieverId: userId }],
     };
     if (paymentMethod) {
         if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
             queryPayload = {
-                userId: userId,
-                $or: [
-                    { paymentMethod: transaction_enum_1.PaymentMethodEnum.wallet },
+                $and: [
+                    { $or: [{ userId: userId }, { recieverId: userId }] },
                     {
-                        paymentMethod: transaction_enum_1.PaymentMethodEnum.card,
-                        serviceType: transaction_enum_1.ServiceEnum.walletFunding,
+                        $or: [
+                            { paymentMethod: transaction_enum_1.PaymentMethodEnum.wallet },
+                            {
+                                paymentMethod: transaction_enum_1.PaymentMethodEnum.card,
+                                serviceType: transaction_enum_1.ServiceEnum.walletFunding,
+                            },
+                        ],
                     },
                 ],
             };

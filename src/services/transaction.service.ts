@@ -42,21 +42,25 @@ export const adminFetchAllTransactionsByStatus = async(status: TransactionEnum ,
 
 export const fetchAllTransactionsByUser = async(userId: string,page: number, limit: number,  paymentMethod:PaymentMethodEnum)=>{
     const skip = (page - 1) * limit;
-   let queryPayload: any= {
-        userId: userId
-      };
+    let queryPayload: any = {
+      $or: [{ userId: userId }, { recieverId: userId }],
+    };
       if(paymentMethod){
         if (paymentMethod === PaymentMethodEnum.wallet) {
-            queryPayload = {
-              userId: userId,
-              $or: [
-                { paymentMethod: PaymentMethodEnum.wallet }, 
-                {
-                  paymentMethod: PaymentMethodEnum.card,
-                  serviceType: ServiceEnum.walletFunding, 
-                },
-              ],
-            };
+          queryPayload = {
+            $and: [
+              { $or: [{ userId: userId }, { recieverId: userId }] },
+              {
+                $or: [
+                  { paymentMethod: PaymentMethodEnum.wallet },
+                  {
+                    paymentMethod: PaymentMethodEnum.card,
+                    serviceType: ServiceEnum.walletFunding,
+                  },
+                ],
+              },
+            ],
+          };
           } else {
             queryPayload.paymentMethod = paymentMethod as PaymentMethodEnum;
           }
