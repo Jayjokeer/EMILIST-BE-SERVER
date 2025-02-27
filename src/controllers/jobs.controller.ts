@@ -25,6 +25,7 @@ import { PlanEnum } from "../enums/plan.enum";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const job: IJob = req.body;
+    const {artisan} = req.body;
     const files = req.files as Express.Multer.File[];
     if (files && files.length > 0) {
       const fileObjects = files.map((file) => ({
@@ -34,9 +35,9 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
       job.jobFiles = fileObjects;
     }
 
-  if(job.type == JobType.direct && (job.email || job.userName)){
+  if(job.type == JobType.direct && artisan){
 
-    const user = await authService.findUserByEmailOrUserName(job.email, job.userName);
+    const user = await authService.findUserByEmailOrUserNameDirectJob(artisan);
     if(!user) throw new NotFoundError("User not found!");
     
       const userId = req.user.id;

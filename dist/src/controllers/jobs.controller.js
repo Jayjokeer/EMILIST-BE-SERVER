@@ -67,6 +67,7 @@ const subscriptionService = __importStar(require("../services/subscription.servi
 const plan_enum_1 = require("../enums/plan.enum");
 exports.createJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const job = req.body;
+    const { artisan } = req.body;
     const files = req.files;
     if (files && files.length > 0) {
         const fileObjects = files.map((file) => ({
@@ -75,8 +76,8 @@ exports.createJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         }));
         job.jobFiles = fileObjects;
     }
-    if (job.type == jobs_enum_1.JobType.direct && (job.email || job.userName)) {
-        const user = yield authService.findUserByEmailOrUserName(job.email, job.userName);
+    if (job.type == jobs_enum_1.JobType.direct && artisan) {
+        const user = yield authService.findUserByEmailOrUserNameDirectJob(artisan);
         if (!user)
             throw new error_1.NotFoundError("User not found!");
         const userId = req.user.id;

@@ -96,6 +96,9 @@ export const validateJob = (req: Request, res: Response, next: NextFunction) => 
   identifier: Joi.string().optional().messages({
     'string.empty': 'Identifier must be a string',
   }),
+  artisan: Joi.string().optional().messages({
+    'string.base': 'Artisan must be a string',
+  }),
 });
 
 const { error } = jobValidation.validate(req.body, { abortEarly: false });

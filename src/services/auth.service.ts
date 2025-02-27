@@ -44,6 +44,10 @@ export const findUserByEmailOrUserName = async(email: string | undefined, userNa
 
   return await Users.findOne({ $or: [{ email }, { userName }] });
 };   
+export const findUserByEmailOrUserNameDirectJob = async(user: string)=>{
+
+  return await Users.findOne({ $or: [{ email: user }, { userName: user }] });
+};   
 export const findSpecificUser = async (query: string)=>{
   return await  Users.findOne({
     $or: [{ userName: query }, { email: query }],
