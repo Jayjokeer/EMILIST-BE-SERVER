@@ -537,11 +537,11 @@ const projectAnalytics = (...args_1) => __awaiter(void 0, [...args_1], void 0, f
             },
             {
                 $project: {
-                    totalProjects: { $arrayElemAt: ['$totalJobs.count', 0] },
-                    totalActiveProjects: { $arrayElemAt: ['$totalActiveJobs.count', 0] },
-                    totalOverdueProjects: { $arrayElemAt: ['$totalOverdueJobs.count', 0] },
-                    totalPausedProjects: { $arrayElemAt: ['$totalPausedJobs.count', 0] },
-                    totalCompletedProjects: { $arrayElemAt: ['$totalCompletedJobs.count', 0] },
+                    totalProjects: { $arrayElemAt: ['$totalProjects.count', 0] },
+                    totalActiveProjects: { $arrayElemAt: ['$totalActiveProjects.count', 0] },
+                    totalOverdueProjects: { $arrayElemAt: ['$totalOverdueProjects.count', 0] },
+                    totalPausedProjects: { $arrayElemAt: ['$totalPausedProjects.count', 0] },
+                    totalCompletedProjects: { $arrayElemAt: ['$totalCompletedProjects.count', 0] },
                 },
             },
         ]);

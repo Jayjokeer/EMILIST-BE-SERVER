@@ -550,7 +550,6 @@ export const projectAnalytics = async (year: number = moment().year(), month?: n
 
   const projects = await Project.find({ user: userId }).select('_id');
   const projectIds = projects.map(project => project._id);
-
   const analyticsData = await Promise.all(
     dateRange.map(async (date) => {
       const dayStart = date.startOf(interval).toDate();
@@ -591,15 +590,15 @@ export const projectAnalytics = async (year: number = moment().year(), month?: n
         },
         {
           $project: {
-            totalProjects: { $arrayElemAt: ['$totalJobs.count', 0] },
-            totalActiveProjects: { $arrayElemAt: ['$totalActiveJobs.count', 0] },
-            totalOverdueProjects: { $arrayElemAt: ['$totalOverdueJobs.count', 0] },
-            totalPausedProjects: { $arrayElemAt: ['$totalPausedJobs.count', 0] },
-            totalCompletedProjects: { $arrayElemAt: ['$totalCompletedJobs.count', 0] },
+            totalProjects: { $arrayElemAt: ['$totalProjects.count', 0] },
+            totalActiveProjects: { $arrayElemAt: ['$totalActiveProjects.count', 0] },
+            totalOverdueProjects: { $arrayElemAt: ['$totalOverdueProjects.count', 0] },
+            totalPausedProjects: { $arrayElemAt: ['$totalPausedProjects.count', 0] },
+            totalCompletedProjects: { $arrayElemAt: ['$totalCompletedProjects.count',0] },
           },
         },
-      ]);
-
+      ] 
+    );
       return {
         period: date.format(interval === 'months' ? 'MMM YYYY' : 'MMM D, YYYY'),
         totalProjects: jobs[0]?.totalProjects || 0,
