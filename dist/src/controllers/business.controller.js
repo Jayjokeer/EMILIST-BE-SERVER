@@ -59,6 +59,7 @@ exports.createBusinessController = (0, error_handler_1.catchAsync)((req, res) =>
     if (!user) {
         throw new error_1.NotFoundError("user not found!");
     }
+    console.log(req.files);
     if (req.files && req.files['profileImage'] && req.files['profileImage'][0]) {
         businessData.profileImage = req.files['profileImage'][0].path;
     }

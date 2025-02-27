@@ -20,6 +20,7 @@ export const createBusinessController = catchAsync( async (req: JwtPayload, res:
     if(!user){
         throw new NotFoundError("user not found!");
     }
+    console.log(req.files)
     if (req.files && req.files['profileImage'] && req.files['profileImage'][0]) {
         businessData.profileImage = req.files['profileImage'][0].path;
     }

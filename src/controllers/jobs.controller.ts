@@ -57,7 +57,7 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
        data.acceptedApplicationId = String(project._id);
        data.save();
        const { html, subject } = directJobApplicationMessage(user.userName, req.user.userName, String(data._id));
-       await sendEmail(req.user.email, subject, html); 
+       await sendEmail(user.email, subject, html); 
       successResponse(res,StatusCodes.CREATED, data);
 
   } else {

@@ -95,7 +95,7 @@ exports.createJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         data.acceptedApplicationId = String(project._id);
         data.save();
         const { html, subject } = (0, templates_1.directJobApplicationMessage)(user.userName, req.user.userName, String(data._id));
-        yield (0, send_email_1.sendEmail)(req.user.email, subject, html);
+        yield (0, send_email_1.sendEmail)(user.email, subject, html);
         (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
     else {
