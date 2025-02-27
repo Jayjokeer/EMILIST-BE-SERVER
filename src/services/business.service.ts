@@ -6,6 +6,9 @@ import Review from "../models/review.model";
 import * as userService from "./auth.service";
 import * as projectService from "../services/project.service";
 import BusinessLike from "../models/businessLike.model";
+import Projects from "../models/project.model";
+import { JobStatusEnum } from "../enums/jobs.enum";
+import { ProjectStatusEnum } from "../enums/project.enum";
 
 export const createBusiness = async (data:  IBusiness) =>{
     return await Business.create(data);
@@ -147,11 +150,20 @@ export const fetchSingleBusinessWithDetails = async (businessId: string)=>{
       totalReviews > 0
         ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
         : 0;
-  
+        const totalJobs = await Projects.countDocuments({ user: business.userId,
+             status: { $nin: [ ProjectStatusEnum.pending,  ProjectStatusEnum.rejected] }
+        });
+        const successfulJobs = await Projects.countDocuments({ user: business.userId, status: ProjectStatusEnum.completed });
+        const unsuccessfulJobs = await Projects.countDocuments({ user: business.userId, status: ProjectStatusEnum.cancelled});
+        const successRate = totalJobs > 0 ? (successfulJobs / totalJobs) * 100 : 0;
     return {
       ...business.toObject(),
       totalReviews,
       averageRating: parseFloat(averageRating.toFixed(2)),
+      totalJobs ,
+      successfulJobs,
+      unsuccessfulJobs,
+      successRate,
     };
 };
 

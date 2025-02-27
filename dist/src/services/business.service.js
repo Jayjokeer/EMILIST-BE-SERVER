@@ -52,6 +52,8 @@ const review_model_1 = __importDefault(require("../models/review.model"));
 const userService = __importStar(require("./auth.service"));
 const projectService = __importStar(require("../services/project.service"));
 const businessLike_model_1 = __importDefault(require("../models/businessLike.model"));
+const project_model_1 = __importDefault(require("../models/project.model"));
+const project_enum_1 = require("../enums/project.enum");
 const createBusiness = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield business_model_1.default.create(data);
 });
@@ -175,7 +177,16 @@ const fetchSingleBusinessWithDetails = (businessId) => __awaiter(void 0, void 0,
     const averageRating = totalReviews > 0
         ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
         : 0;
-    return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
+    const totalJobs = yield project_model_1.default.countDocuments({ user: business.userId,
+        status: { $nin: [project_enum_1.ProjectStatusEnum.pending, project_enum_1.ProjectStatusEnum.rejected] }
+    });
+    const successfulJobs = yield project_model_1.default.countDocuments({ user: business.userId, status: project_enum_1.ProjectStatusEnum.completed });
+    const unsuccessfulJobs = yield project_model_1.default.countDocuments({ user: business.userId, status: project_enum_1.ProjectStatusEnum.cancelled });
+    const successRate = totalJobs > 0 ? (successfulJobs / totalJobs) * 100 : 0;
+    return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)), totalJobs,
+        successfulJobs,
+        unsuccessfulJobs,
+        successRate });
 });
 exports.fetchSingleBusinessWithDetails = fetchSingleBusinessWithDetails;
 const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(void 0, void 0, void 0, function* () {

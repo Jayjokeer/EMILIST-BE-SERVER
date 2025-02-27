@@ -109,6 +109,7 @@ exports.fetchSingleBusinessController = (0, error_handler_1.catchAsync)((req, re
             isCompared = user.comparedBusinesses.some((id) => id.toString() === businessId);
         }
     }
+    ;
     const data = {
         business,
         liked,

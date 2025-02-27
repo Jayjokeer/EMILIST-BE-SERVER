@@ -5,6 +5,7 @@ export enum ProjectStatusEnum {
     completed = 'completed',
     unpause = "unpause",
     pause = "pause",
+    cancelled = "cancelled" 
   }
   
 export enum QuoteStatusEnum {

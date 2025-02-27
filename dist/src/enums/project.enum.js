@@ -9,6 +9,7 @@ var ProjectStatusEnum;
     ProjectStatusEnum["completed"] = "completed";
     ProjectStatusEnum["unpause"] = "unpause";
     ProjectStatusEnum["pause"] = "pause";
+    ProjectStatusEnum["cancelled"] = "cancelled";
 })(ProjectStatusEnum || (exports.ProjectStatusEnum = ProjectStatusEnum = {}));
 var QuoteStatusEnum;
 (function (QuoteStatusEnum) {

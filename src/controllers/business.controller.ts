@@ -79,7 +79,8 @@ export const fetchSingleBusinessController = catchAsync( async (req: JwtPayload,
           isCompared = user.comparedBusinesses.some((id: any) => id.toString() === businessId);
         }
     
-      }
+      };
+      
     const data = {
         business,
         liked,
