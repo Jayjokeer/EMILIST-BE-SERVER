@@ -44,7 +44,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchDynamicTargetMetrics = exports.createTargetController = void 0;
 const http_status_codes_1 = require("http-status-codes");
-const error_1 = require("../errors/error");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const userService = __importStar(require("../services/auth.service"));
@@ -64,7 +63,7 @@ exports.fetchDynamicTargetMetrics = (0, error_handler_1.catchAsync)((req, res) =
     const user = yield userService.findUserById(userId);
     const target = yield targetService.findUserTarget(userId);
     if (!target) {
-        throw new error_1.NotFoundError("No target set!");
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "No target set!");
     }
     const targetGoals = {
         jobs: target.job || 0,

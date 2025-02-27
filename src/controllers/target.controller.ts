@@ -27,7 +27,7 @@ export const fetchDynamicTargetMetrics = catchAsync(async (req: JwtPayload, res:
     const target = await targetService.findUserTarget(userId );
 
     if (!target) {
-        throw new NotFoundError("No target set!");
+      return successResponse(res, StatusCodes.OK, "No target set!");
     }
 
     const targetGoals = {
