@@ -90,10 +90,11 @@ export const fetchSingleBusinessController = catchAsync( async (req: JwtPayload,
 export const deleteBusinessImageController = catchAsync( async (req: JwtPayload, res: Response) => {
     const {businessId, imageId} = req.params;
     const business= await businessService.fetchSingleBusiness(String(businessId));
+
     if(!business){
         throw new NotFoundError("Business not found!");
     }
-    if(String(business.userId) !== String(req.user._id)){
+    if(String(business.userId!._id) !== String(req.user._id)){
         throw new UnauthorizedError("Unauthorized");
     }
     const imageIndex = business.businessImages?.findIndex(

@@ -123,7 +123,7 @@ exports.deleteBusinessImageController = (0, error_handler_1.catchAsync)((req, re
     if (!business) {
         throw new error_1.NotFoundError("Business not found!");
     }
-    if (String(business.userId) !== String(req.user._id)) {
+    if (String(business.userId._id) !== String(req.user._id)) {
         throw new error_1.UnauthorizedError("Unauthorized");
     }
     const imageIndex = (_a = business.businessImages) === null || _a === void 0 ? void 0 : _a.findIndex((image) => image._id.toString() === imageId);
