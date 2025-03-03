@@ -1,5 +1,7 @@
 import { SubscriptionStatusEnum } from '../enums/suscribtion.enum';
 import Subscription from '../models/subscription.model';
+import Appconfig from '../models/app-config.model';
+import Promotion from '../models/promotion.model';
 
 export const createSubscription = async (data: any) => {
     return await Subscription.create(data);
@@ -28,4 +30,14 @@ export const fetchAllSubscriptionsAdmin = async(limit: number, page: number)=>{
     const subscriptions = await Subscription.find().skip(skip).limit(limit);
     const totalSubscriptions = await Subscription.countDocuments();
     return {subscriptions ,  totalSubscriptions};
+};
+
+export const fetchCostPerClick = async ()=>{
+    const config = await Appconfig.findOne();
+
+    return config!.costPerClick;
+};
+
+export const createPromotion = async (data: any)=>{
+    return await Promotion.create(data);
 };

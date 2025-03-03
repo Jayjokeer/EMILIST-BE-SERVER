@@ -21,3 +21,12 @@ export enum SubscriptionPeriodEnum {
     yearly = "yearly"
 };
 
+export enum PromotionTargetEnum {
+    anybody = "anybody",
+    selected = "selected"
+};
+
+export enum PromotionPaymentStatus {
+    pending = "pending",
+    paid = "paid"
+};

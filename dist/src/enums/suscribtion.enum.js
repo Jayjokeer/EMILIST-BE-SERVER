@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SubscriptionPeriodEnum = exports.SubscriptionPerksEnum = exports.SubscriptionStatusEnum = void 0;
+exports.PromotionPaymentStatus = exports.PromotionTargetEnum = exports.SubscriptionPeriodEnum = exports.SubscriptionPerksEnum = exports.SubscriptionStatusEnum = void 0;
 var SubscriptionStatusEnum;
 (function (SubscriptionStatusEnum) {
     SubscriptionStatusEnum["active"] = "active";
@@ -26,4 +26,16 @@ var SubscriptionPeriodEnum;
     SubscriptionPeriodEnum["monthly"] = "monthly";
     SubscriptionPeriodEnum["yearly"] = "yearly";
 })(SubscriptionPeriodEnum || (exports.SubscriptionPeriodEnum = SubscriptionPeriodEnum = {}));
+;
+var PromotionTargetEnum;
+(function (PromotionTargetEnum) {
+    PromotionTargetEnum["anybody"] = "anybody";
+    PromotionTargetEnum["selected"] = "selected";
+})(PromotionTargetEnum || (exports.PromotionTargetEnum = PromotionTargetEnum = {}));
+;
+var PromotionPaymentStatus;
+(function (PromotionPaymentStatus) {
+    PromotionPaymentStatus["pending"] = "pending";
+    PromotionPaymentStatus["paid"] = "paid";
+})(PromotionPaymentStatus || (exports.PromotionPaymentStatus = PromotionPaymentStatus = {}));
 ;

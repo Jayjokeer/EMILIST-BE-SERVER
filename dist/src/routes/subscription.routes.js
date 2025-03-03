@@ -45,3 +45,4 @@ router.route("/get-user-subscription").get(current_user_1.userAuth, subscrbtionC
 router.route("/subscribe-plan").post(current_user_1.userAuth, subscription_validation_1.validateSubscriptionPayment, subscrbtionController.subscribeToPlan);
 router.route("/create-plan").post(current_user_1.adminAuth, planController.createPlanController);
 router.route("/get-plans").get(planController.getPlansController);
+router.route("/promote/:id").post(current_user_1.userAuth, subscription_validation_1.promoteJobAndBusinessValidation, subscrbtionController.promoteJobAndBusinessController);

@@ -3,10 +3,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateSubscriptionPayment = void 0;
+exports.promoteJobAndBusinessValidation = exports.validateSubscriptionPayment = void 0;
 const joi_1 = __importDefault(require("joi"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const target_enum_1 = require("../enums/target.enum");
+const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const validateSubscriptionPayment = (req, res, next) => {
     const subscriptionPaymentValidation = joi_1.default.object({
         planId: joi_1.default.string().required().messages({
@@ -51,3 +52,52 @@ const validateSubscriptionPayment = (req, res, next) => {
     next();
 };
 exports.validateSubscriptionPayment = validateSubscriptionPayment;
+const promoteJobAndBusinessValidation = (req, res, next) => {
+    const promoteJobAndBusinessSchema = joi_1.default.object({
+        target: joi_1.default.string()
+            .valid(...Object.values(suscribtion_enum_1.PromotionTargetEnum))
+            .required()
+            .messages({
+            'any.only': `Target must be one of: ${Object.values(suscribtion_enum_1.PromotionTargetEnum).join(', ')}`,
+            'any.required': 'Target is required',
+        }),
+        startDate: joi_1.default.date()
+            .iso()
+            .required()
+            .messages({
+            'date.base': 'Start Date must be a valid date',
+            'any.required': 'Start Date is required',
+        }),
+        endDate: joi_1.default.date()
+            .iso()
+            .required()
+            .messages({
+            'date.base': 'End Date must be a valid date',
+            'any.required': 'End Date is required',
+        }),
+        type: joi_1.default.string()
+            .valid('job', 'service')
+            .required()
+            .messages({
+            'any.only': 'Type must be either "job" or "service"',
+            'any.required': 'Type is required',
+        }),
+        expectedClicks: joi_1.default.number()
+            .integer()
+            .min(1)
+            .required()
+            .messages({
+            'number.base': 'Expected clicks must be a number',
+            'number.min': 'Expected clicks must be at least 1',
+            'any.required': 'Expected clicks is required',
+        }),
+    });
+    const { error } = promoteJobAndBusinessSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+        const errorMessages = error.details.map((detail) => detail.message);
+        res.status(400).json({ errors: errorMessages });
+        return;
+    }
+    next();
+};
+exports.promoteJobAndBusinessValidation = promoteJobAndBusinessValidation;

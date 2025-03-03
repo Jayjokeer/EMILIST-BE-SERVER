@@ -171,45 +171,36 @@ exports.getUserSubscription = (0, error_handler_1.catchAsync)((req, res) => __aw
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.promoteJobAndBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { target, startDate, endDate, type } = req.body;
+    const { target, startDate, endDate, type, expectedClicks } = req.body;
     const { id } = req.params;
     const userId = req.user._id;
+    let payload;
+    payload = {
+        userId: userId,
+        target,
+        startDate,
+        endDate,
+        clicks: expectedClicks,
+        isActive: true,
+    };
     if (type === "job") {
         const job = yield jobService.fetchJobById(id);
         if (!job) {
             throw new error_1.NotFoundError('Job not found.');
         }
+        payload.jobId = job._id;
     }
     else if (type === "service") {
         const business = yield businessService.fetchSingleBusiness(id);
         if (!business) {
             throw new error_1.NotFoundError('Service not found');
         }
+        payload.businessId = business._id;
     }
-    // 3. Ensure the job belongs to the authenticated user.
-    // if (job.userId?.toString() !== user._id.toString()) {
-    //   return res.status(403).json({ message: 'Forbidden. You do not own this job.' });
-    // }
-    if (!target || !startDate || !endDate) {
-        return res.status(400).json({ message: 'Missing required promotion details: target, startDate, endDate.' });
-    }
-    // 5. Calculate promotion values (these can be dynamic based on your business logic).
-    const cost = 11500; // Example: Fixed cost for the promotion.
-    const expectedClicks = 2000; // Example: Expected clicks count.
-    const costPerClick = 1; // Example: Calculated as cost / expectedClicks.
-    //     // 6. Create a new Promotion document.
-    //     const promotion = new Promotion({
-    //       jobId: job._id,
-    //       userId: userId,
-    //       target,
-    //       startDate,
-    //       endDate,
-    //       cost,
-    //       clicks: expectedClicks, // You may update this later based on actual performance.
-    //       costPerClick,
-    //       isActive: true,
-    //       paymentStatus: 'pending'
-    //     });
-    //     await promotion.save();
-    //   return successResponse(res,StatusCodes.OK, data);
+    const costPerClick = yield subscriptionService.fetchCostPerClick();
+    const cost = costPerClick * expectedClicks;
+    payload.cost = cost;
+    payload.costPerClick = costPerClick;
+    const promotion = yield subscriptionService.createPromotion(payload);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, promotion);
 }));

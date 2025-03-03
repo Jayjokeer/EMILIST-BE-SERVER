@@ -2,6 +2,7 @@ import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
 import { PaymentMethodEnum, WalletEnum } from '../enums/transaction.enum';
 import { TargetEnum } from '../enums/target.enum';
+import { PromotionTargetEnum } from '../enums/suscribtion.enum';
 
 export const validateSubscriptionPayment = (req: Request, res: Response, next: NextFunction) => {
   const subscriptionPaymentValidation = Joi.object({
@@ -46,6 +47,55 @@ export const validateSubscriptionPayment = (req: Request, res: Response, next: N
     res.status(400).json({ errors: errorMessages });
     return;
   }
-
   next();
+};
+
+export const promoteJobAndBusinessValidation = (req: Request, res: Response, next: NextFunction) =>{
+ const promoteJobAndBusinessSchema = Joi.object({
+  target: Joi.string()
+    .valid(...Object.values(PromotionTargetEnum))
+    .required()
+    .messages({
+      'any.only': `Target must be one of: ${Object.values(PromotionTargetEnum).join(', ')}`,
+      'any.required': 'Target is required',
+    }),
+  startDate: Joi.date()
+    .iso()
+    .required()
+    .messages({
+      'date.base': 'Start Date must be a valid date',
+      'any.required': 'Start Date is required',
+    }),
+  endDate: Joi.date()
+    .iso()
+    .required()
+    .messages({
+      'date.base': 'End Date must be a valid date',
+      'any.required': 'End Date is required',
+    }),
+  type: Joi.string()
+    .valid('job', 'service')
+    .required()
+    .messages({
+      'any.only': 'Type must be either "job" or "service"',
+      'any.required': 'Type is required',
+    }),
+  expectedClicks: Joi.number()
+    .integer()
+    .min(1)
+    .required()
+    .messages({
+      'number.base': 'Expected clicks must be a number',
+      'number.min': 'Expected clicks must be at least 1',
+      'any.required': 'Expected clicks is required',
+    }),
+})
+const { error } = promoteJobAndBusinessSchema.validate(req.body, { abortEarly: false });
+
+if (error) {
+  const errorMessages = error.details.map((detail) => detail.message);
+  res.status(400).json({ errors: errorMessages });
+  return;
+}
+next();
 };

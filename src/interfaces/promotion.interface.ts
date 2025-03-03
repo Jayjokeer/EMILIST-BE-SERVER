@@ -12,6 +12,5 @@ export interface IPromotion extends mongoose.Document {
     costPerClick: number;
     isActive: boolean;
     paymentStatus: 'pending' | 'paid';
-    createdAt: Date;
   }
   

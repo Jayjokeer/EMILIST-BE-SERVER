@@ -34,18 +34,20 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
+const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const PromotionSchema = new mongoose_1.Schema({
     jobId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Jobs', },
     businessId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Business' },
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users', required: true },
-    target: { type: String, required: true },
+    target: { type: String, enum: suscribtion_enum_1.PromotionTargetEnum, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     cost: { type: Number, required: true },
     clicks: { type: Number, default: 0 },
     costPerClick: { type: Number, required: true },
     isActive: { type: Boolean, default: true },
-    paymentStatus: { type: String, enum: ['pending', 'paid'], default: 'pending' },
-    createdAt: { type: Date, default: Date.now }
+    paymentStatus: { type: String, enum: suscribtion_enum_1.PromotionPaymentStatus, default: suscribtion_enum_1.PromotionPaymentStatus.pending },
+}, {
+    timestamps: true
 });
 exports.default = mongoose_1.default.model('Promotion', PromotionSchema);
