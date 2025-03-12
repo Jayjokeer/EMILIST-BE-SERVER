@@ -274,8 +274,8 @@ const otherProductsByUser = (userId) => __awaiter(void 0, void 0, void 0, functi
         .populate('reviews', 'rating');
 });
 exports.otherProductsByUser = otherProductsByUser;
-const fetchSimilarProducts = (productId) => __awaiter(void 0, void 0, void 0, function* () {
-    const limit = 10;
+const fetchSimilarProducts = (productId, limit, page, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const skip = (page - 1) * limit;
     const targetProduct = yield product_model_1.default.findById(productId);
     if (!targetProduct) {
         throw new error_1.NotFoundError("Product not found!");
@@ -295,7 +295,12 @@ const fetchSimilarProducts = (productId) => __awaiter(void 0, void 0, void 0, fu
     ;
     const similarProducts = yield product_model_1.default.find(query)
         .limit(Number(limit))
-        .populate('reviews', 'rating');
+        .skip(skip)
+        .populate('reviews', 'rating')
+        .populate({
+        path: 'userId',
+        select: 'fullName email userName profileImage level uniqueId isPrimeMember',
+    });
     const enhancedProducts = yield Promise.all(similarProducts.map((product) => __awaiter(void 0, void 0, void 0, function* () {
         const totalReviews = product.reviews.length;
         const averageRating = totalReviews > 0
@@ -303,7 +308,25 @@ const fetchSimilarProducts = (productId) => __awaiter(void 0, void 0, void 0, fu
             : 0;
         return Object.assign(Object.assign({}, product.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
     })));
-    return enhancedProducts;
+    let productsWithDetails;
+    if (userId) {
+        const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();
+        const likedProductIds = likedProducts.map((like) => like.product.toString());
+        const user = yield users_model_1.default.findById(userId);
+        const comparedProductIds = (user === null || user === void 0 ? void 0 : user.comparedProducts.map((id) => id.toString())) || [];
+        productsWithDetails = enhancedProducts.map((product) => (Object.assign(Object.assign({}, product), { liked: likedProductIds.includes(product._id.toString()), isCompared: comparedProductIds.includes(product._id.toString()) })));
+    }
+    else {
+        productsWithDetails = enhancedProducts.map((product) => (Object.assign(Object.assign({}, product), { liked: false, isCompared: false })));
+    }
+    const totalProducts = productsWithDetails.length;
+    return {
+        products: productsWithDetails,
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        limit,
+        totalProducts,
+    };
 });
 exports.fetchSimilarProducts = fetchSimilarProducts;
 const fetchProductReviews = (productId_1, page_1, limit_1, ...args_1) => __awaiter(void 0, [productId_1, page_1, limit_1, ...args_1], void 0, function* (productId, page, limit, sortBy = 'newest') {

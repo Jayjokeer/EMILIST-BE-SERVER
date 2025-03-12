@@ -320,8 +320,9 @@ export const otherProductsByUser = async(userId: string)=>{
   .populate('reviews', 'rating');
 };
 
-export const fetchSimilarProducts = async (productId: string) => {
-  const limit = 10;
+export const fetchSimilarProducts = async (productId: string, limit: number, page: number, userId: string) => {
+ const skip = (page -1) * limit;
+
   const targetProduct  = await Product.findById(productId);
 
   if(!targetProduct){
@@ -343,7 +344,12 @@ export const fetchSimilarProducts = async (productId: string) => {
   };
   const similarProducts =  await Product.find(query)
   .limit(Number(limit))
-  .populate('reviews', 'rating');
+  .skip(skip)
+  .populate('reviews', 'rating')
+  .populate({
+    path: 'userId',
+    select: 'fullName email userName profileImage level uniqueId isPrimeMember',
+  });
   
   const enhancedProducts = await Promise.all(
     similarProducts.map(async (product: any) => {
@@ -360,8 +366,33 @@ export const fetchSimilarProducts = async (productId: string) => {
       };
     })
   );
-
-  return enhancedProducts; 
+  let productsWithDetails;
+  if (userId) {
+    const likedProducts = await ProductLike.find({ user: userId }).select('product').lean();
+    const likedProductIds = likedProducts.map((like) => like.product.toString());
+      const user = await User.findById(userId);
+      const comparedProductIds = user?.comparedProducts.map((id: any) => id.toString()) || [];
+      
+    productsWithDetails = enhancedProducts.map((product) => ({
+      ...product,
+      liked: likedProductIds.includes(product._id.toString()),
+      isCompared: comparedProductIds.includes(product._id.toString()),
+    }));
+  } else {
+    productsWithDetails = enhancedProducts.map((product) => ({
+      ...product,
+      liked: false,
+      isCompared: false,
+    }));
+  }
+  const totalProducts = productsWithDetails.length;
+  return {
+    products: productsWithDetails,
+    currentPage: page,
+    totalPages: Math.ceil(totalProducts / limit),
+    limit,
+    totalProducts,
+  }; 
 };
 export const fetchProductReviews = async (
   productId: string,

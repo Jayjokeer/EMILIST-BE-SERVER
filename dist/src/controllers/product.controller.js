@@ -268,7 +268,8 @@ exports.fetchOtherProductByUserController = (0, error_handler_1.catchAsync)((req
 }));
 exports.fetchSimilarProductByUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { productId } = req.params;
-    const data = yield productService.fetchSimilarProducts(productId);
+    const { page = 1, limit = 10, userId } = req.query;
+    const data = yield productService.fetchSimilarProducts(productId, limit, page, userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchProductReviewsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
