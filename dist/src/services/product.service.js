@@ -55,6 +55,7 @@ const fetchAllProducts = (page, limit, userId, filters, search) => __awaiter(voi
     }
     const totalProducts = yield product_model_1.default.countDocuments(query);
     const products = yield product_model_1.default.find(query)
+        .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .populate({
@@ -268,10 +269,29 @@ const fetchAllProductsAdmin = (page, limit, search) => __awaiter(void 0, void 0,
     };
 });
 exports.fetchAllProductsAdmin = fetchAllProductsAdmin;
-const otherProductsByUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield product_model_1.default.find({ userId })
+const otherProductsByUser = (userId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+    const skip = (page - 1) * limit;
+    const products = yield product_model_1.default.find({ userId })
         .sort({ createdAt: -1 })
-        .populate('reviews', 'rating');
+        .populate('reviews', 'rating')
+        .skip(skip)
+        .populate({
+        path: 'userId',
+        select: 'fullName email userName profileImage level uniqueId isPrimeMember',
+    });
+    const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();
+    const likedProductIds = likedProducts.map((like) => like.product.toString());
+    const user = yield users_model_1.default.findById(userId);
+    const comparedProductIds = (user === null || user === void 0 ? void 0 : user.comparedProducts.map((id) => id.toString())) || [];
+    const productsWithDetails = products.map((product) => (Object.assign(Object.assign({}, product), { liked: likedProductIds.includes(product._id.toString()), isCompared: comparedProductIds.includes(product._id.toString()) })));
+    const totalProducts = productsWithDetails.length;
+    return {
+        products: productsWithDetails,
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        limit,
+        totalProducts,
+    };
 });
 exports.otherProductsByUser = otherProductsByUser;
 const fetchSimilarProducts = (productId, limit, page, userId) => __awaiter(void 0, void 0, void 0, function* () {

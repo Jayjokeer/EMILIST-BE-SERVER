@@ -263,7 +263,8 @@ exports.addDiscountToProductController = (0, error_handler_1.catchAsync)((req, r
 }));
 exports.fetchOtherProductByUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.params;
-    const data = yield productService.otherProductsByUser(userId);
+    const { page = 1, limit = 10 } = req.query;
+    const data = yield productService.otherProductsByUser(userId, page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchSimilarProductByUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

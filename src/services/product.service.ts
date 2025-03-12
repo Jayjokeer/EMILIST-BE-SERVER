@@ -62,6 +62,7 @@ export const fetchAllProducts = async (
   const totalProducts = await Product.countDocuments(query);
 
   const products = await Product.find(query)
+  .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .populate({
@@ -314,10 +315,36 @@ export const fetchAllProductsAdmin = async (page: number, limit: number, search:
     totalMaterials,
   };
 };
-export const otherProductsByUser = async(userId: string)=>{
-  return await  Product.find({userId})
+export const otherProductsByUser = async(userId: string, page: number, limit: number)=>{
+  const skip = (page -1) * limit;
+
+const products = await  Product.find({userId})
   .sort({ createdAt: -1 })
-  .populate('reviews', 'rating');
+  .populate('reviews', 'rating')
+  .skip(skip)
+  .populate({
+    path: 'userId',
+    select: 'fullName email userName profileImage level uniqueId isPrimeMember',
+  });
+
+  const likedProducts = await ProductLike.find({ user: userId }).select('product').lean();
+  const likedProductIds = likedProducts.map((like) => like.product.toString());
+  const user = await User.findById(userId);
+  const comparedProductIds = user?.comparedProducts.map((id: any) => id.toString()) || [];
+    
+  const productsWithDetails = products.map((product) => ({
+    ...product,
+    liked: likedProductIds.includes(product._id.toString()),
+    isCompared: comparedProductIds.includes(product._id.toString()),
+  }));
+  const totalProducts = productsWithDetails.length;
+  return {
+    products: productsWithDetails,
+    currentPage: page,
+    totalPages: Math.ceil(totalProducts / limit),
+    limit,
+    totalProducts,
+  }; 
 };
 
 export const fetchSimilarProducts = async (productId: string, limit: number, page: number, userId: string) => {

@@ -275,8 +275,9 @@ export const addDiscountToProductController = catchAsync(async (req: JwtPayload,
 
 export const fetchOtherProductByUserController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {userId} = req.params; 
+    const {page = 1, limit = 10 } = req.query;
 
-     const data = await productService.otherProductsByUser(userId);
+     const data = await productService.otherProductsByUser(userId, page, limit);
    return successResponse(res, StatusCodes.OK, data);
   });
 
