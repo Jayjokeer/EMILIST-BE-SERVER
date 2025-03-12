@@ -325,7 +325,7 @@ const products = await  Product.find({userId})
   .populate({
     path: 'userId',
     select: 'fullName email userName profileImage level uniqueId isPrimeMember',
-  });
+  }).lean();
 
   const likedProducts = await ProductLike.find({ user: userId }).select('product').lean();
   const likedProductIds = likedProducts.map((like) => like.product.toString());

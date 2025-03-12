@@ -278,7 +278,7 @@ const otherProductsByUser = (userId, page, limit) => __awaiter(void 0, void 0, v
         .populate({
         path: 'userId',
         select: 'fullName email userName profileImage level uniqueId isPrimeMember',
-    });
+    }).lean();
     const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();
     const likedProductIds = likedProducts.map((like) => like.product.toString());
     const user = yield users_model_1.default.findById(userId);
