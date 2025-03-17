@@ -256,8 +256,9 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
             throw new error_1.NotFoundError("No milestone");
         }
         const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
-        if (verifyPayment == "success") {
-            yield jobService.updateMilestone(transaction.jobId, transaction.milestoneId, {
+        console.log(verifyPayment);
+        if (verifyPayment === "success") {
+            const pay = yield jobService.updateMilestone(transaction.jobId, transaction.milestoneId, {
                 paymentStatus: jobs_enum_1.MilestonePaymentStatus.processing,
                 paymentInfo: {
                     amountPaid: transaction.amount,
@@ -268,7 +269,7 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
             transaction.status = transaction_enum_1.TransactionEnum.completed;
             transaction.dateCompleted = new Date();
             yield transaction.save();
-            job.markModified('milestones');
+            // job.markModified('milestones');
             yield job.save();
             message = "Payment successfully";
         }

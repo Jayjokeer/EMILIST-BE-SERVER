@@ -225,8 +225,9 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
     }
   
     const verifyPayment = await  verifyPaystackPayment(reference);
-    if(verifyPayment == "success"){
-      await jobService.updateMilestone(
+    console.log(verifyPayment)
+    if(verifyPayment === "success"){
+    const pay =  await jobService.updateMilestone(
         transaction.jobId!,
         transaction.milestoneId!,
         {
@@ -241,7 +242,7 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
       transaction.status = TransactionEnum.completed;
       transaction.dateCompleted = new Date();
       await transaction.save();
-      job.markModified('milestones');
+      // job.markModified('milestones');
       await job.save();
       message = "Payment successfully";
     }else {

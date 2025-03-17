@@ -668,7 +668,7 @@ const fetchJobLeads = (userId, page, limit) => __awaiter(void 0, void 0, void 0,
 });
 exports.fetchJobLeads = fetchJobLeads;
 const updateMilestone = (jobId, milestoneId, updateData) => __awaiter(void 0, void 0, void 0, function* () {
-    yield jobs_model_1.default.updateOne({ _id: jobId, 'milestones._id': milestoneId }, {
+    return yield jobs_model_1.default.updateOne({ _id: jobId, 'milestones._id': milestoneId }, {
         $set: {
             'milestones.$.paymentStatus': updateData.paymentStatus,
             'milestones.$.paymentInfo': updateData.paymentInfo,

@@ -744,7 +744,7 @@ export const updateMilestone = async (
   milestoneId: string,
   updateData: any
 ) => {
-  await Jobs.updateOne(
+ return await Jobs.updateOne(
     { _id: jobId, 'milestones._id': milestoneId },
     {
       $set: {
