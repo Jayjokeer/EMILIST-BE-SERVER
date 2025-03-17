@@ -235,7 +235,7 @@ export const validateMilestoneStatusUpdate = (req: Request, res: Response, next:
         'any.only': `Invalid status, must be one of: ${Object.values(MilestoneEnum).join(', ')}`,
         'any.required': 'Status is required',
       }),
-      additionalAmount: Joi.number().optional().messages({
+      additionalAmount: Joi.number().optional().allow("").messages({
         'number.base': 'Additional amount must be a number',
       }),
       note: Joi.string().optional().allow("").messages({

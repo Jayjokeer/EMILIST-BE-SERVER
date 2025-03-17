@@ -167,6 +167,7 @@ if(!project){
       milestone.paymentInfo.amountPaid = milestone.amount;
       milestone.paymentInfo.paymentMethod = PaymentMethodEnum.wallet;  
       milestone.paymentInfo.date = new Date();
+      job.markModified('milestones');
       await job.save();
        data = "Payment successful"
     } else if (paymentMethod === PaymentMethodEnum.card) {
@@ -224,6 +225,7 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
       transaction.status = TransactionEnum.completed;
       transaction.dateCompleted = new Date();
       await transaction.save();
+      job.markModified('milestones');
       await job.save();
       message = "Payment successfully";
     }else {
