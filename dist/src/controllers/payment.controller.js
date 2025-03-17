@@ -204,6 +204,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         milestone.paymentInfo.amountPaid = milestone.amount;
         milestone.paymentInfo.paymentMethod = transaction_enum_1.PaymentMethodEnum.wallet;
         milestone.paymentInfo.date = new Date();
+        job.markModified('milestones');
         yield job.save();
         data = "Payment successful";
     }
@@ -259,6 +260,7 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
             transaction.status = transaction_enum_1.TransactionEnum.completed;
             transaction.dateCompleted = new Date();
             yield transaction.save();
+            job.markModified('milestones');
             yield job.save();
             message = "Payment successfully";
         }
