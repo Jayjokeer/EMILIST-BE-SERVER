@@ -739,29 +739,18 @@ export const fetchJobLeads = async (userId: string, page: number, limit: number)
   };
 }
 
-  // export const checkOverdueMilestones = async () => {
-  //   const jobs = await Jobs.find({
-  //     status: { $in: [JobStatusEnum.active, JobStatusEnum.paused] },
-  //     'milestones.status': { $in: [MilestoneEnum.pending, MilestoneEnum.active, MilestoneEnum.paused] },
-  //   });
-  
-  //   const now = new Date();
-  
-  //   jobs.forEach(async (job) => {
-  //     const currentMilestone = job.milestones.find(
-  //       (milestone: IMilestone) =>
-  //         milestone.status !== MilestoneEnum.completed && milestone.status !== MilestoneEnum.overdue
-  //     );
-  
-  //     if (currentMilestone && currentMilestone.timeFrame && job.startDate) {
-  //       const dueDate = new Date(job.startDate);
-  //       dueDate.setDate(dueDate.getDate() + Number(currentMilestone.timeFrame.number));
-  
-  //       if (dueDate < now) {
-  //         job.status = JobStatusEnum.;
-  //         currentMilestone.status = MilestoneEnum.overdue;
-  //         await job.save();
-  //       }
-  //     }
-  //   });
-  // };
+export const updateMilestone = async (
+  jobId: string,
+  milestoneId: string,
+  updateData: any
+) => {
+  await Jobs.updateOne(
+    { _id: jobId, 'milestones._id': milestoneId },
+    {
+      $set: {
+        'milestones.$.paymentStatus': updateData.paymentStatus,
+        'milestones.$.paymentInfo': updateData.paymentInfo,
+      },
+    }
+  );
+};

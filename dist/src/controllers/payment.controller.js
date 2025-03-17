@@ -200,10 +200,14 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         userWallet.balance -= milestone.amount;
         yield userWallet.save();
         transaction.balanceAfter = userWallet.balance;
-        milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.processing;
-        milestone.paymentInfo.amountPaid = milestone.amount;
-        milestone.paymentInfo.paymentMethod = transaction_enum_1.PaymentMethodEnum.wallet;
-        milestone.paymentInfo.date = new Date();
+        yield jobService.updateMilestone(transaction.jobId, transaction.milestoneId, {
+            paymentStatus: jobs_enum_1.MilestonePaymentStatus.processing,
+            paymentInfo: {
+                amountPaid: transaction.amount,
+                paymentMethod: transaction_enum_1.PaymentMethodEnum.card,
+                date: new Date(),
+            },
+        });
         job.markModified('milestones');
         yield job.save();
         data = "Payment successful";
@@ -253,10 +257,14 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
         }
         const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
         if (verifyPayment == "success") {
-            milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.processing;
-            milestone.paymentInfo.amountPaid = transaction.amount;
-            milestone.paymentInfo.paymentMethod = transaction_enum_1.PaymentMethodEnum.card;
-            milestone.paymentInfo.date = new Date();
+            yield jobService.updateMilestone(transaction.jobId, transaction.milestoneId, {
+                paymentStatus: jobs_enum_1.MilestonePaymentStatus.processing,
+                paymentInfo: {
+                    amountPaid: transaction.amount,
+                    paymentMethod: transaction_enum_1.PaymentMethodEnum.card,
+                    date: new Date(),
+                },
+            });
             transaction.status = transaction_enum_1.TransactionEnum.completed;
             transaction.dateCompleted = new Date();
             yield transaction.save();

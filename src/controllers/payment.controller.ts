@@ -163,10 +163,18 @@ if(!project){
       userWallet.balance -= milestone.amount;
       await userWallet.save();
       transaction.balanceAfter = userWallet.balance;
-      milestone.paymentStatus =  MilestonePaymentStatus.processing;
-      milestone.paymentInfo.amountPaid = milestone.amount;
-      milestone.paymentInfo.paymentMethod = PaymentMethodEnum.wallet;  
-      milestone.paymentInfo.date = new Date();
+      await jobService.updateMilestone(
+        transaction.jobId!,
+        transaction.milestoneId!,
+        {
+          paymentStatus: MilestonePaymentStatus.processing,
+          paymentInfo: {
+            amountPaid: transaction.amount,
+            paymentMethod: PaymentMethodEnum.card,
+            date: new Date(),
+          },
+        }
+      );
       job.markModified('milestones');
       await job.save();
        data = "Payment successful"
@@ -218,10 +226,18 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
   
     const verifyPayment = await  verifyPaystackPayment(reference);
     if(verifyPayment == "success"){
-      milestone.paymentStatus =  MilestonePaymentStatus.processing;
-      milestone.paymentInfo.amountPaid = transaction.amount;
-      milestone.paymentInfo.paymentMethod = PaymentMethodEnum.card;  
-      milestone.paymentInfo.date = new Date();
+      await jobService.updateMilestone(
+        transaction.jobId!,
+        transaction.milestoneId!,
+        {
+          paymentStatus: MilestonePaymentStatus.processing,
+          paymentInfo: {
+            amountPaid: transaction.amount,
+            paymentMethod: PaymentMethodEnum.card,
+            date: new Date(),
+          },
+        }
+      );
       transaction.status = TransactionEnum.completed;
       transaction.dateCompleted = new Date();
       await transaction.save();

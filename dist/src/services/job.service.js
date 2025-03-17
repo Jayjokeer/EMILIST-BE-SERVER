@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
+exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -667,25 +667,12 @@ const fetchJobLeads = (userId, page, limit) => __awaiter(void 0, void 0, void 0,
     };
 });
 exports.fetchJobLeads = fetchJobLeads;
-// export const checkOverdueMilestones = async () => {
-//   const jobs = await Jobs.find({
-//     status: { $in: [JobStatusEnum.active, JobStatusEnum.paused] },
-//     'milestones.status': { $in: [MilestoneEnum.pending, MilestoneEnum.active, MilestoneEnum.paused] },
-//   });
-//   const now = new Date();
-//   jobs.forEach(async (job) => {
-//     const currentMilestone = job.milestones.find(
-//       (milestone: IMilestone) =>
-//         milestone.status !== MilestoneEnum.completed && milestone.status !== MilestoneEnum.overdue
-//     );
-//     if (currentMilestone && currentMilestone.timeFrame && job.startDate) {
-//       const dueDate = new Date(job.startDate);
-//       dueDate.setDate(dueDate.getDate() + Number(currentMilestone.timeFrame.number));
-//       if (dueDate < now) {
-//         job.status = JobStatusEnum.;
-//         currentMilestone.status = MilestoneEnum.overdue;
-//         await job.save();
-//       }
-//     }
-//   });
-// };
+const updateMilestone = (jobId, milestoneId, updateData) => __awaiter(void 0, void 0, void 0, function* () {
+    yield jobs_model_1.default.updateOne({ _id: jobId, 'milestones._id': milestoneId }, {
+        $set: {
+            'milestones.$.paymentStatus': updateData.paymentStatus,
+            'milestones.$.paymentInfo': updateData.paymentInfo,
+        },
+    });
+});
+exports.updateMilestone = updateMilestone;
