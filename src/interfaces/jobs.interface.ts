@@ -1,4 +1,5 @@
-import { JobExpertLevel, JobPeriod, JobStatusEnum, JobType, MilestoneEnum, MilestonePaymentStatus, QuoteStatusEnum } from "../enums/jobs.enum";
+import mongoose from "mongoose";
+import { FrequencyEnum, JobExpertLevel, JobPeriod, JobStatusEnum, JobType, MilestoneEnum, MilestonePaymentStatus, QuoteStatusEnum } from "../enums/jobs.enum";
 
 export interface IJob {
     category: string;
@@ -19,7 +20,7 @@ export interface IJob {
     status: JobStatusEnum;
     userId: string;
     applications?: string[];
-    acceptedApplicationId?: string;
+    acceptedApplicationId?: any;
     startDate?: Date;
     pausedDate?: Date;
     email?: string; 
@@ -72,3 +73,14 @@ export interface IUpdateJob {
     amount: number; 
     status: QuoteStatusEnum;
   }
+
+  export interface IRecurringJob {
+    jobId: mongoose.Types.ObjectId;            
+    frequency: FrequencyEnum;    
+    startDate: Date;                              
+    endDate: Date;                                
+    nextMaintenanceDate: Date;                    
+    reminderDates: any;                        
+    childJobs: mongoose.Types.ObjectId[];        
+  }
+  

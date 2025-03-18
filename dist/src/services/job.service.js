@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
+exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -56,6 +56,7 @@ const date_fns_1 = require("date-fns");
 const moment_1 = __importDefault(require("moment"));
 const userService = __importStar(require("./auth.service"));
 const business_model_1 = __importDefault(require("../models/business.model"));
+const recurring_job_model_1 = __importDefault(require("../models/recurring-job.model"));
 const createJob = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield jobs_model_1.default.create(data);
 });
@@ -143,6 +144,14 @@ const fetchJobById = (jobId) => __awaiter(void 0, void 0, void 0, function* () {
     return yield jobs_model_1.default.findById(jobId);
 });
 exports.fetchJobById = fetchJobById;
+const fetchJobByIdWithUserId = (jobId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield jobs_model_1.default.findById(jobId)
+        .populate({
+        path: 'acceptedApplicationId',
+        populate: { path: 'user', select: '_id' }
+    });
+});
+exports.fetchJobByIdWithUserId = fetchJobByIdWithUserId;
 const fetchJobByIdWithDetails = (jobId) => __awaiter(void 0, void 0, void 0, function* () {
     const job = yield jobs_model_1.default.findById(jobId)
         .populate('userId', 'fullName userName email location level profileImage')
@@ -676,3 +685,7 @@ const updateMilestone = (jobId, milestoneId, updateData) => __awaiter(void 0, vo
     });
 });
 exports.updateMilestone = updateMilestone;
+const createRecurringJob = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield recurring_job_model_1.default.create(payload);
+});
+exports.createRecurringJob = createRecurringJob;

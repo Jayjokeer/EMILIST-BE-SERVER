@@ -53,3 +53,9 @@ export enum RatingEnum {
   four= "4",
   five= "5"
 }
+
+export enum FrequencyEnum {
+  weekly=  'Weekly',
+  monthly = 'Monthly',
+  quarterly = 'Quarterly ',
+}

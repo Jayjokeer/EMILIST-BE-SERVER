@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
-import { JobExpertLevel, JobPeriod, JobType, MilestoneEnum } from '../enums/jobs.enum';
+import { FrequencyEnum, JobExpertLevel, JobPeriod, JobType, MilestoneEnum } from '../enums/jobs.enum';
 
 export const validateJob = (req: Request, res: Response, next: NextFunction) => {
  const jobValidation = Joi.object({
@@ -332,3 +332,96 @@ export const validateUpdateMilestonePayment= (req: Request, res: Response, next:
 
   next();
 };
+
+export const validateRecurringJob = (req: Request, res: Response, next: NextFunction) => {
+  const jobValidation = Joi.object({
+    jobId: Joi.string().optional(),
+   category: Joi.string().required().messages({
+     'string.empty': 'Category is required',
+   }),
+   service: Joi.string().required().messages({
+     'string.empty': 'Service is required',
+   }),
+   title: Joi.string().required().messages({
+     'string.empty': 'Title is required',
+   }),
+   description: Joi.string().required().messages({
+     'string.empty': 'Description is required',
+   }),
+   jobFiles: Joi.array().items(Joi.string()).messages({
+     'string.base': 'Each job file must be a string (URL or file path)',
+   }),
+   duration: Joi.object({
+     number: Joi.number().required().messages({
+       'number.base': 'Duration number must be a number',
+       'any.required': 'Duration number is required',
+     }),
+     period: Joi.string()
+       .valid(...Object.values(JobPeriod)) 
+       .required()
+       .messages({
+         'any.only': 'Invalid period, must be one of: ' + Object.values(JobPeriod).join(', '),
+         'any.required': 'Duration period is required',
+       }),
+   }).required(),
+   location: Joi.string().required().messages({
+     'string.empty': 'Location is required',
+   }),
+   expertLevel: Joi.string()
+     .valid(...Object.values(JobExpertLevel)) 
+     .required()
+     .messages({
+       'any.only': 'Invalid expert level, must be one of: ' + Object.values(JobExpertLevel).join(', '),
+       'any.required': 'Expert level is required',
+     }),
+   milestones: Joi.array().items(Joi.object({
+     timeFrame: Joi.object({
+           number: Joi.number().required(),
+           period: Joi.string().valid(...Object.values(JobPeriod)).required(),
+         }).required(),
+     achievement: Joi.string().required(),
+     amount: Joi.number().required(),
+       })).max(5).required(),
+   budget: Joi.number().required().messages({
+       'number.base': 'Budget must be a number',
+       'any.required': 'Budget is required for regular or direct jobs',
+     }),
+   achievementDetails: Joi.string().messages({
+     'string.empty': 'Achievement details must be a string',
+   }),
+   currency: Joi.string().messages({
+     'string.empty': 'Currency must be a string',
+   }),
+   artisan: Joi.string().optional().messages({
+     'string.base': 'Artisan must be a string',
+   }),
+   frequency: Joi.string()
+   .valid(...Object.values(FrequencyEnum)) 
+   .required()
+   .messages({
+     'any.only': 'Frequency, must be one of: ' + Object.values(FrequencyEnum).join(', '),
+     'any.required': 'Frequency  is required',
+   }),
+   startDate: Joi.date().required().messages({
+    'date.base': 'Start date must be a date',
+    'any.required': 'Start date is required',
+  }),
+    endDate: Joi.date().required().messages({
+    'date.base': 'End date must be a date',
+    'any.required': 'End date is required',
+  }),
+  reminderDates: Joi.array().items(Joi.object({
+    day: Joi.string()
+ })),
+});
+ 
+ const { error } = jobValidation.validate(req.body, { abortEarly: false });
+ 
+   if (error) {
+     const errorMessages = error.details.map((detail) => detail.message);
+      res.status(400).json({ errors: errorMessages });
+      return;
+   }
+ 
+   next();
+ }

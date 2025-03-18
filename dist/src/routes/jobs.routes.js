@@ -73,3 +73,4 @@ router.route("/user-project-analytics").get(current_user_1.userAuth, jobControll
 router.route("/mute-job/:jobId").get(current_user_1.userAuth, jobController.muteJobController);
 router.route("/pay-for-job").post(current_user_1.userAuth, product_validation_1.validatePaymentForJob, paymentController.payforJobController);
 router.route("/leads").get(current_user_1.userAuth, jobController.jobLeadsController);
+router.route("/create-recurring-job").post(current_user_1.userAuth, image_upload_1.multipleUpload, job_validation_1.validateRecurringJob, jobController.createRecurringJobController);

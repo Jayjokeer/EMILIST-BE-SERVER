@@ -1,4 +1,4 @@
-import { IJob, IMilestone } from "../interfaces/jobs.interface";
+import { IJob, IMilestone, IRecurringJob } from "../interfaces/jobs.interface";
 import Jobs from "../models/jobs.model";
 import  JobLike  from "../models/joblike.model";
 import Project from "../models/project.model";
@@ -10,6 +10,7 @@ import moment from "moment";
 import * as userService from './auth.service';
 import { PipelineStage } from 'mongoose';
 import Business from "../models/business.model";
+import RecurringJob from "../models/recurring-job.model";
 
 export const createJob = async (data:  IJob) =>{
     return await Jobs.create(data);
@@ -126,7 +127,14 @@ export const fetchJobById = async (jobId: string)=>{
   
 };
 
-
+export const fetchJobByIdWithUserId = async (jobId: string)=>{
+  return await Jobs.findById(jobId)
+  .populate({
+    path: 'acceptedApplicationId',
+    populate: {path: 'user', select: '_id'}
+  });
+  
+};
 
 
 export const fetchJobByIdWithDetails = async (jobId: string) => {
@@ -135,7 +143,7 @@ export const fetchJobByIdWithDetails = async (jobId: string) => {
     .populate({
       path: 'applications',
       populate: { path: 'user', select: 'fullName userName email location level profileImage' },
-    });    
+    });   
 
   if (!job) throw new NotFoundError("Job not found!");
 
@@ -753,4 +761,8 @@ export const updateMilestone = async (
       },
     }
   );
+};
+
+export const createRecurringJob = async (payload: IRecurringJob)=>{
+  return await RecurringJob.create(payload);
 };

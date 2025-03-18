@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneStatusUpdate = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = void 0;
+exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneStatusUpdate = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = void 0;
 const joi_1 = __importDefault(require("joi"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 const validateJob = (req, res, next) => {
@@ -318,3 +318,93 @@ const validateUpdateMilestonePayment = (req, res, next) => {
     next();
 };
 exports.validateUpdateMilestonePayment = validateUpdateMilestonePayment;
+const validateRecurringJob = (req, res, next) => {
+    const jobValidation = joi_1.default.object({
+        jobId: joi_1.default.string().optional(),
+        category: joi_1.default.string().required().messages({
+            'string.empty': 'Category is required',
+        }),
+        service: joi_1.default.string().required().messages({
+            'string.empty': 'Service is required',
+        }),
+        title: joi_1.default.string().required().messages({
+            'string.empty': 'Title is required',
+        }),
+        description: joi_1.default.string().required().messages({
+            'string.empty': 'Description is required',
+        }),
+        jobFiles: joi_1.default.array().items(joi_1.default.string()).messages({
+            'string.base': 'Each job file must be a string (URL or file path)',
+        }),
+        duration: joi_1.default.object({
+            number: joi_1.default.number().required().messages({
+                'number.base': 'Duration number must be a number',
+                'any.required': 'Duration number is required',
+            }),
+            period: joi_1.default.string()
+                .valid(...Object.values(jobs_enum_1.JobPeriod))
+                .required()
+                .messages({
+                'any.only': 'Invalid period, must be one of: ' + Object.values(jobs_enum_1.JobPeriod).join(', '),
+                'any.required': 'Duration period is required',
+            }),
+        }).required(),
+        location: joi_1.default.string().required().messages({
+            'string.empty': 'Location is required',
+        }),
+        expertLevel: joi_1.default.string()
+            .valid(...Object.values(jobs_enum_1.JobExpertLevel))
+            .required()
+            .messages({
+            'any.only': 'Invalid expert level, must be one of: ' + Object.values(jobs_enum_1.JobExpertLevel).join(', '),
+            'any.required': 'Expert level is required',
+        }),
+        milestones: joi_1.default.array().items(joi_1.default.object({
+            timeFrame: joi_1.default.object({
+                number: joi_1.default.number().required(),
+                period: joi_1.default.string().valid(...Object.values(jobs_enum_1.JobPeriod)).required(),
+            }).required(),
+            achievement: joi_1.default.string().required(),
+            amount: joi_1.default.number().required(),
+        })).max(5).required(),
+        budget: joi_1.default.number().required().messages({
+            'number.base': 'Budget must be a number',
+            'any.required': 'Budget is required for regular or direct jobs',
+        }),
+        achievementDetails: joi_1.default.string().messages({
+            'string.empty': 'Achievement details must be a string',
+        }),
+        currency: joi_1.default.string().messages({
+            'string.empty': 'Currency must be a string',
+        }),
+        artisan: joi_1.default.string().optional().messages({
+            'string.base': 'Artisan must be a string',
+        }),
+        frequency: joi_1.default.string()
+            .valid(...Object.values(jobs_enum_1.FrequencyEnum))
+            .required()
+            .messages({
+            'any.only': 'Frequency, must be one of: ' + Object.values(jobs_enum_1.FrequencyEnum).join(', '),
+            'any.required': 'Frequency  is required',
+        }),
+        startDate: joi_1.default.date().required().messages({
+            'date.base': 'Start date must be a date',
+            'any.required': 'Start date is required',
+        }),
+        endDate: joi_1.default.date().required().messages({
+            'date.base': 'End date must be a date',
+            'any.required': 'End date is required',
+        }),
+        reminderDates: joi_1.default.array().items(joi_1.default.object({
+            day: joi_1.default.string()
+        })),
+    });
+    const { error } = jobValidation.validate(req.body, { abortEarly: false });
+    if (error) {
+        const errorMessages = error.details.map((detail) => detail.message);
+        res.status(400).json({ errors: errorMessages });
+        return;
+    }
+    next();
+};
+exports.validateRecurringJob = validateRecurringJob;

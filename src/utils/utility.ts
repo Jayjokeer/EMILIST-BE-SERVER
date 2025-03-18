@@ -43,3 +43,20 @@ export const generateShortUUID = (): string => {
       totalAmount:  parseFloat((amount + vatAmount).toFixed(2))
     }; 
     };
+  export const calculateNextMaintenanceDate = (startDate: Date, frequency: string): Date => {
+      const nextDate = new Date(startDate);
+      switch (frequency) {
+        case 'Weekly':
+          nextDate.setDate(nextDate.getDate() + 7);
+          break;
+        case 'Monthly':
+          nextDate.setMonth(nextDate.getMonth() + 1);
+          break;
+        case 'Quarterly':
+          nextDate.setMonth(nextDate.getMonth() + 3);
+          break;
+        default:
+          throw new Error(`Frequency ${frequency} not supported.`);
+      }
+      return nextDate;
+    };

@@ -3,7 +3,7 @@ import { catchAsync } from "../errors/error-handler";
 import { successResponse } from "../helpers/success-response";
 import { NextFunction, Request, Response } from "express";
 import * as jobService from "../services/job.service";
-import { IJob, IMilestone, IUpdateJob } from "../interfaces/jobs.interface";
+import { IJob, IMilestone, IRecurringJob, IUpdateJob } from "../interfaces/jobs.interface";
 import { JwtPayload } from "jsonwebtoken";
 import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/error";
 import { IProject } from "../interfaces/project.interface";
@@ -22,6 +22,7 @@ import * as reviewService from "../services/review.service";
 import * as subscriptionService from "../services/subscription.service";
 import * as planService from "../services/plan.service";
 import { PlanEnum } from "../enums/plan.enum";
+import { calculateNextMaintenanceDate } from "../utils/utility";
 
 export const createJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const job: IJob = req.body;
@@ -58,7 +59,7 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
        data.save();
        const { html, subject } = directJobApplicationMessage(user.userName, req.user.userName, String(data._id));
        await sendEmail(user.email, subject, html); 
-      successResponse(res,StatusCodes.CREATED, data);
+      return successResponse(res,StatusCodes.CREATED, data);
 
   } else {
     const user = req.user._id;
@@ -857,5 +858,72 @@ export const jobLeadsController = catchAsync( async(req:JwtPayload, res: Respons
 const data = await jobService.fetchJobLeads(userId,page , limit );
 return successResponse(res,StatusCodes.OK, data);
 
+
+});
+
+export const createRecurringJobController = catchAsync( async (req: JwtPayload, res: Response) => {
+  const { jobId, frequency, startDate, endDate, reminderDates} = req.body;
+
+  let jobDetails;
+  let appliedUser;     
+
+  if (jobId) {
+    jobDetails = await jobService.fetchJobByIdWithUserId(jobId);
+    if (!jobDetails) {
+      throw new NotFoundError("Job not found");
+    }
+    appliedUser = jobDetails.acceptedApplicationId!._id;
+ 
+  } else {
+    jobDetails = req.body;
+    appliedUser = req.body.artisan;
+    const files = req.files as Express.Multer.File[];
+    if (files && files.length > 0) {
+      const fileObjects = files.map((file) => ({
+        id: new mongoose.Types.ObjectId(),
+        url: file.path, 
+      }));
+      jobDetails.jobFiles = fileObjects;
+    }
+  }
+
+  const user = await authService.findUserByEmailOrUserNameDirectJob(appliedUser);
+  if(!user) throw new NotFoundError("User not found!");
+  
+    const userId = req.user.id;
+    jobDetails.userId = userId;
+
+    const data = await jobService.createJob(jobDetails);
+
+    const payload:any = {
+      job: data._id,
+      user: user._id,
+      creator: userId,
+      directJobStatus: ProjectStatusEnum.pending,
+    };
+     const project = await projectService.createProject(payload);
+     data.applications = [];
+     data.applications!.push(String(project._id));
+     data.acceptedApplicationId = String(project._id);
+     data.save();
+     const { html, subject } = directJobApplicationMessage(user.userName, req.user.userName, String(data._id));
+     await sendEmail(user.email, subject, html); 
+
+  const nextMaintenanceDate = calculateNextMaintenanceDate(new Date(startDate), frequency);
+
+  const recurringPayload: IRecurringJob = {
+    jobId: data._id,
+    frequency,
+    startDate: new Date(startDate),
+    endDate: new Date(endDate),
+    nextMaintenanceDate,
+    childJobs: [],
+    reminderDates, 
+  };
+
+  const recurringJob = await jobService.createRecurringJob(recurringPayload);
+
+
+  return successResponse(res,StatusCodes.CREATED, recurringJob);
 
 });

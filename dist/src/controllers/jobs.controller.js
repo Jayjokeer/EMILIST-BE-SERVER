@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
+exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -65,6 +65,7 @@ const userService = __importStar(require("../services/auth.service"));
 const reviewService = __importStar(require("../services/review.service"));
 const subscriptionService = __importStar(require("../services/subscription.service"));
 const plan_enum_1 = require("../enums/plan.enum");
+const utility_1 = require("../utils/utility");
 exports.createJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const job = req.body;
     const { artisan } = req.body;
@@ -96,7 +97,7 @@ exports.createJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         data.save();
         const { html, subject } = (0, templates_1.directJobApplicationMessage)(user.userName, req.user.userName, String(data._id));
         yield (0, send_email_1.sendEmail)(user.email, subject, html);
-        (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
     else {
         const user = req.user._id;
@@ -771,4 +772,59 @@ exports.jobLeadsController = (0, error_handler_1.catchAsync)((req, res) => __awa
     }
     const data = yield jobService.fetchJobLeads(userId, page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.createRecurringJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { jobId, frequency, startDate, endDate, reminderDates } = req.body;
+    let jobDetails;
+    let appliedUser;
+    if (jobId) {
+        jobDetails = yield jobService.fetchJobByIdWithUserId(jobId);
+        if (!jobDetails) {
+            throw new error_1.NotFoundError("Job not found");
+        }
+        appliedUser = jobDetails.acceptedApplicationId._id;
+    }
+    else {
+        jobDetails = req.body;
+        appliedUser = req.body.artisan;
+        const files = req.files;
+        if (files && files.length > 0) {
+            const fileObjects = files.map((file) => ({
+                id: new mongoose_1.default.Types.ObjectId(),
+                url: file.path,
+            }));
+            jobDetails.jobFiles = fileObjects;
+        }
+    }
+    const user = yield authService.findUserByEmailOrUserNameDirectJob(appliedUser);
+    if (!user)
+        throw new error_1.NotFoundError("User not found!");
+    const userId = req.user.id;
+    jobDetails.userId = userId;
+    const data = yield jobService.createJob(jobDetails);
+    const payload = {
+        job: data._id,
+        user: user._id,
+        creator: userId,
+        directJobStatus: project_enum_1.ProjectStatusEnum.pending,
+    };
+    const project = yield projectService.createProject(payload);
+    data.applications = [];
+    data.applications.push(String(project._id));
+    data.acceptedApplicationId = String(project._id);
+    data.save();
+    const { html, subject } = (0, templates_1.directJobApplicationMessage)(user.userName, req.user.userName, String(data._id));
+    yield (0, send_email_1.sendEmail)(user.email, subject, html);
+    const nextMaintenanceDate = (0, utility_1.calculateNextMaintenanceDate)(new Date(startDate), frequency);
+    const recurringPayload = {
+        jobId: data._id,
+        frequency,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        nextMaintenanceDate,
+        childJobs: [],
+        reminderDates,
+    };
+    const recurringJob = yield jobService.createRecurringJob(recurringPayload);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, recurringJob);
 }));

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as jobController from "../controllers/jobs.controller";
-import { validateJob, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
+import { validateJob, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateRecurringJob, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
 import { userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload } from "../utils/image-upload";
 import * as paymentController from "../controllers/payment.controller";
@@ -38,6 +38,7 @@ router.route("/user-project-analytics").get(userAuth, jobController.projectAnaly
 router.route("/mute-job/:jobId").get(userAuth, jobController.muteJobController);
 router.route("/pay-for-job").post(userAuth, validatePaymentForJob, paymentController.payforJobController);
 router.route("/leads").get(userAuth, jobController.jobLeadsController);
+router.route("/create-recurring-job").post(userAuth,multipleUpload,validateRecurringJob,jobController.createRecurringJobController);
 
 export { router as JobsRoute };
 

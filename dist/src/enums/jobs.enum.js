@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RatingEnum = exports.QuoteStatusEnum = exports.JobStatusEnum = exports.MilestonePaymentStatus = exports.MilestoneEnum = exports.JobPeriod = exports.JobExpertLevel = exports.JobType = void 0;
+exports.FrequencyEnum = exports.RatingEnum = exports.QuoteStatusEnum = exports.JobStatusEnum = exports.MilestonePaymentStatus = exports.MilestoneEnum = exports.JobPeriod = exports.JobExpertLevel = exports.JobType = void 0;
 var JobType;
 (function (JobType) {
     JobType["biddable"] = "biddable";
@@ -58,3 +58,9 @@ var RatingEnum;
     RatingEnum["four"] = "4";
     RatingEnum["five"] = "5";
 })(RatingEnum || (exports.RatingEnum = RatingEnum = {}));
+var FrequencyEnum;
+(function (FrequencyEnum) {
+    FrequencyEnum["weekly"] = "Weekly";
+    FrequencyEnum["monthly"] = "Monthly";
+    FrequencyEnum["quarterly"] = "Quarterly ";
+})(FrequencyEnum || (exports.FrequencyEnum = FrequencyEnum = {}));

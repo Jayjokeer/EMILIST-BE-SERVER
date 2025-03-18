@@ -42,7 +42,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateVat = exports.calculatePercentage = exports.generateOTPData = exports.generateShortUUID = void 0;
+exports.calculateNextMaintenanceDate = exports.calculateVat = exports.calculatePercentage = exports.generateOTPData = exports.generateShortUUID = void 0;
 const uuid_1 = require("uuid");
 const otplib_1 = require("otplib");
 const config_1 = require("./config");
@@ -90,3 +90,21 @@ const calculateVat = (amount) => __awaiter(void 0, void 0, void 0, function* () 
     };
 });
 exports.calculateVat = calculateVat;
+const calculateNextMaintenanceDate = (startDate, frequency) => {
+    const nextDate = new Date(startDate);
+    switch (frequency) {
+        case 'Weekly':
+            nextDate.setDate(nextDate.getDate() + 7);
+            break;
+        case 'Monthly':
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            break;
+        case 'Quarterly':
+            nextDate.setMonth(nextDate.getMonth() + 3);
+            break;
+        default:
+            throw new Error(`Frequency ${frequency} not supported.`);
+    }
+    return nextDate;
+};
+exports.calculateNextMaintenanceDate = calculateNextMaintenanceDate;
