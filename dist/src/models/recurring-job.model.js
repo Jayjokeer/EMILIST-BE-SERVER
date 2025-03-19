@@ -40,7 +40,7 @@ const recurringJobSchema = new mongoose_1.Schema({
     frequency: { type: String, enum: jobs_enum_1.FrequencyEnum, required: true },
     nextMaintenanceDate: { type: Date, required: true },
     reminderDates: [{
-            day: { type: Date },
+            day: { type: String },
             reminded: { type: Boolean, default: false }
         }],
     startDate: { type: Date },

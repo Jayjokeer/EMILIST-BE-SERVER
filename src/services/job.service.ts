@@ -5,7 +5,7 @@ import Project from "../models/project.model";
 import { BadRequestError, NotFoundError } from "../errors/error";
 import { JobStatusEnum, JobType, MilestoneEnum } from "../enums/jobs.enum";
 import { ProjectStatusEnum } from "../enums/project.enum";
-import { add, format } from 'date-fns';
+import { add, format, startOfDay } from 'date-fns';
 import moment from "moment";
 import * as userService from './auth.service';
 import { PipelineStage } from 'mongoose';
@@ -767,15 +767,19 @@ export const createRecurringJob = async (payload: IRecurringJob)=>{
   return await RecurringJob.create(payload);
 };
 
-export const findRecurringJobsDue = async(today: Date) =>{
+export const findRecurringJobsDue = async (today: Date) => {
+  const normalizedToday = startOfDay(today); 
+
   return await RecurringJob.find({
-    nextMaintenanceDate: { $lte: today },
-    endDate: { $gte: today },
+    nextMaintenanceDate: { $lte: normalizedToday }, 
+    endDate: { $gte: normalizedToday }, 
   });
 };
 
-export const findRecurringJobsWithReminders = async(today: Date) =>{
+export const findRecurringJobsWithReminders = async (today: Date) => {
+  const formattedDate = format(today, 'yyyy-MM-dd'); 
+
   return RecurringJob.find({
-    reminderDates: { $elemMatch: { day: format(today, 'yyyy-MM-dd') } },
+    'reminderDates.day': formattedDate, 
   });
-}
+};

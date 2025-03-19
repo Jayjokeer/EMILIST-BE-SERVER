@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
+exports.generateReminderEmail = exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
 const config_1 = require("./config");
 const otpMessage = (name, otp) => {
     const subject = "Otp Email";
@@ -94,3 +94,10 @@ Date: ${date}.\n\n`;
     return { html, subject };
 };
 exports.sendPrivateExpertMessage = sendPrivateExpertMessage;
+const generateReminderEmail = (userName, date) => {
+    return {
+        subject: `Reminder: Your recurring job is scheduled for ${date}`,
+        html: `<p>Hello ${userName},</p><p>Your recurring job is scheduled for ${date}. Please review and ensure everything is ready.</p>`,
+    };
+};
+exports.generateReminderEmail = generateReminderEmail;

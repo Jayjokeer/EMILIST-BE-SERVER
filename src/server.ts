@@ -17,6 +17,8 @@ import morgan from "morgan";
 import "../src/utils/passport";
 import chatSocket from "./socket";
 import "./jobs/subscription.job";
+import "./jobs/planned-maintenance.job";
+
 const PORT = config.port || 7000;
 const app: Application = express();
 const server = http.createServer(app);

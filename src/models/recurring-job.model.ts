@@ -8,7 +8,7 @@ const recurringJobSchema = new Schema<IRecurringJob>({
   frequency: { type: String, enum: FrequencyEnum, required: true },
   nextMaintenanceDate: { type: Date, required: true },
   reminderDates: [{
-    day: { type: Date },
+    day: { type: String },
     reminded: {type: Boolean, default: false}
 }],
   startDate: { type: Date },                             

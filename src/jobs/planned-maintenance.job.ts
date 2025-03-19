@@ -8,15 +8,16 @@ import * as authService from '../services/auth.service';
 import { generateReminderEmail } from '../utils/templates';
 import { sendEmail } from '../utils/send_email';
 
+// cron.schedule('*/20 * * * * *', async () => {
 cron.schedule('0 0 * * *', async () => {
   console.log('Running daily recurring job check...');
 
   try {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
+    // today.setHours(0, 0, 0, 0);
+    console.log(today)
     const recurringJobs = await jobService.findRecurringJobsDue(today);
-
+    console.log(recurringJobs)
     for (const recurring of recurringJobs) {
       if (recurring.endDate < today) {
         console.log(`Skipping recurring job ${recurring._id} as endDate has passed.`);
@@ -30,8 +31,7 @@ cron.schedule('0 0 * * *', async () => {
       }
 
       const newJobData = { ...originalJob.toObject(), userId: originalJob.userId };
-    //   delete newJobData._id; 
-
+      delete (newJobData as any)._id;
       const newJob = await jobService.createJob(newJobData);
 
       const projectPayload = {

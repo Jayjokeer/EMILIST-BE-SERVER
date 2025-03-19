@@ -31,6 +31,7 @@ const morgan_1 = __importDefault(require("morgan"));
 require("../src/utils/passport");
 const socket_1 = __importDefault(require("./socket"));
 require("./jobs/subscription.job");
+require("./jobs/planned-maintenance.job");
 const PORT = config_1.config.port || 7000;
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
