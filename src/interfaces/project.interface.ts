@@ -13,7 +13,7 @@ import { ProjectStatusEnum } from '../enums/project.enum';
 //   }
   
   export interface IProject extends Document {
-    job: string;
+    job: any;
     user: string;
     creator: string;
     status?: ProjectStatusEnum;

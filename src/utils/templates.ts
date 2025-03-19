@@ -101,3 +101,10 @@ Date: ${date}.\n\n`;
 
 return {html, subject}
 };
+
+export const generateReminderEmail = (userName: string, date: string) =>{
+  return {
+    subject: `Reminder: Your recurring job is scheduled for ${date}`,
+    html: `<p>Hello ${userName},</p><p>Your recurring job is scheduled for ${date}. Please review and ensure everything is ready.</p>`,
+  };
+}
