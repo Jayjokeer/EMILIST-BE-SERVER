@@ -389,6 +389,14 @@ exports.updateJobPaymentStatusController = (0, error_handler_1.catchAsync)((req,
     milestone.paymentStatus = status;
     if (status === jobs_enum_1.MilestonePaymentStatus.paid) {
         milestone.datePaid = new Date();
+        milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.paid;
+        const transaction = yield transactionService.fetchSingleTransactionByMilestoneId(String(milestone._id));
+        if (!transaction) {
+            throw new error_1.NotFoundError('Transaction not found!');
+        }
+        transaction.status = transaction_enum_1.TransactionEnum.completed;
+        transaction.isSettled = true;
+        yield transaction.save();
     }
     yield job.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, job);

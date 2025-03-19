@@ -152,7 +152,7 @@ if(!project){
           balanceBefore: userWallet.balance,
           walletId: userWallet._id,
           currency: userWallet.currency,
-          status: TransactionEnum.completed,
+          status: TransactionEnum.processing,
           jobId,
           milestoneId,
           recieverId: project.user, 
@@ -239,7 +239,7 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
           },
         }
       );
-      transaction.status = TransactionEnum.completed;
+      transaction.status = TransactionEnum.processing;
       transaction.dateCompleted = new Date();
       await transaction.save();
       // job.markModified('milestones');

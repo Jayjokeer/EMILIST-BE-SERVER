@@ -21,6 +21,7 @@ var TransactionEnum;
     TransactionEnum["completed"] = "completed";
     TransactionEnum["declined"] = "declined";
     TransactionEnum["failed"] = "failed";
+    TransactionEnum["processing"] = "processing";
 })(TransactionEnum || (exports.TransactionEnum = TransactionEnum = {}));
 ;
 var TransactionServiceEnum;

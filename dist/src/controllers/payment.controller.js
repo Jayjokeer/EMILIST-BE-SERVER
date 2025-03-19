@@ -189,7 +189,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
             balanceBefore: userWallet.balance,
             walletId: userWallet._id,
             currency: userWallet.currency,
-            status: transaction_enum_1.TransactionEnum.completed,
+            status: transaction_enum_1.TransactionEnum.processing,
             jobId,
             milestoneId,
             recieverId: project.user,
@@ -266,7 +266,7 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
                     date: new Date(),
                 },
             });
-            transaction.status = transaction_enum_1.TransactionEnum.completed;
+            transaction.status = transaction_enum_1.TransactionEnum.processing;
             transaction.dateCompleted = new Date();
             yield transaction.save();
             // job.markModified('milestones');

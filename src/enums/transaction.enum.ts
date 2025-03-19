@@ -16,6 +16,7 @@ export enum TransactionEnum {
     completed = 'completed',
     declined = 'declined',
     failed = 'failed',
+    processing = 'processing',
 };
 
 export enum TransactionServiceEnum {

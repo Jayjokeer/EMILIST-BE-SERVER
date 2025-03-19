@@ -291,3 +291,7 @@ export const changeVatServiceAdmin  = async (vat: number)=>{
 export const getVat = async ()=>{
   return await AppConfig.findOne();
 };
+
+export const fetchSingleTransactionByMilestoneId = async (milestoneId: string) =>{
+  return await Transaction.findOne({milestoneId});
+};

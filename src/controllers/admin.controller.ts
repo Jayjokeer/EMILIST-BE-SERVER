@@ -385,7 +385,14 @@ export const updateJobPaymentStatusController = catchAsync( async (req: Request,
     milestone.paymentStatus = status;
     if(status === MilestonePaymentStatus.paid){
         milestone.datePaid =new Date();
-
+        milestone.paymentStatus = MilestonePaymentStatus.paid
+        const transaction = await transactionService.fetchSingleTransactionByMilestoneId(String(milestone._id));
+        if(!transaction){
+            throw new NotFoundError('Transaction not found!');
+        }
+        transaction.status = TransactionEnum.completed;
+        transaction.isSettled = true;
+        await transaction.save();
     }
     
     await job.save();

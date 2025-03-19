@@ -28,5 +28,6 @@ export interface ITransaction extends Document {
     vat?: number;
     createdAt: Date;
     durationType?: SubscriptionPeriodEnum;
+    isSettled: boolean;
   };
   
