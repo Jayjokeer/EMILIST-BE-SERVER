@@ -160,7 +160,7 @@ if(!project){
           // vat: vatAmount,
         };
       const transaction = await transactionService.createTransaction(transactionPayload);
-      userWallet.balance -= milestone.amount;
+      userWallet.balance -= jobAmount;
       await userWallet.save();
       transaction.balanceAfter = userWallet.balance;
       await jobService.updateMilestone(
@@ -198,7 +198,7 @@ if(!project){
           const transaction = await transactionService.createTransaction(transactionPayload);
           transaction.paymentService = PaymentServiceEnum.paystack;
           await transaction.save();
-          const paymentLink = await generatePaystackPaymentLink(transaction.reference, milestone.amount, req.user.email);
+          const paymentLink = await generatePaystackPaymentLink(transaction.reference, jobAmount, req.user.email);
           data = { paymentLink, transaction };
     }
   }
@@ -227,7 +227,7 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
     const verifyPayment = await  verifyPaystackPayment(reference);
     console.log(verifyPayment)
     if(verifyPayment === "success"){
-    const pay =  await jobService.updateMilestone(
+   await jobService.updateMilestone(
         transaction.jobId!,
         transaction.milestoneId!,
         {

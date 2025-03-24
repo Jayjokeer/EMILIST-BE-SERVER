@@ -197,7 +197,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
             // vat: vatAmount,
         };
         const transaction = yield transactionService.createTransaction(transactionPayload);
-        userWallet.balance -= milestone.amount;
+        userWallet.balance -= jobAmount;
         yield userWallet.save();
         transaction.balanceAfter = userWallet.balance;
         yield jobService.updateMilestone(transaction.jobId, transaction.milestoneId, {
@@ -232,7 +232,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
             const transaction = yield transactionService.createTransaction(transactionPayload);
             transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
             yield transaction.save();
-            const paymentLink = yield (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, milestone.amount, req.user.email);
+            const paymentLink = yield (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, jobAmount, req.user.email);
             data = { paymentLink, transaction };
         }
     }
@@ -258,7 +258,7 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
         const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
         console.log(verifyPayment);
         if (verifyPayment === "success") {
-            const pay = yield jobService.updateMilestone(transaction.jobId, transaction.milestoneId, {
+            yield jobService.updateMilestone(transaction.jobId, transaction.milestoneId, {
                 paymentStatus: jobs_enum_1.MilestonePaymentStatus.processing,
                 paymentInfo: {
                     amountPaid: transaction.amount,
