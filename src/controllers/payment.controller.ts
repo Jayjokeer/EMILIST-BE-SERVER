@@ -140,6 +140,8 @@ if(!project){
 
     if (paymentMethod === PaymentMethodEnum.wallet) {
       const userWallet = await walletService.findUserWalletByCurrency(userId, currency);
+      console.log(userWallet)
+
       if (!userWallet || userWallet.balance < milestone.amount) {
          throw new BadRequestError("Insufficient wallet balance" );
       }
@@ -160,7 +162,7 @@ if(!project){
           // vat: vatAmount,
         };
       const transaction = await transactionService.createTransaction(transactionPayload);
-      userWallet.balance -= jobAmount;
+      userWallet.balance -= Math.ceil(jobAmount);
       await userWallet.save();
       transaction.balanceAfter = userWallet.balance;
       await jobService.updateMilestone(
@@ -170,19 +172,19 @@ if(!project){
           paymentStatus: MilestonePaymentStatus.processing,
           paymentInfo: {
             amountPaid: transaction.amount,
-            paymentMethod: PaymentMethodEnum.card,
+            paymentMethod: PaymentMethodEnum.wallet,
             date: new Date(),
           },
         }
       );
-      job.markModified('milestones');
+      // job.markModified('milestones');
       await job.save();
-       data = "Payment successful"
+       data = "Payment successful";
     } else if (paymentMethod === PaymentMethodEnum.card) {
       if (paymentMethod === PaymentMethodEnum.card && currency === WalletEnum.NGN ) {
           const transactionPayload = {
               userId,
-              amount: jobAmount,
+              amount: Math.ceil(jobAmount),
               type: TransactionType.DEBIT,
               description: `Job payment via card`,
               paymentMethod: paymentMethod,
@@ -225,7 +227,6 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
     }
   
     const verifyPayment = await  verifyPaystackPayment(reference);
-    console.log(verifyPayment)
     if(verifyPayment === "success"){
    await jobService.updateMilestone(
         transaction.jobId!,

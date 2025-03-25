@@ -177,6 +177,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
     // const {vatAmount,totalAmount } = await calculateVat(milestone.amount);
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
         const userWallet = yield walletService.findUserWalletByCurrency(userId, currency);
+        console.log(userWallet);
         if (!userWallet || userWallet.balance < milestone.amount) {
             throw new error_1.BadRequestError("Insufficient wallet balance");
         }
@@ -197,18 +198,18 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
             // vat: vatAmount,
         };
         const transaction = yield transactionService.createTransaction(transactionPayload);
-        userWallet.balance -= jobAmount;
+        userWallet.balance -= Math.ceil(jobAmount);
         yield userWallet.save();
         transaction.balanceAfter = userWallet.balance;
         yield jobService.updateMilestone(transaction.jobId, transaction.milestoneId, {
             paymentStatus: jobs_enum_1.MilestonePaymentStatus.processing,
             paymentInfo: {
                 amountPaid: transaction.amount,
-                paymentMethod: transaction_enum_1.PaymentMethodEnum.card,
+                paymentMethod: transaction_enum_1.PaymentMethodEnum.wallet,
                 date: new Date(),
             },
         });
-        job.markModified('milestones');
+        // job.markModified('milestones');
         yield job.save();
         data = "Payment successful";
     }
@@ -216,7 +217,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency === transaction_enum_1.WalletEnum.NGN) {
             const transactionPayload = {
                 userId,
-                amount: jobAmount,
+                amount: Math.ceil(jobAmount),
                 type: transaction_enum_1.TransactionType.DEBIT,
                 description: `Job payment via card`,
                 paymentMethod: paymentMethod,
@@ -256,7 +257,6 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
             throw new error_1.NotFoundError("No milestone");
         }
         const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
-        console.log(verifyPayment);
         if (verifyPayment === "success") {
             yield jobService.updateMilestone(transaction.jobId, transaction.milestoneId, {
                 paymentStatus: jobs_enum_1.MilestonePaymentStatus.processing,
