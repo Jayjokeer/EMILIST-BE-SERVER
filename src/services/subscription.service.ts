@@ -41,3 +41,9 @@ export const fetchCostPerClick = async ()=>{
 export const createPromotion = async (data: any)=>{
     return await Promotion.create(data);
 };
+export const fetchAllUserSubscriptionsAdmin = async(limit: number, page: number, userId: string)=>{
+    const skip = (page - 1) * limit;
+    const subscriptions = await Subscription.find({userId: userId}).skip(skip).limit(limit);
+    const totalSubscriptions = await Subscription.countDocuments({userId: userId});
+    return {subscriptions ,  totalSubscriptions};
+};

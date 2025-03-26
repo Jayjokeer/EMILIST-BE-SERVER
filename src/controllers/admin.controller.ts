@@ -454,3 +454,17 @@ export const fetchUserAccountDetailsController = catchAsync( async (req: Request
     }
     return successResponse(res,StatusCodes.OK, data);
 });
+
+export const fetchUserSubscriptionsController = catchAsync(async(req: JwtPayload, res: Response)=>{
+    const{limit, page} = req.query;
+    const {userId} = req.params;
+
+    const {subscriptions ,  totalSubscriptions} = await subscriptionService.fetchAllUserSubscriptionsAdmin(limit, page, userId);
+    const data = {
+        subscriptions,
+        totalSubscriptions,
+        page: Number(page),
+        totalPages: Math.ceil(totalSubscriptions / limit),
+    };
+   return successResponse(res,StatusCodes.OK, data);
+});
