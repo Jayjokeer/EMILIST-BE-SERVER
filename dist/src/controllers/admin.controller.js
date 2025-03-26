@@ -449,7 +449,7 @@ exports.fetchUserSubscriptionsController = (0, error_handler_1.catchAsync)((req,
     const data = {
         subscriptions,
         totalSubscriptions,
-        page,
+        page: Number(page),
         totalPages: Math.ceil(totalSubscriptions / limit),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
