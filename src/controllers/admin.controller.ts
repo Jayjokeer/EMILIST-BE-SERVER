@@ -111,6 +111,7 @@ export const fetchUserDetails = catchAsync(async (req: JwtPayload, res: Response
         level: user.level,
         uniqueId: user.uniqueId,
         fullName: user.fullName,
+        status: user.status,
     };
     if(q ==="userDetails"){
     const payload = {

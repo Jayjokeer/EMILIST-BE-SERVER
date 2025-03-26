@@ -142,6 +142,7 @@ exports.fetchUserDetails = (0, error_handler_1.catchAsync)((req, res) => __await
         level: user.level,
         uniqueId: user.uniqueId,
         fullName: user.fullName,
+        status: user.status,
     };
     if (q === "userDetails") {
         const payload = {
