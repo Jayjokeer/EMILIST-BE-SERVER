@@ -87,7 +87,13 @@ export const suspendUserAdminController = catchAsync(async (req: JwtPayload, res
     if(!user){
         throw new NotFoundError("User not found");
     }
-    user.status =UserStatus.suspended;
+    if(user.status === UserStatus.suspended){
+        user.status = UserStatus.active;
+
+    }else {
+        user.status = UserStatus.suspended;
+    }
+    
     await user.save();
     return successResponse(res, StatusCodes.CREATED, 'User suspended successfully');
 });

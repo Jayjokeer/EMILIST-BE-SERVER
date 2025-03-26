@@ -120,7 +120,12 @@ exports.suspendUserAdminController = (0, error_handler_1.catchAsync)((req, res) 
     if (!user) {
         throw new error_1.NotFoundError("User not found");
     }
-    user.status = user_enums_1.UserStatus.suspended;
+    if (user.status === user_enums_1.UserStatus.suspended) {
+        user.status = user_enums_1.UserStatus.active;
+    }
+    else {
+        user.status = user_enums_1.UserStatus.suspended;
+    }
     yield user.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, 'User suspended successfully');
 }));
