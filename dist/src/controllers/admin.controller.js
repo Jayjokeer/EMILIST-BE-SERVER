@@ -454,3 +454,4 @@ exports.fetchUserSubscriptionsController = (0, error_handler_1.catchAsync)((req,
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
+
