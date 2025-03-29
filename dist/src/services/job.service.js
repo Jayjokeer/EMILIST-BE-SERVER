@@ -263,10 +263,11 @@ const fetchUserJobApplications = (userId_1, skip_1, limit_1, status_1, page_1, .
         .limit(limit)
         .sort({ createdAt: -1 });
     const applicationsWithDueDates = yield Promise.all(userApplications.map((job) => __awaiter(void 0, void 0, void 0, function* () {
+        var _a;
         if (job.status !== jobs_enum_1.JobStatusEnum.active && job.status !== jobs_enum_1.JobStatusEnum.paused) {
             return job.toObject();
         }
-        let accumulatedTime = job.startDate.getTime();
+        let accumulatedTime = (_a = job.startDate) === null || _a === void 0 ? void 0 : _a.getTime();
         let milestoneDueDate = null;
         const totalMilestones = job.milestones.length;
         let completedMilestones = 0;

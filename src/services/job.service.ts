@@ -281,7 +281,7 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
         if (job.status !== JobStatusEnum.active && job.status !== JobStatusEnum.paused) {
           return job.toObject();
         }
-        let accumulatedTime = job.startDate!.getTime();
+        let accumulatedTime = job.startDate?.getTime();
         let milestoneDueDate: any = null;
         const totalMilestones = job.milestones.length;
         let completedMilestones = 0;
@@ -290,18 +290,18 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
           const timeMultiplier = milestone.timeFrame.period === 'days' ? 86400000 : 604800000;
           const milestoneDuration = milestone.timeFrame.number * timeMultiplier;
   
-          accumulatedTime += milestoneDuration;
+          accumulatedTime! += milestoneDuration;
           
           if (milestone.status ===  MilestoneEnum.active || milestone.status ===  MilestoneEnum.completed) {
             completedMilestones += 1;
           }
           if ((milestone.status === MilestoneEnum.active || milestone.status === MilestoneEnum.paused) && !milestoneDueDate) {
-            milestoneDueDate = new Date(accumulatedTime);
+            milestoneDueDate = new Date(accumulatedTime!);
           }
         });
         const milestoneProgress = `${completedMilestones}/${totalMilestones}`;
 
-        const overallDueDate = new Date(accumulatedTime);
+        const overallDueDate = new Date(accumulatedTime!);
   
         return {
           ...job.toObject(),
