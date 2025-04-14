@@ -42,17 +42,18 @@ const authController = __importStar(require("../controllers/auth.controller"));
 const current_user_1 = require("../middlewares/current-user");
 const image_upload_1 = require("../utils/image-upload");
 const passport_1 = __importDefault(require("passport"));
+const auth_validation_1 = require("../validations/auth.validation");
 const router = (0, express_1.Router)();
 exports.AuthRoute = router;
 router.route("/").get((req, res) => {
     res.json({ message: "Welcome to Emilist" });
 });
 //unprotected routes
-router.route("/sign-up").post(authController.registerUserController);
-router.route("/login").post(authController.loginController);
-router.route("/verify-email").post(authController.verifyEmailController);
-router.route("/forgot-password").post(authController.forgetPasswordController);
-router.route("/reset-password").post(authController.resetPasswordController);
+router.route("/sign-up").post(auth_validation_1.validateRegisterUser, authController.registerUserController);
+router.route("/login").post(auth_validation_1.validateLoginUser, authController.loginController);
+router.route("/verify-email").post(auth_validation_1.validateVerifyEmail, authController.verifyEmailController);
+router.route("/forgot-password").post(auth_validation_1.validateForgetPassword, authController.forgetPasswordController);
+router.route("/reset-password").post(auth_validation_1.validateResetPassword, authController.resetPasswordController);
 //file uploads
 router.route("/upload-image").post(image_upload_1.singleUpload, authController.uploadImage);
 router.route("/upload-files").post(image_upload_1.multipleUpload, authController.uploadMultipleFiles);
@@ -67,11 +68,11 @@ router.route("/user-details/:userId").get(authController.getUserDetailsControlle
 //Protected routes
 router.route("/log-out").get(current_user_1.userAuth, authController.logoutController);
 router.route("/update-profile").patch(current_user_1.userAuth, image_upload_1.singleUpload, authController.updateUserController);
-router.route("/change-password").patch(current_user_1.userAuth, authController.changePasswordController);
+router.route("/change-password").patch(current_user_1.userAuth, auth_validation_1.validateChangePassword, authController.changePasswordController);
 router.route("/current-user").get(current_user_1.userAuth, authController.currentUserController);
 router.route("/deactivate-user").patch(current_user_1.userAuth, authController.deactivateUserController);
 router.route("/get-specific-user").get(current_user_1.userAuth, authController.findUserController);
 router.route("/invite-user").get(current_user_1.userAuth, authController.inviteUserController);
 router.route("/request-verificaton").get(current_user_1.userAuth, authController.requestVerificationController);
 router.route("/insights").get(current_user_1.userAuth, authController.insightsController);
-router.route("/update-account-details").patch(current_user_1.userAuth, authController.updateAccountDetailsController);
+router.route("/update-account-details").patch(current_user_1.userAuth, auth_validation_1.validateUpdateAccountDetails, authController.updateAccountDetailsController);
