@@ -75,7 +75,7 @@ export const loginController = catchAsync(async (req: Request, res: Response) =>
     password
   } = req.body;
 
-  const foundUser = await authService.findUserByEmail(email);
+  const foundUser = await authService.findUserByEmail(email.toLowerCase());
   if(!foundUser) throw new NotFoundError("Invalid credentials!");
   if(!foundUser.password) throw new NotFoundError("Invalid credentials!");
   const pwdCompare = await comparePassword(password, foundUser.password);
