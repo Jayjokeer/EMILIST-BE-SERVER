@@ -45,7 +45,8 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
       email: email.toLowerCase(),
       password: encryptPwd,
       uniqueId:generateShortUUID()
-    }
+    };
+    
     const data = await authService.createUser(user);
     const userId = String(data._id);
     const {otp, otpCreatedAt, otpExpiryTime} = await generateOTPData(userId);
@@ -78,6 +79,7 @@ export const loginController = catchAsync(async (req: Request, res: Response) =>
   const foundUser = await authService.findUserByEmail(email.toLowerCase());
   if(!foundUser) throw new NotFoundError("Invalid credentials!");
   if(!foundUser.password) throw new NotFoundError("Invalid credentials!");
+
   const pwdCompare = await comparePassword(password, foundUser.password);
   if(!pwdCompare) throw new NotFoundError("Invalid credentials!");
 
