@@ -236,92 +236,114 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
    export const fetchJobByUserIdAndStatus = async ( userId: string, status: JobStatusEnum ) =>{
     return await Jobs.find({userId: userId, status: status});
    };
-   export const fetchUserJobApplications = async (
-    userId: string,
-    skip: number,
-    limit: number,
-    status: JobStatusEnum | null,
-    page: number,
-    search: string | null = null,
-    filters: { title?: string, location?: string, category?: string, service?: string } = {}
-  ) => {
-    const userProjects = await Project.find({ user: userId }).select('_id');
-    const projectIds = userProjects.map((project) => project._id);
-  
-    let query: any = { applications: { $in: projectIds } };
-    if (status) {
-      query.status = status;
-      if (status === JobStatusEnum.active) {
-        query = { acceptedApplicationId: { $in: projectIds } };
-        query.status = status;
-      }
-    }
-    if (search) {
-      const searchRegex = new RegExp(search, 'i');
-      const jobSchemaPaths = Jobs.schema.paths;
-      const stringFields = Object.keys(jobSchemaPaths).filter(
-        (field) => jobSchemaPaths[field].instance === 'String'
-      );
-  
-      query.$or = stringFields.map((field) => ({ [field]: { $regex: searchRegex } }));
-    } else {
-      if (filters.title) query.title = { $regex: new RegExp(filters.title, 'i') };
-      if (filters.location) query.location = { $regex: new RegExp(filters.location, 'i') };
-      if (filters.category) query.category = { $regex: new RegExp(filters.category, 'i') };
-      if (filters.service) query.service = { $regex: new RegExp(filters.service, 'i') };
-    }
-    const userApplications = await Jobs.find(query)
-      .populate('applications', 'title description status')
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
-  
-    const applicationsWithDueDates = await Promise.all(
-      userApplications.map(async (job) => {
-        if (job.status !== JobStatusEnum.active && job.status !== JobStatusEnum.paused) {
-          return job.toObject();
-        }
-        let accumulatedTime = job.startDate?.getTime();
-        let milestoneDueDate: any = null;
-        const totalMilestones = job.milestones.length;
-        let completedMilestones = 0;
+export const fetchUserJobApplications = async (
+  userId: string,
+  skip: number,
+  limit: number,
+  status: any,
+  page: number,
+  search: string | null = null,
+  filters: { title?: string, location?: string, category?: string, service?: string } = {}
+) => {
+  const userProjects = await Project.find({ user: userId }).select('_id');
+  const projectIds = userProjects.map((project) => project._id);
 
-        job.milestones.forEach((milestone: any) => {
-          const timeMultiplier = milestone.timeFrame.period === 'days' ? 86400000 : 604800000;
-          const milestoneDuration = milestone.timeFrame.number * timeMultiplier;
-  
-          accumulatedTime! += milestoneDuration;
-          
-          if (milestone.status ===  MilestoneEnum.active || milestone.status ===  MilestoneEnum.completed) {
-            completedMilestones += 1;
-          }
-          if ((milestone.status === MilestoneEnum.active || milestone.status === MilestoneEnum.paused) && !milestoneDueDate) {
-            milestoneDueDate = new Date(accumulatedTime!);
-          }
-        });
-        const milestoneProgress = `${completedMilestones}/${totalMilestones}`;
+  let query: any = { applications: { $in: projectIds } };
 
-        const overallDueDate = new Date(accumulatedTime!);
-  
-        return {
-          ...job.toObject(),
-          milestoneDueDate,
-          overallDueDate,
-          milestoneProgress,
-        };
-      })
+  if (status) {
+    query.status = status;
+    if (status === JobStatusEnum.active) {
+      query = { acceptedApplicationId: { $in: projectIds }, status };
+    }
+  }
+
+  if (search) {
+    const searchRegex = new RegExp(search, 'i');
+    const jobSchemaPaths = Jobs.schema.paths;
+    const stringFields = Object.keys(jobSchemaPaths).filter(
+      (field) => jobSchemaPaths[field].instance === 'String'
     );
-  
-    const totalApplications = await Jobs.countDocuments(query);
-  
-    return {
-      total: totalApplications,
-      page,
-      limit,
-      applications: applicationsWithDueDates,
-    };
+
+    query.$or = stringFields.map((field) => ({ [field]: { $regex: searchRegex } }));
+  } else {
+    if (filters.title) query.title = { $regex: new RegExp(filters.title, 'i') };
+    if (filters.location) query.location = { $regex: new RegExp(filters.location, 'i') };
+    if (filters.category) query.category = { $regex: new RegExp(filters.category, 'i') };
+    if (filters.service) query.service = { $regex: new RegExp(filters.service, 'i') };
+  }
+
+  const userApplications = await Jobs.find(query)
+    .populate('applications', 'title description status')
+    .sort({ createdAt: -1 });
+
+  const applicationsWithDueDates = await Promise.all(
+    userApplications.map(async (job) => {
+      if (job.status !== JobStatusEnum.active && job.status !== JobStatusEnum.paused) {
+        return job.toObject();
+      }
+
+      let accumulatedTime = job.startDate?.getTime();
+      let milestoneDueDate: Date | null = null;
+      const totalMilestones = job.milestones.length;
+      let completedMilestones = 0;
+
+      job.milestones.forEach((milestone: any) => {
+        const timeMultiplier =
+          milestone.timeFrame.period === 'days' ? 86400000 : 604800000; 
+        const milestoneDuration = milestone.timeFrame.number * timeMultiplier;
+
+        accumulatedTime! += milestoneDuration;
+
+        if (
+          milestone.status === MilestoneEnum.active ||
+          milestone.status === MilestoneEnum.completed
+        ) {
+          completedMilestones += 1;
+        }
+
+        if (
+          (milestone.status === MilestoneEnum.active ||
+            milestone.status === MilestoneEnum.paused) &&
+          !milestoneDueDate
+        ) {
+          milestoneDueDate = new Date(accumulatedTime!);
+        }
+      });
+
+      const milestoneProgress = `${completedMilestones}/${totalMilestones}`;
+      const overallDueDate = new Date(accumulatedTime!);
+
+      return {
+        ...job.toObject(),
+        milestoneDueDate,
+        overallDueDate,
+        milestoneProgress,
+      };
+    })
+  );
+
+  const filteredApplications = applicationsWithDueDates.filter((job: any) => {
+    if (status === JobStatusEnum.active) {
+      return job.overallDueDate > new Date();
+    }
+    if (status === 'overdue') {
+      return job.overallDueDate <= new Date();
+    }
+    return true; 
+  });
+
+  const totalApplications = filteredApplications.length;
+
+  const paginatedApplications = filteredApplications.slice(skip, skip + limit);
+
+  return {
+    total: totalApplications,
+    page,
+    limit,
+    applications: paginatedApplications,
   };
-  
+};
+
   
   export const fetchUserApplications = async(userId: string, skip: number, limit: number, status: ProjectStatusEnum, page: number)=>{
   const userProjects = await Project.find({ user: userId ,     
@@ -781,5 +803,12 @@ export const findRecurringJobsWithReminders = async (today: Date) => {
 
   return RecurringJob.find({
     'reminderDates.day': formattedDate, 
+  });
+};
+
+export const activePendingJobs = async () => {
+  return await Jobs.find({
+    status: { $in: ["active", "paused"] },
+    isClosed: false,
   });
 };

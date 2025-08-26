@@ -109,7 +109,7 @@ exports.registerUserController = (0, error_handler_1.catchAsync)((req, res) => _
 }));
 exports.loginController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, password } = req.body;
-    const foundUser = yield authService.findUserByEmail(email);
+    const foundUser = yield authService.findUserByEmail(email.toLowerCase());
     if (!foundUser)
         throw new error_1.NotFoundError("Invalid credentials!");
     if (!foundUser.password)

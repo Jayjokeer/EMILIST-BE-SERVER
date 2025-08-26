@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
+exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -237,8 +237,7 @@ const fetchUserJobApplications = (userId_1, skip_1, limit_1, status_1, page_1, .
     if (status) {
         query.status = status;
         if (status === jobs_enum_1.JobStatusEnum.active) {
-            query = { acceptedApplicationId: { $in: projectIds } };
-            query.status = status;
+            query = { acceptedApplicationId: { $in: projectIds }, status };
         }
     }
     if (search) {
@@ -259,8 +258,6 @@ const fetchUserJobApplications = (userId_1, skip_1, limit_1, status_1, page_1, .
     }
     const userApplications = yield jobs_model_1.default.find(query)
         .populate('applications', 'title description status')
-        .skip(skip)
-        .limit(limit)
         .sort({ createdAt: -1 });
     const applicationsWithDueDates = yield Promise.all(userApplications.map((job) => __awaiter(void 0, void 0, void 0, function* () {
         var _a;
@@ -275,10 +272,13 @@ const fetchUserJobApplications = (userId_1, skip_1, limit_1, status_1, page_1, .
             const timeMultiplier = milestone.timeFrame.period === 'days' ? 86400000 : 604800000;
             const milestoneDuration = milestone.timeFrame.number * timeMultiplier;
             accumulatedTime += milestoneDuration;
-            if (milestone.status === jobs_enum_1.MilestoneEnum.active || milestone.status === jobs_enum_1.MilestoneEnum.completed) {
+            if (milestone.status === jobs_enum_1.MilestoneEnum.active ||
+                milestone.status === jobs_enum_1.MilestoneEnum.completed) {
                 completedMilestones += 1;
             }
-            if ((milestone.status === jobs_enum_1.MilestoneEnum.active || milestone.status === jobs_enum_1.MilestoneEnum.paused) && !milestoneDueDate) {
+            if ((milestone.status === jobs_enum_1.MilestoneEnum.active ||
+                milestone.status === jobs_enum_1.MilestoneEnum.paused) &&
+                !milestoneDueDate) {
                 milestoneDueDate = new Date(accumulatedTime);
             }
         });
@@ -288,12 +288,22 @@ const fetchUserJobApplications = (userId_1, skip_1, limit_1, status_1, page_1, .
             overallDueDate,
             milestoneProgress });
     })));
-    const totalApplications = yield jobs_model_1.default.countDocuments(query);
+    const filteredApplications = applicationsWithDueDates.filter((job) => {
+        if (status === jobs_enum_1.JobStatusEnum.active) {
+            return job.overallDueDate > new Date();
+        }
+        if (status === 'overdue') {
+            return job.overallDueDate <= new Date();
+        }
+        return true;
+    });
+    const totalApplications = filteredApplications.length;
+    const paginatedApplications = filteredApplications.slice(skip, skip + limit);
     return {
         total: totalApplications,
         page,
         limit,
-        applications: applicationsWithDueDates,
+        applications: paginatedApplications,
     };
 });
 exports.fetchUserJobApplications = fetchUserJobApplications;
@@ -705,3 +715,10 @@ const findRecurringJobsWithReminders = (today) => __awaiter(void 0, void 0, void
     });
 });
 exports.findRecurringJobsWithReminders = findRecurringJobsWithReminders;
+const activePendingJobs = () => __awaiter(void 0, void 0, void 0, function* () {
+    return yield jobs_model_1.default.find({
+        status: { $in: ["active", "paused"] },
+        isClosed: false,
+    });
+});
+exports.activePendingJobs = activePendingJobs;

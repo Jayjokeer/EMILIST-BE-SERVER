@@ -514,7 +514,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const page = parseInt(req.query.page as string, 10) || 1;
     const limit = parseInt(req.query.limit as string, 10) || 10;
     const skip = (page - 1) * limit;
-    const statusEnum = status ? (status as JobStatusEnum) : null;
+    const statusEnum = status ? status : null;
     const filters = {
       title, 
       location, 
