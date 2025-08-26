@@ -487,7 +487,7 @@ export const fetchJobCount = async( userId: string)=>{
 
 
 };
-export const fetchProjectCounts = async(userId: string)=>{
+export const fetchProjectCounts = async (userId: string) => {
   const userProjects = await Project.find({ user: userId });
 
   let totalPendingProjects = 0;
@@ -497,61 +497,66 @@ export const fetchProjectCounts = async(userId: string)=>{
   const currentDate = new Date();
   const userProjectIds = userProjects.map((project) => project._id);
 
-
-  const totalActiveProjects = await Jobs.countDocuments({
+  const totalActiveProjectsRaw = await Jobs.find({
     acceptedApplicationId: { $in: userProjectIds },
     status: JobStatusEnum.active,
   });
+
   const totalPausedProjects = await Jobs.countDocuments({
     acceptedApplicationId: { $in: userProjectIds },
     status: JobStatusEnum.paused,
   });
+
   const totalCompletedProjects = await Jobs.countDocuments({
     acceptedApplicationId: { $in: userProjectIds },
     status: JobStatusEnum.complete,
   });
+
   userProjects.forEach((project) => {
-
-   if (project.status == ProjectStatusEnum.pending) {
-        totalPendingProjects++;
+    if (project.status == ProjectStatusEnum.pending) {
+      totalPendingProjects++;
     }
   });
-  const jobs = await Jobs.find({
-    acceptedApplicationId: { $in: userProjectIds },
-    status: JobStatusEnum.active,
-  });
 
+  let totalActiveProjects = 0;
 
-  jobs.forEach((job) => {
-    let isProjectDue = false; 
+  for (const job of totalActiveProjectsRaw) {
+    if (!job.startDate || !job.milestones?.length) {
+      totalActiveProjects++;
+      continue;
+    }
 
-    job.milestones.forEach((milestone: any) => {
-      if (milestone.status === MilestoneEnum.overdue) {
-        totalOverdueProjects++;
-      } else if (milestone.status === MilestoneEnum.active || milestone.status === MilestoneEnum.pending) {
-        const milestoneDueDate = new Date(
-          (job.startDate?.getTime() ?? currentDate.getTime()) +
-          (milestone.timeFrame.number ?? 0) * 24 * 60 * 60 * 1000 // assuming timeFrame is in days
-        );
+    let accumulatedTime = job.startDate.getTime();
 
-        if (milestoneDueDate <= currentDate) {
-          isProjectDue = true;
-        }
+    for (const milestone of job.milestones) {
+      const timeMultiplier =
+        milestone.timeFrame?.period === "days" ? 86400000 : 604800000; 
+      const milestoneDuration = (milestone.timeFrame?.number ?? 0) * timeMultiplier;
+      accumulatedTime += milestoneDuration;
+    }
+
+    const overallDueDate = new Date(accumulatedTime);
+
+    if (overallDueDate <= currentDate) {
+      totalOverdueProjects++;
+    } else {
+      totalActiveProjects++;
+      const threeDaysAhead = new Date(currentDate.getTime() + 3 * 86400000);
+      if (overallDueDate <= threeDaysAhead) {
+        totalDueProjects++;
       }
-    });
-
-    if (isProjectDue) {
-      totalDueProjects++;
     }
-  });
+  }
+
   return {
     totalPendingProjects,
     totalActiveProjects,
     totalPausedProjects,
     totalCompletedProjects,
     totalOverdueProjects,
+    totalDueProjects,
   };
-}
+};
 export const projectAnalytics = async (year: number = moment().year(), month?: number, startDate?: string, endDate?: string, userId?: string) => {
   let start, end;
 

@@ -436,13 +436,14 @@ const fetchJobCount = (userId) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.fetchJobCount = fetchJobCount;
 const fetchProjectCounts = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d;
     const userProjects = yield project_model_1.default.find({ user: userId });
     let totalPendingProjects = 0;
     let totalOverdueProjects = 0;
     let totalDueProjects = 0;
     const currentDate = new Date();
     const userProjectIds = userProjects.map((project) => project._id);
-    const totalActiveProjects = yield jobs_model_1.default.countDocuments({
+    const totalActiveProjectsRaw = yield jobs_model_1.default.find({
         acceptedApplicationId: { $in: userProjectIds },
         status: jobs_enum_1.JobStatusEnum.active,
     });
@@ -459,36 +460,37 @@ const fetchProjectCounts = (userId) => __awaiter(void 0, void 0, void 0, functio
             totalPendingProjects++;
         }
     });
-    const jobs = yield jobs_model_1.default.find({
-        acceptedApplicationId: { $in: userProjectIds },
-        status: jobs_enum_1.JobStatusEnum.active,
-    });
-    jobs.forEach((job) => {
-        let isProjectDue = false;
-        job.milestones.forEach((milestone) => {
-            var _a, _b, _c;
-            if (milestone.status === jobs_enum_1.MilestoneEnum.overdue) {
-                totalOverdueProjects++;
-            }
-            else if (milestone.status === jobs_enum_1.MilestoneEnum.active || milestone.status === jobs_enum_1.MilestoneEnum.pending) {
-                const milestoneDueDate = new Date(((_b = (_a = job.startDate) === null || _a === void 0 ? void 0 : _a.getTime()) !== null && _b !== void 0 ? _b : currentDate.getTime()) +
-                    ((_c = milestone.timeFrame.number) !== null && _c !== void 0 ? _c : 0) * 24 * 60 * 60 * 1000 // assuming timeFrame is in days
-                );
-                if (milestoneDueDate <= currentDate) {
-                    isProjectDue = true;
-                }
-            }
-        });
-        if (isProjectDue) {
-            totalDueProjects++;
+    let totalActiveProjects = 0;
+    for (const job of totalActiveProjectsRaw) {
+        if (!job.startDate || !((_a = job.milestones) === null || _a === void 0 ? void 0 : _a.length)) {
+            totalActiveProjects++;
+            continue;
         }
-    });
+        let accumulatedTime = job.startDate.getTime();
+        for (const milestone of job.milestones) {
+            const timeMultiplier = ((_b = milestone.timeFrame) === null || _b === void 0 ? void 0 : _b.period) === "days" ? 86400000 : 604800000;
+            const milestoneDuration = ((_d = (_c = milestone.timeFrame) === null || _c === void 0 ? void 0 : _c.number) !== null && _d !== void 0 ? _d : 0) * timeMultiplier;
+            accumulatedTime += milestoneDuration;
+        }
+        const overallDueDate = new Date(accumulatedTime);
+        if (overallDueDate <= currentDate) {
+            totalOverdueProjects++;
+        }
+        else {
+            totalActiveProjects++;
+            const threeDaysAhead = new Date(currentDate.getTime() + 3 * 86400000);
+            if (overallDueDate <= threeDaysAhead) {
+                totalDueProjects++;
+            }
+        }
+    }
     return {
         totalPendingProjects,
         totalActiveProjects,
         totalPausedProjects,
         totalCompletedProjects,
         totalOverdueProjects,
+        totalDueProjects,
     };
 });
 exports.fetchProjectCounts = fetchProjectCounts;
