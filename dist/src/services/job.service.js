@@ -236,8 +236,8 @@ const fetchUserJobApplications = (userId_1, skip_1, limit_1, status_1, page_1, .
     let query = { applications: { $in: projectIds } };
     if (status) {
         query.status = status;
-        if (status === jobs_enum_1.JobStatusEnum.active) {
-            query = { acceptedApplicationId: { $in: projectIds }, status };
+        if (status === jobs_enum_1.JobStatusEnum.active || status === 'overdue') {
+            query = { acceptedApplicationId: { $in: projectIds }, status: jobs_enum_1.JobStatusEnum.active };
         }
     }
     if (search) {

@@ -252,8 +252,8 @@ export const fetchUserJobApplications = async (
 
   if (status) {
     query.status = status;
-    if (status === JobStatusEnum.active) {
-      query = { acceptedApplicationId: { $in: projectIds }, status };
+    if (status === JobStatusEnum.active || status === 'overdue') {
+      query = { acceptedApplicationId: { $in: projectIds }, status: JobStatusEnum.active };
     }
   }
 
