@@ -59,101 +59,115 @@ const createBusiness = (data) => __awaiter(void 0, void 0, void 0, function* () 
 });
 exports.createBusiness = createBusiness;
 const updateBusiness = (businessId, businessData, files) => __awaiter(void 0, void 0, void 0, function* () {
-    const business = yield business_model_1.default.findById(businessId);
-    if (!business) {
-        throw new Error('Business not found');
-    }
-    if (businessData.renderedServices) {
-        businessData.renderedServices.forEach((newService) => {
-            const existingServiceIndex = business.renderedServices.findIndex((service) => String(service._id) == String(newService.id));
-            if (existingServiceIndex !== -1) {
-                business.renderedServices[existingServiceIndex] = Object.assign(Object.assign({}, business.renderedServices[existingServiceIndex]), newService);
-            }
-            else {
-                business.renderedServices.push(newService);
-            }
-        });
-    }
-    if (businessData.certification) {
-        businessData.certification.forEach((newCert) => {
-            var _a;
-            const existingCert = business.certification.find((cert) => String(cert._id) === String(newCert.id));
-            if (existingCert) {
-                if (files && files['certificate'] && files['certificate'].path) {
-                    existingCert.certificate = files['certificate'].path;
+    try {
+        const business = yield business_model_1.default.findById(businessId);
+        if (!business) {
+            throw new Error('Business not found');
+        }
+        if (businessData.renderedServices) {
+            businessData.renderedServices.forEach((newService) => {
+                const existingServiceIndex = business.renderedServices.findIndex((service) => String(service._id) == String(newService.id));
+                if (existingServiceIndex !== -1) {
+                    business.renderedServices[existingServiceIndex] = Object.assign(Object.assign({}, business.renderedServices[existingServiceIndex]), newService);
                 }
-                existingCert.issuingOrganisation = newCert.issuingOrganisation || existingCert.issuingOrganisation;
-                existingCert.verificationNumber = newCert.verificationNumber || existingCert.verificationNumber;
-                existingCert.issuingDate = newCert.issuingDate || existingCert.issuingDate;
-                existingCert.expiringDate = newCert.expiringDate || existingCert.expiringDate;
-                existingCert.isCertificateExpire = newCert.isCertificateExpire || existingCert.isCertificateExpire;
-            }
-            else {
-                const certificatePath = (_a = files === null || files === void 0 ? void 0 : files['certificate'][0]) === null || _a === void 0 ? void 0 : _a.path;
-                newCert.certificate = certificatePath;
-                business.certification.push(Object.assign({}, newCert));
-            }
-        });
+                else {
+                    business.renderedServices.push(newService);
+                }
+            });
+        }
+        if (businessData.certification) {
+            businessData.certification.forEach((newCert) => {
+                var _a;
+                const existingCert = business.certification.find((cert) => String(cert._id) === String(newCert.id));
+                if (existingCert) {
+                    if (files && files['certificate'] && files['certificate'].path) {
+                        existingCert.certificate = files['certificate'].path;
+                    }
+                    existingCert.issuingOrganisation = newCert.issuingOrganisation || existingCert.issuingOrganisation;
+                    existingCert.verificationNumber = newCert.verificationNumber || existingCert.verificationNumber;
+                    existingCert.issuingDate = newCert.issuingDate || existingCert.issuingDate;
+                    existingCert.expiringDate = newCert.expiringDate || existingCert.expiringDate;
+                    existingCert.isCertificateExpire = newCert.isCertificateExpire || existingCert.isCertificateExpire;
+                }
+                else {
+                    let certificatePath;
+                    if (files === null || files === void 0 ? void 0 : files['certificate']) {
+                        if (Array.isArray(files['certificate'])) {
+                            certificatePath = (_a = files['certificate'][0]) === null || _a === void 0 ? void 0 : _a.path;
+                        }
+                        else {
+                            certificatePath = files['certificate'].path;
+                        }
+                    }
+                    newCert.certificate = certificatePath;
+                    business.certification.push(Object.assign({}, newCert));
+                }
+            });
+        }
+        if (businessData.membership) {
+            businessData.membership.forEach((newMembership) => {
+                const existingMembership = business.membership.find((membership) => String(membership._id) === String(newMembership.id));
+                if (existingMembership) {
+                    existingMembership.organisation = newMembership.organisation || existingMembership.organisation;
+                    existingMembership.positionHeld = newMembership.positionHeld || existingMembership.positionHeld;
+                    existingMembership.startDate = newMembership.startDate || existingMembership.startDate;
+                    existingMembership.endDate = newMembership.endDate || existingMembership.endDate;
+                    existingMembership.isMembershipExpire = newMembership.isMembershipExpire || existingMembership.isMembershipExpire;
+                }
+                else {
+                    business.membership.push(newMembership);
+                }
+            });
+        }
+        if (businessData.insurance) {
+            businessData.insurance.forEach((newInsurance) => {
+                const existingInsurance = business.insurance.find((ins) => String(ins._id) == String(newInsurance.id));
+                if (existingInsurance) {
+                    existingInsurance.issuingOrganisation = newInsurance.issuingOrganisation || existingInsurance.issuingOrganisation;
+                    existingInsurance.coverage = newInsurance.coverage || existingInsurance.coverage;
+                    existingInsurance.description = newInsurance.description || existingInsurance.description;
+                }
+                else {
+                    business.insurance.push(newInsurance);
+                }
+            });
+        }
+        business.firstName = businessData.firstName || business.firstName;
+        business.lastName = businessData.lastName || business.lastName;
+        business.languages = businessData.languages || business.languages;
+        business.address = businessData.address || business.address;
+        business.phoneNumber = businessData.phoneNumber || business.phoneNumber;
+        business.city = businessData.city || business.city;
+        business.state = businessData.state || business.state;
+        business.country = businessData.country || business.country;
+        business.bio = businessData.bio || business.bio;
+        business.businessName = businessData.businessName || business.businessName;
+        business.yearFounded = businessData.yearFounded || business.yearFounded;
+        business.numberOfEmployee = businessData.numberOfEmployee || business.numberOfEmployee;
+        business.businessAddress = businessData.businessAddress || business.businessAddress;
+        business.businessCity = businessData.businessCity || business.businessCity;
+        business.businessState = businessData.businessState || business.businessState;
+        business.businessCountry = businessData.businessCountry || business.businessCountry;
+        business.startingPrice = businessData.startingPrice || business.startingPrice;
+        business.noticePeriod = businessData.noticePeriod || business.noticePeriod;
+        business.businessDescription = businessData.businessDescription || business.businessDescription;
+        business.currency = businessData.currency || business.currency;
+        if (files['profileImage']) {
+            business.profileImage = files['profileImage'][0].path;
+        }
+        if (files['businessImages'] && files['businessImages'].length > 0) {
+            const newBusinessImages = files['businessImages'].map((file) => ({
+                imageUrl: file.path,
+            }));
+            business.businessImages.push(...newBusinessImages);
+        }
+        yield business.save();
+        return business;
     }
-    if (businessData.membership) {
-        businessData.membership.forEach((newMembership) => {
-            const existingMembership = business.membership.find((membership) => String(membership._id) === String(newMembership.id));
-            if (existingMembership) {
-                existingMembership.organisation = newMembership.organisation || existingMembership.organisation;
-                existingMembership.positionHeld = newMembership.positionHeld || existingMembership.positionHeld;
-                existingMembership.startDate = newMembership.startDate || existingMembership.startDate;
-                existingMembership.endDate = newMembership.endDate || existingMembership.endDate;
-                existingMembership.isMembershipExpire = newMembership.isMembershipExpire || existingMembership.isMembershipExpire;
-            }
-            else {
-                business.membership.push(newMembership);
-            }
-        });
+    catch (error) {
+        console.error('Error updating business:', error);
+        throw new error_1.BadRequestError('Failed to update business. ' + error.message);
     }
-    if (businessData.insurance) {
-        businessData.insurance.forEach((newInsurance) => {
-            const existingInsurance = business.insurance.find((ins) => String(ins._id) == String(newInsurance.id));
-            if (existingInsurance) {
-                existingInsurance.issuingOrganisation = newInsurance.issuingOrganisation || existingInsurance.issuingOrganisation;
-                existingInsurance.coverage = newInsurance.coverage || existingInsurance.coverage;
-                existingInsurance.description = newInsurance.description || existingInsurance.description;
-            }
-            else {
-                business.insurance.push(newInsurance);
-            }
-        });
-    }
-    business.firstName = businessData.firstName || business.firstName;
-    business.lastName = businessData.lastName || business.lastName;
-    business.languages = businessData.languages || business.languages;
-    business.address = businessData.address || business.address;
-    business.phoneNumber = businessData.phoneNumber || business.phoneNumber;
-    business.city = businessData.city || business.city;
-    business.state = businessData.state || business.state;
-    business.country = businessData.country || business.country;
-    business.bio = businessData.bio || business.bio;
-    business.businessName = businessData.businessName || business.businessName;
-    business.yearFounded = businessData.yearFounded || business.yearFounded;
-    business.numberOfEmployee = businessData.numberOfEmployee || business.numberOfEmployee;
-    business.businessAddress = businessData.businessAddress || business.businessAddress;
-    business.businessCity = businessData.businessCity || business.businessCity;
-    business.businessState = businessData.businessState || business.businessState;
-    business.businessCountry = businessData.businessCountry || business.businessCountry;
-    business.startingPrice = businessData.startingPrice || business.startingPrice;
-    business.noticePeriod = businessData.noticePeriod || business.noticePeriod;
-    business.businessDescription = businessData.businessDescription || business.businessDescription;
-    business.currency = businessData.currency || business.currency;
-    if (files['profileImage']) {
-        business.profileImage = files['profileImage'][0].path;
-    }
-    if (files['businessImages'] && files['businessImages'].length > 0) {
-        const newBusinessImages = files['businessImages'].map((file) => ({
-            imageUrl: file.path,
-        }));
-        business.businessImages.push(...newBusinessImages);
-    }
-    yield business.save();
-    return business;
 });
 exports.updateBusiness = updateBusiness;
 const fetchUserBusiness = (userId) => __awaiter(void 0, void 0, void 0, function* () {

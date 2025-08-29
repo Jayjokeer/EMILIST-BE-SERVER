@@ -14,7 +14,7 @@ export const createBusiness = async (data:  IBusiness) =>{
     return await Business.create(data);
 };
 export const updateBusiness = async (  businessId: string, businessData: any, files: any) => {
-
+  try{
     const business : any = await Business.findById(businessId);
     if (!business) {
         throw new Error('Business not found');
@@ -51,9 +51,17 @@ export const updateBusiness = async (  businessId: string, businessData: any, fi
                 existingCert.expiringDate = newCert.expiringDate || existingCert.expiringDate;
                 existingCert.isCertificateExpire = newCert.isCertificateExpire || existingCert.isCertificateExpire;
             } else {
-                const certificatePath = files?.['certificate'][0]?.path;
-                newCert.certificate= certificatePath
-                business.certification.push({
+        let certificatePath: string | undefined;
+
+        if (files?.['certificate']) {
+          if (Array.isArray(files['certificate'])) {
+            certificatePath = files['certificate'][0]?.path;
+          } else {
+            certificatePath = (files['certificate'] as any).path;
+          }
+        }
+        newCert.certificate = certificatePath;
+        business.certification.push({
                     ...newCert,
                 });
             }
@@ -128,6 +136,10 @@ export const updateBusiness = async (  businessId: string, businessData: any, fi
     }
     await business.save();
     return business;
+  }catch(error){
+    console.error('Error updating business:', error);
+    throw new BadRequestError('Failed to update business. ' + (error as Error).message);
+  }
 };
 export const fetchUserBusiness = async (userId: string)=>{
     return await Business.findOne({userId});
