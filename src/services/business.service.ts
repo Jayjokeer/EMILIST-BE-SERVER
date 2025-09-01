@@ -194,7 +194,6 @@ export const fetchAllBusiness = async (
   search?: string,
 ) => {
   const skip = (page - 1) * limit;
-
   const query: Record<string, any> = {};
 
   if (filters.startPriceRange) {
@@ -217,27 +216,44 @@ export const fetchAllBusiness = async (
   }
 
   if (search) {
+    const searchRegex = new RegExp(search, 'i');
     query.$or = [];
-    const businessFields = ['services', 'businessName', 'location', 'bio', 'city', 'state', 'country'];
+
+    const businessFields = [
+      'services',
+      'businessName',
+      'location',
+      'bio',
+      'city',
+      'state',
+      'country',
+    ];
+
     businessFields.forEach((field) => {
-      query.$or.push({ [field]: { $regex: search, $options: 'i' } });
+      query.$or!.push({ [field]: { $regex: searchRegex } });
     });
+
+    query.$or!.push({ 'user.userName': { $regex: searchRegex } });
+    query.$or!.push({ 'user.fullName': { $regex: searchRegex } });
   }
 
   if (filters.noticePeriod) {
     query.noticePeriod = filters.noticePeriod;
   }
+
   if (userId) {
-    const user = await userService.fetchUserMutedBusinesses(userId)
+    const user = await userService.fetchUserMutedBusinesses(userId);
     if (user && user.mutedBusinesses && user.mutedBusinesses.length > 0) {
-      query._id = { $nin: user.mutedJobs };
+      query._id = { $nin: user.mutedBusinesses };
     }
   }
+
   const businesses = await Business.find(query)
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
-    .populate('reviews', 'rating');
+    .populate('reviews', 'rating')
+    .populate('userId', 'userName fullName'); 
 
   const totalBusinesses = await Business.countDocuments(query);
 
@@ -252,14 +268,16 @@ export const fetchAllBusiness = async (
 
   const enhancedBusinesses = await Promise.all(
     businesses.map(async (business: any) => {
-      const reviews = business.reviews || []; 
+      const reviews = business.reviews || [];
       const totalReviews = reviews.length;
       const averageRating =
         totalReviews > 0
-          ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
+          ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) /
+            totalReviews
           : 0;
 
       const completedJobs = await projectService.completedJobsCount(String(business._id));
+
       return {
         ...business.toObject(),
         totalReviews,
@@ -288,6 +306,7 @@ export const fetchAllBusiness = async (
     totalBusinesses,
   };
 };
+
 
 
 export const deleteBusiness = async (businessId: string)=>{

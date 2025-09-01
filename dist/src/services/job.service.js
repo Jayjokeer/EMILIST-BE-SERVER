@@ -118,7 +118,7 @@ const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __await
         }
     }
     let jobsQuery = jobs_model_1.default.find(searchCriteria)
-        .populate('user', 'userName fullName')
+        .populate('userId', 'userName fullName')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
@@ -132,7 +132,7 @@ const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __await
                 { description: { $regex: searchRegex } },
             ] }))
             .populate({
-            path: 'user',
+            path: 'userId',
             match: {
                 $or: [
                     { userName: { $regex: searchRegex } },

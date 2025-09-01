@@ -86,7 +86,7 @@ export const fetchAllJobs = async (
   }
 
   let jobsQuery = Jobs.find(searchCriteria)
-    .populate('user', 'userName fullName') 
+    .populate('userId', 'userName fullName') 
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
@@ -105,7 +105,7 @@ export const fetchAllJobs = async (
       ],
     })
       .populate({
-        path: 'user',
+        path: 'userId',
         match: {
           $or: [
             { userName: { $regex: searchRegex } },

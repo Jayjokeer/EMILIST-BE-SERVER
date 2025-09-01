@@ -223,11 +223,22 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
         ];
     }
     if (search) {
+        const searchRegex = new RegExp(search, 'i');
         query.$or = [];
-        const businessFields = ['services', 'businessName', 'location', 'bio', 'city', 'state', 'country'];
+        const businessFields = [
+            'services',
+            'businessName',
+            'location',
+            'bio',
+            'city',
+            'state',
+            'country',
+        ];
         businessFields.forEach((field) => {
-            query.$or.push({ [field]: { $regex: search, $options: 'i' } });
+            query.$or.push({ [field]: { $regex: searchRegex } });
         });
+        query.$or.push({ 'user.userName': { $regex: searchRegex } });
+        query.$or.push({ 'user.fullName': { $regex: searchRegex } });
     }
     if (filters.noticePeriod) {
         query.noticePeriod = filters.noticePeriod;
@@ -235,14 +246,15 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
     if (userId) {
         const user = yield userService.fetchUserMutedBusinesses(userId);
         if (user && user.mutedBusinesses && user.mutedBusinesses.length > 0) {
-            query._id = { $nin: user.mutedJobs };
+            query._id = { $nin: user.mutedBusinesses };
         }
     }
     const businesses = yield business_model_1.default.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('reviews', 'rating');
+        .populate('reviews', 'rating')
+        .populate('userId', 'userName fullName');
     const totalBusinesses = yield business_model_1.default.countDocuments(query);
     let likedBusinessIds = [];
     let user;
@@ -255,7 +267,8 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
         const reviews = business.reviews || [];
         const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
-            ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+            ? business.reviews.reduce((sum, review) => sum + review.rating, 0) /
+                totalReviews
             : 0;
         const completedJobs = yield projectService.completedJobsCount(String(business._id));
         return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)), isCompared: userId ? user.comparedBusinesses.includes(String(business._id)) : false, completedJobs, liked: likedBusinessIds.includes(String(business._id)) });
