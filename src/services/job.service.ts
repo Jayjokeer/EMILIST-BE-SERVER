@@ -58,40 +58,68 @@ export const fetchAllJobs = async (
   limit: number,
   userId: string | null,
   search: string | null,
-  filters: { title?: string, location?: string, category?: string, service?: string } = {}
+  filters: { title?: string, location?: string, category?: string, service?: string , description?: string } = {}
 ) => {
   const skip = (page - 1) * limit;
+
+  // base search
   const searchCriteria: any = {
     type: { $ne: JobType.direct },
     status: JobStatusEnum.pending,
   };
 
-  if (search) {
-    const searchRegex = new RegExp(search, 'i');
-    const jobSchemaPaths = Jobs.schema.paths;
-    const stringFields = Object.keys(jobSchemaPaths).filter(
-      (field) => jobSchemaPaths[field].instance === 'String'
-    );
-
-    searchCriteria.$or = stringFields.map((field) => ({ [field]: { $regex: searchRegex } }));
-  } else {
+  // handle filters when search is not provided
+  if (!search) {
     if (filters.title) searchCriteria.title = { $regex: new RegExp(filters.title, 'i') };
     if (filters.location) searchCriteria.location = { $regex: new RegExp(filters.location, 'i') };
     if (filters.category) searchCriteria.category = { $regex: new RegExp(filters.category, 'i') };
     if (filters.service) searchCriteria.service = { $regex: new RegExp(filters.service, 'i') };
+    if (filters.description) searchCriteria.description = { $regex: new RegExp(filters.description, 'i') };
   }
 
+  // exclude muted jobs
   if (userId) {
-    const user = await userService.fetchUserMutedJobs(userId)
+    const user = await userService.fetchUserMutedJobs(userId);
     if (user && user.mutedJobs && user.mutedJobs.length > 0) {
       searchCriteria._id = { $nin: user.mutedJobs };
     }
   }
 
-  const jobs = await Jobs.find(searchCriteria)
+  let jobsQuery = Jobs.find(searchCriteria)
+    .populate('user', 'userName fullName') 
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
+
+  if (search) {
+    const searchRegex = new RegExp(search, 'i');
+
+    jobsQuery = Jobs.find({
+      ...searchCriteria,
+      $or: [
+        { title: { $regex: searchRegex } },
+        { location: { $regex: searchRegex } },
+        { category: { $regex: searchRegex } },
+        { service: { $regex: searchRegex } },
+        { description: { $regex: searchRegex } },
+      ],
+    })
+      .populate({
+        path: 'user',
+        match: {
+          $or: [
+            { userName: { $regex: searchRegex } },
+            { fullName: { $regex: searchRegex } }, 
+          ],
+        },
+        select: 'userName fullName',
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+  }
+
+  const jobs = await jobsQuery.exec();
   const totalJobs = await Jobs.countDocuments(searchCriteria);
 
   let jobsWithLikeStatus;
@@ -117,6 +145,7 @@ export const fetchAllJobs = async (
     totalJobs,
   };
 };
+
 
   
   
