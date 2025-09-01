@@ -183,6 +183,9 @@ export const validateBusinessRegistration = (req: Request, res: Response, next: 
       bio: Joi.string().optional().messages({
         'string.base': 'Bio must be a string',
       }),
+      currency: Joi.string().optional().messages({
+        'string.base': 'Currency must be a string',
+      }),
       coverageArea: Joi.array().items(Joi.string()).optional().messages({
         'string.base': 'Each coverage area must be a string',
       }),

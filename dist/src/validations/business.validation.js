@@ -176,6 +176,9 @@ const validateBusinessUpdate = (req, res, next) => {
         bio: joi_1.default.string().optional().messages({
             'string.base': 'Bio must be a string',
         }),
+        currency: joi_1.default.string().optional().messages({
+            'string.base': 'Currency must be a string',
+        }),
         coverageArea: joi_1.default.array().items(joi_1.default.string()).optional().messages({
             'string.base': 'Each coverage area must be a string',
         }),
