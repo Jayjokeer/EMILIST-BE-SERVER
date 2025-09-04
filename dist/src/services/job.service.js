@@ -92,12 +92,10 @@ const fetchAllUserJobs = (userId_1, page_1, limit_1, ...args_1) => __awaiter(voi
 exports.fetchAllUserJobs = fetchAllUserJobs;
 const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __awaiter(void 0, [page_1, limit_1, userId_1, search_1, ...args_1], void 0, function* (page, limit, userId, search, filters = {}) {
     const skip = (page - 1) * limit;
-    // base search
     const searchCriteria = {
         type: { $ne: jobs_enum_1.JobType.direct },
         status: jobs_enum_1.JobStatusEnum.pending,
     };
-    // handle filters when search is not provided
     if (!search) {
         if (filters.title)
             searchCriteria.title = { $regex: new RegExp(filters.title, 'i') };
@@ -110,37 +108,37 @@ const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __await
         if (filters.description)
             searchCriteria.description = { $regex: new RegExp(filters.description, 'i') };
     }
-    // exclude muted jobs
     if (userId) {
         const user = yield userService.fetchUserMutedJobs(userId);
         if (user && user.mutedJobs && user.mutedJobs.length > 0) {
             searchCriteria._id = { $nin: user.mutedJobs };
         }
     }
-    let jobsQuery = jobs_model_1.default.find(searchCriteria)
-        .populate('userId', 'userName fullName')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
+    let jobsQuery;
     if (search) {
-        const searchRegex = new RegExp(search, 'i');
-        jobsQuery = jobs_model_1.default.find(Object.assign(Object.assign({}, searchCriteria), { $or: [
-                { title: { $regex: searchRegex } },
-                { location: { $regex: searchRegex } },
-                { category: { $regex: searchRegex } },
-                { service: { $regex: searchRegex } },
-                { description: { $regex: searchRegex } },
-            ] }))
+        const words = search.trim().split(/\s+/);
+        const regexList = words.map((word) => new RegExp(word, 'i'));
+        const orConditions = [];
+        const jobFields = ['title', 'location', 'category', 'service', 'description'];
+        regexList.forEach((regex) => {
+            jobFields.forEach((field) => {
+                orConditions.push({ [field]: { $regex: regex } });
+            });
+            orConditions.push({ 'userId.userName': { $regex: regex } });
+            orConditions.push({ 'userId.fullName': { $regex: regex } });
+        });
+        jobsQuery = jobs_model_1.default.find(Object.assign(Object.assign({}, searchCriteria), { $or: orConditions }))
             .populate({
             path: 'userId',
-            match: {
-                $or: [
-                    { userName: { $regex: searchRegex } },
-                    { fullName: { $regex: searchRegex } },
-                ],
-            },
             select: 'userName fullName',
         })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+    }
+    else {
+        jobsQuery = jobs_model_1.default.find(searchCriteria)
+            .populate('userId', 'userName fullName')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
