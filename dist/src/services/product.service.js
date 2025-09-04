@@ -45,6 +45,9 @@ const fetchAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, f
             $lte: filters.priceRange[1],
         };
     }
+    if (filters.currency) {
+        query.currency = filters.currency;
+    }
     if (filters.location) {
         query.location = { $regex: filters.location, $options: "i" };
     }

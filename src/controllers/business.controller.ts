@@ -124,6 +124,7 @@ export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, re
         minReviews,
         location,
         noticePeriod,
+        currency,
         userId,
         search,
     } = req.query;
@@ -134,7 +135,8 @@ export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, re
         minRating,
         minReviews,
         location,
-        noticePeriod
+        noticePeriod,
+        currency,
       }
     const data = await businessService.fetchAllBusiness( 
     userId,   

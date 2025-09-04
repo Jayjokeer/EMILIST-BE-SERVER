@@ -215,6 +215,9 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
     if (filters.expertType) {
         query.expertType = filters.expertType;
     }
+    if (filters.currency) {
+        query.currency = filters.currency;
+    }
     if (filters.location) {
         query.$or = [
             { city: { $regex: filters.location, $options: 'i' } },

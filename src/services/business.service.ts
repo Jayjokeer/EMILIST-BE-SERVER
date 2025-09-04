@@ -190,6 +190,7 @@ export const fetchAllBusiness = async (
     minReviews?: number;
     location?: string;
     noticePeriod?: string;
+    currency?: string;
   },
   search?: string,
 ) => {
@@ -206,7 +207,9 @@ export const fetchAllBusiness = async (
   if (filters.expertType) {
     query.expertType = filters.expertType;
   }
-
+  if(filters.currency){
+    query.currency = filters.currency;
+  }
   if (filters.location) {
     query.$or = [
       { city: { $regex: filters.location, $options: 'i' } },

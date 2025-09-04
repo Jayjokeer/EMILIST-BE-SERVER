@@ -32,6 +32,7 @@ export const fetchAllProducts = async (
     minReviews?: number;
     isPrimeMember?: boolean;
     location?: string;
+    currency?: string;
   } = {},
   search?: string,
 ) => {
@@ -47,7 +48,9 @@ export const fetchAllProducts = async (
       $lte: filters.priceRange[1],
     };
   }
-
+  if (filters.currency) {
+    query.currency = filters.currency;
+  }
   if (filters.location) {
     query.location = { $regex: filters.location, $options: "i" };
   }

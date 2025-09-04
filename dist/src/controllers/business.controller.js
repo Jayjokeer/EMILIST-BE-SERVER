@@ -138,14 +138,15 @@ exports.deleteBusinessImageController = (0, error_handler_1.catchAsync)((req, re
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchAllBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { page = 1, limit = 10, startPriceRange, expertType, minRating, minReviews, location, noticePeriod, userId, search, } = req.query;
+    const { page = 1, limit = 10, startPriceRange, expertType, minRating, minReviews, location, noticePeriod, currency, userId, search, } = req.query;
     const filters = {
         startPriceRange,
         expertType,
         minRating,
         minReviews,
         location,
-        noticePeriod
+        noticePeriod,
+        currency,
     };
     const data = yield businessService.fetchAllBusiness(userId, Number(page), Number(limit), filters, search);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
