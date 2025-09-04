@@ -216,9 +216,7 @@ export const fetchAllBusiness = async (
   }
 
   if (search) {
-    const searchRegex = new RegExp(search, 'i');
-    query.$or = [];
-
+    const words = search.split(/\s+/).filter(Boolean);
     const businessFields = [
       'services',
       'businessName',
@@ -227,14 +225,18 @@ export const fetchAllBusiness = async (
       'city',
       'state',
       'country',
+      'user.userName',
+      'user.fullName',
     ];
 
-    businessFields.forEach((field) => {
-      query.$or!.push({ [field]: { $regex: searchRegex } });
+    query.$and = words.map((word) => {
+      const regex = new RegExp(word, 'i');
+      return {
+        $or: businessFields.map((field) => ({
+          [field]: { $regex: regex },
+        })),
+      };
     });
-
-    query.$or!.push({ 'user.userName': { $regex: searchRegex } });
-    query.$or!.push({ 'user.fullName': { $regex: searchRegex } });
   }
 
   if (filters.noticePeriod) {
@@ -253,7 +255,7 @@ export const fetchAllBusiness = async (
     .skip(skip)
     .limit(limit)
     .populate('reviews', 'rating')
-    .populate('userId', 'userName fullName'); 
+    .populate('userId', 'userName fullName');
 
   const totalBusinesses = await Business.countDocuments(query);
 
@@ -272,8 +274,7 @@ export const fetchAllBusiness = async (
       const totalReviews = reviews.length;
       const averageRating =
         totalReviews > 0
-          ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) /
-            totalReviews
+          ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
           : 0;
 
       const completedJobs = await projectService.completedJobsCount(String(business._id));
@@ -306,6 +307,7 @@ export const fetchAllBusiness = async (
     totalBusinesses,
   };
 };
+
 
 
 

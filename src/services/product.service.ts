@@ -22,7 +22,6 @@ export const fetchProductByIdWithDetails = async (productId: any) =>{
 
 };
 
-
 export const fetchAllProducts = async (
   page: number = 1,
   limit: number = 10,
@@ -63,9 +62,23 @@ export const fetchAllProducts = async (
       "storeName",
       "brand",
     ];
-    query.$or = productFields.map((field) => ({
-      [field]: { $regex: search, $options: "i" },
-    }));
+
+    const sentenceRegex = new RegExp(search, "i");
+
+    const words = search.split(" ").filter((w) => w.trim().length > 0);
+    const wordRegexes = words.map((word) => new RegExp(word, "i"));
+
+    query.$or = [];
+
+    productFields.forEach((field) => {
+      query.$or!.push({ [field]: { $regex: sentenceRegex } });
+    });
+
+    wordRegexes.forEach((regex) => {
+      productFields.forEach((field) => {
+        query.$or!.push({ [field]: { $regex: regex } });
+      });
+    });
   }
 
   const totalProducts = await Product.countDocuments(query);

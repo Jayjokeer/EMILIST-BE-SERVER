@@ -58,9 +58,18 @@ const fetchAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, f
             "storeName",
             "brand",
         ];
-        query.$or = productFields.map((field) => ({
-            [field]: { $regex: search, $options: "i" },
-        }));
+        const sentenceRegex = new RegExp(search, "i");
+        const words = search.split(" ").filter((w) => w.trim().length > 0);
+        const wordRegexes = words.map((word) => new RegExp(word, "i"));
+        query.$or = [];
+        productFields.forEach((field) => {
+            query.$or.push({ [field]: { $regex: sentenceRegex } });
+        });
+        wordRegexes.forEach((regex) => {
+            productFields.forEach((field) => {
+                query.$or.push({ [field]: { $regex: regex } });
+            });
+        });
     }
     const totalProducts = yield product_model_1.default.countDocuments(query);
     const products = yield product_model_1.default.find(query)

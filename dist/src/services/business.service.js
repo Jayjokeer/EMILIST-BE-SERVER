@@ -223,8 +223,7 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
         ];
     }
     if (search) {
-        const searchRegex = new RegExp(search, 'i');
-        query.$or = [];
+        const words = search.split(/\s+/).filter(Boolean);
         const businessFields = [
             'services',
             'businessName',
@@ -233,12 +232,17 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
             'city',
             'state',
             'country',
+            'user.userName',
+            'user.fullName',
         ];
-        businessFields.forEach((field) => {
-            query.$or.push({ [field]: { $regex: searchRegex } });
+        query.$and = words.map((word) => {
+            const regex = new RegExp(word, 'i');
+            return {
+                $or: businessFields.map((field) => ({
+                    [field]: { $regex: regex },
+                })),
+            };
         });
-        query.$or.push({ 'user.userName': { $regex: searchRegex } });
-        query.$or.push({ 'user.fullName': { $regex: searchRegex } });
     }
     if (filters.noticePeriod) {
         query.noticePeriod = filters.noticePeriod;
@@ -267,8 +271,7 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
         const reviews = business.reviews || [];
         const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
-            ? business.reviews.reduce((sum, review) => sum + review.rating, 0) /
-                totalReviews
+            ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
         const completedJobs = yield projectService.completedJobsCount(String(business._id));
         return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)), isCompared: userId ? user.comparedBusinesses.includes(String(business._id)) : false, completedJobs, liked: likedBusinessIds.includes(String(business._id)) });
