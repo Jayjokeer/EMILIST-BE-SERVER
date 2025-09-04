@@ -927,3 +927,13 @@ export const createRecurringJobController = catchAsync( async (req: JwtPayload, 
   return successResponse(res,StatusCodes.CREATED, recurringJob);
 
 });
+
+export const fetchAllRecurringJobsController = catchAsync( async (req: JwtPayload, res: Response) => {
+  const userId = req.user.id;
+  const limit = req.query.limit ? Number(req.query.limit) : 10;
+  const page = req.query.page ? Number(req.query.page) : 1;
+  const recurringJob = await jobService.fetchAllRecurringJobs(userId, limit, page);
+
+  return successResponse(res, StatusCodes.OK, recurringJob);
+
+});

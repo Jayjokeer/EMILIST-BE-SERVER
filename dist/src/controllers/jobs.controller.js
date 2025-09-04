@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
+exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -827,4 +827,11 @@ exports.createRecurringJobController = (0, error_handler_1.catchAsync)((req, res
     };
     const recurringJob = yield jobService.createRecurringJob(recurringPayload);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, recurringJob);
+}));
+exports.fetchAllRecurringJobsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user.id;
+    const limit = req.query.limit ? Number(req.query.limit) : 10;
+    const page = req.query.page ? Number(req.query.page) : 1;
+    const recurringJob = yield jobService.fetchAllRecurringJobs(userId, limit, page);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, recurringJob);
 }));

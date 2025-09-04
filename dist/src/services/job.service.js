@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
+exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -736,7 +736,7 @@ const findRecurringJobsDue = (today) => __awaiter(void 0, void 0, void 0, functi
 exports.findRecurringJobsDue = findRecurringJobsDue;
 const findRecurringJobsWithReminders = (today) => __awaiter(void 0, void 0, void 0, function* () {
     const formattedDate = (0, date_fns_1.format)(today, 'yyyy-MM-dd');
-    return recurring_job_model_1.default.find({
+    return yield recurring_job_model_1.default.find({
         'reminderDates.day': formattedDate,
     });
 });
@@ -748,3 +748,9 @@ const activePendingJobs = () => __awaiter(void 0, void 0, void 0, function* () {
     });
 });
 exports.activePendingJobs = activePendingJobs;
+const fetchAllRecurringJobs = (userId, limit, page) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield recurring_job_model_1.default.find({
+        userId
+    }).limit(limit).skip((page - 1) * limit);
+});
+exports.fetchAllRecurringJobs = fetchAllRecurringJobs;

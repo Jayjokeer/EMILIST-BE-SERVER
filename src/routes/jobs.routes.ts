@@ -39,6 +39,7 @@ router.route("/mute-job/:jobId").get(userAuth, jobController.muteJobController);
 router.route("/pay-for-job").post(userAuth, validatePaymentForJob, paymentController.payforJobController);
 router.route("/leads").get(userAuth, jobController.jobLeadsController);
 router.route("/create-recurring-job").post(userAuth,multipleUpload,validateRecurringJob,jobController.createRecurringJobController);
+router.route("/fetch-recurring-jobs").get(userAuth, jobController.fetchAllRecurringJobsController);
 
 export { router as JobsRoute };
 

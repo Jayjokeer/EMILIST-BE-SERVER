@@ -835,7 +835,7 @@ export const findRecurringJobsDue = async (today: Date) => {
 export const findRecurringJobsWithReminders = async (today: Date) => {
   const formattedDate = format(today, 'yyyy-MM-dd'); 
 
-  return RecurringJob.find({
+  return await RecurringJob.find({
     'reminderDates.day': formattedDate, 
   });
 };
@@ -845,4 +845,11 @@ export const activePendingJobs = async () => {
     status: { $in: ["active", "paused"] },
     isClosed: false,
   });
+};
+
+export const fetchAllRecurringJobs = async (userId: string, limit: number, page: number) => {
+
+  return await RecurringJob.find({
+    userId
+  }).limit(limit).skip((page - 1) * limit);
 };
