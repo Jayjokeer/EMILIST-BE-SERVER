@@ -34,8 +34,10 @@ const fetchProductByIdWithDetails = (productId) => __awaiter(void 0, void 0, voi
         .populate('reviews', 'rating');
 });
 exports.fetchProductByIdWithDetails = fetchProductByIdWithDetails;
-const fetchAllProducts = (page, limit, userId, filters, search) => __awaiter(void 0, void 0, void 0, function* () {
-    const skip = (page - 1) * limit;
+const fetchAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, function* (page = 1, limit = 10, userId, filters = {}, search) {
+    const currentPage = Number(page) > 0 ? Number(page) : 1;
+    const pageLimit = Number(limit) > 0 ? Number(limit) : 10;
+    const skip = (currentPage - 1) * pageLimit;
     const query = {};
     if (filters.priceRange) {
         query.price = {
@@ -44,36 +46,43 @@ const fetchAllProducts = (page, limit, userId, filters, search) => __awaiter(voi
         };
     }
     if (filters.location) {
-        query.location = { $regex: filters.location, $options: 'i' };
+        query.location = { $regex: filters.location, $options: "i" };
     }
     if (search) {
-        query.$or = [];
-        const productFields = ['name', 'description', 'location', 'name', 'category', 'subCategory', 'storeName', 'brand'];
-        productFields.forEach(field => {
-            query.$or.push({ [field]: { $regex: search, $options: 'i' } });
-        });
+        const productFields = [
+            "name",
+            "description",
+            "location",
+            "category",
+            "subCategory",
+            "storeName",
+            "brand",
+        ];
+        query.$or = productFields.map((field) => ({
+            [field]: { $regex: search, $options: "i" },
+        }));
     }
     const totalProducts = yield product_model_1.default.countDocuments(query);
     const products = yield product_model_1.default.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit)
+        .limit(pageLimit)
         .populate({
-        path: 'userId',
-        select: 'fullName email userName profileImage level uniqueId isPrimeMember',
-        match: filters.isPrimeMember !== undefined ? { isPrimeMember: filters.isPrimeMember } : {},
+        path: "userId",
+        select: "fullName email userName profileImage level uniqueId isPrimeMember",
+        match: filters.isPrimeMember !== undefined
+            ? { isPrimeMember: filters.isPrimeMember }
+            : {},
     })
         .lean();
     const filteredProducts = products.filter((product) => product.userId !== null);
     const productIds = filteredProducts.map((product) => product._id);
     const reviews = yield review_model_1.default.aggregate([
-        {
-            $match: { productId: { $in: productIds } },
-        },
+        { $match: { productId: { $in: productIds } } },
         {
             $group: {
-                _id: '$productId',
-                averageRating: { $avg: '$rating' },
+                _id: "$productId",
+                averageRating: { $avg: "$rating" },
                 numberOfRatings: { $sum: 1 },
             },
         },
@@ -99,7 +108,9 @@ const fetchAllProducts = (page, limit, userId, filters, search) => __awaiter(voi
     });
     let productsWithDetails;
     if (userId) {
-        const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();
+        const likedProducts = yield productLike_model_1.default.find({ user: userId })
+            .select("product")
+            .lean();
         const likedProductIds = likedProducts.map((like) => like.product.toString());
         const user = yield users_model_1.default.findById(userId);
         const comparedProductIds = (user === null || user === void 0 ? void 0 : user.comparedProducts.map((id) => id.toString())) || [];
@@ -110,8 +121,8 @@ const fetchAllProducts = (page, limit, userId, filters, search) => __awaiter(voi
     }
     return {
         products: productsWithDetails,
-        totalPages: Math.ceil(totalProducts / limit),
-        currentPage: page,
+        totalPages: Math.ceil(totalProducts / pageLimit),
+        currentPage,
         totalProducts: productsWithDetails.length,
     };
 });

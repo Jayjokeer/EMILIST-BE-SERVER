@@ -24,20 +24,21 @@ export const fetchProductByIdWithDetails = async (productId: any) =>{
 
 
 export const fetchAllProducts = async (
-  page: number,
-  limit: number,
-  userId: string,
+  page: number = 1,
+  limit: number = 10,
+  userId?: string,
   filters: {
     priceRange?: [number, number];
     minRating?: number;
     minReviews?: number;
     isPrimeMember?: boolean;
     location?: string;
-  },
+  } = {},
   search?: string,
-
 ) => {
-  const skip = (page - 1) * limit;
+  const currentPage = Number(page) > 0 ? Number(page) : 1;
+  const pageLimit = Number(limit) > 0 ? Number(limit) : 10;
+  const skip = (currentPage - 1) * pageLimit;
 
   const query: Record<string, any> = {};
 
@@ -49,26 +50,38 @@ export const fetchAllProducts = async (
   }
 
   if (filters.location) {
-    query.location = { $regex: filters.location, $options: 'i' }; 
+    query.location = { $regex: filters.location, $options: "i" };
   }
-  if (search) {
-    query.$or = [];
 
-    const productFields = ['name', 'description', 'location', 'name', 'category', 'subCategory','storeName', 'brand' ];
-    productFields.forEach(field => {
-      query.$or.push({ [field]: { $regex: search, $options: 'i' } });
-    });
+  if (search) {
+    const productFields = [
+      "name",
+      "description",
+      "location",
+      "category",
+      "subCategory",
+      "storeName",
+      "brand",
+    ];
+    query.$or = productFields.map((field) => ({
+      [field]: { $regex: search, $options: "i" },
+    }));
   }
+
   const totalProducts = await Product.countDocuments(query);
 
   const products = await Product.find(query)
-  .sort({ createdAt: -1 })
+    .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(limit)
+    .limit(pageLimit)
     .populate({
-      path: 'userId',
-      select: 'fullName email userName profileImage level uniqueId isPrimeMember',
-      match: filters.isPrimeMember !== undefined ? { isPrimeMember: filters.isPrimeMember } : {},
+      path: "userId",
+      select:
+        "fullName email userName profileImage level uniqueId isPrimeMember",
+      match:
+        filters.isPrimeMember !== undefined
+          ? { isPrimeMember: filters.isPrimeMember }
+          : {},
     })
     .lean();
 
@@ -77,19 +90,17 @@ export const fetchAllProducts = async (
   const productIds = filteredProducts.map((product) => product._id);
 
   const reviews = await Review.aggregate([
-    {
-      $match: { productId: { $in: productIds } },
-    },
+    { $match: { productId: { $in: productIds } } },
     {
       $group: {
-        _id: '$productId',
-        averageRating: { $avg: '$rating' },
+        _id: "$productId",
+        averageRating: { $avg: "$rating" },
         numberOfRatings: { $sum: 1 },
       },
     },
   ]);
 
-  const reviewMap = reviews.reduce((map, review) => {
+  const reviewMap = reviews.reduce<Record<string, any>>((map, review) => {
     map[review._id.toString()] = {
       averageRating: review.averageRating || 0,
       numberOfRatings: review.numberOfRatings || 0,
@@ -111,11 +122,15 @@ export const fetchAllProducts = async (
 
   let productsWithDetails;
   if (userId) {
-    const likedProducts = await ProductLike.find({ user: userId }).select('product').lean();
+    const likedProducts = await ProductLike.find({ user: userId })
+      .select("product")
+      .lean();
     const likedProductIds = likedProducts.map((like) => like.product.toString());
-      const user = await User.findById(userId);
-      const comparedProductIds = user?.comparedProducts.map((id: any) => id.toString()) || [];
-      
+
+    const user = await User.findById(userId);
+    const comparedProductIds =
+      user?.comparedProducts.map((id: any) => id.toString()) || [];
+
     productsWithDetails = enhancedProducts.map((product) => ({
       ...product,
       liked: likedProductIds.includes(product._id.toString()),
@@ -131,11 +146,12 @@ export const fetchAllProducts = async (
 
   return {
     products: productsWithDetails,
-    totalPages: Math.ceil(totalProducts / limit),
-    currentPage: page,
-    totalProducts:productsWithDetails.length,
+    totalPages: Math.ceil(totalProducts / pageLimit),
+    currentPage,
+    totalProducts: productsWithDetails.length,
   };
 };
+
 
 
 export const deleteProduct = async(productId: string)=>{
