@@ -892,7 +892,9 @@ export const createRecurringJobController = catchAsync( async (req: JwtPayload, 
   
     const userId = req.user.id;
     jobDetails.userId = userId;
-
+    if(!jobDetails.type){
+      jobDetails.type = JobType.direct;
+    }
     const data = await jobService.createJob(jobDetails);
 
     const payload:any = {

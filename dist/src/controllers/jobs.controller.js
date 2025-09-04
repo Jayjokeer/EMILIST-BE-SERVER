@@ -801,6 +801,9 @@ exports.createRecurringJobController = (0, error_handler_1.catchAsync)((req, res
         throw new error_1.NotFoundError("User not found!");
     const userId = req.user.id;
     jobDetails.userId = userId;
+    if (!jobDetails.type) {
+        jobDetails.type = jobs_enum_1.JobType.direct;
+    }
     const data = yield jobService.createJob(jobDetails);
     const payload = {
         job: data._id,
