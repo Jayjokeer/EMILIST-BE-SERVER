@@ -43,6 +43,7 @@ var JobStatusEnum;
     JobStatusEnum["complete"] = "completed";
     JobStatusEnum["active"] = "active";
     JobStatusEnum["paused"] = "paused";
+    JobStatusEnum["overdue"] = "overdue";
 })(JobStatusEnum || (exports.JobStatusEnum = JobStatusEnum = {}));
 var QuoteStatusEnum;
 (function (QuoteStatusEnum) {

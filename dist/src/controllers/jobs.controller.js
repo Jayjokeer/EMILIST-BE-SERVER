@@ -380,9 +380,12 @@ exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)((req, res) 
         const jobs = yield jobService.fetchJobByUserIdAndStatus(userId, status);
         data = jobs;
     }
-    else if (status === jobs_enum_1.JobStatusEnum.active || status === jobs_enum_1.JobStatusEnum.paused) {
-        const jobs = yield jobService.fetchJobByUserIdAndStatus(userId, status);
-        data = jobs.map((job) => {
+    else if (status === jobs_enum_1.JobStatusEnum.active || status === jobs_enum_1.JobStatusEnum.paused || status === jobs_enum_1.JobStatusEnum.overdue) {
+        const jobs = yield jobService.fetchJobByUserIdAndStatus(userId, status === jobs_enum_1.JobStatusEnum.overdue
+            ? [jobs_enum_1.JobStatusEnum.active, jobs_enum_1.JobStatusEnum.paused]
+            : status);
+        const now = new Date();
+        const processedJobs = jobs.map((job) => {
             const totalMilestones = job.milestones.length;
             let milestoneStartDate = new Date(job.startDate || new Date());
             let currentMilestoneDueDate = new Date(milestoneStartDate);
@@ -408,6 +411,14 @@ exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)((req, res) 
                 currentMilestoneDueDate,
                 overallDueDate });
         });
+        if (status === jobs_enum_1.JobStatusEnum.overdue) {
+            // only jobs past due
+            data = processedJobs.filter(job => job.overallDueDate < now);
+        }
+        else {
+            // active/paused jobs that are not expired
+            data = processedJobs.filter(job => job.overallDueDate >= now);
+        }
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

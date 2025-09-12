@@ -39,6 +39,7 @@ export enum JobStatusEnum {
   complete= "completed",
   active= "active",
   paused= "paused",
+  overdue= "overdue",
 }
 
 export enum QuoteStatusEnum {

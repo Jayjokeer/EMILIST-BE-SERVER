@@ -395,56 +395,72 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   });
 
   export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const userId = req.user.id; 
-    const { status } = req.query;
-    let data: any;
-  
-    if (status === JobStatusEnum.pending || status === JobStatusEnum.complete) {
-      const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status);
-      data = jobs;
-    } else if (status === JobStatusEnum.active || status === JobStatusEnum.paused) {
-      const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status as JobStatusEnum);
-      data = jobs.map((job) => {
-        const totalMilestones = job.milestones.length;
-        let milestoneStartDate = new Date(job.startDate || new Date());
-        let currentMilestoneDueDate = new Date(milestoneStartDate);
-        let overallDueDate = new Date(milestoneStartDate); 
-  
-        let milestoneProgress = "0/0"; 
-  
-        for (let i = 0; i < totalMilestones; i++) {
-          const milestone = job.milestones[i];
-          const duration = parseInt(milestone.timeFrame.number, 10) || 0;
-  
-          const durationMs =
-            milestone.timeFrame.period === 'days'
-              ? duration * 86400000 
-              : milestone.timeFrame.period === 'weeks'
-              ? duration * 604800000 
-              : duration * 2629800000; 
-  
-          overallDueDate = new Date(overallDueDate.getTime() + durationMs);
-  
-          if (milestone.status === MilestoneEnum.active || milestone.status === MilestoneEnum.paused) {
-            milestoneProgress = `${i + 1}/${totalMilestones}`;
-            currentMilestoneDueDate = new Date(overallDueDate); 
-            break;
-          }
-  
-          milestoneStartDate = new Date(overallDueDate);
+  const userId = req.user.id; 
+  const { status } = req.query;
+  let data: any;
+
+  if (status === JobStatusEnum.pending || status === JobStatusEnum.complete) {
+    const jobs = await jobService.fetchJobByUserIdAndStatus(userId, status);
+    data = jobs;
+  } else if (status === JobStatusEnum.active || status === JobStatusEnum.paused || status === JobStatusEnum.overdue) {
+    const jobs = await jobService.fetchJobByUserIdAndStatus(userId, 
+      status === JobStatusEnum.overdue 
+        ? [JobStatusEnum.active, JobStatusEnum.paused] 
+        : status
+    );
+
+    const now = new Date();
+
+    const processedJobs = jobs.map((job) => {
+      const totalMilestones = job.milestones.length;
+      let milestoneStartDate = new Date(job.startDate || new Date());
+      let currentMilestoneDueDate = new Date(milestoneStartDate);
+      let overallDueDate = new Date(milestoneStartDate); 
+
+      let milestoneProgress = "0/0"; 
+
+      for (let i = 0; i < totalMilestones; i++) {
+        const milestone = job.milestones[i];
+        const duration = parseInt(milestone.timeFrame.number, 10) || 0;
+
+        const durationMs =
+          milestone.timeFrame.period === 'days'
+            ? duration * 86400000 
+            : milestone.timeFrame.period === 'weeks'
+            ? duration * 604800000 
+            : duration * 2629800000; 
+
+        overallDueDate = new Date(overallDueDate.getTime() + durationMs);
+
+        if (milestone.status === MilestoneEnum.active || milestone.status === MilestoneEnum.paused) {
+          milestoneProgress = `${i + 1}/${totalMilestones}`;
+          currentMilestoneDueDate = new Date(overallDueDate); 
+          break;
         }
-  
-        return {
-          ...job.toObject(),
-          milestoneProgress,
-          currentMilestoneDueDate,
-          overallDueDate, 
-        };
-      });
+
+        milestoneStartDate = new Date(overallDueDate);
+      }
+
+      return {
+        ...job.toObject(),
+        milestoneProgress,
+        currentMilestoneDueDate,
+        overallDueDate, 
+      };
+    });
+
+    if (status === JobStatusEnum.overdue) {
+      // only jobs past due
+      data = processedJobs.filter(job => job.overallDueDate < now);
+    } else {
+      // active/paused jobs that are not expired
+      data = processedJobs.filter(job => job.overallDueDate >= now);
     }
-  
-    return  successResponse(res, StatusCodes.OK, data);
-  });
+  }
+
+  return successResponse(res, StatusCodes.OK, data);
+});
+
   
   export const deleteFileController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {jobId, fileId} = req.params;
