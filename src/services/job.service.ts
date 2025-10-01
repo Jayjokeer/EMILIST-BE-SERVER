@@ -120,8 +120,7 @@ export const fetchAllJobs = async (
   }
 
   const jobs = await jobsQuery.exec();
-  const totalJobs = await Jobs.countDocuments(searchCriteria);
-
+  const totalJobs = jobs.length;
   let jobsWithLikeStatus;
   if (userId) {
     const likedJobs = await JobLike.find({ user: userId }).select('job').lean();

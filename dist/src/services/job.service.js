@@ -144,7 +144,7 @@ const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __await
             .limit(limit);
     }
     const jobs = yield jobsQuery.exec();
-    const totalJobs = yield jobs_model_1.default.countDocuments(searchCriteria);
+    const totalJobs = jobs.length;
     let jobsWithLikeStatus;
     if (userId) {
         const likedJobs = yield joblike_model_1.default.find({ user: userId }).select('job').lean();

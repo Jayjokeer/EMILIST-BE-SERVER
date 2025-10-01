@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "build": "tsc -p .",
-    "dev": "nodemon --legacy-watch --watch './src/**/*.ts' --exec 'ts-node' ./src/server.ts",
+    "dev": "nodemon --legacy-watch --watch ./src --ext ts,json --exec ts-node ./src/server.ts",
     "start": "node  --max-old-space-size=4024 ./dist/src/server.js"
   },
   "author": "",
@@ -61,6 +61,6 @@
     "npm": "^10.9.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.6.3"
+    "typescript": "^5.9.3"
   }
 }
