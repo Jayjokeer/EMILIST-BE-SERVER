@@ -83,12 +83,13 @@ export const fetchAllJobs = async (
   }
 
   let jobsQuery;
-
+  let totalJobs;
   if (search) {
     const words = search.trim().split(/\s+/);
     const regexList = words.map((word) => new RegExp(word, 'i'));
 
-    const orConditions: any[] = [];
+      const orConditions: any[] = [];
+
     const jobFields = ['title', 'location', 'category', 'service', 'description'];
 
     regexList.forEach((regex) => {
@@ -100,7 +101,7 @@ export const fetchAllJobs = async (
       orConditions.push({ 'userId.fullName': { $regex: regex } });
     });
 
-    jobsQuery = Jobs.find({
+    jobsQuery = await Jobs.find({
       ...searchCriteria,
       $or: orConditions,
     })
@@ -111,21 +112,25 @@ export const fetchAllJobs = async (
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+      totalJobs = await Jobs.countDocuments({...searchCriteria,      
+     $or: orConditions,
+});
   } else {
-    jobsQuery = Jobs.find(searchCriteria)
+    jobsQuery = await Jobs.find(searchCriteria)
       .populate('userId', 'userName fullName')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+
+    totalJobs = await Jobs.countDocuments(searchCriteria);
   }
 
-  const jobs = await jobsQuery.exec();
-  const totalJobs = jobs.length;
+  const jobs =  jobsQuery;
+
   let jobsWithLikeStatus;
   if (userId) {
     const likedJobs = await JobLike.find({ user: userId }).select('job').lean();
     const likedJobIds = likedJobs.map((like) => like.job.toString());
-
     jobsWithLikeStatus = jobs.map((job) => ({
       ...job.toObject(),
       liked: likedJobIds.includes(job._id.toString()),
@@ -847,7 +852,23 @@ export const activePendingJobs = async () => {
 
 export const fetchAllRecurringJobs = async (userId: string, limit: number, page: number) => {
 
-  return await RecurringJob.find({
-    userId
-  }).limit(limit).skip((page - 1) * limit);
+const jobs = await RecurringJob.find()
+  .populate({
+    path: "jobId",
+    match: { userId }, 
+  })
+  .limit(limit)
+  .skip((page - 1) * limit)
+  .then(results => results.filter(r => r.jobId)); 
+
+const totalJobs = await RecurringJob.countDocuments()
+  .populate({
+    path: "jobId",
+    match: { userId }, 
+  })
+
+  return{
+    totalJobs,
+    jobs
+  }
 };

@@ -115,6 +115,7 @@ const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __await
         }
     }
     let jobsQuery;
+    let totalJobs;
     if (search) {
         const words = search.trim().split(/\s+/);
         const regexList = words.map((word) => new RegExp(word, 'i'));
@@ -127,7 +128,7 @@ const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __await
             orConditions.push({ 'userId.userName': { $regex: regex } });
             orConditions.push({ 'userId.fullName': { $regex: regex } });
         });
-        jobsQuery = jobs_model_1.default.find(Object.assign(Object.assign({}, searchCriteria), { $or: orConditions }))
+        jobsQuery = yield jobs_model_1.default.find(Object.assign(Object.assign({}, searchCriteria), { $or: orConditions }))
             .populate({
             path: 'userId',
             select: 'userName fullName',
@@ -135,16 +136,17 @@ const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __await
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
+        totalJobs = yield jobs_model_1.default.countDocuments(Object.assign(Object.assign({}, searchCriteria), { $or: orConditions }));
     }
     else {
-        jobsQuery = jobs_model_1.default.find(searchCriteria)
+        jobsQuery = yield jobs_model_1.default.find(searchCriteria)
             .populate('userId', 'userName fullName')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
+        totalJobs = yield jobs_model_1.default.countDocuments(searchCriteria);
     }
-    const jobs = yield jobsQuery.exec();
-    const totalJobs = jobs.length;
+    const jobs = jobsQuery;
     let jobsWithLikeStatus;
     if (userId) {
         const likedJobs = yield joblike_model_1.default.find({ user: userId }).select('job').lean();
@@ -747,8 +749,22 @@ const activePendingJobs = () => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.activePendingJobs = activePendingJobs;
 const fetchAllRecurringJobs = (userId, limit, page) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield recurring_job_model_1.default.find({
-        userId
-    }).limit(limit).skip((page - 1) * limit);
+    const jobs = yield recurring_job_model_1.default.find()
+        .populate({
+        path: "jobId",
+        match: { userId },
+    })
+        .limit(limit)
+        .skip((page - 1) * limit)
+        .then(results => results.filter(r => r.jobId));
+    const totalJobs = yield recurring_job_model_1.default.countDocuments()
+        .populate({
+        path: "jobId",
+        match: { userId },
+    });
+    return {
+        totalJobs,
+        jobs
+    };
 });
 exports.fetchAllRecurringJobs = fetchAllRecurringJobs;

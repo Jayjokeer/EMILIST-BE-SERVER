@@ -844,8 +844,15 @@ exports.createRecurringJobController = (0, error_handler_1.catchAsync)((req, res
 }));
 exports.fetchAllRecurringJobsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
+    console.log(userId);
     const limit = req.query.limit ? Number(req.query.limit) : 10;
     const page = req.query.page ? Number(req.query.page) : 1;
-    const recurringJob = yield jobService.fetchAllRecurringJobs(userId, limit, page);
+    const { totalJobs, jobs } = yield jobService.fetchAllRecurringJobs(userId, limit, page);
+    const recurringJob = {
+        page,
+        limit,
+        totalJobs,
+        jobs
+    };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, recurringJob);
 }));
