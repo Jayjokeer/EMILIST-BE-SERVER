@@ -265,9 +265,20 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
    export const deleteJobById = async (jobId: string, userId: string ) =>{
     return await Jobs.findOneAndDelete({userId: userId, _id: jobId});
    };
-   export const fetchJobByUserIdAndStatus = async ( userId: string, status: JobStatusEnum ) =>{
-    return await Jobs.find({userId: userId, status: status});
-   };
+export const fetchJobByUserIdAndStatus = async (
+  userId: string,
+  status: JobStatusEnum | JobStatusEnum[]
+) => {
+  const query: any = { userId };
+
+  if (Array.isArray(status)) {
+    query.status = { $in: status }; 
+  } else {
+    query.status = status;
+  }
+
+  return await Jobs.find(query);
+};
 export const fetchUserJobApplications = async (
   userId: string,
   skip: number,

@@ -56,7 +56,8 @@ const CertificationSchema = new mongoose_1.Schema({
     verificationNumber: { type: String },
     issuingDate: { type: Date },
     expiringDate: { type: Date },
-    isCertificateExpire: { type: Boolean, default: true }
+    isCertificateExpire: { type: Boolean, default: true },
+    isVerified: { type: Boolean, default: false }
 });
 const InsuranceSchema = new mongoose_1.Schema({
     issuingOrganisation: { type: String },
@@ -102,5 +103,6 @@ const businessSchema = new mongoose_1.default.Schema({
         users: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Users' }],
         clickCount: { type: Number, default: 0 }
     },
+    isVerified: { type: Boolean, default: false },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Business', businessSchema);

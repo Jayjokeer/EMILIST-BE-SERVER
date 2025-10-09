@@ -43,7 +43,7 @@ export const createPromotion = async (data: any)=>{
 };
 export const fetchAllUserSubscriptionsAdmin = async(limit: number, page: number, userId: string)=>{
     const skip = (page - 1) * limit;
-    const subscriptions = await Subscription.find({userId: userId}).skip(skip).limit(limit);
+    const subscriptions = await Subscription.find({userId: userId}).skip(skip).limit(limit).populate('planId', 'name price');
     const totalSubscriptions = await Subscription.countDocuments({userId: userId});
     return {subscriptions ,  totalSubscriptions};
 };

@@ -76,9 +76,20 @@ export const fetchAllUsersAdminController = catchAsync(async (req: JwtPayload, r
   });
 
 export const verifyUserAdminController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const {userId} = req.params;
-    await userService.verifyUser(userId);
-    return successResponse(res, StatusCodes.CREATED, 'User verified successfully');
+    const {userId, type, businessId, certificateId} = req.query;
+    if(type === 'user' && userId){
+        await userService.verifyUser(userId);
+     return successResponse(res, StatusCodes.CREATED, 'User verified successfully');
+
+    }else if(type === 'business' && businessId){
+    await businessService.verifyBusinessAdmin(businessId);
+        return successResponse(res, StatusCodes.CREATED, 'Business verified successfully');
+
+    }else if(type === 'certificate' && certificateId && businessId ){
+     const {message, certificate}  = await businessService.verifyCertificateAdmin(businessId, certificateId);
+     return successResponse(res, StatusCodes.CREATED, message);
+
+    }
   
 });
 export const suspendUserAdminController = catchAsync(async (req: JwtPayload, res: Response) => {

@@ -11,7 +11,7 @@ const router = Router();
 
 router.route("/dashboard").get(adminAuth, adminController.adminDashboardController);
 router.route("/users").get(adminAuth, adminController.fetchAllUsersAdminController);
-router.route("/verify-user/:userId").patch(adminAuth, adminController.verifyUserAdminController);
+router.route("/verify-user").patch(adminAuth, adminController.verifyUserAdminController);
 router.route("/fetch-userDetails/:userId").get(adminAuth, adminController.fetchUserDetails);
 router.route("/suspend-user/:userId").patch(adminAuth, adminController.suspendUserAdminController);
 router.route("/add-user").post(adminAuth,validateAddUserAdmin, adminController.addUserAdminController);

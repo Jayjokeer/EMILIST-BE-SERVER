@@ -45,7 +45,7 @@ const router = (0, express_1.Router)();
 exports.AdminRoute = router;
 router.route("/dashboard").get(current_user_1.adminAuth, adminController.adminDashboardController);
 router.route("/users").get(current_user_1.adminAuth, adminController.fetchAllUsersAdminController);
-router.route("/verify-user/:userId").patch(current_user_1.adminAuth, adminController.verifyUserAdminController);
+router.route("/verify-user").patch(current_user_1.adminAuth, adminController.verifyUserAdminController);
 router.route("/fetch-userDetails/:userId").get(current_user_1.adminAuth, adminController.fetchUserDetails);
 router.route("/suspend-user/:userId").patch(current_user_1.adminAuth, adminController.suspendUserAdminController);
 router.route("/add-user").post(current_user_1.adminAuth, admin_validation_1.validateAddUserAdmin, adminController.addUserAdminController);

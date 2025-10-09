@@ -21,6 +21,7 @@ interface ICertification {
   issuingDate?: Date;
   expiringDate?: Date;
   isCertificateExpire?: boolean;
+  isVerified?: boolean;
 }
 
 interface IInsurance {
@@ -62,6 +63,7 @@ export interface IBusiness extends Document {
   expertType?: ExpertTypeEnum;
   reviews?: any;
   clicks?: any;
+  isVerified?: boolean;
 }
 
 export default IBusiness;

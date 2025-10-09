@@ -110,9 +110,19 @@ exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)((req, res
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.verifyUserAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId } = req.params;
-    yield userService.verifyUser(userId);
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, 'User verified successfully');
+    const { userId, type, businessId, certificateId } = req.query;
+    if (type === 'user' && userId) {
+        yield userService.verifyUser(userId);
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, 'User verified successfully');
+    }
+    else if (type === 'business' && businessId) {
+        yield businessService.verifyBusinessAdmin(businessId);
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, 'Business verified successfully');
+    }
+    else if (type === 'certificate' && certificateId && businessId) {
+        const { message, certificate } = yield businessService.verifyCertificateAdmin(businessId, certificateId);
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, message);
+    }
 }));
 exports.suspendUserAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.params;

@@ -59,7 +59,7 @@ const createPromotion = (data) => __awaiter(void 0, void 0, void 0, function* ()
 exports.createPromotion = createPromotion;
 const fetchAllUserSubscriptionsAdmin = (limit, page, userId) => __awaiter(void 0, void 0, void 0, function* () {
     const skip = (page - 1) * limit;
-    const subscriptions = yield subscription_model_1.default.find({ userId: userId }).skip(skip).limit(limit);
+    const subscriptions = yield subscription_model_1.default.find({ userId: userId }).skip(skip).limit(limit).populate('planId', 'name price');
     const totalSubscriptions = yield subscription_model_1.default.countDocuments({ userId: userId });
     return { subscriptions, totalSubscriptions };
 });

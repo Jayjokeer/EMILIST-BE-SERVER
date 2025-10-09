@@ -251,7 +251,14 @@ const deleteJobById = (jobId, userId) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.deleteJobById = deleteJobById;
 const fetchJobByUserIdAndStatus = (userId, status) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield jobs_model_1.default.find({ userId: userId, status: status });
+    const query = { userId };
+    if (Array.isArray(status)) {
+        query.status = { $in: status };
+    }
+    else {
+        query.status = status;
+    }
+    return yield jobs_model_1.default.find(query);
 });
 exports.fetchJobByUserIdAndStatus = fetchJobByUserIdAndStatus;
 const fetchUserJobApplications = (userId_1, skip_1, limit_1, status_1, page_1, ...args_1) => __awaiter(void 0, [userId_1, skip_1, limit_1, status_1, page_1, ...args_1], void 0, function* (userId, skip, limit, status, page, search = null, filters = {}) {

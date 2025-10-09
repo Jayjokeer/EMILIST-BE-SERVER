@@ -24,8 +24,8 @@ const ServicesRenderedSchema = new Schema({
     verificationNumber: {type: String},
     issuingDate: {type: Date},
     expiringDate: {type: Date},
-    isCertificateExpire: {type: Boolean, default: true }
-
+    isCertificateExpire: {type: Boolean, default: true },
+    isVerified: {type: Boolean, default: false}
   })
   const InsuranceSchema = new Schema({
     issuingOrganisation: {type: String},
@@ -72,6 +72,7 @@ const businessSchema: Schema = new mongoose.Schema(
       users: [{type: Schema.Types.ObjectId, ref: 'Users'}],
       clickCount: {type: Number, default: 0}
      },
+     isVerified: {type: Boolean, default: false},
   },
   { timestamps: true }
 

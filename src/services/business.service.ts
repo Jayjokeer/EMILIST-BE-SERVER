@@ -274,6 +274,7 @@ export const fetchAllBusiness = async (
   const enhancedBusinesses = await Promise.all(
     businesses.map(async (business: any) => {
       const reviews = business.reviews || [];
+      console.log(business.reviews)
       const totalReviews = reviews.length;
       const averageRating =
         totalReviews > 0
@@ -292,7 +293,7 @@ export const fetchAllBusiness = async (
       };
     })
   );
-
+console.log(enhancedBusinesses)
   const filteredBusinesses = enhancedBusinesses.filter((business) => {
     if (filters.minRating && business.averageRating < filters.minRating) {
       return false;
@@ -524,3 +525,43 @@ export const fetchAllLikedBusinesses = async (userId: string) => {
     totalLikedBusinesses: likedBusinesses,
   };
 };
+
+export const verifyBusinessAdmin = async(id: string) =>{
+const business = await  Business.findById(id);
+if(!business){
+  throw new NotFoundError('business not found')
+}
+business.isVerified = true;
+await business.save();
+}
+
+export const verifyCertificateAdmin = async(businessId: string, certificateId: string) =>{
+  const business = await  Business.findById(businessId);
+if(!business){
+  throw new NotFoundError('business not found')
+}
+  const certificate = business.certification!.find(
+    (cert: any) => cert._id.toString() === certificateId.toString()
+  );
+  if(!certificate){
+    throw new NotFoundError("Certificate not found for this business");
+
+  }
+
+    const now = new Date();
+  if (certificate.expiringDate && certificate.expiringDate < now) {
+    certificate.isCertificateExpire = true;
+    certificate.isVerified = false;
+  } else {
+    certificate.isCertificateExpire = false;
+    certificate.isVerified = true;
+  }
+  await business.save();
+
+  return  {
+    message: certificate.isVerified
+      ? "Certificate successfully verified"
+      : "Certificate has expired and cannot be verified",
+    certificate,
+  };
+  }

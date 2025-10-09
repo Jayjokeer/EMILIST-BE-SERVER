@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllLikedBusinesses = exports.markReviewHelpful = exports.fetchBusinessReviews = exports.fetchSimilarBusinesses = exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
+exports.verifyCertificateAdmin = exports.verifyBusinessAdmin = exports.fetchAllLikedBusinesses = exports.markReviewHelpful = exports.fetchBusinessReviews = exports.fetchSimilarBusinesses = exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
 const error_1 = require("../errors/error");
 const business_model_1 = __importDefault(require("../models/business.model"));
 const review_model_1 = __importDefault(require("../models/review.model"));
@@ -272,6 +272,7 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
     }
     const enhancedBusinesses = yield Promise.all(businesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
         const reviews = business.reviews || [];
+        console.log(business.reviews);
         const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
             ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
@@ -279,6 +280,7 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
         const completedJobs = yield projectService.completedJobsCount(String(business._id));
         return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)), isCompared: userId ? user.comparedBusinesses.includes(String(business._id)) : false, completedJobs, liked: likedBusinessIds.includes(String(business._id)) });
     })));
+    console.log(enhancedBusinesses);
     const filteredBusinesses = enhancedBusinesses.filter((business) => {
         if (filters.minRating && business.averageRating < filters.minRating) {
             return false;
@@ -449,3 +451,39 @@ const fetchAllLikedBusinesses = (userId) => __awaiter(void 0, void 0, void 0, fu
     };
 });
 exports.fetchAllLikedBusinesses = fetchAllLikedBusinesses;
+const verifyBusinessAdmin = (id) => __awaiter(void 0, void 0, void 0, function* () {
+    const business = yield business_model_1.default.findById(id);
+    if (!business) {
+        throw new error_1.NotFoundError('business not found');
+    }
+    business.isVerified = true;
+    yield business.save();
+});
+exports.verifyBusinessAdmin = verifyBusinessAdmin;
+const verifyCertificateAdmin = (businessId, certificateId) => __awaiter(void 0, void 0, void 0, function* () {
+    const business = yield business_model_1.default.findById(businessId);
+    if (!business) {
+        throw new error_1.NotFoundError('business not found');
+    }
+    const certificate = business.certification.find((cert) => cert._id.toString() === certificateId.toString());
+    if (!certificate) {
+        throw new error_1.NotFoundError("Certificate not found for this business");
+    }
+    const now = new Date();
+    if (certificate.expiringDate && certificate.expiringDate < now) {
+        certificate.isCertificateExpire = true;
+        certificate.isVerified = false;
+    }
+    else {
+        certificate.isCertificateExpire = false;
+        certificate.isVerified = true;
+    }
+    yield business.save();
+    return {
+        message: certificate.isVerified
+            ? "Certificate successfully verified"
+            : "Certificate has expired and cannot be verified",
+        certificate,
+    };
+});
+exports.verifyCertificateAdmin = verifyCertificateAdmin;
