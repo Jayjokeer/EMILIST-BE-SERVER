@@ -13,6 +13,7 @@ const AppConfigSchema = new Schema({
     certificateVerificationPrice: {type: Number, default : certificateVerificationPrice },
     userVerificationPrice: {type: Number, default : userVerificationPrice },
     businessVerificationPrice: {type: Number, default : businessVerificationPrice },
+    email: {type: String},
   });
 
 export default mongoose.model('AppConfig', AppConfigSchema);

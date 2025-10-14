@@ -71,6 +71,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 const project_enum_1 = require("../enums/project.enum");
 const verificationService = __importStar(require("../services/verification.service"));
+const order_enum_1 = require("../enums/order.enum");
 exports.adminDashboardController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { currency, year } = req.query;
     const data = {
@@ -115,6 +116,9 @@ exports.verifyUserAdminController = (0, error_handler_1.catchAsync)((req, res) =
     const verification = yield verificationService.findById(verificationId);
     if (!verification) {
         throw new error_1.NotFoundError("Verification not found");
+    }
+    if (verification.paymentStatus !== order_enum_1.OrderPaymentStatus.paid) {
+        throw new error_1.BadRequestError("You cannot complete this verification as it has not been paid");
     }
     if (verification.type === user_enums_1.VerificationEnum.user) {
         yield userService.verifyUser(String(verification.userId));

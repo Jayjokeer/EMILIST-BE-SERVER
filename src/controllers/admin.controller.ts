@@ -31,6 +31,7 @@ import mongoose from "mongoose";
 import { JobType, MilestonePaymentStatus, QuoteStatusEnum } from "../enums/jobs.enum";
 import { ProjectStatusEnum } from "../enums/project.enum";
 import * as verificationService from "../services/verification.service";
+import { OrderPaymentStatus } from "../enums/order.enum";
 
 export const adminDashboardController = catchAsync(async (req: JwtPayload, res: Response) => {
 const {currency, year}= req.query; 
@@ -79,9 +80,13 @@ export const fetchAllUsersAdminController = catchAsync(async (req: JwtPayload, r
 export const verifyUserAdminController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {verificationId} = req.query;
     const verification = await verificationService.findById(verificationId);
+
     if(!verification){
         throw new NotFoundError("Verification not found");
 
+    }
+    if(verification.paymentStatus !== OrderPaymentStatus.paid){
+        throw new BadRequestError("You cannot complete this verification as it has not been paid")
     }
     if(verification.type === VerificationEnum.user){
         await userService.verifyUser(String(verification.userId));
