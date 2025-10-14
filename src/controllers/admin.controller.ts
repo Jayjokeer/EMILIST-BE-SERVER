@@ -15,7 +15,7 @@ import * as privateExpertService from "../services/private-expert.service";
 import * as transactionService from "../services/transaction.service";
 import { ServiceEnum, TransactionEnum, WalletEnum } from "../enums/transaction.enum";
 import * as planService from "../services/plan.service";
-import { UserStatus } from "../enums/user.enums";
+import { UserStatus, VerificationEnum } from "../enums/user.enums";
 import * as businessService from "../services/business.service";
 import * as projectService from "../services/project.service";
 import * as authService from "../services/auth.service";
@@ -28,7 +28,7 @@ import { directJobApplicationMessage, otpMessage, welcomeMessageAdmin } from "..
 import { generateShortUUID, generateOTPData } from "../utils/utility";
 import { IJob } from "../interfaces/jobs.interface";
 import mongoose from "mongoose";
-import { JobType, MilestonePaymentStatus } from "../enums/jobs.enum";
+import { JobType, MilestonePaymentStatus, QuoteStatusEnum } from "../enums/jobs.enum";
 import { ProjectStatusEnum } from "../enums/project.enum";
 import * as verificationService from "../services/verification.service";
 
@@ -77,17 +77,28 @@ export const fetchAllUsersAdminController = catchAsync(async (req: JwtPayload, r
   });
 
 export const verifyUserAdminController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const {userId, type, businessId, certificateId} = req.query;
-    if(type === 'user' && userId){
-        await userService.verifyUser(userId);
+    const {verificationId} = req.query;
+    const verification = await verificationService.findById(verificationId);
+    if(!verification){
+        throw new NotFoundError("Verification not found");
+
+    }
+    if(verification.type === VerificationEnum.user){
+        await userService.verifyUser(String(verification.userId));
+        verification.status = QuoteStatusEnum.accepted;
+        await verification.save();
      return successResponse(res, StatusCodes.CREATED, 'User verified successfully');
 
-    }else if(type === 'business' && businessId){
-    await businessService.verifyBusinessAdmin(businessId);
+    }else if(verification.type === VerificationEnum.business){
+    await businessService.verifyBusinessAdmin(String(verification.businessId));
+        verification.status = QuoteStatusEnum.accepted;
+        await verification.save();
         return successResponse(res, StatusCodes.CREATED, 'Business verified successfully');
 
-    }else if(type === 'certificate' && certificateId && businessId ){
-     const {message, certificate}  = await businessService.verifyCertificateAdmin(businessId, certificateId);
+    }else if(verification.type === VerificationEnum.certificate ){
+     const {message, certificate}  = await businessService.verifyCertificateAdmin(String(verification.businessId), String(verification.certificateId));
+        verification.status = QuoteStatusEnum.accepted;
+        await verification.save();
      return successResponse(res, StatusCodes.CREATED, message);
 
     }
