@@ -31,6 +31,10 @@ const transactionSchema = new Schema(
     planId: { type: Schema.Types.ObjectId, ref: 'Plan'},
     vat: {type: Number},
     durationType: {type: String, enum: SubscriptionPeriodEnum}, 
+    businessId: { type: Schema.Types.ObjectId, ref: 'Business'},
+    verificationId: { type: Schema.Types.ObjectId, ref: 'Verification'},
+    certificateId: { type: Schema.Types.ObjectId},
+
   },
   { timestamps: true }
 );

@@ -68,3 +68,4 @@ router.route("/delete-category/:id").delete(current_user_1.adminAuth, adminContr
 router.route("/fetch-all-categories").get(adminController.fetchAllCategoriesController);
 router.route("/fetch-user-account-details/:userId").get(current_user_1.adminAuth, adminController.fetchUserAccountDetailsController);
 router.route("/fetch-user-subscriptions/:userId").get(current_user_1.adminAuth, adminController.fetchUserSubscriptionsController);
+router.route("/fetch-all-verifications").get(current_user_1.adminAuth, adminController.fetchAllVerificationsController);

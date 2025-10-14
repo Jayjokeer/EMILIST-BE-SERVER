@@ -21,6 +21,7 @@ import * as subscriptionService from '../services/subscription.service';
 import * as userService from '../services/auth.service';
 import { SubscriptionPeriodEnum, SubscriptionStatusEnum } from "../enums/suscribtion.enum";
 import { calculateVat } from "../utils/utility";
+import * as verificationService from "../services/verification.service";
 
 export const payforProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
@@ -208,6 +209,82 @@ if(!project){
 }   
 );
 
+export const payforVerificationController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const userId = req.user._id;
+  const {paymentMethod, currency, certificateId, type, businessId, verificationId} = req.body;
+  let data;
+      const appConfig = await transactionService.fetchPriceForVerification();
+  let amount;
+    if(type === 'user'){
+       amount = appConfig?.userVerificationPrice;
+    }else if( type === 'certificate' && certificateId && businessId){
+       amount = appConfig?.certificateVerificationPrice;
+
+    }else if (type === 'business' && businessId){
+       amount = appConfig?.businessVerificationPrice;
+
+    }
+    if (paymentMethod === PaymentMethodEnum.wallet) {
+      const userWallet = await walletService.findUserWalletByCurrency(userId, currency);
+      if (!userWallet || userWallet.balance < amount!) {
+         throw new BadRequestError("Insufficient wallet balance" );
+      }
+      const transactionPayload = {
+          userId,
+          type: TransactionType.DEBIT,
+          amount: amount,
+          description: `Verification payment via wallet`,
+          paymentMethod: paymentMethod,
+          balanceBefore: userWallet.balance,
+          walletId: userWallet._id,
+          currency: userWallet.currency,
+          status: TransactionEnum.processing,
+          certificateId,
+          businessId,
+          serviceType: ServiceEnum.verification,
+          verificationId,
+        };
+      const transaction = await transactionService.createTransaction(transactionPayload);
+      userWallet.balance -= Math.ceil(Number(amount));
+      await userWallet.save();
+      transaction.balanceAfter = userWallet.balance;
+      await verificationService.updateVerification(
+          verificationId,
+        {
+          paymentStatus: OrderPaymentStatus.paid,
+          
+        }
+      );
+
+       data = "Payment successful";
+    } else if (paymentMethod === PaymentMethodEnum.card) {
+      if (paymentMethod === PaymentMethodEnum.card && currency === WalletEnum.NGN ) {
+          const transactionPayload = {
+              userId,
+              amount: Math.ceil(Number(amount)),
+              type: TransactionType.DEBIT,
+              description: `Verification payment via card`,
+              paymentMethod: paymentMethod,
+              currency: currency,
+              status: TransactionEnum.pending,
+              reference:`PS-${Date.now()}`,
+              certificateId,
+              businessId,
+              serviceType: ServiceEnum.verification,
+              verificationId,
+             };
+          const transaction = await transactionService.createTransaction(transactionPayload);
+          transaction.paymentService = PaymentServiceEnum.paystack;
+          await transaction.save();
+          const paymentLink = await generatePaystackPaymentLink(transaction.reference, Number(amount), req.user.email);
+          data = { paymentLink, transaction };
+    }
+  }
+  return successResponse(res, StatusCodes.CREATED, data);
+}   
+);
+
+// VERIFY PAYSTACK SERVICE
 export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload, res: Response) => {
   const {reference} = req.params;
   const transaction = await transactionService.fetchTransactionByReference(reference);
@@ -334,7 +411,26 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
       message = "Subscription payment failed"
       await transaction.save();
     }
+  }else if(transaction.serviceType === ServiceEnum.verification){
+    const verification = await verificationService.findById(transaction.verificationId)
+    if(!verification){
+      throw new NotFoundError('verification not found')
+    }
+    const verifyPayment = await verifyPaystackPayment(reference);
+
+    if(verifyPayment == "success"){
+      transaction.dateCompleted = new Date();
+      transaction.status = TransactionEnum.completed;
+      await transaction.save();
+      verification.paymentStatus = OrderPaymentStatus.paid;
+      await verification.save();
+    }else {
+      transaction.status = TransactionEnum.failed;
+      message = "Verification payment failed"
+      await transaction.save();
+    }
   }
 
   return successResponse(res, StatusCodes.OK, message);
 });
+

@@ -295,3 +295,7 @@ export const getVat = async ()=>{
 export const fetchSingleTransactionByMilestoneId = async (milestoneId: string) =>{
   return await Transaction.findOne({milestoneId});
 };
+
+export const fetchPriceForVerification = async()=>{
+  return await AppConfig.findOne();
+}

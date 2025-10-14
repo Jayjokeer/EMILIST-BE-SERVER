@@ -41,4 +41,5 @@ export enum ServiceEnum {
     material = 'Material',
     walletFunding = 'Walletfunding',
     subscription = 'Subscription',
+    verification = 'verification',
 };

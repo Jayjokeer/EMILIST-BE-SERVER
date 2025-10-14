@@ -30,6 +30,7 @@ import { IJob } from "../interfaces/jobs.interface";
 import mongoose from "mongoose";
 import { JobType, MilestonePaymentStatus } from "../enums/jobs.enum";
 import { ProjectStatusEnum } from "../enums/project.enum";
+import * as verificationService from "../services/verification.service";
 
 export const adminDashboardController = catchAsync(async (req: JwtPayload, res: Response) => {
 const {currency, year}= req.query; 
@@ -477,5 +478,13 @@ export const fetchUserSubscriptionsController = catchAsync(async(req: JwtPayload
         page: Number(page),
         totalPages: Math.ceil(totalSubscriptions / limit),
     };
+   return successResponse(res,StatusCodes.OK, data);
+});
+
+export const fetchAllVerificationsController = catchAsync(async(req: JwtPayload, res: Response)=>{
+    const{limit, page} = req.query;
+
+    const data = await verificationService.fetchAllVerifications(limit, page);
+
    return successResponse(res,StatusCodes.OK, data);
 });

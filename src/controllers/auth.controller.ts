@@ -25,6 +25,7 @@ import * as jobService from "../services/job.service";
 import * as businessService from "../services/business.service";
 import * as productService from "../services/product.service";
 import * as newsLetterService from "../services/newsletter.service";
+import * as verificationService from "../services/verification.service";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -383,13 +384,59 @@ export const inviteUserController = catchAsync(async (req: JwtPayload, res: Resp
 });
 
 export const requestVerificationController = catchAsync(async (req: JwtPayload, res: Response) => { 
+  const {type, businessId, certificateId} = req.query;
   const userId = req.user._id;
   const user = await authService.findUserById(userId);
   if(!user){
     throw new NotFoundError("User not found!");
   }
-  user.requestedVerification = true;
-  await user?.save();
+  let verification;
+  if(type == 'user'){
+      user.requestedVerification = true;
+      await user?.save();
+      const payload ={
+        userId
+      }
+      
+     verification = await verificationService.createVerification(payload)
+  }else if (type == 'business'){
+    if(!businessId){
+      throw new BadRequestError("businessID is required")
+    }
+    const business = await businessService.fetchSingleBusiness(businessId);
+    if(!business){
+      throw new NotFoundError("Business not found");
+    };
+    const payload ={
+      userId,
+      businessId,
+    };
+     verification = await verificationService.createVerification(payload)
+  }else if (type == 'certificate'){
+    if(!certificateId || !businessId){
+      throw new BadRequestError("business and certificate id are required")
+    }
+    const business = await businessService.fetchSingleBusiness(businessId);
+    if(!business){
+      throw new NotFoundError("Business not found");
+    }
+    const certificate = business.certification!.find(
+        (cert: any) => cert._id.toString() === certificateId.toString()
+      );
+      if(!certificate){
+        throw new NotFoundError("Certificate not found for this business");
+    
+      }
+    
+      const payload ={
+      userId,
+      businessId,
+      certificateId,
+    }
+    verification = await verificationService.createVerification(payload)
+
+  }
+
   return successResponse(res, StatusCodes.OK, "Verification request sent successfully");
 });
 

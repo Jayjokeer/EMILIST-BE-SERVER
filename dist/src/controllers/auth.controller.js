@@ -69,6 +69,7 @@ const jobService = __importStar(require("../services/job.service"));
 const businessService = __importStar(require("../services/business.service"));
 const productService = __importStar(require("../services/product.service"));
 const newsLetterService = __importStar(require("../services/newsletter.service"));
+const verificationService = __importStar(require("../services/verification.service"));
 exports.registerUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userName, email, password, } = req.body;
     const isEmailExists = yield authService.findUserByEmail(email);
@@ -356,13 +357,55 @@ exports.inviteUserController = (0, error_handler_1.catchAsync)((req, res) => __a
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Invite sent successfully");
 }));
 exports.requestVerificationController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { type, businessId, certificateId } = req.query;
     const userId = req.user._id;
     const user = yield authService.findUserById(userId);
     if (!user) {
         throw new error_1.NotFoundError("User not found!");
     }
-    user.requestedVerification = true;
-    yield (user === null || user === void 0 ? void 0 : user.save());
+    let verification;
+    if (type == 'user') {
+        user.requestedVerification = true;
+        yield (user === null || user === void 0 ? void 0 : user.save());
+        const payload = {
+            userId
+        };
+        verification = yield verificationService.createVerification(payload);
+    }
+    else if (type == 'business') {
+        if (!businessId) {
+            throw new error_1.BadRequestError("businessID is required");
+        }
+        const business = yield businessService.fetchSingleBusiness(businessId);
+        if (!business) {
+            throw new error_1.NotFoundError("Business not found");
+        }
+        ;
+        const payload = {
+            userId,
+            businessId,
+        };
+        verification = yield verificationService.createVerification(payload);
+    }
+    else if (type == 'certificate') {
+        if (!certificateId || !businessId) {
+            throw new error_1.BadRequestError("business and certificate id are required");
+        }
+        const business = yield businessService.fetchSingleBusiness(businessId);
+        if (!business) {
+            throw new error_1.NotFoundError("Business not found");
+        }
+        const certificate = business.certification.find((cert) => cert._id.toString() === certificateId.toString());
+        if (!certificate) {
+            throw new error_1.NotFoundError("Certificate not found for this business");
+        }
+        const payload = {
+            userId,
+            businessId,
+            certificateId,
+        };
+        verification = yield verificationService.createVerification(payload);
+    }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Verification request sent successfully");
 }));
 exports.insightsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

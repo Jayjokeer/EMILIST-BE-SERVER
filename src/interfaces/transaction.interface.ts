@@ -29,5 +29,8 @@ export interface ITransaction extends Document {
     createdAt: Date;
     durationType?: SubscriptionPeriodEnum;
     isSettled: boolean;
+    businessId?: any;
+    certificateId?: any;
+    verificationId?: any;
   };
   

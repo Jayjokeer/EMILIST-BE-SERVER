@@ -34,5 +34,6 @@ router.route("/delete-category/:id").delete(adminAuth,adminController.deleteCate
 router.route("/fetch-all-categories").get(adminController.fetchAllCategoriesController );
 router.route("/fetch-user-account-details/:userId").get(adminAuth, adminController.fetchUserAccountDetailsController );
 router.route("/fetch-user-subscriptions/:userId").get(adminAuth, adminController.fetchUserSubscriptionsController );
+router.route("/fetch-all-verifications").get(adminAuth, adminController.fetchAllVerificationsController );
 
 export { router as AdminRoute };

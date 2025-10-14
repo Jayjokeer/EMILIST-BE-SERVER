@@ -34,16 +34,13 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
-const vatAmount = 7.5;
-const costPerClick = 1;
-const certificateVerificationPrice = 10;
-const userVerificationPrice = 20;
-const businessVerificationPrice = 30;
-const AppConfigSchema = new mongoose_1.Schema({
-    vat: { type: Number, default: vatAmount },
-    costPerClick: { type: Number, default: costPerClick },
-    certificateVerificationPrice: { type: Number, default: certificateVerificationPrice },
-    userVerificationPrice: { type: Number, default: userVerificationPrice },
-    businessVerificationPrice: { type: Number, default: businessVerificationPrice },
+const order_enum_1 = require("../enums/order.enum");
+const jobs_enum_1 = require("../enums/jobs.enum");
+const VerificationSchema = new mongoose_1.Schema({
+    businessId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Business' },
+    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
+    certificateId: { type: String },
+    status: { type: String, enum: jobs_enum_1.QuoteStatusEnum, default: jobs_enum_1.QuoteStatusEnum.pending },
+    paymentStatus: { type: String, enum: order_enum_1.OrderPaymentStatus, default: order_enum_1.OrderPaymentStatus.unpaid }
 });
-exports.default = mongoose_1.default.model('AppConfig', AppConfigSchema);
+exports.default = mongoose_1.default.model('Verifications', VerificationSchema);

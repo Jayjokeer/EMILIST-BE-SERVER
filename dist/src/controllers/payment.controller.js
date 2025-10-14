@@ -42,7 +42,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyPaystackPaymentController = exports.payforJobController = exports.payforProductController = void 0;
+exports.verifyPaystackPaymentController = exports.payforVerificationController = exports.payforJobController = exports.payforProductController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const cartService = __importStar(require("../services/cart.service"));
@@ -63,6 +63,7 @@ const subscriptionService = __importStar(require("../services/subscription.servi
 const userService = __importStar(require("../services/auth.service"));
 const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const utility_1 = require("../utils/utility");
+const verificationService = __importStar(require("../services/verification.service"));
 exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const userId = req.user._id;
@@ -239,6 +240,76 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
+exports.payforVerificationController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user._id;
+    const { paymentMethod, currency, certificateId, type, businessId, verificationId } = req.body;
+    let data;
+    const appConfig = yield transactionService.fetchPriceForVerification();
+    let amount;
+    if (type === 'user') {
+        amount = appConfig === null || appConfig === void 0 ? void 0 : appConfig.userVerificationPrice;
+    }
+    else if (type === 'certificate' && certificateId && businessId) {
+        amount = appConfig === null || appConfig === void 0 ? void 0 : appConfig.certificateVerificationPrice;
+    }
+    else if (type === 'business' && businessId) {
+        amount = appConfig === null || appConfig === void 0 ? void 0 : appConfig.businessVerificationPrice;
+    }
+    if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
+        const userWallet = yield walletService.findUserWalletByCurrency(userId, currency);
+        if (!userWallet || userWallet.balance < amount) {
+            throw new error_1.BadRequestError("Insufficient wallet balance");
+        }
+        const transactionPayload = {
+            userId,
+            type: transaction_enum_1.TransactionType.DEBIT,
+            amount: amount,
+            description: `Verification payment via wallet`,
+            paymentMethod: paymentMethod,
+            balanceBefore: userWallet.balance,
+            walletId: userWallet._id,
+            currency: userWallet.currency,
+            status: transaction_enum_1.TransactionEnum.processing,
+            certificateId,
+            businessId,
+            serviceType: transaction_enum_1.ServiceEnum.verification,
+            verificationId,
+        };
+        const transaction = yield transactionService.createTransaction(transactionPayload);
+        userWallet.balance -= Math.ceil(Number(amount));
+        yield userWallet.save();
+        transaction.balanceAfter = userWallet.balance;
+        yield verificationService.updateVerification(verificationId, {
+            paymentStatus: order_enum_1.OrderPaymentStatus.paid,
+        });
+        data = "Payment successful";
+    }
+    else if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card) {
+        if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency === transaction_enum_1.WalletEnum.NGN) {
+            const transactionPayload = {
+                userId,
+                amount: Math.ceil(Number(amount)),
+                type: transaction_enum_1.TransactionType.DEBIT,
+                description: `Verification payment via card`,
+                paymentMethod: paymentMethod,
+                currency: currency,
+                status: transaction_enum_1.TransactionEnum.pending,
+                reference: `PS-${Date.now()}`,
+                certificateId,
+                businessId,
+                serviceType: transaction_enum_1.ServiceEnum.verification,
+                verificationId,
+            };
+            const transaction = yield transactionService.createTransaction(transactionPayload);
+            transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
+            yield transaction.save();
+            const paymentLink = yield (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, Number(amount), req.user.email);
+            data = { paymentLink, transaction };
+        }
+    }
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+}));
+// VERIFY PAYSTACK SERVICE
 exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { reference } = req.params;
     const transaction = yield transactionService.fetchTransactionByReference(reference);
@@ -368,6 +439,25 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, 
         else {
             transaction.status = transaction_enum_1.TransactionEnum.failed;
             message = "Subscription payment failed";
+            yield transaction.save();
+        }
+    }
+    else if (transaction.serviceType === transaction_enum_1.ServiceEnum.verification) {
+        const verification = yield verificationService.findById(transaction.verificationId);
+        if (!verification) {
+            throw new error_1.NotFoundError('verification not found');
+        }
+        const verifyPayment = yield (0, paystack_1.verifyPaystackPayment)(reference);
+        if (verifyPayment == "success") {
+            transaction.dateCompleted = new Date();
+            transaction.status = transaction_enum_1.TransactionEnum.completed;
+            yield transaction.save();
+            verification.paymentStatus = order_enum_1.OrderPaymentStatus.paid;
+            yield verification.save();
+        }
+        else {
+            transaction.status = transaction_enum_1.TransactionEnum.failed;
+            message = "Verification payment failed";
             yield transaction.save();
         }
     }
