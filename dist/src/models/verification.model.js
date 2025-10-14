@@ -36,11 +36,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const order_enum_1 = require("../enums/order.enum");
 const jobs_enum_1 = require("../enums/jobs.enum");
+const user_enums_1 = require("../enums/user.enums");
 const VerificationSchema = new mongoose_1.Schema({
     businessId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Business' },
-    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
+    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users' },
     certificateId: { type: String },
     status: { type: String, enum: jobs_enum_1.QuoteStatusEnum, default: jobs_enum_1.QuoteStatusEnum.pending },
-    paymentStatus: { type: String, enum: order_enum_1.OrderPaymentStatus, default: order_enum_1.OrderPaymentStatus.unpaid }
+    paymentStatus: { type: String, enum: order_enum_1.OrderPaymentStatus, default: order_enum_1.OrderPaymentStatus.unpaid },
+    type: { type: String, enum: user_enums_1.VerificationEnum },
 });
 exports.default = mongoose_1.default.model('Verifications', VerificationSchema);

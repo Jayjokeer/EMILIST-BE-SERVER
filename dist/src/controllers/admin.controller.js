@@ -467,6 +467,6 @@ exports.fetchUserSubscriptionsController = (0, error_handler_1.catchAsync)((req,
 }));
 exports.fetchAllVerificationsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { limit, page } = req.query;
-    const data = yield verificationService.fetchAllVerifications(limit, page);
+    const data = yield verificationService.fetchAllVerifications(page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

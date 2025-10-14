@@ -62,8 +62,6 @@ const transactionSchema = new mongoose_1.Schema({
     planId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Plan' },
     vat: { type: Number },
     durationType: { type: String, enum: suscribtion_enum_1.SubscriptionPeriodEnum },
-    businessId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Business' },
     verificationId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Verification' },
-    certificateId: { type: mongoose_1.Schema.Types.ObjectId },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Transaction', transactionSchema);

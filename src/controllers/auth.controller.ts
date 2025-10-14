@@ -395,7 +395,8 @@ export const requestVerificationController = catchAsync(async (req: JwtPayload, 
       user.requestedVerification = true;
       await user?.save();
       const payload ={
-        userId
+        userId,
+        type
       }
       
      verification = await verificationService.createVerification(payload)
@@ -410,6 +411,7 @@ export const requestVerificationController = catchAsync(async (req: JwtPayload, 
     const payload ={
       userId,
       businessId,
+      type,
     };
      verification = await verificationService.createVerification(payload)
   }else if (type == 'certificate'){
@@ -432,12 +434,16 @@ export const requestVerificationController = catchAsync(async (req: JwtPayload, 
       userId,
       businessId,
       certificateId,
+      type,
     }
     verification = await verificationService.createVerification(payload)
 
   }
-
-  return successResponse(res, StatusCodes.OK, "Verification request sent successfully");
+  const data = {
+    message: "Verification request sent successfully",
+    verification
+  }
+  return successResponse(res, StatusCodes.OK,data );
 });
 
 export const insightsController = catchAsync(async (req: JwtPayload, res: Response) => { 

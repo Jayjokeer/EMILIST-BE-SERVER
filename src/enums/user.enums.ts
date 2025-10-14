@@ -7,3 +7,8 @@ export enum UserRolesEnum {
     user = "user",
     admin= "admin"
 }
+export enum VerificationEnum {
+    user = 'user',
+    business = 'business',
+    certificate = 'certificate'
+}

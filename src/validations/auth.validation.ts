@@ -1,5 +1,6 @@
 import Joi from "joi";
 import { Request, Response, NextFunction } from "express";
+import { PaymentMethodEnum, WalletEnum } from "../enums/transaction.enum";
 
 export const validateRegisterUser = (req: Request, res: Response, next: NextFunction) => {
     const schema = Joi.object({
@@ -150,3 +151,37 @@ export const validateRegisterUser = (req: Request, res: Response, next: NextFunc
     next();
   };
   
+export const validatePaymentForVerification = (req: Request, res: Response, next: NextFunction) => {
+      const schema = Joi.object({      
+        verificationId: Joi.string().required().messages({
+          'string.base': 'verification ID must be a string',
+          'string.empty': 'verification ID is required',
+        }),
+        paymentMethod: Joi.string()
+          .valid(...Object.values(PaymentMethodEnum))
+          .required()
+          .messages({
+            'string.base': 'Payment method must be a string',
+            'any.only': 'Payment method must be one of the allowed values',
+            'string.empty': 'Payment method is required',
+          }),
+        currency: Joi.string()
+          .valid(...Object.values(WalletEnum))
+          .required()
+          .messages({
+            'string.base': 'Currency must be a string',
+            'any.only': 'Currency must be one of the allowed values',
+            'string.empty': 'Currency is required',
+          }),
+  });
+    
+      const { error } = schema.validate(req.body, { abortEarly: false });
+    
+      if (error) {
+        const errorMessages = error.details.map((detail) => detail.message);
+         res.status(400).json({ errors: errorMessages });
+         return;
+      }
+    
+      next();
+    };

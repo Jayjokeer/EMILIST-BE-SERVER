@@ -484,7 +484,7 @@ export const fetchUserSubscriptionsController = catchAsync(async(req: JwtPayload
 export const fetchAllVerificationsController = catchAsync(async(req: JwtPayload, res: Response)=>{
     const{limit, page} = req.query;
 
-    const data = await verificationService.fetchAllVerifications(limit, page);
+    const data = await verificationService.fetchAllVerifications(page, limit);
 
    return successResponse(res,StatusCodes.OK, data);
 });

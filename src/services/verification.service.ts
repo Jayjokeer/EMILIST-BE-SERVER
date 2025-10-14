@@ -24,7 +24,7 @@ export const fetchAllVerifications = async(page: number, limit: number )=>{
     const [verifications, total] = await Promise.all([
       Verification.find()
         .populate("businessId", "businessName")
-        .populate("userId", "firstName lastName email")
+        .populate("userId", "fullName email")
         .sort({ createdAt: 1 }) 
         .skip(skip)
         .limit(limit),
@@ -36,6 +36,6 @@ export const fetchAllVerifications = async(page: number, limit: number )=>{
      total,
      currentPage: page,
      totalPages: Math.ceil(total / limit),
-     pageSize: limit,
+     limit,
 }
 };

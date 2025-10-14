@@ -368,7 +368,8 @@ exports.requestVerificationController = (0, error_handler_1.catchAsync)((req, re
         user.requestedVerification = true;
         yield (user === null || user === void 0 ? void 0 : user.save());
         const payload = {
-            userId
+            userId,
+            type
         };
         verification = yield verificationService.createVerification(payload);
     }
@@ -384,6 +385,7 @@ exports.requestVerificationController = (0, error_handler_1.catchAsync)((req, re
         const payload = {
             userId,
             businessId,
+            type,
         };
         verification = yield verificationService.createVerification(payload);
     }
@@ -403,10 +405,15 @@ exports.requestVerificationController = (0, error_handler_1.catchAsync)((req, re
             userId,
             businessId,
             certificateId,
+            type,
         };
         verification = yield verificationService.createVerification(payload);
     }
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Verification request sent successfully");
+    const data = {
+        message: "Verification request sent successfully",
+        verification
+    };
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.insightsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d, _e, _f, _g;

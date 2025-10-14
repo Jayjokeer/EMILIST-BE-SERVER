@@ -22,6 +22,7 @@ import * as userService from '../services/auth.service';
 import { SubscriptionPeriodEnum, SubscriptionStatusEnum } from "../enums/suscribtion.enum";
 import { calculateVat } from "../utils/utility";
 import * as verificationService from "../services/verification.service";
+import { VerificationEnum } from "../enums/user.enums";
 
 export const payforProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
@@ -210,17 +211,22 @@ if(!project){
 );
 
 export const payforVerificationController = catchAsync(async (req: JwtPayload, res: Response) => {
+ try{
   const userId = req.user._id;
-  const {paymentMethod, currency, certificateId, type, businessId, verificationId} = req.body;
+  const {paymentMethod, currency, verificationId} = req.body;
+  const verification = await verificationService.findById(verificationId);
+  if(!verification){
+    throw new NotFoundError('verification not found')
+  }
   let data;
       const appConfig = await transactionService.fetchPriceForVerification();
   let amount;
-    if(type === 'user'){
+    if(verification.type === VerificationEnum.user){
        amount = appConfig?.userVerificationPrice;
-    }else if( type === 'certificate' && certificateId && businessId){
+    }else if( verification.type === VerificationEnum.certificate){
        amount = appConfig?.certificateVerificationPrice;
 
-    }else if (type === 'business' && businessId){
+    }else if (verification.type === VerificationEnum.business){
        amount = appConfig?.businessVerificationPrice;
 
     }
@@ -239,8 +245,6 @@ export const payforVerificationController = catchAsync(async (req: JwtPayload, r
           walletId: userWallet._id,
           currency: userWallet.currency,
           status: TransactionEnum.processing,
-          certificateId,
-          businessId,
           serviceType: ServiceEnum.verification,
           verificationId,
         };
@@ -268,8 +272,6 @@ export const payforVerificationController = catchAsync(async (req: JwtPayload, r
               currency: currency,
               status: TransactionEnum.pending,
               reference:`PS-${Date.now()}`,
-              certificateId,
-              businessId,
               serviceType: ServiceEnum.verification,
               verificationId,
              };
@@ -281,7 +283,11 @@ export const payforVerificationController = catchAsync(async (req: JwtPayload, r
     }
   }
   return successResponse(res, StatusCodes.CREATED, data);
+  }catch(error){
+  console.log(error)
+}
 }   
+
 );
 
 // VERIFY PAYSTACK SERVICE

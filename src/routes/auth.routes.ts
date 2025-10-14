@@ -3,8 +3,8 @@ import * as authController from "../controllers/auth.controller";
 import { userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload } from "../utils/image-upload";
 import passport from "passport";
-import { validateRegisterUser, validateLoginUser, validateVerifyEmail, validateForgetPassword, validateResetPassword, validateChangePassword, validateUpdateAccountDetails } from "../validations/auth.validation";
-
+import { validateRegisterUser, validateLoginUser, validateVerifyEmail, validateForgetPassword, validateResetPassword, validateChangePassword, validateUpdateAccountDetails, validatePaymentForVerification } from "../validations/auth.validation";
+import *  as paymentController from "../controllers/payment.controller";
 
 const router = Router();
 
@@ -42,5 +42,6 @@ router.route("/invite-user").get(userAuth,authController.inviteUserController);
 router.route("/request-verificaton").get(userAuth,authController.requestVerificationController);
 router.route("/insights").get(userAuth, authController.insightsController);
 router.route("/update-account-details").patch(userAuth,validateUpdateAccountDetails, authController.updateAccountDetailsController);
+router.route("/pay-for-verification").post(userAuth,validatePaymentForVerification , paymentController.payforVerificationController);
 
 export { router as AuthRoute };

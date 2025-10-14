@@ -43,6 +43,7 @@ const current_user_1 = require("../middlewares/current-user");
 const image_upload_1 = require("../utils/image-upload");
 const passport_1 = __importDefault(require("passport"));
 const auth_validation_1 = require("../validations/auth.validation");
+const paymentController = __importStar(require("../controllers/payment.controller"));
 const router = (0, express_1.Router)();
 exports.AuthRoute = router;
 router.route("/").get((req, res) => {
@@ -76,3 +77,4 @@ router.route("/invite-user").get(current_user_1.userAuth, authController.inviteU
 router.route("/request-verificaton").get(current_user_1.userAuth, authController.requestVerificationController);
 router.route("/insights").get(current_user_1.userAuth, authController.insightsController);
 router.route("/update-account-details").patch(current_user_1.userAuth, auth_validation_1.validateUpdateAccountDetails, authController.updateAccountDetailsController);
+router.route("/pay-for-verification").post(current_user_1.userAuth, auth_validation_1.validatePaymentForVerification, paymentController.payforVerificationController);

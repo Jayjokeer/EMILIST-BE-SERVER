@@ -64,6 +64,7 @@ const userService = __importStar(require("../services/auth.service"));
 const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const utility_1 = require("../utils/utility");
 const verificationService = __importStar(require("../services/verification.service"));
+const user_enums_1 = require("../enums/user.enums");
 exports.payforProductController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const userId = req.user._id;
@@ -241,73 +242,78 @@ exports.payforJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.payforVerificationController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const userId = req.user._id;
-    const { paymentMethod, currency, certificateId, type, businessId, verificationId } = req.body;
-    let data;
-    const appConfig = yield transactionService.fetchPriceForVerification();
-    let amount;
-    if (type === 'user') {
-        amount = appConfig === null || appConfig === void 0 ? void 0 : appConfig.userVerificationPrice;
-    }
-    else if (type === 'certificate' && certificateId && businessId) {
-        amount = appConfig === null || appConfig === void 0 ? void 0 : appConfig.certificateVerificationPrice;
-    }
-    else if (type === 'business' && businessId) {
-        amount = appConfig === null || appConfig === void 0 ? void 0 : appConfig.businessVerificationPrice;
-    }
-    if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
-        const userWallet = yield walletService.findUserWalletByCurrency(userId, currency);
-        if (!userWallet || userWallet.balance < amount) {
-            throw new error_1.BadRequestError("Insufficient wallet balance");
+    try {
+        const userId = req.user._id;
+        const { paymentMethod, currency, verificationId } = req.body;
+        const verification = yield verificationService.findById(verificationId);
+        if (!verification) {
+            throw new error_1.NotFoundError('verification not found');
         }
-        const transactionPayload = {
-            userId,
-            type: transaction_enum_1.TransactionType.DEBIT,
-            amount: amount,
-            description: `Verification payment via wallet`,
-            paymentMethod: paymentMethod,
-            balanceBefore: userWallet.balance,
-            walletId: userWallet._id,
-            currency: userWallet.currency,
-            status: transaction_enum_1.TransactionEnum.processing,
-            certificateId,
-            businessId,
-            serviceType: transaction_enum_1.ServiceEnum.verification,
-            verificationId,
-        };
-        const transaction = yield transactionService.createTransaction(transactionPayload);
-        userWallet.balance -= Math.ceil(Number(amount));
-        yield userWallet.save();
-        transaction.balanceAfter = userWallet.balance;
-        yield verificationService.updateVerification(verificationId, {
-            paymentStatus: order_enum_1.OrderPaymentStatus.paid,
-        });
-        data = "Payment successful";
-    }
-    else if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card) {
-        if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency === transaction_enum_1.WalletEnum.NGN) {
+        let data;
+        const appConfig = yield transactionService.fetchPriceForVerification();
+        let amount;
+        if (verification.type === user_enums_1.VerificationEnum.user) {
+            amount = appConfig === null || appConfig === void 0 ? void 0 : appConfig.userVerificationPrice;
+        }
+        else if (verification.type === user_enums_1.VerificationEnum.certificate) {
+            amount = appConfig === null || appConfig === void 0 ? void 0 : appConfig.certificateVerificationPrice;
+        }
+        else if (verification.type === user_enums_1.VerificationEnum.business) {
+            amount = appConfig === null || appConfig === void 0 ? void 0 : appConfig.businessVerificationPrice;
+        }
+        if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
+            const userWallet = yield walletService.findUserWalletByCurrency(userId, currency);
+            if (!userWallet || userWallet.balance < amount) {
+                throw new error_1.BadRequestError("Insufficient wallet balance");
+            }
             const transactionPayload = {
                 userId,
-                amount: Math.ceil(Number(amount)),
                 type: transaction_enum_1.TransactionType.DEBIT,
-                description: `Verification payment via card`,
+                amount: amount,
+                description: `Verification payment via wallet`,
                 paymentMethod: paymentMethod,
-                currency: currency,
-                status: transaction_enum_1.TransactionEnum.pending,
-                reference: `PS-${Date.now()}`,
-                certificateId,
-                businessId,
+                balanceBefore: userWallet.balance,
+                walletId: userWallet._id,
+                currency: userWallet.currency,
+                status: transaction_enum_1.TransactionEnum.processing,
                 serviceType: transaction_enum_1.ServiceEnum.verification,
                 verificationId,
             };
             const transaction = yield transactionService.createTransaction(transactionPayload);
-            transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
-            yield transaction.save();
-            const paymentLink = yield (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, Number(amount), req.user.email);
-            data = { paymentLink, transaction };
+            userWallet.balance -= Math.ceil(Number(amount));
+            yield userWallet.save();
+            transaction.balanceAfter = userWallet.balance;
+            yield verificationService.updateVerification(verificationId, {
+                paymentStatus: order_enum_1.OrderPaymentStatus.paid,
+            });
+            data = "Payment successful";
         }
+        else if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card) {
+            if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency === transaction_enum_1.WalletEnum.NGN) {
+                const transactionPayload = {
+                    userId,
+                    amount: Math.ceil(Number(amount)),
+                    type: transaction_enum_1.TransactionType.DEBIT,
+                    description: `Verification payment via card`,
+                    paymentMethod: paymentMethod,
+                    currency: currency,
+                    status: transaction_enum_1.TransactionEnum.pending,
+                    reference: `PS-${Date.now()}`,
+                    serviceType: transaction_enum_1.ServiceEnum.verification,
+                    verificationId,
+                };
+                const transaction = yield transactionService.createTransaction(transactionPayload);
+                transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
+                yield transaction.save();
+                const paymentLink = yield (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, Number(amount), req.user.email);
+                data = { paymentLink, transaction };
+            }
+        }
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    catch (error) {
+        console.log(error);
+    }
 }));
 // VERIFY PAYSTACK SERVICE
 exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

@@ -35,7 +35,7 @@ const fetchAllVerifications = (page, limit) => __awaiter(void 0, void 0, void 0,
     const [verifications, total] = yield Promise.all([
         verification_model_1.default.find()
             .populate("businessId", "businessName")
-            .populate("userId", "firstName lastName email")
+            .populate("userId", "fullName email")
             .sort({ createdAt: 1 })
             .skip(skip)
             .limit(limit),
@@ -46,7 +46,7 @@ const fetchAllVerifications = (page, limit) => __awaiter(void 0, void 0, void 0,
         total,
         currentPage: page,
         totalPages: Math.ceil(total / limit),
-        pageSize: limit,
+        limit,
     };
 });
 exports.fetchAllVerifications = fetchAllVerifications;
