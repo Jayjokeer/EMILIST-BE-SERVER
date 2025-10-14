@@ -111,17 +111,27 @@ exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)((req, res
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 }));
 exports.verifyUserAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId, type, businessId, certificateId } = req.query;
-    if (type === 'user' && userId) {
-        yield userService.verifyUser(userId);
+    const { verificationId } = req.query;
+    const verification = yield verificationService.findById(verificationId);
+    if (!verification) {
+        throw new error_1.NotFoundError("Verification not found");
+    }
+    if (verification.type === user_enums_1.VerificationEnum.user) {
+        yield userService.verifyUser(String(verification.userId));
+        verification.status = jobs_enum_1.QuoteStatusEnum.accepted;
+        yield verification.save();
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, 'User verified successfully');
     }
-    else if (type === 'business' && businessId) {
-        yield businessService.verifyBusinessAdmin(businessId);
+    else if (verification.type === user_enums_1.VerificationEnum.business) {
+        yield businessService.verifyBusinessAdmin(String(verification.businessId));
+        verification.status = jobs_enum_1.QuoteStatusEnum.accepted;
+        yield verification.save();
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, 'Business verified successfully');
     }
-    else if (type === 'certificate' && certificateId && businessId) {
-        const { message, certificate } = yield businessService.verifyCertificateAdmin(businessId, certificateId);
+    else if (verification.type === user_enums_1.VerificationEnum.certificate) {
+        const { message, certificate } = yield businessService.verifyCertificateAdmin(String(verification.businessId), String(verification.certificateId));
+        verification.status = jobs_enum_1.QuoteStatusEnum.accepted;
+        yield verification.save();
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, message);
     }
 }));
