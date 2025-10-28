@@ -375,50 +375,71 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)((req, res) => __aw
 exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
     const { status } = req.query;
-    let data;
-    if (status === jobs_enum_1.JobStatusEnum.pending || status === jobs_enum_1.JobStatusEnum.complete) {
-        const jobs = yield jobService.fetchJobByUserIdAndStatus(userId, status);
-        data = jobs;
-    }
-    else if (status === jobs_enum_1.JobStatusEnum.active || status === jobs_enum_1.JobStatusEnum.paused || status === jobs_enum_1.JobStatusEnum.overdue) {
-        const jobs = yield jobService.fetchJobByUserIdAndStatus(userId, status === jobs_enum_1.JobStatusEnum.overdue
-            ? [jobs_enum_1.JobStatusEnum.active, jobs_enum_1.JobStatusEnum.paused]
-            : status);
-        const now = new Date();
-        const processedJobs = jobs.map((job) => {
-            const totalMilestones = job.milestones.length;
-            let milestoneStartDate = new Date(job.startDate || new Date());
-            let currentMilestoneDueDate = new Date(milestoneStartDate);
-            let overallDueDate = new Date(milestoneStartDate);
-            let milestoneProgress = "0/0";
-            for (let i = 0; i < totalMilestones; i++) {
-                const milestone = job.milestones[i];
-                const duration = parseInt(milestone.timeFrame.number, 10) || 0;
-                const durationMs = milestone.timeFrame.period === 'days'
-                    ? duration * 86400000
-                    : milestone.timeFrame.period === 'weeks'
-                        ? duration * 604800000
-                        : duration * 2629800000;
-                overallDueDate = new Date(overallDueDate.getTime() + durationMs);
-                if (milestone.status === jobs_enum_1.MilestoneEnum.active || milestone.status === jobs_enum_1.MilestoneEnum.paused) {
-                    milestoneProgress = `${i + 1}/${totalMilestones}`;
-                    currentMilestoneDueDate = new Date(overallDueDate);
-                    break;
+    const now = new Date();
+    let data = [];
+    const jobs = yield jobService.fetchJobsByUserId(userId);
+    const processedJobs = jobs.map((job) => {
+        var _a, _b;
+        const totalMilestones = ((_a = job.milestones) === null || _a === void 0 ? void 0 : _a.length) || 0;
+        const progressMilestones = ((_b = job.milestones) === null || _b === void 0 ? void 0 : _b.filter((m) => m.status === jobs_enum_1.MilestoneEnum.completed ||
+            m.status === jobs_enum_1.MilestoneEnum.active ||
+            m.status === jobs_enum_1.MilestoneEnum.paused).length) || 0;
+        const milestoneProgress = `${progressMilestones}/${totalMilestones}`;
+        let overallDueDate = job.startDate ? new Date(job.startDate) : null;
+        if (job.startDate && totalMilestones > 0) {
+            job.milestones.forEach((milestone) => {
+                var _a;
+                if (((_a = milestone.timeFrame) === null || _a === void 0 ? void 0 : _a.period) === "days") {
+                    const days = parseInt(milestone.timeFrame.number, 10);
+                    if (!isNaN(days)) {
+                        overallDueDate === null || overallDueDate === void 0 ? void 0 : overallDueDate.setDate(overallDueDate.getDate() + days);
+                    }
                 }
-                milestoneStartDate = new Date(overallDueDate);
-            }
-            return Object.assign(Object.assign({}, job.toObject()), { milestoneProgress,
-                currentMilestoneDueDate,
-                overallDueDate });
+            });
+        }
+        const isOverdue = job.status === jobs_enum_1.JobStatusEnum.active &&
+            job.startDate &&
+            overallDueDate &&
+            overallDueDate < now;
+        return Object.assign(Object.assign({}, job.toObject()), { milestoneProgress,
+            overallDueDate,
+            isOverdue });
+    });
+    if (status === jobs_enum_1.JobStatusEnum.pending) {
+        data = processedJobs.filter((job) => job.status === jobs_enum_1.JobStatusEnum.pending);
+    }
+    if (status === jobs_enum_1.JobStatusEnum.complete) {
+        data = processedJobs.filter((job) => job.status === jobs_enum_1.JobStatusEnum.complete);
+    }
+    if (status === jobs_enum_1.JobStatusEnum.active) {
+        data = processedJobs.filter((job) => {
+            if (job.status !== jobs_enum_1.JobStatusEnum.active)
+                return false;
+            // ✅ Active jobs without start date should be returned
+            if (!job.startDate)
+                return true;
+            // ✅ Active jobs with due date still in future should also be returned
+            if (job.overallDueDate && job.overallDueDate >= now)
+                return true;
+            return false;
         });
-        if (status === jobs_enum_1.JobStatusEnum.overdue) {
-            // only jobs past due
-            data = processedJobs.filter(job => job.overallDueDate < now);
-        }
-        else {
-            // active/paused jobs that are not expired
-            data = processedJobs.filter(job => job.overallDueDate >= now);
-        }
+    }
+    if (status === jobs_enum_1.JobStatusEnum.paused) {
+        data = processedJobs.filter((job) => {
+            if (job.status !== jobs_enum_1.JobStatusEnum.paused)
+                return false;
+            if (!job.startDate)
+                return true;
+            if (job.overallDueDate && job.overallDueDate >= now)
+                return true;
+            return false;
+        });
+    }
+    if (status === jobs_enum_1.JobStatusEnum.overdue) {
+        data = processedJobs.filter((job) => job.status === jobs_enum_1.JobStatusEnum.active &&
+            job.startDate &&
+            job.overallDueDate &&
+            job.overallDueDate < now);
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

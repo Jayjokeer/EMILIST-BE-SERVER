@@ -507,28 +507,56 @@ export const fetchUserJobApplications = async (
     return analyticsData;
   };
   
-export const fetchJobCount = async( userId: string)=>{
-  const totalPendingJobs = await Jobs.countDocuments({ userId, status: JobStatusEnum.pending });
-  const totalActiveJobs = await Jobs.countDocuments({ userId, status: JobStatusEnum.active });
-  const totalPausedJobs = await Jobs.countDocuments({ userId, status: JobStatusEnum.paused });
-  const totalCompletedJobs = await Jobs.countDocuments({ userId, status: JobStatusEnum.complete });
+export const fetchJobCount = async (userId: string) => {
+  const jobs = await Jobs.find({ userId });
+  const now = new Date();
 
-  const totalOverdueJobs = await Jobs.countDocuments({
-    userId,
-    status: JobStatusEnum.active,
-    dueDate: { $lt: new Date() },
-  });
+  let totalPendingJobs = 0;
+  let totalActiveJobs = 0;
+  let totalPausedJobs = 0;
+  let totalCompletedJobs = 0;
+  let totalOverdueJobs = 0;
 
+  jobs.forEach(job => {
+    const { status, startDate, milestones } = job;
+    if (status === JobStatusEnum.pending) totalPendingJobs++;
+    if (status === JobStatusEnum.paused) totalPausedJobs++;
+    if (status === JobStatusEnum.complete) totalCompletedJobs++;
 
-   return {
-      totalPendingJobs,
-      totalActiveJobs,
-      totalOverdueJobs,
-      totalPausedJobs,
-      totalCompletedJobs,
+    if (status === JobStatusEnum.active && startDate && milestones?.length > 0) {
+      let totalDays = 0;
+
+      milestones.forEach((m: any) => {
+        if (
+          m.timeFrame?.period === "days" &&
+          !isNaN(parseInt(m.timeFrame.number as any))
+        ) {
+          totalDays += parseInt(m.timeFrame.number as any);
+        }
+      });
+
+      const dueDate = new Date(startDate);
+      dueDate.setDate(dueDate.getDate() + totalDays);
+
+      if (dueDate < now) {
+        totalOverdueJobs++;
+      } else {
+        totalActiveJobs++;
+      }
     }
 
+    else if (status === JobStatusEnum.active) {
+      totalActiveJobs++;
+    }
+  });
 
+  return {
+    totalPendingJobs,
+    totalActiveJobs,
+    totalOverdueJobs,
+    totalPausedJobs,
+    totalCompletedJobs
+  };
 };
 export const fetchProjectCounts = async (userId: string) => {
   const userProjects = await Project.find({ user: userId });
@@ -883,3 +911,7 @@ const totalJobs = await RecurringJob.countDocuments()
     jobs
   }
 };
+
+export const fetchJobsByUserId = async(userId: string)=>{
+  return await Jobs.find({userId: userId});
+}

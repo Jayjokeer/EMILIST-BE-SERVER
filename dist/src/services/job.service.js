@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
+exports.fetchJobsByUserId = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -448,21 +448,49 @@ const jobAnalytics = (...args_1) => __awaiter(void 0, [...args_1], void 0, funct
 });
 exports.jobAnalytics = jobAnalytics;
 const fetchJobCount = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const totalPendingJobs = yield jobs_model_1.default.countDocuments({ userId, status: jobs_enum_1.JobStatusEnum.pending });
-    const totalActiveJobs = yield jobs_model_1.default.countDocuments({ userId, status: jobs_enum_1.JobStatusEnum.active });
-    const totalPausedJobs = yield jobs_model_1.default.countDocuments({ userId, status: jobs_enum_1.JobStatusEnum.paused });
-    const totalCompletedJobs = yield jobs_model_1.default.countDocuments({ userId, status: jobs_enum_1.JobStatusEnum.complete });
-    const totalOverdueJobs = yield jobs_model_1.default.countDocuments({
-        userId,
-        status: jobs_enum_1.JobStatusEnum.active,
-        dueDate: { $lt: new Date() },
+    const jobs = yield jobs_model_1.default.find({ userId });
+    const now = new Date();
+    let totalPendingJobs = 0;
+    let totalActiveJobs = 0;
+    let totalPausedJobs = 0;
+    let totalCompletedJobs = 0;
+    let totalOverdueJobs = 0;
+    jobs.forEach(job => {
+        const { status, startDate, milestones } = job;
+        if (status === jobs_enum_1.JobStatusEnum.pending)
+            totalPendingJobs++;
+        if (status === jobs_enum_1.JobStatusEnum.paused)
+            totalPausedJobs++;
+        if (status === jobs_enum_1.JobStatusEnum.complete)
+            totalCompletedJobs++;
+        if (status === jobs_enum_1.JobStatusEnum.active && startDate && (milestones === null || milestones === void 0 ? void 0 : milestones.length) > 0) {
+            let totalDays = 0;
+            milestones.forEach((m) => {
+                var _a;
+                if (((_a = m.timeFrame) === null || _a === void 0 ? void 0 : _a.period) === "days" &&
+                    !isNaN(parseInt(m.timeFrame.number))) {
+                    totalDays += parseInt(m.timeFrame.number);
+                }
+            });
+            const dueDate = new Date(startDate);
+            dueDate.setDate(dueDate.getDate() + totalDays);
+            if (dueDate < now) {
+                totalOverdueJobs++;
+            }
+            else {
+                totalActiveJobs++;
+            }
+        }
+        else if (status === jobs_enum_1.JobStatusEnum.active) {
+            totalActiveJobs++;
+        }
     });
     return {
         totalPendingJobs,
         totalActiveJobs,
         totalOverdueJobs,
         totalPausedJobs,
-        totalCompletedJobs,
+        totalCompletedJobs
     };
 });
 exports.fetchJobCount = fetchJobCount;
@@ -775,3 +803,7 @@ const fetchAllRecurringJobs = (userId, limit, page) => __awaiter(void 0, void 0,
     };
 });
 exports.fetchAllRecurringJobs = fetchAllRecurringJobs;
+const fetchJobsByUserId = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield jobs_model_1.default.find({ userId: userId });
+});
+exports.fetchJobsByUserId = fetchJobsByUserId;
