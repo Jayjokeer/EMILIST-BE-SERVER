@@ -7,6 +7,7 @@ import * as planController from "../controllers/plan.controller";
 const router = Router();
 
 router.route("/get-user-subscription").get(userAuth,subscrbtionController.getUserSubscription); 
+router.route("/get-all-user-subscriptions").get(userAuth,subscrbtionController.getAllUsersSubscription); 
 router.route("/subscribe-plan").post(userAuth, validateSubscriptionPayment, subscrbtionController.subscribeToPlan);
 router.route("/create-plan").post(adminAuth, planController.createPlanController);
 router.route("/get-plans").get(planController.getPlansController);

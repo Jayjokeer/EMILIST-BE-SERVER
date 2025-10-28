@@ -15,6 +15,7 @@ interface IMembership {
 }
 
 interface ICertification {
+  id?: string;
   certificate?: string;
   issuingOrganisation?: string;
   verificationNumber?: string;

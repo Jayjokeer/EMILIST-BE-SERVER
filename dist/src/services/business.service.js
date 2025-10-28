@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyCertificateAdmin = exports.verifyBusinessAdmin = exports.fetchAllLikedBusinesses = exports.markReviewHelpful = exports.fetchBusinessReviews = exports.fetchSimilarBusinesses = exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
+exports.deleteBusinessItem = exports.verifyCertificateAdmin = exports.verifyBusinessAdmin = exports.fetchAllLikedBusinesses = exports.markReviewHelpful = exports.fetchBusinessReviews = exports.fetchSimilarBusinesses = exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
 const error_1 = require("../errors/error");
 const business_model_1 = __importDefault(require("../models/business.model"));
 const review_model_1 = __importDefault(require("../models/review.model"));
@@ -487,3 +487,46 @@ const verifyCertificateAdmin = (businessId, certificateId) => __awaiter(void 0, 
     };
 });
 exports.verifyCertificateAdmin = verifyCertificateAdmin;
+const deleteBusinessItem = (businessId, itemType, itemId, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    const business = yield business_model_1.default.findOne({ _id: businessId, userId });
+    if (!business) {
+        throw new error_1.NotFoundError("Business not found or not owned by the user");
+    }
+    switch (itemType) {
+        case "certificate": {
+            const cert = business.certification.id(itemId);
+            if (!cert)
+                throw new error_1.NotFoundError("Certificate not found");
+            cert.deleteOne();
+            yield business.save();
+            return business;
+        }
+        case "certificateImage": {
+            const cert = business.certification.id(itemId);
+            if (!cert)
+                throw new error_1.NotFoundError("Certificate not found");
+            cert.certificate = undefined;
+            yield business.save();
+            return business;
+        }
+        case "membership": {
+            const membership = business.membership.id(itemId);
+            if (!membership)
+                throw new error_1.NotFoundError("Membership not found");
+            membership.deleteOne();
+            yield business.save();
+            return business;
+        }
+        case "insurance": {
+            const insurance = business.insurance.id(itemId);
+            if (!insurance)
+                throw new error_1.NotFoundError("Insurance not found");
+            insurance.deleteOne();
+            yield business.save();
+            return business;
+        }
+        default:
+            throw new error_1.BadRequestError("Invalid itemType provided");
+    }
+});
+exports.deleteBusinessItem = deleteBusinessItem;

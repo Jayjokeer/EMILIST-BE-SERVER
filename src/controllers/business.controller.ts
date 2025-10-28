@@ -302,3 +302,42 @@ export const markReviewController = catchAsync(async (req: JwtPayload, res: Resp
     return successResponse(res,StatusCodes.OK, "Business muted successfully");
   
   });
+
+  export const deleteBusinessItemController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const { businessId, itemType, itemId } = req.params;
+  const userId = req.user._id;
+
+  const business = await businessService.deleteBusinessItem(  businessId,itemType, itemId, userId );
+  if (!business) {
+    throw new NotFoundError("Business not found or not owned by the user");
+  }
+
+  switch (itemType) {
+    case "certificate": {
+      return successResponse(res, StatusCodes.OK, {
+        message: "Certificate removed successfully"
+      });
+    }
+
+    case "certificateImage": {
+      return successResponse(res, StatusCodes.OK, {
+        message: "Certificate image removed successfully"
+      });
+    }
+
+    case "membership": {
+      return successResponse(res, StatusCodes.OK, {
+        message: "Membership removed successfully"
+      });
+    }
+
+    case "insurance": {
+      return successResponse(res, StatusCodes.OK, {
+        message: "Insurance removed successfully"
+      });
+    }
+
+    default:
+      throw new BadRequestError("Invalid itemType provided");
+  }
+});

@@ -42,7 +42,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.promoteJobAndBusinessController = exports.getUserSubscription = exports.subscribeToPlan = void 0;
+exports.getAllUsersSubscription = exports.promoteJobAndBusinessController = exports.getUserSubscription = exports.subscribeToPlan = void 0;
 const planService = __importStar(require("../services/plan.service"));
 const subscriptionService = __importStar(require("../services/subscription.service"));
 const error_handler_1 = require("../errors/error-handler");
@@ -203,4 +203,11 @@ exports.promoteJobAndBusinessController = (0, error_handler_1.catchAsync)((req, 
     payload.costPerClick = costPerClick;
     const promotion = yield subscriptionService.createPromotion(payload);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, promotion);
+}));
+exports.getAllUsersSubscription = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user._id;
+    const data = yield subscriptionService.getAllUsersSubscription(userId);
+    if (!data)
+        throw new error_1.NotFoundError('Subscriptions not found');
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

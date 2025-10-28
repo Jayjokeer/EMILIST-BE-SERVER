@@ -42,7 +42,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.muteBusinessController = exports.markReviewController = exports.fetchBusinessReviewsController = exports.fetchSimilarBusinessByUserController = exports.fetchOtherBusinessByUserController = exports.unlikeBusinessController = exports.likeBusinessController = exports.fetchAllComparedBusinessesController = exports.compareBusinessController = exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
+exports.deleteBusinessItemController = exports.muteBusinessController = exports.markReviewController = exports.fetchBusinessReviewsController = exports.fetchSimilarBusinessByUserController = exports.fetchOtherBusinessByUserController = exports.unlikeBusinessController = exports.likeBusinessController = exports.fetchAllComparedBusinessesController = exports.compareBusinessController = exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -278,4 +278,36 @@ exports.muteBusinessController = (0, error_handler_1.catchAsync)((req, res) => _
     user.mutedBusinesses.push(businessId);
     yield (user === null || user === void 0 ? void 0 : user.save());
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Business muted successfully");
+}));
+exports.deleteBusinessItemController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { businessId, itemType, itemId } = req.params;
+    const userId = req.user._id;
+    const business = yield businessService.deleteBusinessItem(businessId, itemType, itemId, userId);
+    if (!business) {
+        throw new error_1.NotFoundError("Business not found or not owned by the user");
+    }
+    switch (itemType) {
+        case "certificate": {
+            return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+                message: "Certificate removed successfully"
+            });
+        }
+        case "certificateImage": {
+            return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+                message: "Certificate image removed successfully"
+            });
+        }
+        case "membership": {
+            return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+                message: "Membership removed successfully"
+            });
+        }
+        case "insurance": {
+            return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+                message: "Insurance removed successfully"
+            });
+        }
+        default:
+            throw new error_1.BadRequestError("Invalid itemType provided");
+    }
 }));

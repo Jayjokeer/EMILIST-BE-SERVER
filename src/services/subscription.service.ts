@@ -47,3 +47,7 @@ export const fetchAllUserSubscriptionsAdmin = async(limit: number, page: number,
     const totalSubscriptions = await Subscription.countDocuments({userId: userId});
     return {subscriptions ,  totalSubscriptions};
 };
+
+export const getAllUsersSubscription = async (userId: string) => {
+    return await Subscription.findOne({ userId}).populate('planId');
+};

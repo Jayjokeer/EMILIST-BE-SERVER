@@ -42,6 +42,7 @@ const planController = __importStar(require("../controllers/plan.controller"));
 const router = (0, express_1.Router)();
 exports.SubscribeRoute = router;
 router.route("/get-user-subscription").get(current_user_1.userAuth, subscrbtionController.getUserSubscription);
+router.route("/get-all-user-subscriptions").get(current_user_1.userAuth, subscrbtionController.getAllUsersSubscription);
 router.route("/subscribe-plan").post(current_user_1.userAuth, subscription_validation_1.validateSubscriptionPayment, subscrbtionController.subscribeToPlan);
 router.route("/create-plan").post(current_user_1.adminAuth, planController.createPlanController);
 router.route("/get-plans").get(planController.getPlansController);

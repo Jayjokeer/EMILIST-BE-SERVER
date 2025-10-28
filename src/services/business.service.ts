@@ -565,3 +565,61 @@ if(!business){
     certificate,
   };
   }
+
+export const deleteBusinessItem = async (
+  businessId: string,
+  itemType: string, 
+  itemId: string,
+  userId: string,
+) => {
+
+  const business = await Business.findOne({ _id: businessId, userId });
+  if (!business) {
+    throw new NotFoundError("Business not found or not owned by the user");
+  }
+
+  switch (itemType) {
+    case "certificate": {
+    const cert = (business.certification as any).id(itemId);
+      if (!cert) throw new NotFoundError("Certificate not found");
+
+      cert.deleteOne();
+      await business.save();
+
+      return business;
+    }
+
+    case "certificateImage": {
+      const cert = (business.certification as any).id(itemId);
+      if (!cert) throw new NotFoundError("Certificate not found");
+
+      cert.certificate = undefined;
+      await business.save();
+
+      return business;
+    }
+
+    case "membership": {
+      const membership = (business.membership as any).id(itemId);
+      if (!membership) throw new NotFoundError("Membership not found");
+
+      membership.deleteOne();
+      await business.save();
+
+      return business;
+    }
+
+    case "insurance": {
+      const insurance = (business.insurance as any).id(itemId);
+      if (!insurance) throw new NotFoundError("Insurance not found");
+
+      insurance.deleteOne();
+      await business.save();
+
+      return business;
+    }
+
+    default:
+      throw new BadRequestError("Invalid itemType provided");
+  }
+};

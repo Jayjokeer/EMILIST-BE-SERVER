@@ -22,7 +22,7 @@ router.route("/fetch-similar-business-by-user/:businessId").get(businesControlle
 router.route("/fetch-business-reviews/:businessId").get(businesController.fetchBusinessReviewsController );
 router.route("/mark-helpul-review/:reviewId").patch(validateMarkBusinessReview,businesController.markReviewController );
 router.route("/mute-business/:businessId").patch(userAuth,businesController.muteBusinessController  );
-// router.route("/review-business").post(userAuth,validateReviewBusiness,businesController.reviewBusinessController);
+router.route("/delete-business-item/:businessId/:itemId/:itemType").get(userAuth,businesController.deleteBusinessItemController);
 
 export { router as BusinessRoute };
 

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllUserSubscriptionsAdmin = exports.createPromotion = exports.fetchCostPerClick = exports.fetchAllSubscriptionsAdmin = exports.findExpiredSubscriptions = exports.getSubscriptionById = exports.getActiveSubscriptionWithoutDetails = exports.getActiveSubscription = exports.createSubscription = void 0;
+exports.getAllUsersSubscription = exports.fetchAllUserSubscriptionsAdmin = exports.createPromotion = exports.fetchCostPerClick = exports.fetchAllSubscriptionsAdmin = exports.findExpiredSubscriptions = exports.getSubscriptionById = exports.getActiveSubscriptionWithoutDetails = exports.getActiveSubscription = exports.createSubscription = void 0;
 const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const subscription_model_1 = __importDefault(require("../models/subscription.model"));
 const app_config_model_1 = __importDefault(require("../models/app-config.model"));
@@ -64,3 +64,7 @@ const fetchAllUserSubscriptionsAdmin = (limit, page, userId) => __awaiter(void 0
     return { subscriptions, totalSubscriptions };
 });
 exports.fetchAllUserSubscriptionsAdmin = fetchAllUserSubscriptionsAdmin;
+const getAllUsersSubscription = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield subscription_model_1.default.findOne({ userId }).populate('planId');
+});
+exports.getAllUsersSubscription = getAllUsersSubscription;

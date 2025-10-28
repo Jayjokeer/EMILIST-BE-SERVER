@@ -171,3 +171,13 @@ export const promoteJobAndBusinessController = catchAsync( async(req:JwtPayload,
     return successResponse(res,StatusCodes.OK, promotion);
   
   });
+
+export const getAllUsersSubscription = catchAsync( async (req: JwtPayload, res: Response) => {
+    const userId = req.user._id;
+
+    const data = await subscriptionService.getAllUsersSubscription(userId);
+
+    if (!data) throw new NotFoundError('Subscriptions not found');
+
+return successResponse(res, StatusCodes.OK, data);
+});
