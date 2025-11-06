@@ -23,7 +23,7 @@ import * as walletService from "../services/wallet.services";
 import { PlanEnum } from "../enums/plan.enum";
 import { ICreateUser } from "../interfaces/user.interface";
 import { sendEmail } from "../utils/send_email";
-import { directJobApplicationMessage, otpMessage, welcomeMessageAdmin } from "../utils/templates";
+import { directJobApplicationMessage, otpMessage, passwordResetMessage, welcomeMessageAdmin } from "../utils/templates";
 import { generateShortUUID, generateOTPData } from "../utils/utility";
 import { IJob } from "../interfaces/jobs.interface";
 import mongoose from "mongoose";
@@ -34,6 +34,7 @@ import { OrderPaymentStatus } from "../enums/order.enum";
 import * as  adminService from "../services/admin.service";
 import {  hashPassword ,  comparePassword  } from "../utils/hashing";
 import { generateJWTwithExpiryDate } from "../utils/jwt";
+import { NotificationTypeEnum } from "../enums/notification.enum";
 
 export const adminDashboardController = catchAsync(async (req: JwtPayload, res: Response) => {
 const {currency, year}= req.query; 
@@ -572,4 +573,45 @@ export const changeStatusAdmin = catchAsync(async(req: JwtPayload, res: Response
     admin.status = status;
     await admin.save();
    return successResponse(res,StatusCodes.OK,"Admin status changed");
+});
+
+export const forgetPasswordController = catchAsync(async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  const foundUser = await adminService.getAdminByEmail(email.toLowerCase());
+  if (!foundUser) throw new NotFoundError("Admin not found!");
+
+  const { otp, otpExpiryTime } = await generateOTPData(String(foundUser._id));
+  foundUser.otpExpiresAt = otpExpiryTime;
+  foundUser.passwordResetOtp = otp;
+  await foundUser.save();
+
+  const { html, subject } = passwordResetMessage(String(foundUser.fullName), otp);
+  await sendEmail(email, subject, html); 
+
+  return successResponse(res, StatusCodes.OK, "Password reset OTP sent to your email.");
+});
+
+export const resetPasswordController = catchAsync(async (req: Request, res: Response) => {
+  const { email, otp, newPassword } = req.body;
+
+  const foundUser = await adminService.getAdminByEmail(email.toLowerCase());
+  if (!foundUser) throw new NotFoundError("User not found!");
+
+  if (foundUser.passwordResetOtp !== otp) throw new BadRequestError("Invalid OTP");
+  const expiresAt = foundUser.otpExpiresAt as any;
+  if (foundUser.otpExpiresAt && Date.now() > expiresAt) {
+    throw new BadRequestError("OTP expired, request a new one.");
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+  foundUser.password = hashedPassword;
+  foundUser.passwordResetOtp = undefined;
+  foundUser.otpExpiresAt = undefined;
+  if(foundUser.isEmailVerified == false){
+    foundUser.isEmailVerified = true;
+  }
+  await foundUser.save();
+
+  return successResponse(res, StatusCodes.OK, "Password reset successfully!");
 });

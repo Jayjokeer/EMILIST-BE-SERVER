@@ -38,6 +38,8 @@ router.route("/fetch-all-verifications").get(adminAuth, adminController.fetchAll
 router.route("/create-admin").post(superAdminAuth, adminController.createAdminController);
 router.route("/login").post(adminController.loginAdminController);
 router.route("/change-status-admin").patch(superAdminAuth,adminController.changeStatusAdmin);
+router.route("/forgot-password").patch(adminController.forgetPasswordController);
+router.route("/password-reset").patch(adminController.resetPasswordController);
 
 
 export { router as AdminRoute };

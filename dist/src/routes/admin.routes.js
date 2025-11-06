@@ -72,3 +72,5 @@ router.route("/fetch-all-verifications").get(current_user_1.adminAuth, adminCont
 router.route("/create-admin").post(current_user_1.superAdminAuth, adminController.createAdminController);
 router.route("/login").post(adminController.loginAdminController);
 router.route("/change-status-admin").patch(current_user_1.superAdminAuth, adminController.changeStatusAdmin);
+router.route("/forgot-password").patch(adminController.forgetPasswordController);
+router.route("/password-reset").patch(adminController.resetPasswordController);
