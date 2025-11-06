@@ -42,12 +42,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminAuth = exports.userAuth = void 0;
+exports.superAdminAuth = exports.adminAuth = exports.userAuth = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const jwt_1 = require("../utils/jwt");
 const error_1 = require("../errors/error");
 const authService = __importStar(require("../services/auth.service"));
 const user_enums_1 = require("../enums/user.enums");
+const adminService = __importStar(require("../services/admin.service"));
 const userAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
@@ -95,11 +96,11 @@ const adminAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function
         if (!decode || !decode.email) {
             throw new error_1.UnauthorizedError("Authentication Failure");
         }
-        const user = yield authService.findUserByEmail(decode.email.toLowerCase());
+        const user = yield adminService.getAdminByEmail(decode.email.toLowerCase());
         if (!user) {
             throw new error_1.UnauthorizedError("No user found");
         }
-        if (user.role !== user_enums_1.UserRolesEnum.admin) {
+        if (user.role !== user_enums_1.AdminRolesEnum.admin && user.role !== user_enums_1.AdminRolesEnum.superAdmin) {
             throw new error_1.UnauthorizedError("Admin access only");
         }
         req.user = user;
@@ -114,3 +115,36 @@ const adminAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function
     }
 });
 exports.adminAuth = adminAuth;
+const superAdminAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
+    }
+    if (!token) {
+        res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ message: "Kindly login" });
+        return;
+    }
+    try {
+        const decode = (0, jwt_1.verifyJWT)(token);
+        if (!decode || !decode.email) {
+            throw new error_1.UnauthorizedError("Authentication Failure");
+        }
+        const user = yield adminService.getAdminByEmail(decode.email.toLowerCase());
+        if (!user) {
+            throw new error_1.UnauthorizedError("No user found");
+        }
+        if (user.role !== user_enums_1.AdminRolesEnum.superAdmin) {
+            throw new error_1.UnauthorizedError("Super Admin access only");
+        }
+        req.user = user;
+        next();
+    }
+    catch (error) {
+        console.error("Auth Error:", error);
+        res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({
+            message: error instanceof error_1.UnauthorizedError ? error.message : "Authentication Failure",
+        });
+        return;
+    }
+});
+exports.superAdminAuth = superAdminAuth;

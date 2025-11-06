@@ -69,3 +69,6 @@ router.route("/fetch-all-categories").get(adminController.fetchAllCategoriesCont
 router.route("/fetch-user-account-details/:userId").get(current_user_1.adminAuth, adminController.fetchUserAccountDetailsController);
 router.route("/fetch-user-subscriptions/:userId").get(current_user_1.adminAuth, adminController.fetchUserSubscriptionsController);
 router.route("/fetch-all-verifications").get(current_user_1.adminAuth, adminController.fetchAllVerificationsController);
+router.route("/create-admin").post(current_user_1.superAdminAuth, adminController.createAdminController);
+router.route("/login").post(adminController.loginAdminController);
+router.route("/change-status-admin").patch(current_user_1.superAdminAuth, adminController.changeStatusAdmin);

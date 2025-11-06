@@ -33,7 +33,7 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
       email,
       password,
     } = req.body;
-    const isEmailExists = await authService.findUserByEmail(email);
+    const isEmailExists = await authService.findUserByEmail(email.toLowerCase());
 
     if(isEmailExists) throw new BadRequestError("User with email already exists!");
 

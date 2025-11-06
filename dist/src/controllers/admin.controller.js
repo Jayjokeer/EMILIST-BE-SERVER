@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllVerificationsController = exports.fetchUserSubscriptionsController = exports.fetchUserAccountDetailsController = exports.fetchAllCategoriesController = exports.fetchSingleCategoryController = exports.deleteCategoryController = exports.addCategoriesController = exports.updateJobPaymentStatusController = exports.fetchPrivateExpertByIdController = exports.fetchAllPrivateExpertsController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
+exports.changeStatusAdmin = exports.loginAdminController = exports.createAdminController = exports.fetchAllVerificationsController = exports.fetchUserSubscriptionsController = exports.fetchUserAccountDetailsController = exports.fetchAllCategoriesController = exports.fetchSingleCategoryController = exports.deleteCategoryController = exports.addCategoriesController = exports.updateJobPaymentStatusController = exports.fetchPrivateExpertByIdController = exports.fetchAllPrivateExpertsController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -72,6 +72,9 @@ const jobs_enum_1 = require("../enums/jobs.enum");
 const project_enum_1 = require("../enums/project.enum");
 const verificationService = __importStar(require("../services/verification.service"));
 const order_enum_1 = require("../enums/order.enum");
+const adminService = __importStar(require("../services/admin.service"));
+const hashing_1 = require("../utils/hashing");
+const jwt_1 = require("../utils/jwt");
 exports.adminDashboardController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { currency, year } = req.query;
     const data = {
@@ -483,4 +486,59 @@ exports.fetchAllVerificationsController = (0, error_handler_1.catchAsync)((req, 
     const { limit, page } = req.query;
     const data = yield verificationService.fetchAllVerifications(page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+}));
+exports.createAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { fullName, mobile, email, password } = req.body;
+    const isEmailExists = yield adminService.getAdminByEmail(email.toLowerCase());
+    if (isEmailExists) {
+        throw new error_1.BadRequestError('Email exists');
+    }
+    const encryptPwd = yield (0, hashing_1.hashPassword)(password);
+    const data = yield adminService.createAdmin({
+        fullName,
+        mobile,
+        email: email.toLowerCase(),
+        password: encryptPwd
+    });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, "Admin created");
+}));
+exports.loginAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email, password } = req.body;
+    const foundUser = yield adminService.getAdminByEmail(email.toLowerCase());
+    if (!foundUser)
+        throw new error_1.NotFoundError("Invalid credentials!");
+    const userPwd = foundUser.password;
+    const pwdCompare = yield (0, hashing_1.comparePassword)(password, userPwd);
+    if (!pwdCompare)
+        throw new error_1.NotFoundError("Invalid credentials!");
+    if (foundUser.status == user_enums_1.UserStatus.deactivated) {
+        throw new error_1.UnauthorizedError("Account Deactivated!!");
+    }
+    if (foundUser.status == user_enums_1.UserStatus.suspended) {
+        throw new error_1.UnauthorizedError("Account Suspended kindly Contact Admin!!");
+    }
+    //   if(foundUser.isEmailVerified == false){
+    //     throw new BadRequestError("Kindly verify your email!");
+    //   }
+    const token = yield (0, jwt_1.generateJWTwithExpiryDate)({
+        email: foundUser.email,
+        id: foundUser._id,
+        userName: foundUser.fullName
+    });
+    const userData = yield authService.findUserById(String(foundUser._id));
+    const user = {
+        token,
+        userData
+    };
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, user);
+}));
+exports.changeStatusAdmin = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { status, id } = req.body;
+    const admin = yield adminService.getAdminById(id);
+    if (!admin) {
+        throw new error_1.NotFoundError('Admin not found');
+    }
+    admin.status = status;
+    yield admin.save();
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Admin status changed");
 }));

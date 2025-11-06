@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { adminAuth } from "../middlewares/current-user";
+import { adminAuth, superAdminAuth } from "../middlewares/current-user";
 import * as adminController from "../controllers/admin.controller";
 import { validateAddUserAdmin, validateJobPaymentAdmin } from "../validations/admin.validation";
 import { multipleUpload } from "../utils/image-upload";
@@ -35,5 +35,9 @@ router.route("/fetch-all-categories").get(adminController.fetchAllCategoriesCont
 router.route("/fetch-user-account-details/:userId").get(adminAuth, adminController.fetchUserAccountDetailsController );
 router.route("/fetch-user-subscriptions/:userId").get(adminAuth, adminController.fetchUserSubscriptionsController );
 router.route("/fetch-all-verifications").get(adminAuth, adminController.fetchAllVerificationsController );
+router.route("/create-admin").post(superAdminAuth, adminController.createAdminController);
+router.route("/login").post(adminController.loginAdminController);
+router.route("/change-status-admin").patch(superAdminAuth,adminController.changeStatusAdmin);
+
 
 export { router as AdminRoute };

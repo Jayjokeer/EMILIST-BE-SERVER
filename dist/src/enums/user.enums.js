@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VerificationEnum = exports.UserRolesEnum = exports.UserStatus = void 0;
+exports.AdminRolesEnum = exports.VerificationEnum = exports.UserRolesEnum = exports.UserStatus = void 0;
 var UserStatus;
 (function (UserStatus) {
     UserStatus["active"] = "Active";
@@ -18,3 +18,8 @@ var VerificationEnum;
     VerificationEnum["business"] = "business";
     VerificationEnum["certificate"] = "certificate";
 })(VerificationEnum || (exports.VerificationEnum = VerificationEnum = {}));
+var AdminRolesEnum;
+(function (AdminRolesEnum) {
+    AdminRolesEnum["admin"] = "admin";
+    AdminRolesEnum["superAdmin"] = "superAdmin";
+})(AdminRolesEnum || (exports.AdminRolesEnum = AdminRolesEnum = {}));

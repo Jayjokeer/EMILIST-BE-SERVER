@@ -72,7 +72,7 @@ const newsLetterService = __importStar(require("../services/newsletter.service")
 const verificationService = __importStar(require("../services/verification.service"));
 exports.registerUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userName, email, password, } = req.body;
-    const isEmailExists = yield authService.findUserByEmail(email);
+    const isEmailExists = yield authService.findUserByEmail(email.toLowerCase());
     if (isEmailExists)
         throw new error_1.BadRequestError("User with email already exists!");
     const isUserNameExists = yield authService.findUserByUserName(userName);

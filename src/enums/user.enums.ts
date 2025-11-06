@@ -5,10 +5,14 @@ export enum UserStatus {
 }
 export enum UserRolesEnum {
     user = "user",
-    admin= "admin"
+    admin = "admin"
 }
 export enum VerificationEnum {
     user = 'user',
     business = 'business',
     certificate = 'certificate'
+}
+export enum AdminRolesEnum {
+    admin = "admin",
+    superAdmin = "superAdmin"
 }

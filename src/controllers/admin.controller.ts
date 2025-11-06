@@ -22,7 +22,6 @@ import * as authService from "../services/auth.service";
 import * as walletService from "../services/wallet.services";
 import { PlanEnum } from "../enums/plan.enum";
 import { ICreateUser } from "../interfaces/user.interface";
-import { hashPassword } from "../utils/hashing";
 import { sendEmail } from "../utils/send_email";
 import { directJobApplicationMessage, otpMessage, welcomeMessageAdmin } from "../utils/templates";
 import { generateShortUUID, generateOTPData } from "../utils/utility";
@@ -32,6 +31,9 @@ import { JobType, MilestonePaymentStatus, QuoteStatusEnum } from "../enums/jobs.
 import { ProjectStatusEnum } from "../enums/project.enum";
 import * as verificationService from "../services/verification.service";
 import { OrderPaymentStatus } from "../enums/order.enum";
+import * as  adminService from "../services/admin.service";
+import {  hashPassword ,  comparePassword  } from "../utils/hashing";
+import { generateJWTwithExpiryDate } from "../utils/jwt";
 
 export const adminDashboardController = catchAsync(async (req: JwtPayload, res: Response) => {
 const {currency, year}= req.query; 
@@ -503,4 +505,71 @@ export const fetchAllVerificationsController = catchAsync(async(req: JwtPayload,
     const data = await verificationService.fetchAllVerifications(page, limit);
 
    return successResponse(res,StatusCodes.OK, data);
+});
+
+export const createAdminController = catchAsync(async(req: JwtPayload, res: Response)=>{
+    const{fullName, mobile, email, password} = req.body;
+    const isEmailExists = await adminService.getAdminByEmail(email.toLowerCase())
+    if(isEmailExists){
+        throw new BadRequestError('Email exists')
+    }
+    const encryptPwd = await hashPassword(password);
+    
+    const data = await adminService.createAdmin({
+        fullName, 
+        mobile, 
+        email: email.toLowerCase(), 
+        password: encryptPwd
+    });
+
+   return successResponse(res,StatusCodes.CREATED,"Admin created");
+});
+
+export const loginAdminController = catchAsync(async (req: Request, res: Response) => {
+  const {
+    email,
+    password
+  } = req.body;
+
+  const foundUser = await adminService.getAdminByEmail(email.toLowerCase());
+  if(!foundUser) throw new NotFoundError("Invalid credentials!");
+
+  const userPwd: string = foundUser.password as string
+  const pwdCompare = await comparePassword(password, userPwd);
+  if(!pwdCompare) throw new NotFoundError("Invalid credentials!");
+
+  if(foundUser.status == UserStatus.deactivated){
+    throw new UnauthorizedError("Account Deactivated!!")
+  }
+  if(foundUser.status == UserStatus.suspended){
+    throw new UnauthorizedError("Account Suspended kindly Contact Admin!!")
+  }
+//   if(foundUser.isEmailVerified == false){
+//     throw new BadRequestError("Kindly verify your email!");
+//   }
+  const token = await generateJWTwithExpiryDate({
+    email: foundUser.email as string,
+    id: foundUser._id,
+    userName: foundUser.fullName as string
+  });
+  const userData = await authService.findUserById(String(foundUser._id));
+const user = {
+  token,
+  userData
+};
+
+  return successResponse(res, StatusCodes.OK, user)
+});
+
+export const changeStatusAdmin = catchAsync(async(req: JwtPayload, res: Response)=>{
+    const{status, id} = req.body;
+
+    const admin = await adminService.getAdminById(id)
+    if(!admin){
+        throw new NotFoundError('Admin not found')
+    }
+
+    admin.status = status;
+    await admin.save();
+   return successResponse(res,StatusCodes.OK,"Admin status changed");
 });
