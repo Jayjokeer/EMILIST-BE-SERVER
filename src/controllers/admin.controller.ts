@@ -615,3 +615,16 @@ export const resetPasswordController = catchAsync(async (req: Request, res: Resp
 
   return successResponse(res, StatusCodes.OK, "Password reset successfully!");
 });
+
+export const fetchAdminsController = catchAsync(async (req: Request, res: Response) => {
+  const { page =1, limit=10, search } = req.query;
+    const {admins, totalAdmins} = await adminService.fetchAllAdmins( Number(page), Number(limit), String(search))
+    const data = {
+        admins, 
+        totalAdmins,
+        page,
+        totalPages: Math.ceil(totalAdmins / Number(limit)),
+
+    }
+  return successResponse(res, StatusCodes.OK, data);
+});

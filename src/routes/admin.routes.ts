@@ -40,6 +40,7 @@ router.route("/login").post(adminController.loginAdminController);
 router.route("/change-status-admin").patch(superAdminAuth,adminController.changeStatusAdmin);
 router.route("/forgot-password").patch(adminController.forgetPasswordController);
 router.route("/password-reset").patch(adminController.resetPasswordController);
+router.route("/fetch-admins").get(superAdminAuth,adminController.fetchAdminsController);
 
 
 export { router as AdminRoute };
