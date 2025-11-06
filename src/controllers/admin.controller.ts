@@ -143,6 +143,7 @@ export const fetchUserDetails = catchAsync(async (req: JwtPayload, res: Response
         uniqueId: user.uniqueId,
         fullName: user.fullName,
         status: user.status,
+        accountDetails: user.accountDetails,
     };
     if(q ==="userDetails"){
     const payload = {

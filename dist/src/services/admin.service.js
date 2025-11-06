@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAdminById = exports.getAdminByEmail = exports.createAdmin = void 0;
+exports.fetchAllAdmins = exports.getAdminById = exports.getAdminByEmail = exports.createAdmin = void 0;
 const admin_model_1 = __importDefault(require("../models/admin.model"));
 const createAdmin = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     return yield admin_model_1.default.create(payload);
@@ -26,3 +26,21 @@ const getAdminById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     return yield admin_model_1.default.findById({ _id: id });
 });
 exports.getAdminById = getAdminById;
+const fetchAllAdmins = (page, limit, search) => __awaiter(void 0, void 0, void 0, function* () {
+    const skip = (page - 1) * limit;
+    let query = {};
+    if (search && search.trim() !== '') {
+        const searchRegex = new RegExp(search, 'i');
+        query.$or = [
+            { fullName: searchRegex },
+            { email: searchRegex },
+            { status: searchRegex },
+        ];
+    }
+    const totalAdmins = yield admin_model_1.default.countDocuments(query);
+    const admins = yield admin_model_1.default.find(query)
+        .skip(skip)
+        .limit(limit);
+    return { admins, totalAdmins };
+});
+exports.fetchAllAdmins = fetchAllAdmins;

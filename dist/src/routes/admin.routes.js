@@ -74,3 +74,4 @@ router.route("/login").post(adminController.loginAdminController);
 router.route("/change-status-admin").patch(current_user_1.superAdminAuth, adminController.changeStatusAdmin);
 router.route("/forgot-password").patch(adminController.forgetPasswordController);
 router.route("/password-reset").patch(adminController.resetPasswordController);
+router.route("/fetch-admins").get(current_user_1.superAdminAuth, adminController.fetchAdminsController);

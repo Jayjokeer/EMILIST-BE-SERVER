@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resetPasswordController = exports.forgetPasswordController = exports.changeStatusAdmin = exports.loginAdminController = exports.createAdminController = exports.fetchAllVerificationsController = exports.fetchUserSubscriptionsController = exports.fetchUserAccountDetailsController = exports.fetchAllCategoriesController = exports.fetchSingleCategoryController = exports.deleteCategoryController = exports.addCategoriesController = exports.updateJobPaymentStatusController = exports.fetchPrivateExpertByIdController = exports.fetchAllPrivateExpertsController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
+exports.fetchAdminsController = exports.resetPasswordController = exports.forgetPasswordController = exports.changeStatusAdmin = exports.loginAdminController = exports.createAdminController = exports.fetchAllVerificationsController = exports.fetchUserSubscriptionsController = exports.fetchUserAccountDetailsController = exports.fetchAllCategoriesController = exports.fetchSingleCategoryController = exports.deleteCategoryController = exports.addCategoriesController = exports.updateJobPaymentStatusController = exports.fetchPrivateExpertByIdController = exports.fetchAllPrivateExpertsController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -171,6 +171,7 @@ exports.fetchUserDetails = (0, error_handler_1.catchAsync)((req, res) => __await
         uniqueId: user.uniqueId,
         fullName: user.fullName,
         status: user.status,
+        accountDetails: user.accountDetails,
     };
     if (q === "userDetails") {
         const payload = {
@@ -575,4 +576,15 @@ exports.resetPasswordController = (0, error_handler_1.catchAsync)((req, res) => 
     }
     yield foundUser.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Password reset successfully!");
+}));
+exports.fetchAdminsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page = 1, limit = 10, search } = req.query;
+    const { admins, totalAdmins } = yield adminService.fetchAllAdmins(Number(page), Number(limit), String(search));
+    const data = {
+        admins,
+        totalAdmins,
+        page,
+        totalPages: Math.ceil(totalAdmins / Number(limit)),
+    };
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
