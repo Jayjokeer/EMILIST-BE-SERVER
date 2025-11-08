@@ -17,6 +17,8 @@ const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const subscription_model_1 = __importDefault(require("../models/subscription.model"));
 const app_config_model_1 = __importDefault(require("../models/app-config.model"));
 const promotion_model_1 = __importDefault(require("../models/promotion.model"));
+const users_model_1 = __importDefault(require("../models/users.model"));
+const plan_model_1 = __importDefault(require("../models/plan.model"));
 const createSubscription = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield subscription_model_1.default.create(data);
 });
@@ -41,11 +43,57 @@ const findExpiredSubscriptions = () => __awaiter(void 0, void 0, void 0, functio
     });
 });
 exports.findExpiredSubscriptions = findExpiredSubscriptions;
-const fetchAllSubscriptionsAdmin = (limit, page) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllSubscriptionsAdmin = (limit, page, search, status) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d;
     const skip = (page - 1) * limit;
-    const subscriptions = yield subscription_model_1.default.find().skip(skip).limit(limit);
-    const totalSubscriptions = yield subscription_model_1.default.countDocuments();
-    return { subscriptions, totalSubscriptions };
+    const filters = {};
+    if (status)
+        filters.status = status;
+    if (search) {
+        const users = yield users_model_1.default.find({
+            $or: [
+                { fullName: { $regex: search, $options: "i" } },
+                { userName: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } },
+            ],
+        }).select("_id");
+        const plans = yield plan_model_1.default.find({
+            name: { $regex: search, $options: "i" },
+        }).select("_id");
+        filters.$or = [
+            { userId: { $in: users.map(u => u._id) } },
+            { planId: { $in: plans.map(p => p._id) } },
+        ];
+    }
+    const subscriptions = yield subscription_model_1.default.find(filters)
+        .populate("userId", "fullName userName email")
+        .populate("planId", "name price")
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+    const totalSubscriptions = yield subscription_model_1.default.countDocuments(filters);
+    const planCounts = yield subscription_model_1.default.aggregate([
+        { $lookup: { from: "plans", localField: "planId", foreignField: "_id", as: "plan" } },
+        { $unwind: "$plan" },
+        {
+            $group: {
+                _id: "$plan.name",
+                count: { $sum: 1 },
+            },
+        },
+    ]);
+    const totalBasic = ((_a = planCounts.find(p => { var _a; return ((_a = p._id) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === "basic"; })) === null || _a === void 0 ? void 0 : _a.count) || 0;
+    const totalSilver = ((_b = planCounts.find(p => { var _a; return ((_a = p._id) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === "silver"; })) === null || _b === void 0 ? void 0 : _b.count) || 0;
+    const totalGold = ((_c = planCounts.find(p => { var _a; return ((_a = p._id) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === "gold"; })) === null || _c === void 0 ? void 0 : _c.count) || 0;
+    const totalPlatinum = ((_d = planCounts.find(p => { var _a; return ((_a = p._id) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === "platinum"; })) === null || _d === void 0 ? void 0 : _d.count) || 0;
+    return {
+        subscriptions,
+        totalSubscriptions,
+        totalBasic,
+        totalSilver,
+        totalGold,
+        totalPlatinum,
+    };
 });
 exports.fetchAllSubscriptionsAdmin = fetchAllSubscriptionsAdmin;
 const fetchCostPerClick = () => __awaiter(void 0, void 0, void 0, function* () {

@@ -348,16 +348,35 @@ export const fetchSingleMaterialController = catchAsync(async(req: JwtPayload, r
    return successResponse(res,StatusCodes.OK, data);
 });
 
-export const fetchSubscriptionsController = catchAsync(async(req: JwtPayload, res: Response)=>{
-    const{limit, page} = req.query;
-    const {subscriptions ,  totalSubscriptions} = await subscriptionService.fetchAllSubscriptionsAdmin(limit, page);
-    const data = {
-        subscriptions,
-        totalSubscriptions,
-        page,
-        totalPages: Math.ceil(totalSubscriptions / limit),
-    };
-   return successResponse(res,StatusCodes.OK, data);
+export const fetchSubscriptionsController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const { limit = 10, page = 1, search = "", status } = req.query;
+
+  const {
+    subscriptions,
+    totalSubscriptions,
+    totalBasic,
+    totalSilver,
+    totalGold,
+    totalPlatinum,
+  } = await subscriptionService.fetchAllSubscriptionsAdmin(
+    Number(limit),
+    Number(page),
+    search as string,
+    status as string
+  );
+
+  const data = {
+    subscriptions,
+    totalSubscriptions,
+    totalBasic,
+    totalSilver,
+    totalGold,
+    totalPlatinum,
+    page: Number(page),
+    totalPages: Math.ceil(totalSubscriptions / Number(limit)),
+  };
+
+  return successResponse(res, StatusCodes.OK, data);
 });
 
 export const fetchAllTransactionsAdminController = catchAsync(async(req: JwtPayload, res: Response)=>{

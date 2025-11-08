@@ -358,13 +358,17 @@ exports.fetchSingleMaterialController = (0, error_handler_1.catchAsync)((req, re
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));
 exports.fetchSubscriptionsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { limit, page } = req.query;
-    const { subscriptions, totalSubscriptions } = yield subscriptionService.fetchAllSubscriptionsAdmin(limit, page);
+    const { limit = 10, page = 1, search = "", status } = req.query;
+    const { subscriptions, totalSubscriptions, totalBasic, totalSilver, totalGold, totalPlatinum, } = yield subscriptionService.fetchAllSubscriptionsAdmin(Number(limit), Number(page), search, status);
     const data = {
         subscriptions,
         totalSubscriptions,
-        page,
-        totalPages: Math.ceil(totalSubscriptions / limit),
+        totalBasic,
+        totalSilver,
+        totalGold,
+        totalPlatinum,
+        page: Number(page),
+        totalPages: Math.ceil(totalSubscriptions / Number(limit)),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 }));

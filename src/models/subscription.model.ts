@@ -15,7 +15,7 @@ const PerkSchema = new Schema<IPerk>(
 
 const SubscriptionSchema = new Schema<ISubscription>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'Users', required: true },
     planId: { type: Schema.Types.ObjectId, ref: 'Plan', required: true },
     status: {
       type: String,

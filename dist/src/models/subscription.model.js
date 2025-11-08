@@ -41,7 +41,7 @@ const PerkSchema = new mongoose_1.Schema({
     used: { type: Number, default: 0 },
 });
 const SubscriptionSchema = new mongoose_1.Schema({
-    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users', required: true },
     planId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Plan', required: true },
     status: {
         type: String,
