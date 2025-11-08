@@ -12,6 +12,8 @@ const VerificationSchema = new Schema({
     status: {type: String, enum: QuoteStatusEnum,default: QuoteStatusEnum.pending},
     paymentStatus: {type: String, enum: OrderPaymentStatus, default: OrderPaymentStatus.unpaid},
     type: {type: String, enum: VerificationEnum},
+  },{
+    timestamps: true
   });
 
 export default mongoose.model('Verifications', VerificationSchema);
