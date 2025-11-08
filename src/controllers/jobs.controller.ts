@@ -395,7 +395,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   });
 
 export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
-  const userId = req.user.id; 
+  const userId = req.user.id;
   const { status } = req.query;
   const now = new Date();
   let data: any = [];
@@ -405,26 +405,46 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
   const processedJobs = jobs.map((job: any) => {
     const totalMilestones = job.milestones?.length || 0;
 
-    const progressMilestones = job.milestones?.filter(
-      (m: any) =>
-        m.status === MilestoneEnum.completed ||
-        m.status === MilestoneEnum.active ||
-        m.status === MilestoneEnum.paused
-    ).length || 0;
+    const progressMilestones =
+      job.milestones?.filter(
+        (m: any) =>
+          m.status === MilestoneEnum.completed ||
+          m.status === MilestoneEnum.active ||
+          m.status === MilestoneEnum.paused
+      ).length || 0;
 
     const milestoneProgress = `${progressMilestones}/${totalMilestones}`;
 
     let overallDueDate = job.startDate ? new Date(job.startDate) : null;
+    let currentMilestoneDueDate: Date | null = null;
 
     if (job.startDate && totalMilestones > 0) {
-      job.milestones.forEach((milestone: any) => {
+      let accumulatedDays = 0;
+      let currentMilestoneFound = false;
+
+      for (const milestone of job.milestones) {
+        const days = parseInt(milestone.timeFrame?.number, 10) || 0;
+
         if (milestone.timeFrame?.period === "days") {
-          const days = parseInt(milestone.timeFrame.number, 10);
-          if (!isNaN(days)) {
-            overallDueDate?.setDate(overallDueDate.getDate() + days);
-          }
+          accumulatedDays += days;
         }
-      });
+
+        if (overallDueDate && !isNaN(days)) {
+          overallDueDate.setDate(overallDueDate.getDate() + days);
+        }
+
+        if (
+          !currentMilestoneFound &&
+          (milestone.status === MilestoneEnum.active ||
+            milestone.status === MilestoneEnum.paused)
+        ) {
+          currentMilestoneDueDate = new Date(job.startDate);
+          currentMilestoneDueDate.setDate(
+            currentMilestoneDueDate.getDate() + accumulatedDays
+          );
+          currentMilestoneFound = true;
+        }
+      }
     }
 
     const isOverdue =
@@ -437,7 +457,8 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
       ...job.toObject(),
       milestoneProgress,
       overallDueDate,
-      isOverdue
+      currentMilestoneDueDate,
+      isOverdue,
     };
   });
 
@@ -452,13 +473,8 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
   if (status === JobStatusEnum.active) {
     data = processedJobs.filter((job: any) => {
       if (job.status !== JobStatusEnum.active) return false;
-
-      // ✅ Active jobs without start date should be returned
       if (!job.startDate) return true;
-
-      // ✅ Active jobs with due date still in future should also be returned
       if (job.overallDueDate && job.overallDueDate >= now) return true;
-
       return false;
     });
   }
@@ -466,26 +482,25 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
   if (status === JobStatusEnum.paused) {
     data = processedJobs.filter((job: any) => {
       if (job.status !== JobStatusEnum.paused) return false;
-
       if (!job.startDate) return true;
-
       if (job.overallDueDate && job.overallDueDate >= now) return true;
-
       return false;
     });
   }
 
   if (status === JobStatusEnum.overdue) {
-    data = processedJobs.filter((job: any) =>
-      job.status === JobStatusEnum.active &&
-      job.startDate &&
-      job.overallDueDate &&
-      job.overallDueDate < now
+    data = processedJobs.filter(
+      (job: any) =>
+        job.status === JobStatusEnum.active &&
+        job.startDate &&
+        job.overallDueDate &&
+        job.overallDueDate < now
     );
   }
 
   return successResponse(res, StatusCodes.OK, data);
 });
+
 
 
   
