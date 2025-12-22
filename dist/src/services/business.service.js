@@ -59,11 +59,11 @@ const createBusiness = (data) => __awaiter(void 0, void 0, void 0, function* () 
 });
 exports.createBusiness = createBusiness;
 const updateBusiness = (businessId, businessData, files) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const business = yield business_model_1.default.findById(businessId);
-        if (!business) {
+        if (!business)
             throw new Error('Business not found');
-        }
         if (businessData.renderedServices) {
             businessData.renderedServices.forEach((newService) => {
                 const existingServiceIndex = business.renderedServices.findIndex((service) => String(service._id) == String(newService.id));
@@ -77,42 +77,49 @@ const updateBusiness = (businessId, businessData, files) => __awaiter(void 0, vo
         }
         if (businessData.certification) {
             businessData.certification.forEach((newCert) => {
-                var _a;
-                const existingCert = business.certification.find((cert) => String(cert._id) === String(newCert.id));
+                var _a, _b, _c;
+                const certId = newCert.id || newCert._id;
+                const existingCert = business.certification.find((cert) => String(cert._id) === String(certId));
+                // normalize uploaded certificate path
+                let certificatePath;
+                if (files === null || files === void 0 ? void 0 : files.certificate) {
+                    certificatePath = Array.isArray(files.certificate)
+                        ? (_a = files.certificate[0]) === null || _a === void 0 ? void 0 : _a.path
+                        : (_b = files.certificate) === null || _b === void 0 ? void 0 : _b.path;
+                }
                 if (existingCert) {
-                    if (files && files['certificate'] && files['certificate'].path) {
-                        existingCert.certificate = files['certificate'].path;
+                    if (certificatePath) {
+                        existingCert.certificate = certificatePath;
                     }
-                    existingCert.issuingOrganisation = newCert.issuingOrganisation || existingCert.issuingOrganisation;
-                    existingCert.verificationNumber = newCert.verificationNumber || existingCert.verificationNumber;
-                    existingCert.issuingDate = newCert.issuingDate || existingCert.issuingDate;
-                    existingCert.expiringDate = newCert.expiringDate || existingCert.expiringDate;
-                    existingCert.isCertificateExpire = newCert.isCertificateExpire || existingCert.isCertificateExpire;
+                    existingCert.issuingOrganisation =
+                        newCert.issuingOrganisation || existingCert.issuingOrganisation;
+                    existingCert.verificationNumber =
+                        newCert.verificationNumber || existingCert.verificationNumber;
+                    existingCert.issuingDate =
+                        newCert.issuingDate || existingCert.issuingDate;
+                    existingCert.expiringDate =
+                        newCert.expiringDate || existingCert.expiringDate;
+                    // use ?? to avoid overriding false
+                    existingCert.isCertificateExpire =
+                        (_c = newCert.isCertificateExpire) !== null && _c !== void 0 ? _c : existingCert.isCertificateExpire;
                 }
                 else {
-                    let certificatePath;
-                    if (files === null || files === void 0 ? void 0 : files['certificate']) {
-                        if (Array.isArray(files['certificate'])) {
-                            certificatePath = (_a = files['certificate'][0]) === null || _a === void 0 ? void 0 : _a.path;
-                        }
-                        else {
-                            certificatePath = files['certificate'].path;
-                        }
-                    }
-                    newCert.certificate = certificatePath;
-                    business.certification.push(Object.assign({}, newCert));
+                    business.certification.push(Object.assign(Object.assign({}, newCert), { certificate: certificatePath || null }));
                 }
             });
         }
+        // ---------- END CERT FIX ----------
         if (businessData.membership) {
             businessData.membership.forEach((newMembership) => {
+                var _a;
                 const existingMembership = business.membership.find((membership) => String(membership._id) === String(newMembership.id));
                 if (existingMembership) {
                     existingMembership.organisation = newMembership.organisation || existingMembership.organisation;
                     existingMembership.positionHeld = newMembership.positionHeld || existingMembership.positionHeld;
                     existingMembership.startDate = newMembership.startDate || existingMembership.startDate;
                     existingMembership.endDate = newMembership.endDate || existingMembership.endDate;
-                    existingMembership.isMembershipExpire = newMembership.isMembershipExpire || existingMembership.isMembershipExpire;
+                    existingMembership.isMembershipExpire =
+                        (_a = newMembership.isMembershipExpire) !== null && _a !== void 0 ? _a : existingMembership.isMembershipExpire;
                 }
                 else {
                     business.membership.push(newMembership);
@@ -152,11 +159,11 @@ const updateBusiness = (businessId, businessData, files) => __awaiter(void 0, vo
         business.noticePeriod = businessData.noticePeriod || business.noticePeriod;
         business.businessDescription = businessData.businessDescription || business.businessDescription;
         business.currency = businessData.currency || business.currency;
-        if (files['profileImage']) {
-            business.profileImage = files['profileImage'][0].path;
+        if (files === null || files === void 0 ? void 0 : files.profileImage) {
+            business.profileImage = files.profileImage[0].path;
         }
-        if (files['businessImages'] && files['businessImages'].length > 0) {
-            const newBusinessImages = files['businessImages'].map((file) => ({
+        if (((_a = files === null || files === void 0 ? void 0 : files.businessImages) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+            const newBusinessImages = files.businessImages.map((file) => ({
                 imageUrl: file.path,
             }));
             business.businessImages.push(...newBusinessImages);
