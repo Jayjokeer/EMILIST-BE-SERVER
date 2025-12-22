@@ -283,7 +283,10 @@ const getVat = () => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getVat = getVat;
 const fetchSingleTransactionByMilestoneId = (milestoneId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield transaction_model_1.default.findOne({ milestoneId });
+    return yield transaction_model_1.default.findOne({
+        milestoneId: milestoneId,
+        status: transaction_enum_1.TransactionEnum.processing
+    });
 });
 exports.fetchSingleTransactionByMilestoneId = fetchSingleTransactionByMilestoneId;
 const fetchPriceForVerification = () => __awaiter(void 0, void 0, void 0, function* () {

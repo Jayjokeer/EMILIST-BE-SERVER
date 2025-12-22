@@ -293,7 +293,10 @@ export const getVat = async ()=>{
 };
 
 export const fetchSingleTransactionByMilestoneId = async (milestoneId: string) =>{
-  return await Transaction.findOne({milestoneId});
+  return await Transaction.findOne({
+    milestoneId: milestoneId,
+    status: TransactionEnum.processing
+  });
 };
 
 export const fetchPriceForVerification = async()=>{
