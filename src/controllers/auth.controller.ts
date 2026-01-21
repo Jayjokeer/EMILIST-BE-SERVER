@@ -329,7 +329,7 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
   httpOnly: true,
   secure: true,
   sameSite: 'none',
-  domain: 'www.emilist.com',
+  domain: 'emilist.com',
   maxAge: 7 * 24 * 60 * 60 * 1000,
 });
 
