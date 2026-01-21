@@ -64,8 +64,15 @@ router.route('/google').get(passport_1.default.authenticate('google', {
     scope: ['profile', 'email'],
     session: false,
 }));
-router.route('/google/callback').get(passport_1.default.authenticate('google', { session: false, failureRedirect: `${config_1.config.frontendUrl}/login?error=google_auth_failed`,
-}), authController.googleRedirectController);
+router.get('/google/callback', (req, res, next) => {
+    passport_1.default.authenticate('google', { session: false }, (err, user) => {
+        if (err || !user) {
+            return res.redirect(`${config_1.config.frontendUrl}/login`);
+        }
+        req.user = user;
+        next();
+    })(req, res, next);
+}, authController.googleRedirectController);
 router.route("/add-click").patch(authController.countClicksController);
 router.route("/subscribe-newsletter").post(authController.subscribeNewsLetterController);
 router.route("/user-details/:userId").get(authController.getUserDetailsController);

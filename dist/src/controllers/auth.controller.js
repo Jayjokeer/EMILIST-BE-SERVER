@@ -295,6 +295,7 @@ exports.resendVerificationOtpController = (0, error_handler_1.catchAsync)((req, 
 }));
 exports.googleRedirectController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const loggedIn = req.user;
+    console.log('redirect controller');
     const token = (0, jwt_1.generateJWTwithExpiryDate)({
         email: loggedIn.email,
         id: loggedIn.id,
@@ -307,7 +308,8 @@ exports.googleRedirectController = (0, error_handler_1.catchAsync)((req, res) =>
         email: userData.email,
         userName: userData.userName,
     }).toString();
-    res.redirect(`${config_1.config.frontendUrl}?${queryParams}`);
+    console.log(`${config_1.config.frontendUrl}?${queryParams}`);
+    return res.redirect(`${config_1.config.frontendUrl}?${queryParams}`);
 }));
 exports.logoutController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield authService.findUserById(req.user.id);

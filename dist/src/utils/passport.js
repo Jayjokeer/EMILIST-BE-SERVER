@@ -18,26 +18,28 @@ const users_model_1 = __importDefault(require("../models/users.model"));
 const utility_1 = require("./utility");
 // import { Strategy as FacebookStrategy, Profile } from 'passport-facebook';
 const config_1 = require("./config");
-passport_1.default.serializeUser((user, done) => {
-    done(null, user.id);
-});
-passport_1.default.deserializeUser((id, done) => {
-    users_model_1.default.findById(id).then((user) => {
-        done(null, user);
-    });
-});
+// passport.serializeUser((user: any, done) => {
+//     done(null, user.id);
+// });
+// passport.deserializeUser((id: string, done) => {
+//     Users.findById(id).then((user) => {
+//         done(null, user);
+//     });
+// });
 passport_1.default.use(new passport_google_oauth20_1.Strategy({
     clientID: config_1.config.googleClientId,
     clientSecret: config_1.config.googleClientSecret,
     callbackURL: `${config_1.config.baseUrl}/api/v1/auth/google/callback`,
 }, (accessToken, refreshToken, profile, done) => __awaiter(void 0, void 0, void 0, function* () {
     const existingUserByGoogleId = yield users_model_1.default.findOne({ googleId: profile.id });
+    console.log(existingUserByGoogleId);
     if (existingUserByGoogleId) {
         existingUserByGoogleId.accessToken = accessToken;
         yield existingUserByGoogleId.save();
         return done(null, existingUserByGoogleId);
     }
     const existingUserByEmail = yield users_model_1.default.findOne({ email: profile.emails[0].value });
+    console.log(existingUserByEmail);
     if (existingUserByEmail) {
         existingUserByEmail.accessToken = accessToken;
         yield existingUserByEmail.save();
@@ -51,7 +53,7 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
         isEmailVerified: true,
         accessToken: accessToken
     }).save();
-    done(null, newUser);
+    return done(null, newUser);
 })));
 // passport.serializeUser((user: Express.User, done) => {
 //   done(null, user);
