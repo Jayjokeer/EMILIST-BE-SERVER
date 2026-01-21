@@ -18,14 +18,14 @@ const users_model_1 = __importDefault(require("../models/users.model"));
 const utility_1 = require("./utility");
 // import { Strategy as FacebookStrategy, Profile } from 'passport-facebook';
 const config_1 = require("./config");
-// passport.serializeUser((user: any, done) => {
-//     done(null, user.id);
-// });
-// passport.deserializeUser((id: string, done) => {
-//     Users.findById(id).then((user) => {
-//         done(null, user);
-//     });
-// });
+passport_1.default.serializeUser((user, done) => {
+    done(null, user.id);
+});
+passport_1.default.deserializeUser((id, done) => {
+    users_model_1.default.findById(id).then((user) => {
+        done(null, user);
+    });
+});
 passport_1.default.use(new passport_google_oauth20_1.Strategy({
     clientID: config_1.config.googleClientId,
     clientSecret: config_1.config.googleClientSecret,
