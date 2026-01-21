@@ -54,6 +54,9 @@ const userAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
     }
+    else if (req.cookies.sessionId) {
+        token = req.cookies.sessionId;
+    }
     if (!token) {
         res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ message: "Kindly login" });
         return;
