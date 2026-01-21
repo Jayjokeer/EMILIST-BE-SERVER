@@ -29,9 +29,20 @@ router.route('/google').get( passport.authenticate('google', {
 
 }));
 
-router.route('/google/callback',).get(passport.authenticate('google', { session: false,failureRedirect: `${config.frontendUrl}/login?error=google_auth_failed`,
- }),
- authController.googleRedirectController);
+router.get('/google/callback', (req, res, next) => {
+  passport.authenticate(
+    'google',
+    { session: false },
+    (err, user) => {
+      if (err || !user) {
+        return res.redirect(`${config.frontendUrl}/login`);
+      }
+
+      req.user = user;
+      next();
+    }
+  )(req, res, next);
+}, authController.googleRedirectController);
 router.route("/add-click").patch(authController.countClicksController);
 router.route("/subscribe-newsletter").post( authController.subscribeNewsLetterController);
 router.route("/user-details/:userId").get( authController.getUserDetailsController);

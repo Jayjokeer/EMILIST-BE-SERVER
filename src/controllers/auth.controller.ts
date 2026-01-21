@@ -327,7 +327,7 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
     userName: userData!.userName,
   }).toString();
   console.log(`${config.frontendUrl}?${queryParams}`)
-  res.redirect(`${config.frontendUrl}?${queryParams}`);
+ return res.redirect(`${config.frontendUrl}?${queryParams}`);
 });
 
 export const logoutController = catchAsync(async (req: JwtPayload, res: Response) => {
