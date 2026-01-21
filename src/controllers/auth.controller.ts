@@ -321,11 +321,17 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
   const userData = await authService.findUserById(loggedIn.id);
 
   const queryParams = new URLSearchParams({
-    token,
     id: userData!.id,
     email: userData!.email,
     userName: userData!.userName,
   }).toString();
+  res.cookie('access_token', token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
+
   console.log(`${config.frontendUrl}?${queryParams}`)
  return res.redirect(`${config.frontendUrl}?${queryParams}`);
 });
