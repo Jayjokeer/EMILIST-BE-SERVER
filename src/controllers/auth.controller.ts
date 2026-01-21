@@ -325,7 +325,7 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
     email: userData!.email,
     userName: userData!.userName,
   }).toString();
-  res.cookie('access_token', token, {
+  res.cookie('sessionId', token, {
   httpOnly: true,
   secure: true,
   sameSite: 'none',
@@ -333,7 +333,6 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
   maxAge: 7 * 24 * 60 * 60 * 1000,
 });
 
-  console.log(`${config.frontendUrl}?${queryParams}`)
  return res.redirect(`${config.frontendUrl}?${queryParams}`);
 });
 

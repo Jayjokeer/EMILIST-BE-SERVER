@@ -307,14 +307,13 @@ exports.googleRedirectController = (0, error_handler_1.catchAsync)((req, res) =>
         email: userData.email,
         userName: userData.userName,
     }).toString();
-    res.cookie('access_token', token, {
+    res.cookie('sessionId', token, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
         domain: '.emilist.com',
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    console.log(`${config_1.config.frontendUrl}?${queryParams}`);
     return res.redirect(`${config_1.config.frontendUrl}?${queryParams}`);
 }));
 exports.logoutController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
