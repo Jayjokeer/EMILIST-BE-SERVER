@@ -311,7 +311,7 @@ exports.googleRedirectController = (0, error_handler_1.catchAsync)((req, res) =>
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        domain: 'emilist.com',
+        domain: 'www.emilist.com',
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     return res.redirect(`${config_1.config.frontendUrl}?${queryParams}`);
