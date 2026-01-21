@@ -13,7 +13,7 @@ import MongoStore from 'connect-mongo';
 import { Server } from "socket.io";
 import http from "http";
 import morgan from "morgan";
-
+import cookieParser from "cookie-parser";
 import "../src/utils/passport";
 import chatSocket from "./socket";
 import "./jobs/subscription.job";
@@ -24,6 +24,7 @@ const app: Application = express();
 const server = http.createServer(app);
 
 // Middleware
+app.use(cookieParser());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(helmet());

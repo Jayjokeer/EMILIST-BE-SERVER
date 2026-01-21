@@ -28,6 +28,7 @@ const connect_mongo_1 = __importDefault(require("connect-mongo"));
 const socket_io_1 = require("socket.io");
 const http_1 = __importDefault(require("http"));
 const morgan_1 = __importDefault(require("morgan"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 require("../src/utils/passport");
 const socket_1 = __importDefault(require("./socket"));
 require("./jobs/subscription.job");
@@ -36,6 +37,7 @@ const PORT = config_1.config.port || 7000;
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 // Middleware
+app.use((0, cookie_parser_1.default)());
 app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
 app.use((0, helmet_1.default)());
