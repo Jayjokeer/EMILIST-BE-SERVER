@@ -44,6 +44,7 @@ const image_upload_1 = require("../utils/image-upload");
 const passport_1 = __importDefault(require("passport"));
 const auth_validation_1 = require("../validations/auth.validation");
 const paymentController = __importStar(require("../controllers/payment.controller"));
+const config_1 = require("../utils/config");
 const router = (0, express_1.Router)();
 exports.AuthRoute = router;
 router.route("/").get((req, res) => {
@@ -63,7 +64,8 @@ router.route('/google').get(passport_1.default.authenticate('google', {
     scope: ['profile', 'email'],
     session: false,
 }));
-router.route('/google/callback').get(passport_1.default.authenticate('google', { session: false }), authController.googleRedirectController);
+router.route('/google/callback').get(passport_1.default.authenticate('google', { session: false, failureRedirect: `${config_1.config.frontendUrl}/login?error=google_auth_failed`,
+}), authController.googleRedirectController);
 router.route("/add-click").patch(authController.countClicksController);
 router.route("/subscribe-newsletter").post(authController.subscribeNewsLetterController);
 router.route("/user-details/:userId").get(authController.getUserDetailsController);

@@ -5,6 +5,7 @@ import { multipleUpload, singleUpload } from "../utils/image-upload";
 import passport from "passport";
 import { validateRegisterUser, validateLoginUser, validateVerifyEmail, validateForgetPassword, validateResetPassword, validateChangePassword, validateUpdateAccountDetails, validatePaymentForVerification } from "../validations/auth.validation";
 import *  as paymentController from "../controllers/payment.controller";
+import { config } from "../utils/config";
 
 const router = Router();
 
@@ -28,7 +29,8 @@ router.route('/google').get( passport.authenticate('google', {
 
 }));
 
-router.route('/google/callback',).get(passport.authenticate('google', { session: false }),
+router.route('/google/callback',).get(passport.authenticate('google', { session: false,     failureRedirect: `${config.frontendUrl}/login?error=google_auth_failed`,
+ }),
  authController.googleRedirectController);
 router.route("/add-click").patch(authController.countClicksController);
 router.route("/subscribe-newsletter").post( authController.subscribeNewsLetterController);
