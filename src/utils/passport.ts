@@ -6,15 +6,15 @@ import { generateShortUUID } from './utility';
 import { config } from './config';
 
 
-passport.serializeUser((user: any, done) => {
-    done(null, user.id);
-});
+// passport.serializeUser((user: any, done) => {
+//     done(null, user.id);
+// });
 
-passport.deserializeUser((id: string, done) => {
-    Users.findById(id).then((user) => {
-        done(null, user);
-    });
-});
+// passport.deserializeUser((id: string, done) => {
+//     Users.findById(id).then((user) => {
+//         done(null, user);
+//     });
+// });
 
 passport.use(
     new GoogleStrategy(
@@ -46,8 +46,8 @@ passport.use(
                     isEmailVerified: true,
                     accessToken: accessToken
                 }).save();
-
-                done(null, newUser);
+                console.log('passport')
+               return done(null, newUser);
         }
     )
 );

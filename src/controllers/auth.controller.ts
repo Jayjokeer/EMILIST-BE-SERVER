@@ -312,7 +312,7 @@ export const resendVerificationOtpController = catchAsync(async (req: Request, r
 
 export const googleRedirectController = catchAsync(async (req: Request, res: Response) => {
   const loggedIn = req.user as ISignUser;
-  
+  console.log('redirect controller')
   const token =  generateJWTwithExpiryDate({
     email: loggedIn.email,
     id: loggedIn.id,
@@ -326,7 +326,7 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
     email: userData!.email,
     userName: userData!.userName,
   }).toString();
-
+  console.log(`${config.frontendUrl}?${queryParams}`)
   res.redirect(`${config.frontendUrl}?${queryParams}`);
 });
 
