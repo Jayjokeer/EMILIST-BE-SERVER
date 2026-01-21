@@ -24,9 +24,12 @@ router.route("/upload-files").post(multipleUpload, authController.uploadMultiple
 router.route("/resend-otp").post(authController.resendVerificationOtpController);
 router.route('/google').get( passport.authenticate('google', {
   scope: ['profile', 'email'],
+  session: false,
+
 }));
 
-router.route('/google/callback',).get( passport.authenticate('google'), authController.googleRedirectController);
+router.route('/google/callback',).get(passport.authenticate('google', { session: false }),
+ authController.googleRedirectController);
 router.route("/add-click").patch(authController.countClicksController);
 router.route("/subscribe-newsletter").post( authController.subscribeNewsLetterController);
 router.route("/user-details/:userId").get( authController.getUserDetailsController);
