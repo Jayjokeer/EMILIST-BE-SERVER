@@ -50,13 +50,15 @@ const authService = __importStar(require("../services/auth.service"));
 const user_enums_1 = require("../enums/user.enums");
 const adminService = __importStar(require("../services/admin.service"));
 const userAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
     }
     else if (req.cookies.sessionId) {
-        token = req.cookies.sessionId;
+        token = (_a = req.cookies) === null || _a === void 0 ? void 0 : _a.sessionId;
     }
+    console.log((_b = req.cookies) === null || _b === void 0 ? void 0 : _b.sessionId);
     if (!token) {
         res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ message: "Kindly login" });
         return;

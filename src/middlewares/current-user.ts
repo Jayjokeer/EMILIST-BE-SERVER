@@ -14,9 +14,9 @@ export const userAuth = async (req: JwtPayload, res: Response, next: NextFunctio
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     token = req.headers.authorization.split(' ')[1];
   }else if(req.cookies.sessionId ){
-    token = req.cookies.sessionId;
+    token = req.cookies?.sessionId;
   }
-
+console.log(req.cookies?.sessionId)
   if (!token) {
     res.status(StatusCodes.UNAUTHORIZED).json({ message: "Kindly login" });
     return;
