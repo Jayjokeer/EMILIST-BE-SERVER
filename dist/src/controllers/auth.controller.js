@@ -302,11 +302,6 @@ exports.googleRedirectController = (0, error_handler_1.catchAsync)((req, res) =>
         userName: loggedIn.userName,
     });
     const userData = yield authService.findUserById(loggedIn.id);
-    const queryParams = new URLSearchParams({
-        id: userData.id,
-        email: userData.email,
-        userName: userData.userName,
-    }).toString();
     res.cookie('sessionId', token, {
         httpOnly: false,
         secure: true,
@@ -315,7 +310,7 @@ exports.googleRedirectController = (0, error_handler_1.catchAsync)((req, res) =>
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    return res.redirect(`${config_1.config.frontendUrl}?${queryParams}`);
+    return res.redirect(`${config_1.config.frontendUrl}`);
 }));
 exports.logoutController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield authService.findUserById(req.user.id);

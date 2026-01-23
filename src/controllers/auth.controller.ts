@@ -320,11 +320,7 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
   });
   const userData = await authService.findUserById(loggedIn.id);
 
-  const queryParams = new URLSearchParams({
-    id: userData!.id,
-    email: userData!.email,
-    userName: userData!.userName,
-  }).toString();
+
   res.cookie('sessionId', token, {
   httpOnly: false,
   secure: true,
@@ -334,7 +330,7 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
   maxAge: 7 * 24 * 60 * 60 * 1000,
 });
 
- return res.redirect(`${config.frontendUrl}?${queryParams}`);
+ return res.redirect(`${config.frontendUrl}`);
 });
 
 export const logoutController = catchAsync(async (req: JwtPayload, res: Response) => {
