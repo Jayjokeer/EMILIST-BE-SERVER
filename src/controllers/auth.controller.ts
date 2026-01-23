@@ -326,7 +326,7 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
     userName: userData!.userName,
   }).toString();
   res.cookie('sessionId', token, {
-  httpOnly: true,
+  httpOnly: false,
   secure: true,
   sameSite: 'none',
   domain: 'emilist.com',

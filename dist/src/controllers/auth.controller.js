@@ -308,7 +308,7 @@ exports.googleRedirectController = (0, error_handler_1.catchAsync)((req, res) =>
         userName: userData.userName,
     }).toString();
     res.cookie('sessionId', token, {
-        httpOnly: true,
+        httpOnly: false,
         secure: true,
         sameSite: 'none',
         domain: 'emilist.com',
