@@ -26,7 +26,9 @@ const sendEmail = (to, subject, html) => {
         try {
             const from = config_1.config.senderEmail;
             const transporter = nodemailer.createTransport({
-                service: "gmail",
+                host: "smtp.zoho.com",
+                port: 465,
+                secure: true,
                 auth: {
                     user: config_1.config.senderEmail,
                     pass: config_1.config.senderEmailPassword,
