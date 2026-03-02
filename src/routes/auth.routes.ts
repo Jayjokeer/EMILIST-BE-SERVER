@@ -59,5 +59,6 @@ router.route("/request-verificaton").get(userAuth,authController.requestVerifica
 router.route("/insights").get(userAuth, authController.insightsController);
 router.route("/update-account-details").patch(userAuth,validateUpdateAccountDetails, authController.updateAccountDetailsController);
 router.route("/pay-for-verification").post(userAuth,validatePaymentForVerification , paymentController.payforVerificationController);
+router.route("/delete-user/:userId").delete(userAuth,  authController.deleteUserController);
 
 export { router as AuthRoute };

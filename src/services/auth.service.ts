@@ -139,3 +139,6 @@ export const findUserWithoutPhoneNumberDetailsById = async (id: string)=>{
   });
 };
 
+export const deleteUser = async(userId: string)=>{
+ return await Users.findByIdAndDelete(userId)
+}

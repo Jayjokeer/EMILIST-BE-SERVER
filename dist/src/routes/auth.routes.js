@@ -88,3 +88,4 @@ router.route("/request-verificaton").get(current_user_1.userAuth, authController
 router.route("/insights").get(current_user_1.userAuth, authController.insightsController);
 router.route("/update-account-details").patch(current_user_1.userAuth, auth_validation_1.validateUpdateAccountDetails, authController.updateAccountDetailsController);
 router.route("/pay-for-verification").post(current_user_1.userAuth, auth_validation_1.validatePaymentForVerification, paymentController.payforVerificationController);
+router.route("/delete-user/:userId").delete(current_user_1.userAuth, authController.deleteUserController);

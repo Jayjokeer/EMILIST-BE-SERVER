@@ -602,3 +602,10 @@ export const getUserDetailsController = catchAsync(async (req: JwtPayload, res: 
 
   return successResponse(res, StatusCodes.OK, data);
 });
+
+export const deleteUserController = catchAsync(async (req: JwtPayload, res: Response) => { 
+  const {userId} = req.params;
+   const data = await authService.deleteUser(userId);
+
+  return successResponse(res, StatusCodes.OK, 'User deleted sucessfully');
+});
