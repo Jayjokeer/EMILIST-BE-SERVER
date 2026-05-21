@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -54,57 +45,57 @@ const authService = __importStar(require("../services/auth.service"));
 const templates_1 = require("../utils/templates");
 const send_email_1 = require("../utils/send_email");
 // cron.schedule('*/20 * * * * *', async () => {
-node_cron_1.default.schedule('0 0 * * *', () => __awaiter(void 0, void 0, void 0, function* () {
+node_cron_1.default.schedule('0 0 * * *', async () => {
     console.log('Running daily recurring job check...');
     try {
         const today = new Date();
         // today.setHours(0, 0, 0, 0);
         console.log(today);
-        const recurringJobs = yield jobService.findRecurringJobsDue(today);
+        const recurringJobs = await jobService.findRecurringJobsDue(today);
         console.log(recurringJobs);
         for (const recurring of recurringJobs) {
             if (recurring.endDate < today) {
                 console.log(`Skipping recurring job ${recurring._id} as endDate has passed.`);
                 continue;
             }
-            const originalJob = yield jobService.fetchJobByIdWithUserId(String(recurring.jobId));
+            const originalJob = await jobService.fetchJobByIdWithUserId(String(recurring.jobId));
             if (!originalJob) {
                 console.log(`Original job ${recurring.jobId} not found. Skipping.`);
                 continue;
             }
-            const newJobData = Object.assign(Object.assign({}, originalJob.toObject()), { userId: originalJob.userId });
+            const newJobData = { ...originalJob.toObject(), userId: originalJob.userId };
             delete newJobData._id;
-            const newJob = yield jobService.createJob(newJobData);
+            const newJob = await jobService.createJob(newJobData);
             const projectPayload = {
                 job: newJob._id,
                 user: originalJob.acceptedApplicationId._id,
                 creator: originalJob.userId,
                 directJobStatus: 'pending',
             };
-            const newProject = yield projectService.createProject(projectPayload);
+            const newProject = await projectService.createProject(projectPayload);
             newJob.applications = [String(newProject._id)];
             newJob.acceptedApplicationId = String(newProject._id);
-            yield newJob.save();
+            await newJob.save();
             recurring.childJobs.push(newJob._id);
             recurring.nextMaintenanceDate = (0, utility_1.calculateNextMaintenanceDate)(today, recurring.frequency);
-            yield recurring.save();
+            await recurring.save();
             console.log(`Created new job ${newJob._id} from recurring job ${recurring._id}`);
         }
-        const reminders = yield jobService.findRecurringJobsWithReminders(today);
+        const reminders = await jobService.findRecurringJobsWithReminders(today);
         for (const reminder of reminders) {
-            const job = yield jobService.fetchJobById(String(reminder.jobId));
+            const job = await jobService.fetchJobById(String(reminder.jobId));
             if (!job)
                 continue;
-            const user = yield authService.findUserWithoutDetailsById(job.userId);
+            const user = await authService.findUserWithoutDetailsById(job.userId);
             if (!user)
                 continue;
             const formattedDate = (0, date_fns_1.format)(reminder.startDate, 'yyyy-MM-dd');
             const { subject, html } = (0, templates_1.generateReminderEmail)(user.userName, formattedDate);
-            yield (0, send_email_1.sendEmail)(user.email, subject, html);
+            await (0, send_email_1.sendEmail)(user.email, subject, html);
             console.log(`Sent reminder for recurring job ${reminder._id}`);
         }
     }
     catch (error) {
         console.error('Error in recurring job cron:', error);
     }
-}));
+});

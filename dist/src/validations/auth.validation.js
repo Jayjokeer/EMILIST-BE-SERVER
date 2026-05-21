@@ -8,10 +8,6 @@ const joi_1 = __importDefault(require("joi"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const validateRegisterUser = (req, res, next) => {
     const schema = joi_1.default.object({
-        userName: joi_1.default.string().required().messages({
-            "string.base": "Username must be a string",
-            "string.empty": "Username is required",
-        }),
         email: joi_1.default.string().email().required().messages({
             "string.base": "Email must be a string",
             "string.email": "Invalid email format",

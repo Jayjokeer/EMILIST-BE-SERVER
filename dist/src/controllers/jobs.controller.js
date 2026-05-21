@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -66,7 +57,7 @@ const reviewService = __importStar(require("../services/review.service"));
 const subscriptionService = __importStar(require("../services/subscription.service"));
 const plan_enum_1 = require("../enums/plan.enum");
 const utility_1 = require("../utils/utility");
-exports.createJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.createJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const job = req.body;
     const { artisan } = req.body;
     const files = req.files;
@@ -78,35 +69,35 @@ exports.createJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
         job.jobFiles = fileObjects;
     }
     if (job.type == jobs_enum_1.JobType.direct && artisan) {
-        const user = yield authService.findUserByEmailOrUserNameDirectJob(artisan);
+        const user = await authService.findUserByEmailOrUserNameDirectJob(artisan);
         if (!user)
             throw new error_1.NotFoundError("User not found!");
         const userId = req.user.id;
         job.userId = userId;
-        const data = yield jobService.createJob(job);
+        const data = await jobService.createJob(job);
         const payload = {
             job: data._id,
             user: user._id,
             creator: userId,
             directJobStatus: project_enum_1.ProjectStatusEnum.pending,
         };
-        const project = yield projectService.createProject(payload);
+        const project = await projectService.createProject(payload);
         data.applications = [];
         data.applications.push(String(project._id));
         data.acceptedApplicationId = String(project._id);
         data.save();
         const { html, subject } = (0, templates_1.directJobApplicationMessage)(user.userName, req.user.userName, String(data._id));
-        yield (0, send_email_1.sendEmail)(user.email, subject, html);
+        await (0, send_email_1.sendEmail)(user.email, subject, html);
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
     else {
         const user = req.user._id;
         job.userId = user;
-        const data = yield jobService.createJob(job);
+        const data = await jobService.createJob(job);
         (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
-}));
-exports.allUserJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.allUserJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page = 1, limit = 10, search = null, title, location, category, service } = req.query;
     const filters = {
         title,
@@ -114,10 +105,10 @@ exports.allUserJobController = (0, error_handler_1.catchAsync)((req, res) => __a
         category,
         service
     };
-    const data = yield jobService.fetchAllUserJobs(req.user.id, Number(page), Number(limit), search, filters);
+    const data = await jobService.fetchAllUserJobs(req.user.id, Number(page), Number(limit), search, filters);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.allJobsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.allJobsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page = 1, limit = 10, title, location, category, service } = req.query;
     const userId = req.query.userId ? req.query.userId : null;
     const search = req.query.search || null;
@@ -127,48 +118,48 @@ exports.allJobsController = (0, error_handler_1.catchAsync)((req, res) => __awai
         category,
         service
     };
-    const data = yield jobService.fetchAllJobs(Number(page), Number(limit), userId, search, filters);
+    const data = await jobService.fetchAllJobs(Number(page), Number(limit), userId, search, filters);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchSingleJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchSingleJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { id } = req.query;
     if (!id) {
         throw new error_1.NotFoundError("Id required!");
     }
     ;
-    const data = yield jobService.fetchJobByIdWithDetails(String(id));
+    const data = await jobService.fetchJobByIdWithDetails(String(id));
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.likeJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.likeJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     const { jobId } = req.params;
-    const job = yield jobService.fetchJobById(String(jobId));
+    const job = await jobService.fetchJobById(String(jobId));
     if (!job) {
         throw new error_1.NotFoundError("Job not found!");
     }
-    const existingLike = yield jobService.ifLikedJob(jobId, userId);
+    const existingLike = await jobService.ifLikedJob(jobId, userId);
     if (existingLike) {
         throw new error_1.BadRequestError("Job previously liked!");
     }
-    const data = yield jobService.createJobLike({ job: jobId, user: userId });
+    const data = await jobService.createJobLike({ job: jobId, user: userId });
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.fetchLikedJobsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchLikedJobsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     const { page = 1, limit = 10 } = req.query;
-    const data = yield jobService.fetchLikedJobs(userId, Number(page), Number(limit));
+    const data = await jobService.fetchLikedJobs(userId, Number(page), Number(limit));
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.unlikeJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.unlikeJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     const { jobId } = req.params;
-    const data = yield jobService.unlikeJob(jobId, userId);
+    const data = await jobService.unlikeJob(jobId, userId);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.applyForJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.applyForJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     const { jobId, type, maximumPrice, milestones, businessId } = req.body;
-    const job = yield jobService.fetchJobById(String(jobId));
+    const job = await jobService.fetchJobById(String(jobId));
     if (!job) {
         throw new error_1.NotFoundError("Job not found!");
     }
@@ -178,7 +169,7 @@ exports.applyForJobController = (0, error_handler_1.catchAsync)((req, res) => __
     if (job.status !== jobs_enum_1.JobStatusEnum.pending) {
         throw new error_1.BadRequestError("You can only apply to a pending job!");
     }
-    const business = yield businessService.fetchSingleBusiness(String(businessId));
+    const business = await businessService.fetchSingleBusiness(String(businessId));
     if (!business) {
         throw new error_1.NotFoundError("Business not found!");
     }
@@ -201,54 +192,54 @@ exports.applyForJobController = (0, error_handler_1.catchAsync)((req, res) => __
             })),
         };
     }
-    const projectData = yield projectService.createProject(payload);
+    const projectData = await projectService.createProject(payload);
     job.applications.push(String(projectData._id));
     job.milestones;
-    yield job.save();
+    await job.save();
     const notificationPayload = {
         userId: job.userId,
         title: "Job Application",
         message: `${req.user.userName} applied to your job titled: ${job.title}`,
         type: notification_enum_1.NotificationTypeEnum.info
     };
-    const user = yield userService.findUserById(job.userId);
+    const user = await userService.findUserById(job.userId);
     const { html, subject } = (0, templates_1.sendJobApplicationMessage)(user.userName, req.user.userName, job.title);
     (0, send_email_1.sendEmail)(user.email, subject, html);
-    yield notificationService.createNotification(notificationPayload);
+    await notificationService.createNotification(notificationPayload);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, projectData);
-}));
-exports.deleteJobApplicationController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.deleteJobApplicationController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     const { projectId } = req.params;
-    const project = yield projectService.fetchProjectById(projectId);
+    const project = await projectService.fetchProjectById(projectId);
     if (!project) {
         throw new error_1.NotFoundError("Application not found!");
     }
     if (project.status !== project_enum_1.ProjectStatusEnum.pending) {
         throw new error_1.BadRequestError("You can only withdraw a pending application!");
     }
-    yield jobService.deleteJobApplication(project.job, projectId);
-    yield projectService.deleteProject(projectId, userId);
+    await jobService.deleteJobApplication(project.job, projectId);
+    await projectService.deleteProject(projectId, userId);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Application withdrawn");
-}));
-exports.deleteJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.deleteJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     const { jobId } = req.params;
-    const job = yield jobService.fetchJobById(jobId);
+    const job = await jobService.fetchJobById(jobId);
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
     if (job.status !== jobs_enum_1.JobStatusEnum.pending) {
         throw new error_1.BadRequestError("You can only delete a pending job!");
     }
-    yield jobService.deleteJobById(jobId, userId);
+    await jobService.deleteJobById(jobId, userId);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job deleted successfully");
-}));
-exports.updateJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.updateJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     const { jobId } = req.params;
     const files = req.files;
     const updates = req.body;
-    const job = yield jobService.fetchJobById(jobId);
+    const job = await jobService.fetchJobById(jobId);
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
     if (job.status !== jobs_enum_1.JobStatusEnum.pending) {
@@ -264,23 +255,23 @@ exports.updateJobController = (0, error_handler_1.catchAsync)((req, res) => __aw
     Object.keys(updates).forEach((key) => {
         job[key] = updates[key];
     });
-    yield job.save();
-    const data = yield jobService.fetchJobById(jobId);
+    await job.save();
+    const data = await jobService.fetchJobById(jobId);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.jobStatusController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     const { projectId } = req.params;
     const { status } = req.body;
-    const project = yield projectService.fetchProjectById(projectId);
-    const user = yield userService.findUserById(project.user);
+    const project = await projectService.fetchProjectById(projectId);
+    const user = await userService.findUserById(project.user);
     if (!project) {
         throw new error_1.NotFoundError("Application not found!");
     }
     if (project.creator != userId) {
         throw new error_1.UnauthorizedError("UnAuthorized!");
     }
-    const job = yield jobService.fetchJobById(String(project.job));
+    const job = await jobService.fetchJobById(String(project.job));
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
     if (status == project_enum_1.ProjectStatusEnum.pending) {
@@ -304,7 +295,7 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)((req, res) => __aw
                 }
             });
         }
-        yield projectService.updateRejectProject(projectId, String(job._id));
+        await projectService.updateRejectProject(projectId, String(job._id));
         const applicationStatus = "accepted";
         const notificationPayload = {
             userId: project.user,
@@ -313,8 +304,8 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)((req, res) => __aw
             type: notification_enum_1.NotificationTypeEnum.info
         };
         const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(user.userName, req.user.userName, job.title, applicationStatus);
-        yield (0, send_email_1.sendEmail)(user.email, subject, html);
-        yield notificationService.createNotification(notificationPayload);
+        await (0, send_email_1.sendEmail)(user.email, subject, html);
+        await notificationService.createNotification(notificationPayload);
     }
     else if (status == project_enum_1.ProjectStatusEnum.rejected) {
         project.rejectedAt = new Date();
@@ -327,8 +318,8 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)((req, res) => __aw
             type: notification_enum_1.NotificationTypeEnum.info
         };
         const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(user.userName, req.user.userName, job.title, applicationStatus);
-        yield (0, send_email_1.sendEmail)(user.email, subject, html);
-        yield notificationService.createNotification(notificationPayload);
+        await (0, send_email_1.sendEmail)(user.email, subject, html);
+        await notificationService.createNotification(notificationPayload);
     }
     else if (status == project_enum_1.ProjectStatusEnum.pause) {
         job.status = jobs_enum_1.JobStatusEnum.paused;
@@ -346,8 +337,8 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)((req, res) => __aw
             type: notification_enum_1.NotificationTypeEnum.info
         };
         const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(user.userName, req.user.userName, job.title, applicationStatus);
-        yield (0, send_email_1.sendEmail)(user.email, subject, html);
-        yield notificationService.createNotification(notificationPayload);
+        await (0, send_email_1.sendEmail)(user.email, subject, html);
+        await notificationService.createNotification(notificationPayload);
     }
     else if (status == project_enum_1.ProjectStatusEnum.unpause) {
         job.status = jobs_enum_1.JobStatusEnum.active;
@@ -364,26 +355,25 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)((req, res) => __aw
             type: notification_enum_1.NotificationTypeEnum.info
         };
         const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(user.userName, req.user.userName, job.title, applicationStatus);
-        yield (0, send_email_1.sendEmail)(user.email, subject, html);
-        yield notificationService.createNotification(notificationPayload);
+        await (0, send_email_1.sendEmail)(user.email, subject, html);
+        await notificationService.createNotification(notificationPayload);
     }
-    yield project.save();
-    yield job.save();
-    const data = yield jobService.fetchJobById(String(job._id));
+    await project.save();
+    await job.save();
+    const data = await jobService.fetchJobById(String(job._id));
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     const { status } = req.query;
     const now = new Date();
     let data = [];
-    const jobs = yield jobService.fetchJobsByUserId(userId);
+    const jobs = await jobService.fetchJobsByUserId(userId);
     const processedJobs = jobs.map((job) => {
-        var _a, _b, _c, _d;
-        const totalMilestones = ((_a = job.milestones) === null || _a === void 0 ? void 0 : _a.length) || 0;
-        const progressMilestones = ((_b = job.milestones) === null || _b === void 0 ? void 0 : _b.filter((m) => m.status === jobs_enum_1.MilestoneEnum.completed ||
+        const totalMilestones = job.milestones?.length || 0;
+        const progressMilestones = job.milestones?.filter((m) => m.status === jobs_enum_1.MilestoneEnum.completed ||
             m.status === jobs_enum_1.MilestoneEnum.active ||
-            m.status === jobs_enum_1.MilestoneEnum.paused).length) || 0;
+            m.status === jobs_enum_1.MilestoneEnum.paused).length || 0;
         const milestoneProgress = `${progressMilestones}/${totalMilestones}`;
         let overallDueDate = job.startDate ? new Date(job.startDate) : null;
         let currentMilestoneDueDate = null;
@@ -391,8 +381,8 @@ exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)((req, res) 
             let accumulatedDays = 0;
             let currentMilestoneFound = false;
             for (const milestone of job.milestones) {
-                const days = parseInt((_c = milestone.timeFrame) === null || _c === void 0 ? void 0 : _c.number, 10) || 0;
-                if (((_d = milestone.timeFrame) === null || _d === void 0 ? void 0 : _d.period) === "days") {
+                const days = parseInt(milestone.timeFrame?.number, 10) || 0;
+                if (milestone.timeFrame?.period === "days") {
                     accumulatedDays += days;
                 }
                 if (overallDueDate && !isNaN(days)) {
@@ -411,10 +401,13 @@ exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)((req, res) 
             job.startDate &&
             overallDueDate &&
             overallDueDate < now;
-        return Object.assign(Object.assign({}, job.toObject()), { milestoneProgress,
+        return {
+            ...job.toObject(),
+            milestoneProgress,
             overallDueDate,
             currentMilestoneDueDate,
-            isOverdue });
+            isOverdue,
+        };
     });
     if (status === jobs_enum_1.JobStatusEnum.pending) {
         data = processedJobs.filter((job) => job.status === jobs_enum_1.JobStatusEnum.pending);
@@ -451,29 +444,29 @@ exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)((req, res) 
             job.overallDueDate < now);
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.deleteFileController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.deleteFileController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { jobId, fileId } = req.params;
-    const job = yield jobService.fetchJobById(jobId);
+    const job = await jobService.fetchJobById(jobId);
     if (!job) {
         throw new error_1.NotFoundError('Job not found');
     }
     job.jobFiles = job.jobFiles.filter((file) => file.id.toString() !== fileId);
-    yield job.save();
+    await job.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Image deleted successfully");
-}));
-exports.acceptDirectJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.acceptDirectJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { projectId } = req.params;
     const { status, businessId } = req.body;
     const user = req.user;
-    const project = yield projectService.fetchProjectById(projectId);
+    const project = await projectService.fetchProjectById(projectId);
     if (!project) {
         throw new error_1.NotFoundError("Application not found!");
     }
     if (String(project.user) !== String(user.id)) {
         throw new error_1.BadRequestError("Unauthorized!");
     }
-    const job = yield jobService.fetchJobById(String(project.job));
+    const job = await jobService.fetchJobById(String(project.job));
     if (!job) {
         throw new error_1.NotFoundError("Job not found!");
     }
@@ -492,9 +485,9 @@ exports.acceptDirectJobController = (0, error_handler_1.catchAsync)((req, res) =
         job.type = jobs_enum_1.JobType.regular;
     }
     ;
-    yield project.save();
-    yield job.save();
-    const jobOwner = yield userService.findUserById(job.userId);
+    await project.save();
+    await job.save();
+    const jobOwner = await userService.findUserById(job.userId);
     const applicationStatus = status;
     const notificationPayload = {
         userId: job.userId,
@@ -503,11 +496,11 @@ exports.acceptDirectJobController = (0, error_handler_1.catchAsync)((req, res) =
         type: notification_enum_1.NotificationTypeEnum.info
     };
     const { html, subject } = (0, templates_1.acceptDirectJobApplicationMessage)(user.userName, jobOwner.userName, String(job._id));
-    yield (0, send_email_1.sendEmail)(jobOwner.email, subject, html);
-    yield notificationService.createNotification(notificationPayload);
+    await (0, send_email_1.sendEmail)(jobOwner.email, subject, html);
+    await notificationService.createNotification(notificationPayload);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Status changed successfully");
-}));
-exports.fetchUserAppliedJobsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchUserAppliedJobsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const user = req.user;
     const { status, search = null, title, location, category, service } = req.query;
     const page = parseInt(req.query.page, 10) || 1;
@@ -520,30 +513,30 @@ exports.fetchUserAppliedJobsController = (0, error_handler_1.catchAsync)((req, r
         category,
         service
     };
-    const data = yield jobService.fetchUserJobApplications(user.id, skip, limit, statusEnum, page, search, filters);
+    const data = await jobService.fetchUserJobApplications(user.id, skip, limit, statusEnum, page, search, filters);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchApplicationByStatusController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchApplicationByStatusController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const user = req.user;
     const { status } = req.query;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
-    const data = yield jobService.fetchUserApplications(user.id, skip, limit, status, page);
+    const data = await jobService.fetchUserApplications(user.id, skip, limit, status, page);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.updateMilestoneStatusController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.updateMilestoneStatusController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const user = req.user;
     const { milestoneId, jobId } = req.params;
     const { status, note, additionalAmount } = req.body;
-    const job = yield jobService.fetchJobById(String(jobId));
+    const job = await jobService.fetchJobById(String(jobId));
     if (!job) {
         throw new error_1.NotFoundError("Job not found!");
     }
     if (job.status == jobs_enum_1.JobStatusEnum.pending) {
         throw new error_1.BadRequestError("You cannot update a pending job milestone");
     }
-    const project = yield projectService.fetchProjectById(String(job.acceptedApplicationId));
+    const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
     if (!project) {
         throw new error_1.NotFoundError("Application not found!");
     }
@@ -565,7 +558,7 @@ exports.updateMilestoneStatusController = (0, error_handler_1.catchAsync)((req, 
         if (allMilestonesCompleted) {
             job.status = jobs_enum_1.JobStatusEnum.complete;
             project.status = project_enum_1.ProjectStatusEnum.completed;
-            yield project.save();
+            await project.save();
         }
         if (note) {
             milestone.invoice.note = note;
@@ -578,14 +571,14 @@ exports.updateMilestoneStatusController = (0, error_handler_1.catchAsync)((req, 
     if (!milestone)
         throw new error_1.NotFoundError("Milestone not found");
     milestone.status = status;
-    yield job.save();
-    const data = yield jobService.fetchJobById(String(jobId));
+    await job.save();
+    const data = await jobService.fetchJobById(String(jobId));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.requestForQuoteController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.requestForQuoteController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { jobId } = req.params;
     const loggedInUser = req.user;
-    const job = yield jobService.fetchJobById(String(jobId));
+    const job = await jobService.fetchJobById(String(jobId));
     if (!job) {
         throw new error_1.NotFoundError("Job not found!");
     }
@@ -596,19 +589,19 @@ exports.requestForQuoteController = (0, error_handler_1.catchAsync)((req, res) =
         throw new error_1.BadRequestError("You can only request for quote on an active or paused job!");
     }
     job.isRequestForQuote = true;
-    const project = yield projectService.fetchProjectById(String(job.acceptedApplicationId));
-    const user = yield authService.findUserById(String(project === null || project === void 0 ? void 0 : project.user));
+    const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
+    const user = await authService.findUserById(String(project?.user));
     if (!user)
         throw new error_1.NotFoundError("user not found!");
     job.save();
     const { html, subject } = (0, templates_1.requestForQuoteMessage)(user.userName, req.user.userName, String(job._id));
-    yield (0, send_email_1.sendEmail)(user.email, subject, html);
+    await (0, send_email_1.sendEmail)(user.email, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, 'Request for quote sent successfully');
-}));
-exports.postQuoteController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.postQuoteController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const loggedInUser = req.user;
     const { milestones, jobId, totalAmount } = req.body;
-    const job = yield jobService.fetchJobById(String(jobId));
+    const job = await jobService.fetchJobById(String(jobId));
     if (!job) {
         throw new error_1.NotFoundError("Job not found!");
     }
@@ -621,7 +614,7 @@ exports.postQuoteController = (0, error_handler_1.catchAsync)((req, res) => __aw
     if (!job.isRequestForQuote) {
         throw new error_1.BadRequestError("You cannot post a quote on this job");
     }
-    const project = yield projectService.fetchProjectById(String(job.acceptedApplicationId));
+    const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
     if (!project) {
         throw new error_1.NotFoundError("Project not found!");
     }
@@ -634,27 +627,27 @@ exports.postQuoteController = (0, error_handler_1.catchAsync)((req, res) => __aw
         totalAmount: totalAmount,
         postedAt: new Date()
     };
-    yield project.save();
-    const user = yield authService.findUserById(String(job.userId));
+    await project.save();
+    const user = await authService.findUserById(String(job.userId));
     if (!user)
         throw new error_1.NotFoundError("user not found!");
-    yield job.save();
+    await job.save();
     const { html, subject } = (0, templates_1.postQuoteMessage)(user.userName, req.user.userName, String(job._id));
-    yield (0, send_email_1.sendEmail)(user.email, subject, html);
+    await (0, send_email_1.sendEmail)(user.email, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, 'Quote sent successfully');
-}));
-exports.acceptQuoteController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.acceptQuoteController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     const { projectId } = req.params;
     const { status } = req.body;
-    const project = yield projectService.fetchProjectById(projectId);
+    const project = await projectService.fetchProjectById(projectId);
     if (!project) {
         throw new error_1.NotFoundError("Application not found!");
     }
     if (project.creator != userId) {
         throw new error_1.UnauthorizedError("UnAuthorized!");
     }
-    const job = yield jobService.fetchJobById(String(project.job));
+    const job = await jobService.fetchJobById(String(project.job));
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
     project.quote.status = status;
@@ -679,18 +672,18 @@ exports.acceptQuoteController = (0, error_handler_1.catchAsync)((req, res) => __
     else if (status == jobs_enum_1.QuoteStatusEnum.rejected) {
         project.quote.rejectedAt = new Date();
     }
-    yield project.save();
-    yield job.save();
-    const data = yield jobService.fetchJobById(String(job._id));
+    await project.save();
+    await job.save();
+    const data = await jobService.fetchJobById(String(job._id));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.updateMilestonePaymentController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.updateMilestonePaymentController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { amountPaid, paymentMethod, date, jobId, milestoneId, note } = req.body;
     if (!jobId && !milestoneId) {
         throw new error_1.NotFoundError("Ids required!");
     }
     ;
-    const job = yield jobService.fetchJobById(String(jobId));
+    const job = await jobService.fetchJobById(String(jobId));
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
     if (String(job.userId) !== String(req.user.id))
@@ -709,22 +702,21 @@ exports.updateMilestonePaymentController = (0, error_handler_1.catchAsync)((req,
         milestone.paymentInfo.paymentReciept = req.file.path;
     }
     milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.paid;
-    yield job.save();
-    const data = yield jobService.fetchJobById(String(jobId));
+    await job.save();
+    const data = await jobService.fetchJobById(String(jobId));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.jobAnalyticsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.jobAnalyticsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { startDate, endDate, year, month } = req.query;
     const userId = req.user._id;
-    const data = yield jobService.jobAnalytics(year, month, startDate, endDate, userId);
+    const data = await jobService.jobAnalytics(year, month, startDate, endDate, userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.closeContractController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+});
+exports.closeContractController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
     const { jobId } = req.params;
     const { rating, note, rateCommunication, isRecommendVendor } = req.body;
-    const job = yield jobService.fetchJobById(String(jobId));
+    const job = await jobService.fetchJobById(String(jobId));
     if (!job)
         throw new error_1.NotFoundError('Job not found!');
     if (String(userId) !== String(job.userId)) {
@@ -739,11 +731,11 @@ exports.closeContractController = (0, error_handler_1.catchAsync)((req, res) => 
     if (job.status !== jobs_enum_1.JobStatusEnum.complete) {
         job.status = jobs_enum_1.JobStatusEnum.complete;
     }
-    const project = yield projectService.fetchProjectById(String(job.acceptedApplicationId));
+    const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
     if (!project) {
         throw new error_1.NotFoundError("Project not found!");
     }
-    const business = yield businessService.fetchSingleBusiness(String(project.businessId));
+    const business = await businessService.fetchSingleBusiness(String(project.businessId));
     if (!business) {
         throw new error_1.NotFoundError("Business not found!");
     }
@@ -758,52 +750,52 @@ exports.closeContractController = (0, error_handler_1.catchAsync)((req, res) => 
         rateCommunication,
         isRecommendVendor
     };
-    const data = yield reviewService.addReview(payload);
-    yield job.save();
-    yield project.save();
-    yield ((_a = business.reviews) === null || _a === void 0 ? void 0 : _a.push(data._id));
-    yield business.save();
+    const data = await reviewService.addReview(payload);
+    await job.save();
+    await project.save();
+    await business.reviews?.push(data._id);
+    await business.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job closed successfully");
-}));
-exports.fetchJobCountsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchJobCountsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
-    const data = yield jobService.fetchJobCount(String(userId));
+    const data = await jobService.fetchJobCount(String(userId));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchProjectCountsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchProjectCountsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
-    const data = yield jobService.fetchProjectCounts(String(userId));
+    const data = await jobService.fetchProjectCounts(String(userId));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.projectAnalyticsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.projectAnalyticsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { startDate, endDate, year, month } = req.query;
     const userId = req.user._id;
-    const data = yield jobService.projectAnalytics(year, month, startDate, endDate, userId);
+    const data = await jobService.projectAnalytics(year, month, startDate, endDate, userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.muteJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.muteJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { jobId } = req.params;
     const userId = req.user._id;
-    const job = yield jobService.fetchJobById(jobId);
+    const job = await jobService.fetchJobById(jobId);
     if (!job) {
         throw new error_1.NotFoundError("Job not found!");
     }
     if (String(userId) === String(job.userId)) {
         throw new error_1.BadRequestError("You cannot mute your own job!");
     }
-    const user = yield userService.findUserById(userId);
-    const isMuted = user === null || user === void 0 ? void 0 : user.mutedJobs.includes(jobId);
+    const user = await userService.findUserById(userId);
+    const isMuted = user?.mutedJobs.includes(jobId);
     if (isMuted) {
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job is already muted.");
     }
     user.mutedJobs.push(jobId);
-    yield (user === null || user === void 0 ? void 0 : user.save());
+    await user?.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job muted successfully");
-}));
-exports.jobLeadsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.jobLeadsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page, limit } = req.query;
     const userId = req.user._id;
-    const subscription = yield subscriptionService.getActiveSubscription(userId);
+    const subscription = await subscriptionService.getActiveSubscription(userId);
     if (!subscription) {
         throw new error_1.BadRequestError("You do not have an active subscription.");
     }
@@ -811,15 +803,15 @@ exports.jobLeadsController = (0, error_handler_1.catchAsync)((req, res) => __awa
     if (plan === plan_enum_1.PlanEnum.basic) {
         throw new error_1.BadRequestError("Basic subscription does not include the ability to fetch leads.");
     }
-    const data = yield jobService.fetchJobLeads(userId, page, limit);
+    const data = await jobService.fetchJobLeads(userId, page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.createRecurringJobController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.createRecurringJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { jobId, frequency, startDate, endDate, reminderDates } = req.body;
     let jobDetails;
     let appliedUser;
     if (jobId) {
-        jobDetails = yield jobService.fetchJobByIdWithUserId(jobId);
+        jobDetails = await jobService.fetchJobByIdWithUserId(jobId);
         if (!jobDetails) {
             throw new error_1.NotFoundError("Job not found");
         }
@@ -837,7 +829,7 @@ exports.createRecurringJobController = (0, error_handler_1.catchAsync)((req, res
             jobDetails.jobFiles = fileObjects;
         }
     }
-    const user = yield authService.findUserByEmailOrUserNameDirectJob(appliedUser);
+    const user = await authService.findUserByEmailOrUserNameDirectJob(appliedUser);
     if (!user)
         throw new error_1.NotFoundError("User not found!");
     const userId = req.user.id;
@@ -845,20 +837,20 @@ exports.createRecurringJobController = (0, error_handler_1.catchAsync)((req, res
     if (!jobDetails.type) {
         jobDetails.type = jobs_enum_1.JobType.direct;
     }
-    const data = yield jobService.createJob(jobDetails);
+    const data = await jobService.createJob(jobDetails);
     const payload = {
         job: data._id,
         user: user._id,
         creator: userId,
         directJobStatus: project_enum_1.ProjectStatusEnum.pending,
     };
-    const project = yield projectService.createProject(payload);
+    const project = await projectService.createProject(payload);
     data.applications = [];
     data.applications.push(String(project._id));
     data.acceptedApplicationId = String(project._id);
     data.save();
     const { html, subject } = (0, templates_1.directJobApplicationMessage)(user.userName, req.user.userName, String(data._id));
-    yield (0, send_email_1.sendEmail)(user.email, subject, html);
+    await (0, send_email_1.sendEmail)(user.email, subject, html);
     const nextMaintenanceDate = (0, utility_1.calculateNextMaintenanceDate)(new Date(startDate), frequency);
     const recurringPayload = {
         jobId: data._id,
@@ -869,15 +861,15 @@ exports.createRecurringJobController = (0, error_handler_1.catchAsync)((req, res
         childJobs: [],
         reminderDates,
     };
-    const recurringJob = yield jobService.createRecurringJob(recurringPayload);
+    const recurringJob = await jobService.createRecurringJob(recurringPayload);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, recurringJob);
-}));
-exports.fetchAllRecurringJobsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchAllRecurringJobsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     console.log(userId);
     const limit = req.query.limit ? Number(req.query.limit) : 10;
     const page = req.query.page ? Number(req.query.page) : 1;
-    const { totalJobs, jobs } = yield jobService.fetchAllRecurringJobs(userId, limit, page);
+    const { totalJobs, jobs } = await jobService.fetchAllRecurringJobs(userId, limit, page);
     const recurringJob = {
         page,
         limit,
@@ -885,4 +877,4 @@ exports.fetchAllRecurringJobsController = (0, error_handler_1.catchAsync)((req, 
         jobs
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, recurringJob);
-}));
+});

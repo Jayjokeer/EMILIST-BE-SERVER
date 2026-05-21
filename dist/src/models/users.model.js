@@ -79,5 +79,6 @@ const userSchema = new mongoose_1.default.Schema({
     },
     sharedCount: { type: Number, default: 0 },
     mutedBusinesses: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Business' }],
+    isProfileComplete: { type: Boolean, default: false },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Users', userSchema);

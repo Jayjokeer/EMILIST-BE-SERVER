@@ -4,10 +4,6 @@ import { PaymentMethodEnum, WalletEnum } from "../enums/transaction.enum";
 
 export const validateRegisterUser = (req: Request, res: Response, next: NextFunction) => {
     const schema = Joi.object({
-      userName: Joi.string().required().messages({
-        "string.base": "Username must be a string",
-        "string.empty": "Username is required",
-      }),
       email: Joi.string().email().required().messages({
         "string.base": "Email must be a string",
         "string.email": "Invalid email format",

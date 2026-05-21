@@ -13,7 +13,9 @@ export const findUserById = async (id: string)=>{
 export const createUser = async (data:  ICreateUser) =>{
     return await Users.create(data);
 };
-
+export const findCurrentUserById = async (id: string)=>{
+    return await Users.findById(id).select("fullName uniqueId email language isProfileComplete isVerified");
+};
 export const findTokenService = async (
     registrationOtp: string
   )=> {

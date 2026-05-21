@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyBankTransferWalletFunding = exports.initiateWalletFunding = exports.createWalletController = void 0;
 const http_status_codes_1 = require("http-status-codes");
@@ -52,20 +43,19 @@ const transactionService = __importStar(require("../services/transaction.service
 const paystack_1 = require("../utils/paystack");
 const transaction_enum_1 = require("../enums/transaction.enum");
 const userService = __importStar(require("../services/auth.service"));
-exports.createWalletController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+exports.createWalletController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
     const { currency, isDefault } = req.body;
-    const data = yield walletService.createNewWallet(userId, currency, isDefault);
-    const user = yield userService.findUserById(userId);
-    (_a = user === null || user === void 0 ? void 0 : user.wallets) === null || _a === void 0 ? void 0 : _a.push(data._id);
-    yield (user === null || user === void 0 ? void 0 : user.save());
+    const data = await walletService.createNewWallet(userId, currency, isDefault);
+    const user = await userService.findUserById(userId);
+    user?.wallets?.push(data._id);
+    await user?.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.initiateWalletFunding = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.initiateWalletFunding = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
     const { currency, amount, paymentMethod, walletId } = req.body;
-    const wallet = yield walletService.findWallet(userId, currency, walletId);
+    const wallet = await walletService.findWallet(userId, currency, walletId);
     if (!wallet)
         throw new error_1.NotFoundError('Wallet not found');
     const transactionPayload = {
@@ -81,10 +71,10 @@ exports.initiateWalletFunding = (0, error_handler_1.catchAsync)((req, res) => __
         currency,
         serviceType: transaction_enum_1.ServiceEnum.walletFunding,
     };
-    const transaction = yield transactionService.createTransaction(transactionPayload);
+    const transaction = await transactionService.createTransaction(transactionPayload);
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency === transaction_enum_1.WalletEnum.NGN) {
         transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
-        const paymentLink = yield (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, amount, req.user.email);
+        const paymentLink = await (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, amount, req.user.email);
         const data = { paymentLink, transaction };
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
@@ -93,19 +83,19 @@ exports.initiateWalletFunding = (0, error_handler_1.catchAsync)((req, res) => __
             transaction.transferReceipt = req.file.path;
         }
         ;
-        yield transaction.save();
+        await transaction.save();
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, "Wallet funding initiated successfully");
     }
-}));
-exports.verifyBankTransferWalletFunding = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.verifyBankTransferWalletFunding = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
     const { transactionId, status } = req.body;
     let message;
-    const transaction = yield transactionService.fetchSingleTransaction(transactionId);
+    const transaction = await transactionService.fetchSingleTransaction(transactionId);
     if (!transaction || transaction.paymentMethod !== transaction_enum_1.PaymentMethodEnum.bankTransfer) {
         throw new Error('Transaction not found or not a bank transfer');
     }
-    const wallet = yield walletService.findWallet(String(transaction.userId), transaction.currency, transaction.walletId);
+    const wallet = await walletService.findWallet(String(transaction.userId), transaction.currency, transaction.walletId);
     if (!wallet) {
         throw new error_1.NotFoundError("Wallet not found!");
     }
@@ -118,11 +108,11 @@ exports.verifyBankTransferWalletFunding = (0, error_handler_1.catchAsync)((req, 
         transaction.status = transaction_enum_1.TransactionEnum.completed;
         transaction.adminApproval = true;
         transaction.balanceAfter = wallet.balance + transaction.amount;
-        yield Promise.all([transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
+        await Promise.all([transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
     }
     else if (status === "Declined") {
         transaction.status = transaction_enum_1.TransactionEnum.declined;
-        yield transaction.save();
+        await transaction.save();
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, message);
-}));
+});

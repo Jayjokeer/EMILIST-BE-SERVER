@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -54,21 +45,23 @@ const projectService = __importStar(require("../services/project.service"));
 const businessLike_model_1 = __importDefault(require("../models/businessLike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
 const project_enum_1 = require("../enums/project.enum");
-const createBusiness = (data) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield business_model_1.default.create(data);
-});
+const createBusiness = async (data) => {
+    return await business_model_1.default.create(data);
+};
 exports.createBusiness = createBusiness;
-const updateBusiness = (businessId, businessData, files) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+const updateBusiness = async (businessId, businessData, files) => {
     try {
-        const business = yield business_model_1.default.findById(businessId);
+        const business = await business_model_1.default.findById(businessId);
         if (!business)
             throw new Error('Business not found');
         if (businessData.renderedServices) {
             businessData.renderedServices.forEach((newService) => {
                 const existingServiceIndex = business.renderedServices.findIndex((service) => String(service._id) == String(newService.id));
                 if (existingServiceIndex !== -1) {
-                    business.renderedServices[existingServiceIndex] = Object.assign(Object.assign({}, business.renderedServices[existingServiceIndex]), newService);
+                    business.renderedServices[existingServiceIndex] = {
+                        ...business.renderedServices[existingServiceIndex],
+                        ...newService,
+                    };
                 }
                 else {
                     business.renderedServices.push(newService);
@@ -77,15 +70,14 @@ const updateBusiness = (businessId, businessData, files) => __awaiter(void 0, vo
         }
         if (businessData.certification) {
             businessData.certification.forEach((newCert) => {
-                var _a, _b, _c;
                 const certId = newCert.id || newCert._id;
                 const existingCert = business.certification.find((cert) => String(cert._id) === String(certId));
                 // normalize uploaded certificate path
                 let certificatePath;
-                if (files === null || files === void 0 ? void 0 : files.certificate) {
+                if (files?.certificate) {
                     certificatePath = Array.isArray(files.certificate)
-                        ? (_a = files.certificate[0]) === null || _a === void 0 ? void 0 : _a.path
-                        : (_b = files.certificate) === null || _b === void 0 ? void 0 : _b.path;
+                        ? files.certificate[0]?.path
+                        : files.certificate?.path;
                 }
                 if (existingCert) {
                     if (certificatePath) {
@@ -101,17 +93,19 @@ const updateBusiness = (businessId, businessData, files) => __awaiter(void 0, vo
                         newCert.expiringDate || existingCert.expiringDate;
                     // use ?? to avoid overriding false
                     existingCert.isCertificateExpire =
-                        (_c = newCert.isCertificateExpire) !== null && _c !== void 0 ? _c : existingCert.isCertificateExpire;
+                        newCert.isCertificateExpire ?? existingCert.isCertificateExpire;
                 }
                 else {
-                    business.certification.push(Object.assign(Object.assign({}, newCert), { certificate: certificatePath || null }));
+                    business.certification.push({
+                        ...newCert,
+                        certificate: certificatePath || null,
+                    });
                 }
             });
         }
         // ---------- END CERT FIX ----------
         if (businessData.membership) {
             businessData.membership.forEach((newMembership) => {
-                var _a;
                 const existingMembership = business.membership.find((membership) => String(membership._id) === String(newMembership.id));
                 if (existingMembership) {
                     existingMembership.organisation = newMembership.organisation || existingMembership.organisation;
@@ -119,7 +113,7 @@ const updateBusiness = (businessId, businessData, files) => __awaiter(void 0, vo
                     existingMembership.startDate = newMembership.startDate || existingMembership.startDate;
                     existingMembership.endDate = newMembership.endDate || existingMembership.endDate;
                     existingMembership.isMembershipExpire =
-                        (_a = newMembership.isMembershipExpire) !== null && _a !== void 0 ? _a : existingMembership.isMembershipExpire;
+                        newMembership.isMembershipExpire ?? existingMembership.isMembershipExpire;
                 }
                 else {
                     business.membership.push(newMembership);
@@ -159,35 +153,35 @@ const updateBusiness = (businessId, businessData, files) => __awaiter(void 0, vo
         business.noticePeriod = businessData.noticePeriod || business.noticePeriod;
         business.businessDescription = businessData.businessDescription || business.businessDescription;
         business.currency = businessData.currency || business.currency;
-        if (files === null || files === void 0 ? void 0 : files.profileImage) {
+        if (files?.profileImage) {
             business.profileImage = files.profileImage[0].path;
         }
-        if (((_a = files === null || files === void 0 ? void 0 : files.businessImages) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+        if (files?.businessImages?.length > 0) {
             const newBusinessImages = files.businessImages.map((file) => ({
                 imageUrl: file.path,
             }));
             business.businessImages.push(...newBusinessImages);
         }
-        yield business.save();
+        await business.save();
         return business;
     }
     catch (error) {
         console.error('Error updating business:', error);
         throw new error_1.BadRequestError('Failed to update business. ' + error.message);
     }
-});
+};
 exports.updateBusiness = updateBusiness;
-const fetchUserBusiness = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield business_model_1.default.findOne({ userId });
-});
+const fetchUserBusiness = async (userId) => {
+    return await business_model_1.default.findOne({ userId });
+};
 exports.fetchUserBusiness = fetchUserBusiness;
-const fetchSingleBusiness = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield business_model_1.default.findById(businessId)
+const fetchSingleBusiness = async (businessId) => {
+    return await business_model_1.default.findById(businessId)
         .populate('userId', 'fullName email userName uniqueId profileImage level');
-});
+};
 exports.fetchSingleBusiness = fetchSingleBusiness;
-const fetchSingleBusinessWithDetails = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
-    const business = yield business_model_1.default.findById(businessId)
+const fetchSingleBusinessWithDetails = async (businessId) => {
+    const business = await business_model_1.default.findById(businessId)
         .populate('userId', 'fullName email userName uniqueId profileImage level')
         .populate('reviews', 'rating');
     if (!business) {
@@ -198,19 +192,24 @@ const fetchSingleBusinessWithDetails = (businessId) => __awaiter(void 0, void 0,
     const averageRating = totalReviews > 0
         ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
         : 0;
-    const totalJobs = yield project_model_1.default.countDocuments({ user: business.userId,
+    const totalJobs = await project_model_1.default.countDocuments({ user: business.userId,
         status: { $nin: [project_enum_1.ProjectStatusEnum.pending, project_enum_1.ProjectStatusEnum.rejected] }
     });
-    const successfulJobs = yield project_model_1.default.countDocuments({ user: business.userId, status: project_enum_1.ProjectStatusEnum.completed });
-    const unsuccessfulJobs = yield project_model_1.default.countDocuments({ user: business.userId, status: project_enum_1.ProjectStatusEnum.cancelled });
+    const successfulJobs = await project_model_1.default.countDocuments({ user: business.userId, status: project_enum_1.ProjectStatusEnum.completed });
+    const unsuccessfulJobs = await project_model_1.default.countDocuments({ user: business.userId, status: project_enum_1.ProjectStatusEnum.cancelled });
     const successRate = totalJobs > 0 ? (successfulJobs / totalJobs) * 100 : 0;
-    return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)), totalJobs,
+    return {
+        ...business.toObject(),
+        totalReviews,
+        averageRating: parseFloat(averageRating.toFixed(2)),
+        totalJobs,
         successfulJobs,
         unsuccessfulJobs,
-        successRate });
-});
+        successRate,
+    };
+};
 exports.fetchSingleBusinessWithDetails = fetchSingleBusinessWithDetails;
-const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllBusiness = async (userId, page, limit, filters, search) => {
     const skip = (page - 1) * limit;
     const query = {};
     if (filters.startPriceRange) {
@@ -258,35 +257,42 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
         query.noticePeriod = filters.noticePeriod;
     }
     if (userId) {
-        const user = yield userService.fetchUserMutedBusinesses(userId);
+        const user = await userService.fetchUserMutedBusinesses(userId);
         if (user && user.mutedBusinesses && user.mutedBusinesses.length > 0) {
             query._id = { $nin: user.mutedBusinesses };
         }
     }
-    const businesses = yield business_model_1.default.find(query)
+    const businesses = await business_model_1.default.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .populate('reviews', 'rating')
         .populate('userId', 'userName fullName');
-    const totalBusinesses = yield business_model_1.default.countDocuments(query);
+    const totalBusinesses = await business_model_1.default.countDocuments(query);
     let likedBusinessIds = [];
     let user;
     if (userId) {
-        const likedBusinesses = yield businessLike_model_1.default.find({ user: userId }).select('business').lean();
+        const likedBusinesses = await businessLike_model_1.default.find({ user: userId }).select('business').lean();
         likedBusinessIds = likedBusinesses.map((like) => like.business.toString());
-        user = yield userService.findUserWithoutDetailsById(userId);
+        user = await userService.findUserWithoutDetailsById(userId);
     }
-    const enhancedBusinesses = yield Promise.all(businesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
+    const enhancedBusinesses = await Promise.all(businesses.map(async (business) => {
         const reviews = business.reviews || [];
         console.log(business.reviews);
         const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
             ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
-        const completedJobs = yield projectService.completedJobsCount(String(business._id));
-        return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)), isCompared: userId ? user.comparedBusinesses.includes(String(business._id)) : false, completedJobs, liked: likedBusinessIds.includes(String(business._id)) });
-    })));
+        const completedJobs = await projectService.completedJobsCount(String(business._id));
+        return {
+            ...business.toObject(),
+            totalReviews,
+            averageRating: parseFloat(averageRating.toFixed(2)),
+            isCompared: userId ? user.comparedBusinesses.includes(String(business._id)) : false,
+            completedJobs,
+            liked: likedBusinessIds.includes(String(business._id)),
+        };
+    }));
     console.log(enhancedBusinesses);
     const filteredBusinesses = enhancedBusinesses.filter((business) => {
         if (filters.minRating && business.averageRating < filters.minRating) {
@@ -303,60 +309,63 @@ const fetchAllBusiness = (userId, page, limit, filters, search) => __awaiter(voi
         currentPage: page,
         totalBusinesses,
     };
-});
+};
 exports.fetchAllBusiness = fetchAllBusiness;
-const deleteBusiness = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield business_model_1.default.findByIdAndDelete(businessId);
-});
+const deleteBusiness = async (businessId) => {
+    return await business_model_1.default.findByIdAndDelete(businessId);
+};
 exports.deleteBusiness = deleteBusiness;
-const fetchAllUserBusinessesAdmin = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield business_model_1.default.find({ userId: userId })
+const fetchAllUserBusinessesAdmin = async (userId) => {
+    return await business_model_1.default.find({ userId: userId })
         .sort({ createdAt: -1 })
         .populate('reviews', 'rating')
         .lean();
-});
+};
 exports.fetchAllUserBusinessesAdmin = fetchAllUserBusinessesAdmin;
-const fetchAllComparedBusinesses = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
-    const businesses = yield business_model_1.default.find({ _id: { $in: businessId } })
+const fetchAllComparedBusinesses = async (businessId) => {
+    const businesses = await business_model_1.default.find({ _id: { $in: businessId } })
         .populate('userId', 'fullName email userName uniqueId profileImage level gender')
         .populate('reviews', 'rating').lean();
-    const enhancedBusinesses = yield Promise.all(businesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
+    const enhancedBusinesses = await Promise.all(businesses.map(async (business) => {
         const reviews = business.reviews || [];
         const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
             ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
-        const completedJobs = yield projectService.completedJobsCount(String(business._id));
-        return Object.assign(Object.assign({}, business), { completedJobs,
-            totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
-    })));
+        const completedJobs = await projectService.completedJobsCount(String(business._id));
+        return {
+            ...business,
+            completedJobs,
+            totalReviews,
+            averageRating: parseFloat(averageRating.toFixed(2)),
+        };
+    }));
     return {
         enhancedBusinesses
     };
-});
+};
 exports.fetchAllComparedBusinesses = fetchAllComparedBusinesses;
-const ifLikedBusiness = (businessId, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield businessLike_model_1.default.findOne({ business: businessId, user: userId });
-});
+const ifLikedBusiness = async (businessId, userId) => {
+    return await businessLike_model_1.default.findOne({ business: businessId, user: userId });
+};
 exports.ifLikedBusiness = ifLikedBusiness;
-const createBusinessLike = (data) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield businessLike_model_1.default.create(data);
-});
+const createBusinessLike = async (data) => {
+    return await businessLike_model_1.default.create(data);
+};
 exports.createBusinessLike = createBusinessLike;
-const unlikeBusiness = (businessId, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield businessLike_model_1.default.findOneAndDelete({ user: userId, business: businessId });
-});
+const unlikeBusiness = async (businessId, userId) => {
+    return await businessLike_model_1.default.findOneAndDelete({ user: userId, business: businessId });
+};
 exports.unlikeBusiness = unlikeBusiness;
-const otherBusinessesByUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield business_model_1.default.find({ userId })
+const otherBusinessesByUser = async (userId) => {
+    return await business_model_1.default.find({ userId })
         .sort({ createdAt: -1 })
         .populate('reviews', 'rating');
-});
+};
 exports.otherBusinessesByUser = otherBusinessesByUser;
-const fetchSimilarBusinesses = (businessId) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+const fetchSimilarBusinesses = async (businessId) => {
     const limit = 10;
-    const targetBusiness = yield business_model_1.default.findById(businessId);
+    const targetBusiness = await business_model_1.default.findById(businessId);
     if (!targetBusiness) {
         throw new error_1.NotFoundError('Service not found');
     }
@@ -371,37 +380,41 @@ const fetchSimilarBusinesses = (businessId) => __awaiter(void 0, void 0, void 0,
         ];
     }
     ;
-    if ((_a = targetBusiness.services) === null || _a === void 0 ? void 0 : _a.length) {
+    if (targetBusiness.services?.length) {
         query.services = { $in: targetBusiness.services };
     }
-    const similarBusinesses = yield business_model_1.default.find(query)
+    const similarBusinesses = await business_model_1.default.find(query)
         .limit(Number(limit))
         .populate('reviews', 'rating');
-    const enhancedBusinesses = yield Promise.all(similarBusinesses.map((business) => __awaiter(void 0, void 0, void 0, function* () {
+    const enhancedBusinesses = await Promise.all(similarBusinesses.map(async (business) => {
         const reviews = business.reviews || [];
         const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
             ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
-        return Object.assign(Object.assign({}, business.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
-    })));
+        return {
+            ...business.toObject(),
+            totalReviews,
+            averageRating: parseFloat(averageRating.toFixed(2)),
+        };
+    }));
     return enhancedBusinesses;
-});
+};
 exports.fetchSimilarBusinesses = fetchSimilarBusinesses;
-const fetchBusinessReviews = (businessId_1, page_1, limit_1, ...args_1) => __awaiter(void 0, [businessId_1, page_1, limit_1, ...args_1], void 0, function* (businessId, page, limit, sortBy = 'newest') {
-    const business = yield business_model_1.default.findById(businessId);
+const fetchBusinessReviews = async (businessId, page, limit, sortBy = 'newest') => {
+    const business = await business_model_1.default.findById(businessId);
     if (!business) {
         throw new error_1.NotFoundError('Service not found!');
     }
     const skip = (Number(page) - 1) * Number(limit);
     const sortCriteria = sortBy === 'mostRelevant' ? { helpfulCount: -1, createdAt: -1 } : { createdAt: -1 };
-    const reviews = yield review_model_1.default.find({ businessId })
+    const reviews = await review_model_1.default.find({ businessId })
         .skip(skip)
         .limit(Number(limit))
         .sort(sortCriteria)
         .populate('userId', 'profileImage fullName userName uniqueId gender level')
         .lean();
-    const allReviews = yield review_model_1.default.find({ businessId }).lean();
+    const allReviews = await review_model_1.default.find({ businessId }).lean();
     const starCounts = [1, 2, 3, 4, 5].reduce((acc, star) => {
         acc[star] = allReviews.filter((review) => review.rating === star).length;
         return acc;
@@ -429,10 +442,10 @@ const fetchBusinessReviews = (businessId_1, page_1, limit_1, ...args_1) => __awa
         totalPages: Math.ceil(totalRatings / Number(limit)),
     };
     return data;
-});
+};
 exports.fetchBusinessReviews = fetchBusinessReviews;
-const markReviewHelpful = (reviewId, isHelpful, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const review = yield review_model_1.default.findById(reviewId);
+const markReviewHelpful = async (reviewId, isHelpful, userId) => {
+    const review = await review_model_1.default.findById(reviewId);
     if (!review) {
         throw new error_1.NotFoundError('Review not found.');
     }
@@ -447,28 +460,28 @@ const markReviewHelpful = (reviewId, isHelpful, userId) => __awaiter(void 0, voi
         review.helpfulUsers.push(userId);
         review.helpfulCount += 1;
     }
-    yield review.save();
+    await review.save();
     return review;
-});
+};
 exports.markReviewHelpful = markReviewHelpful;
-const fetchAllLikedBusinesses = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const likedBusinesses = yield businessLike_model_1.default.countDocuments({ user: userId });
+const fetchAllLikedBusinesses = async (userId) => {
+    const likedBusinesses = await businessLike_model_1.default.countDocuments({ user: userId });
     return {
         totalLikedBusinesses: likedBusinesses,
     };
-});
+};
 exports.fetchAllLikedBusinesses = fetchAllLikedBusinesses;
-const verifyBusinessAdmin = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    const business = yield business_model_1.default.findById(id);
+const verifyBusinessAdmin = async (id) => {
+    const business = await business_model_1.default.findById(id);
     if (!business) {
         throw new error_1.NotFoundError('business not found');
     }
     business.isVerified = true;
-    yield business.save();
-});
+    await business.save();
+};
 exports.verifyBusinessAdmin = verifyBusinessAdmin;
-const verifyCertificateAdmin = (businessId, certificateId) => __awaiter(void 0, void 0, void 0, function* () {
-    const business = yield business_model_1.default.findById(businessId);
+const verifyCertificateAdmin = async (businessId, certificateId) => {
+    const business = await business_model_1.default.findById(businessId);
     if (!business) {
         throw new error_1.NotFoundError('business not found');
     }
@@ -485,17 +498,17 @@ const verifyCertificateAdmin = (businessId, certificateId) => __awaiter(void 0, 
         certificate.isCertificateExpire = false;
         certificate.isVerified = true;
     }
-    yield business.save();
+    await business.save();
     return {
         message: certificate.isVerified
             ? "Certificate successfully verified"
             : "Certificate has expired and cannot be verified",
         certificate,
     };
-});
+};
 exports.verifyCertificateAdmin = verifyCertificateAdmin;
-const deleteBusinessItem = (businessId, itemType, itemId, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const business = yield business_model_1.default.findOne({ _id: businessId, userId });
+const deleteBusinessItem = async (businessId, itemType, itemId, userId) => {
+    const business = await business_model_1.default.findOne({ _id: businessId, userId });
     if (!business) {
         throw new error_1.NotFoundError("Business not found or not owned by the user");
     }
@@ -505,7 +518,7 @@ const deleteBusinessItem = (businessId, itemType, itemId, userId) => __awaiter(v
             if (!cert)
                 throw new error_1.NotFoundError("Certificate not found");
             cert.deleteOne();
-            yield business.save();
+            await business.save();
             return business;
         }
         case "certificateImage": {
@@ -513,7 +526,7 @@ const deleteBusinessItem = (businessId, itemType, itemId, userId) => __awaiter(v
             if (!cert)
                 throw new error_1.NotFoundError("Certificate not found");
             cert.certificate = undefined;
-            yield business.save();
+            await business.save();
             return business;
         }
         case "membership": {
@@ -521,7 +534,7 @@ const deleteBusinessItem = (businessId, itemType, itemId, userId) => __awaiter(v
             if (!membership)
                 throw new error_1.NotFoundError("Membership not found");
             membership.deleteOne();
-            yield business.save();
+            await business.save();
             return business;
         }
         case "insurance": {
@@ -529,11 +542,11 @@ const deleteBusinessItem = (businessId, itemType, itemId, userId) => __awaiter(v
             if (!insurance)
                 throw new error_1.NotFoundError("Insurance not found");
             insurance.deleteOne();
-            yield business.save();
+            await business.save();
             return business;
         }
         default:
             throw new error_1.BadRequestError("Invalid itemType provided");
     }
-});
+};
 exports.deleteBusinessItem = deleteBusinessItem;

@@ -47,7 +47,7 @@ const userSchema: Schema = new mongoose.Schema(
     },
     sharedCount: {type: Number, default: 0},
     mutedBusinesses: [{ type: Schema.Types.ObjectId, ref: 'Business' }],
-
+    isProfileComplete: {type: Boolean, default: false},
   },
   { timestamps: true }
 

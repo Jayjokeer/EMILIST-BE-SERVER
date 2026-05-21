@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.calculateNextMaintenanceDate = exports.calculateVat = exports.calculatePercentage = exports.generateOTPData = exports.generateShortUUID = void 0;
 const uuid_1 = require("uuid");
@@ -67,7 +58,7 @@ const generateOTPData = (userId) => {
     const otp = otplib_1.totp.generate(secret + String(userId));
     let time = new Date();
     const otpCreatedAt = time;
-    const minutes = 10;
+    const minutes = 5;
     const otpExpiryTime = AddMinutesToDate(time, minutes);
     return { otp, otpCreatedAt, otpExpiryTime };
 };
@@ -80,15 +71,15 @@ const calculatePercentage = (currentValue, targetValue) => {
     return Math.min(Math.max(percentage, 0), 100);
 };
 exports.calculatePercentage = calculatePercentage;
-const calculateVat = (amount) => __awaiter(void 0, void 0, void 0, function* () {
-    const data = yield transactionService.getVat();
+const calculateVat = async (amount) => {
+    const data = await transactionService.getVat();
     const vatRate = data.vat / 100;
     const vatAmount = amount * vatRate;
     return {
         vatAmount,
         totalAmount: parseFloat((amount + vatAmount).toFixed(2))
     };
-});
+};
 exports.calculateVat = calculateVat;
 const calculateNextMaintenanceDate = (startDate, frequency) => {
     const nextDate = new Date(startDate);

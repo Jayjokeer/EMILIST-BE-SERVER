@@ -43,12 +43,10 @@ export interface IUser {
 export interface ICreateUser {
     email: string;
     password?: string;
-    userName: string;
     uniqueId: string;
 }
 
 export interface ISignUser {
   email: string,
   id: any,
-  userName: string,
 }

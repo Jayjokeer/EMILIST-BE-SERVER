@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.superAdminAuth = exports.adminAuth = exports.userAuth = void 0;
 const http_status_codes_1 = require("http-status-codes");
@@ -49,16 +40,15 @@ const error_1 = require("../errors/error");
 const authService = __importStar(require("../services/auth.service"));
 const user_enums_1 = require("../enums/user.enums");
 const adminService = __importStar(require("../services/admin.service"));
-const userAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+const userAuth = async (req, res, next) => {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
     }
     else if (req.cookies.sessionId) {
-        token = (_a = req.cookies) === null || _a === void 0 ? void 0 : _a.sessionId;
+        token = req.cookies?.sessionId;
     }
-    console.log((_b = req.cookies) === null || _b === void 0 ? void 0 : _b.sessionId);
+    console.log(req.cookies?.sessionId);
     if (!token) {
         res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ message: "Kindly login" });
         return;
@@ -68,7 +58,7 @@ const userAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         if (!decode || !decode.email) {
             throw new error_1.UnauthorizedError("Authentication Failure");
         }
-        const user = yield authService.findUserByEmail(decode.email.toLowerCase());
+        const user = await authService.findUserByEmail(decode.email.toLowerCase());
         if (!user) {
             throw new error_1.UnauthorizedError("No user found");
         }
@@ -85,9 +75,9 @@ const userAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         });
         return;
     }
-});
+};
 exports.userAuth = userAuth;
-const adminAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const adminAuth = async (req, res, next) => {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
@@ -101,7 +91,7 @@ const adminAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function
         if (!decode || !decode.email) {
             throw new error_1.UnauthorizedError("Authentication Failure");
         }
-        const user = yield adminService.getAdminByEmail(decode.email.toLowerCase());
+        const user = await adminService.getAdminByEmail(decode.email.toLowerCase());
         if (!user) {
             throw new error_1.UnauthorizedError("No user found");
         }
@@ -118,9 +108,9 @@ const adminAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function
         });
         return;
     }
-});
+};
 exports.adminAuth = adminAuth;
-const superAdminAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const superAdminAuth = async (req, res, next) => {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
@@ -134,7 +124,7 @@ const superAdminAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         if (!decode || !decode.email) {
             throw new error_1.UnauthorizedError("Authentication Failure");
         }
-        const user = yield adminService.getAdminByEmail(decode.email.toLowerCase());
+        const user = await adminService.getAdminByEmail(decode.email.toLowerCase());
         if (!user) {
             throw new error_1.UnauthorizedError("No user found");
         }
@@ -151,5 +141,5 @@ const superAdminAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         });
         return;
     }
-});
+};
 exports.superAdminAuth = superAdminAuth;

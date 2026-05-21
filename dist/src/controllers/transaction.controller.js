@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchVatController = exports.fetchUserEarningsController = exports.fetchAllTransactionsByUsersController = exports.fetchAllTransactionsByStatusController = exports.fetchSingleTransactionController = void 0;
 const http_status_codes_1 = require("http-status-codes");
@@ -48,24 +39,23 @@ const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const transactionService = __importStar(require("../services/transaction.service"));
 const transaction_enum_1 = require("../enums/transaction.enum");
-exports.fetchSingleTransactionController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.fetchSingleTransactionController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { transactionId } = req.params;
-    const data = yield transactionService.fetchSingleTransactionWithDetails(transactionId);
+    const data = await transactionService.fetchSingleTransactionWithDetails(transactionId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchAllTransactionsByStatusController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchAllTransactionsByStatusController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page, limit, status } = req.query;
-    const data = yield transactionService.adminFetchAllTransactionsByStatus(status, page, limit);
+    const data = await transactionService.adminFetchAllTransactionsByStatus(status, page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchAllTransactionsByUsersController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchAllTransactionsByUsersController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page, limit, paymentMethod } = req.query;
     const userId = req.user._id;
-    const data = yield transactionService.fetchAllTransactionsByUser(userId, page, limit, paymentMethod);
+    const data = await transactionService.fetchAllTransactionsByUser(userId, page, limit, paymentMethod);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchUserEarningsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+});
+exports.fetchUserEarningsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
     const { year, month, currency } = req.query;
     const reportYear = parseInt(year, 10);
@@ -81,7 +71,7 @@ exports.fetchUserEarningsController = (0, error_handler_1.catchAsync)((req, res)
         startDate = new Date(reportYear, 0, 1);
         endDate = new Date(reportYear, 11, 31);
     }
-    const transactions = yield transactionService.fetchUserEarnings(userId, startDate, endDate);
+    const transactions = await transactionService.fetchUserEarnings(userId, startDate, endDate);
     const totalsByCurrency = {};
     transactions.forEach((transaction) => {
         const currency = transaction.currency;
@@ -120,14 +110,13 @@ exports.fetchUserEarningsController = (0, error_handler_1.catchAsync)((req, res)
                 period: `${new Date(reportYear, i).toLocaleString("default", { month: "short" })} ${reportYear}`,
             };
             if (selectedCurrency) {
-                monthlyData[selectedCurrency] = ((_a = monthlyTotalsByCurrency[selectedCurrency]) === null || _a === void 0 ? void 0 : _a.earned) || 0;
-                monthlyData[`${selectedCurrency}_expenses`] = ((_b = monthlyTotalsByCurrency[selectedCurrency]) === null || _b === void 0 ? void 0 : _b.expenses) || 0;
+                monthlyData[selectedCurrency] = monthlyTotalsByCurrency[selectedCurrency]?.earned || 0;
+                monthlyData[`${selectedCurrency}_expenses`] = monthlyTotalsByCurrency[selectedCurrency]?.expenses || 0;
             }
             else {
                 ["NGN", "USD", "GBP", "EUR"].forEach((currency) => {
-                    var _a, _b;
-                    monthlyData[currency] = ((_a = monthlyTotalsByCurrency[currency]) === null || _a === void 0 ? void 0 : _a.earned) || 0;
-                    monthlyData[`${currency}_expenses`] = ((_b = monthlyTotalsByCurrency[currency]) === null || _b === void 0 ? void 0 : _b.expenses) || 0;
+                    monthlyData[currency] = monthlyTotalsByCurrency[currency]?.earned || 0;
+                    monthlyData[`${currency}_expenses`] = monthlyTotalsByCurrency[currency]?.expenses || 0;
                 });
             }
             earningsStatistics.push(monthlyData);
@@ -140,9 +129,9 @@ exports.fetchUserEarningsController = (0, error_handler_1.catchAsync)((req, res)
         earningsStatistics: reportMonth ? [] : earningsStatistics,
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchVatController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const vat = yield transactionService.getVat();
+});
+exports.fetchVatController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const vat = await transactionService.getVat();
     const data = vat.vat;
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
+});

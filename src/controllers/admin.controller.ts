@@ -211,7 +211,6 @@ export const addUserAdminController = catchAsync(async (req: JwtPayload, res: Re
         if(isUserNameExists) throw new BadRequestError("UserName already exists!");
     
         const user: ICreateUser= {
-          userName,
           email: email.toLowerCase(),
           uniqueId:generateShortUUID()
         }
@@ -423,7 +422,7 @@ export const fetchAllPrivateExpertsController = catchAsync(async(req: JwtPayload
 
 export const fetchPrivateExpertByIdController = catchAsync( async (req: Request, res: Response) => {
     const {id} = req.params;
-    const data = await privateExpertService.fetchPrivateExpertById(id);
+    const data = await privateExpertService.fetchPrivateExpertById(String(id));
     return successResponse(res,StatusCodes.OK, data);
 });
 
@@ -471,7 +470,7 @@ export const addCategoriesController = catchAsync( async (req: Request, res: Res
 export const deleteCategoryController = catchAsync( async (req: Request, res: Response) => {
     const {id } = req.params;
 
-    await productService.deleteCategory(id);
+    await productService.deleteCategory(String(id));
 
     return successResponse(res,StatusCodes.OK, "Category deleted successfully");
 });
@@ -479,7 +478,7 @@ export const deleteCategoryController = catchAsync( async (req: Request, res: Re
 export const fetchSingleCategoryController = catchAsync( async (req: Request, res: Response) => {
     const {id} = req.params;
 
-    const data = await productService.fetchSingleCategory(id);
+    const data = await productService.fetchSingleCategory(String(id));
 
     return successResponse(res,StatusCodes.OK, data);
 });
@@ -494,7 +493,7 @@ export const fetchAllCategoriesController = catchAsync( async (req: Request, res
 export const fetchUserAccountDetailsController = catchAsync( async (req: Request, res: Response) => {
     const {userId} = req.params;
 
-    const user = await userService.findUserById(userId);
+    const user = await userService.findUserById(String(userId));
     if(!user){
         throw  new NotFoundError("user not found")
     }
@@ -571,7 +570,6 @@ export const loginAdminController = catchAsync(async (req: Request, res: Respons
   const token = await generateJWTwithExpiryDate({
     email: foundUser.email as string,
     id: foundUser._id,
-    userName: foundUser.fullName as string
   });
   const userData = await authService.findUserById(String(foundUser._id));
 const user = {

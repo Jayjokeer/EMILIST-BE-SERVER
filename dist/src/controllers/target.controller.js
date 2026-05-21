@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchDynamicTargetMetrics = exports.createTargetController = void 0;
 const http_status_codes_1 = require("http-status-codes");
@@ -50,18 +41,17 @@ const userService = __importStar(require("../services/auth.service"));
 const targetService = __importStar(require("../services/target.service"));
 const transactionService = __importStar(require("../services/transaction.service"));
 const utility_1 = require("../utils/utility");
-exports.createTargetController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.createTargetController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const targetData = req.body;
     const userId = req.user._id;
     targetData.userId = userId;
-    const data = yield targetService.createTarget(targetData);
+    const data = await targetService.createTarget(targetData);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.fetchDynamicTargetMetrics = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+});
+exports.fetchDynamicTargetMetrics = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
-    const user = yield userService.findUserById(userId);
-    const target = yield targetService.findUserTarget(userId);
+    const user = await userService.findUserById(userId);
+    const target = await targetService.findUserTarget(userId);
     if (!target) {
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "No target set!");
     }
@@ -71,11 +61,11 @@ exports.fetchDynamicTargetMetrics = (0, error_handler_1.catchAsync)((req, res) =
         referrals: target.referrals || 0,
         invites: target.invites || 0,
     };
-    const completedJobs = yield transactionService.totalCompletedJobsByTransaction(userId);
-    const totalAmount = yield transactionService.totalAmountByTransaction(userId);
+    const completedJobs = await transactionService.totalCompletedJobsByTransaction(userId);
+    const totalAmount = await transactionService.totalAmountByTransaction(userId);
     const currentAmount = totalAmount.length > 0 ? totalAmount[0].total : 0;
     const totalReferrals = 0;
-    const totalInvites = (_a = user === null || user === void 0 ? void 0 : user.invitedUsers) === null || _a === void 0 ? void 0 : _a.length;
+    const totalInvites = user?.invitedUsers?.length;
     const jobPercentage = (0, utility_1.calculatePercentage)(completedJobs, targetGoals.jobs);
     const amountPercentage = (0, utility_1.calculatePercentage)(currentAmount, targetGoals.amount);
     const referralPercentage = (0, utility_1.calculatePercentage)(totalReferrals, targetGoals.referrals);
@@ -91,4 +81,4 @@ exports.fetchDynamicTargetMetrics = (0, error_handler_1.catchAsync)((req, res) =
         duration: target.duration
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
+});

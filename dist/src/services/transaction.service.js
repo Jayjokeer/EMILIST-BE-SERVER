@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -17,33 +8,33 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const transaction_model_1 = __importDefault(require("../models/transaction.model"));
 const app_config_model_1 = __importDefault(require("../models/app-config.model"));
-const createTransaction = (data) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield transaction_model_1.default.create(data);
-});
+const createTransaction = async (data) => {
+    return await transaction_model_1.default.create(data);
+};
 exports.createTransaction = createTransaction;
-const fetchSingleTransactionWithDetails = (transactionId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield transaction_model_1.default.findById(transactionId).populate('walletId').populate('userId', 'fullName email userName profileImage level _id uniqueId');
-});
+const fetchSingleTransactionWithDetails = async (transactionId) => {
+    return await transaction_model_1.default.findById(transactionId).populate('walletId').populate('userId', 'fullName email userName profileImage level _id uniqueId');
+};
 exports.fetchSingleTransactionWithDetails = fetchSingleTransactionWithDetails;
-const fetchSingleTransaction = (transactionId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield transaction_model_1.default.findById(transactionId);
-});
+const fetchSingleTransaction = async (transactionId) => {
+    return await transaction_model_1.default.findById(transactionId);
+};
 exports.fetchSingleTransaction = fetchSingleTransaction;
-const fetchUserTransactions = (page, limit, userId) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchUserTransactions = async (page, limit, userId) => {
     const skip = (page - 1) * limit;
-    return yield transaction_model_1.default.find({ userId: userId })
+    return await transaction_model_1.default.find({ userId: userId })
         .skip(skip)
         .limit(limit);
-});
+};
 exports.fetchUserTransactions = fetchUserTransactions;
-const fetchTransactionByReference = (reference) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield transaction_model_1.default.findOne({ reference });
-});
+const fetchTransactionByReference = async (reference) => {
+    return await transaction_model_1.default.findOne({ reference });
+};
 exports.fetchTransactionByReference = fetchTransactionByReference;
-const adminFetchAllTransactionsByStatus = (status, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+const adminFetchAllTransactionsByStatus = async (status, page, limit) => {
     const skip = (page - 1) * limit;
-    const totalTransactions = yield transaction_model_1.default.countDocuments({ status });
-    const transactions = yield transaction_model_1.default.find({ status })
+    const totalTransactions = await transaction_model_1.default.countDocuments({ status });
+    const transactions = await transaction_model_1.default.find({ status })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -53,9 +44,9 @@ const adminFetchAllTransactionsByStatus = (status, page, limit) => __awaiter(voi
         totalTransactions,
         page,
     };
-});
+};
 exports.adminFetchAllTransactionsByStatus = adminFetchAllTransactionsByStatus;
-const fetchAllTransactionsByUser = (userId, page, limit, paymentMethod) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllTransactionsByUser = async (userId, page, limit, paymentMethod) => {
     const skip = (page - 1) * limit;
     let queryPayload = {
         $or: [{ userId: userId }, { recieverId: userId }],
@@ -82,8 +73,8 @@ const fetchAllTransactionsByUser = (userId, page, limit, paymentMethod) => __awa
         }
     }
     ;
-    const totalTransactions = yield transaction_model_1.default.countDocuments(queryPayload);
-    const transactions = yield transaction_model_1.default.find(queryPayload)
+    const totalTransactions = await transaction_model_1.default.countDocuments(queryPayload);
+    const transactions = await transaction_model_1.default.find(queryPayload)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -93,24 +84,24 @@ const fetchAllTransactionsByUser = (userId, page, limit, paymentMethod) => __awa
         totalTransactions,
         page,
     };
-});
+};
 exports.fetchAllTransactionsByUser = fetchAllTransactionsByUser;
-const totalCompletedJobsByTransaction = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield transaction_model_1.default.countDocuments({
+const totalCompletedJobsByTransaction = async (userId) => {
+    return await transaction_model_1.default.countDocuments({
         userId,
         jobId: { $exists: true },
         status: transaction_enum_1.TransactionEnum.completed,
     });
-});
+};
 exports.totalCompletedJobsByTransaction = totalCompletedJobsByTransaction;
-const totalAmountByTransaction = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield transaction_model_1.default.aggregate([
+const totalAmountByTransaction = async (userId) => {
+    return await transaction_model_1.default.aggregate([
         { $match: { userId, status: transaction_enum_1.TransactionEnum.completed } },
         { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
-});
+};
 exports.totalAmountByTransaction = totalAmountByTransaction;
-const fetchTransactionChartAdminDashboard = (year, currency) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchTransactionChartAdminDashboard = async (year, currency) => {
     const filter = {};
     if (year) {
         if (isNaN(year) || year < 1970 || year > new Date().getFullYear()) {
@@ -128,7 +119,7 @@ const fetchTransactionChartAdminDashboard = (year, currency) => __awaiter(void 0
         filter.currency = currency;
     }
     try {
-        const transactions = yield transaction_model_1.default.find(filter).lean();
+        const transactions = await transaction_model_1.default.find(filter).lean();
         const totalsByCurrency = {};
         const transactionsByMonth = {};
         const months = [
@@ -186,10 +177,10 @@ const fetchTransactionChartAdminDashboard = (year, currency) => __awaiter(void 0
         console.error("Error fetching transactions:", error);
         throw new Error("Unable to fetch transactions");
     }
-});
+};
 exports.fetchTransactionChartAdminDashboard = fetchTransactionChartAdminDashboard;
-const fetchAllUserEarningsAdmin = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield transaction_model_1.default.aggregate([
+const fetchAllUserEarningsAdmin = async (userId) => {
+    return await transaction_model_1.default.aggregate([
         {
             $match: {
                 recieverId: new mongoose_1.default.Types.ObjectId(userId),
@@ -209,21 +200,21 @@ const fetchAllUserEarningsAdmin = (userId) => __awaiter(void 0, void 0, void 0, 
             },
         },
     ]);
-});
+};
 exports.fetchAllUserEarningsAdmin = fetchAllUserEarningsAdmin;
-const fetchTransactionsByService = (userId, serviceType) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield transaction_model_1.default.find({ userId, serviceType });
-});
+const fetchTransactionsByService = async (userId, serviceType) => {
+    return await transaction_model_1.default.find({ userId, serviceType });
+};
 exports.fetchTransactionsByService = fetchTransactionsByService;
-const fetchUserEarnings = (userId, startDate, endDate) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield transaction_model_1.default.find({
+const fetchUserEarnings = async (userId, startDate, endDate) => {
+    return await transaction_model_1.default.find({
         userId,
         dateCompleted: { $gte: startDate, $lte: endDate },
         status: transaction_enum_1.TransactionEnum.completed,
     });
-});
+};
 exports.fetchUserEarnings = fetchUserEarnings;
-const fetchAllTransactionsAdmin = (limit, page, search) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllTransactionsAdmin = async (limit, page, search) => {
     const pageNum = Math.max(1, Number(page));
     const limitNum = Math.max(1, Number(limit));
     const skip = (pageNum - 1) * limitNum;
@@ -241,7 +232,7 @@ const fetchAllTransactionsAdmin = (limit, page, search) => __awaiter(void 0, voi
             }))
         }
         : {};
-    const [transactions, totalTransactions] = yield Promise.all([
+    const [transactions, totalTransactions] = await Promise.all([
         transaction_model_1.default.find(searchQuery)
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -260,10 +251,10 @@ const fetchAllTransactionsAdmin = (limit, page, search) => __awaiter(void 0, voi
         transactions,
         totalTransactions,
     };
-});
+};
 exports.fetchAllTransactionsAdmin = fetchAllTransactionsAdmin;
-const fetchTransactionAdmin = (transactionId) => __awaiter(void 0, void 0, void 0, function* () {
-    const transaction = yield transaction_model_1.default.findById(transactionId)
+const fetchTransactionAdmin = async (transactionId) => {
+    const transaction = await transaction_model_1.default.findById(transactionId)
         .populate('jobId')
         .populate('recieverId', '_id fullName')
         .populate('milestoneId')
@@ -272,24 +263,24 @@ const fetchTransactionAdmin = (transactionId) => __awaiter(void 0, void 0, void 
         .populate('planId')
         .populate('userId', '_id fullName');
     return transaction;
-});
+};
 exports.fetchTransactionAdmin = fetchTransactionAdmin;
-const changeVatServiceAdmin = (vat) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield app_config_model_1.default.updateOne({}, { $set: { vat } });
-});
+const changeVatServiceAdmin = async (vat) => {
+    return await app_config_model_1.default.updateOne({}, { $set: { vat } });
+};
 exports.changeVatServiceAdmin = changeVatServiceAdmin;
-const getVat = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield app_config_model_1.default.findOne();
-});
+const getVat = async () => {
+    return await app_config_model_1.default.findOne();
+};
 exports.getVat = getVat;
-const fetchSingleTransactionByMilestoneId = (milestoneId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield transaction_model_1.default.findOne({
+const fetchSingleTransactionByMilestoneId = async (milestoneId) => {
+    return await transaction_model_1.default.findOne({
         milestoneId: milestoneId,
         status: transaction_enum_1.TransactionEnum.processing
     });
-});
+};
 exports.fetchSingleTransactionByMilestoneId = fetchSingleTransactionByMilestoneId;
-const fetchPriceForVerification = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield app_config_model_1.default.findOne();
-});
+const fetchPriceForVerification = async () => {
+    return await app_config_model_1.default.findOne();
+};
 exports.fetchPriceForVerification = fetchPriceForVerification;

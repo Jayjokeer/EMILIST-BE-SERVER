@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteBusinessItemController = exports.muteBusinessController = exports.markReviewController = exports.fetchBusinessReviewsController = exports.fetchSimilarBusinessByUserController = exports.fetchOtherBusinessByUserController = exports.unlikeBusinessController = exports.likeBusinessController = exports.fetchAllComparedBusinessesController = exports.compareBusinessController = exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
 const http_status_codes_1 = require("http-status-codes");
@@ -50,12 +41,11 @@ const error_1 = require("../errors/error");
 const businessService = __importStar(require("../services/business.service"));
 const authService = __importStar(require("../services/auth.service"));
 const reviewService = __importStar(require("../services/review.service"));
-exports.createBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+exports.createBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const businessData = req.body;
     const userId = req.user._id;
     businessData.userId = userId;
-    const user = yield authService.findUserById(String(userId));
+    const user = await authService.findUserById(String(userId));
     if (!user) {
         throw new error_1.NotFoundError("user not found!");
     }
@@ -77,35 +67,35 @@ exports.createBusinessController = (0, error_handler_1.catchAsync)((req, res) =>
             }
         });
     }
-    const data = yield businessService.createBusiness(businessData);
-    (_a = user.businesses) === null || _a === void 0 ? void 0 : _a.push(data._id);
-    yield user.save();
+    const data = await businessService.createBusiness(businessData);
+    user.businesses?.push(data._id);
+    await user.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.updateBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.updateBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const businessData = req.body;
     const { businessId } = req.params;
-    const data = yield businessService.updateBusiness(businessId, businessData, req.files);
+    const data = await businessService.updateBusiness(businessId, businessData, req.files);
     if (String(data.userId) !== String(req.user._id)) {
         throw new error_1.UnauthorizedError("Unauthorized");
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchUserBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchUserBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
-    const data = yield businessService.fetchUserBusiness(userId);
+    const data = await businessService.fetchUserBusiness(userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchSingleBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchSingleBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { businessId } = req.params;
     const { userId } = req.query;
     let liked = false;
     let isCompared = false;
-    const business = yield businessService.fetchSingleBusinessWithDetails(String(businessId));
+    const business = await businessService.fetchSingleBusinessWithDetails(String(businessId));
     if (userId) {
-        const likedBusiness = yield businessService.ifLikedBusiness(businessId, userId);
+        const likedBusiness = await businessService.ifLikedBusiness(businessId, userId);
         liked = !!likedBusiness;
-        const user = yield authService.findUserById(userId);
+        const user = await authService.findUserById(userId);
         if (user) {
             isCompared = user.comparedBusinesses.some((id) => id.toString() === businessId);
         }
@@ -117,27 +107,26 @@ exports.fetchSingleBusinessController = (0, error_handler_1.catchAsync)((req, re
         isCompared
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.deleteBusinessImageController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+});
+exports.deleteBusinessImageController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { businessId, imageId } = req.params;
-    const business = yield businessService.fetchSingleBusiness(String(businessId));
+    const business = await businessService.fetchSingleBusiness(String(businessId));
     if (!business) {
         throw new error_1.NotFoundError("Business not found!");
     }
     if (String(business.userId._id) !== String(req.user._id)) {
         throw new error_1.UnauthorizedError("Unauthorized");
     }
-    const imageIndex = (_a = business.businessImages) === null || _a === void 0 ? void 0 : _a.findIndex((image) => image._id.toString() === imageId);
+    const imageIndex = business.businessImages?.findIndex((image) => image._id.toString() === imageId);
     if (imageIndex === -1) {
         throw new error_1.NotFoundError("Image not found");
     }
-    (_b = business.businessImages) === null || _b === void 0 ? void 0 : _b.splice(imageIndex, 1);
-    yield business.save();
-    const data = yield businessService.fetchSingleBusiness(String(businessId));
+    business.businessImages?.splice(imageIndex, 1);
+    await business.save();
+    const data = await businessService.fetchSingleBusiness(String(businessId));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchAllBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchAllBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page = 1, limit = 10, startPriceRange, expertType, minRating, minReviews, location, noticePeriod, currency, userId, search, } = req.query;
     const filters = {
         startPriceRange,
@@ -148,26 +137,25 @@ exports.fetchAllBusinessController = (0, error_handler_1.catchAsync)((req, res) 
         noticePeriod,
         currency,
     };
-    const data = yield businessService.fetchAllBusiness(userId, Number(page), Number(limit), filters, search);
+    const data = await businessService.fetchAllBusiness(userId, Number(page), Number(limit), filters, search);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.deleteBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.deleteBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { businessId } = req.params;
-    yield businessService.deleteBusiness(businessId);
+    await businessService.deleteBusiness(businessId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Business deleted!");
-}));
-exports.reviewBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+});
+exports.reviewBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
     const { businessId, rating, comment } = req.body;
-    const business = yield businessService.fetchSingleBusiness(businessId);
+    const business = await businessService.fetchSingleBusiness(businessId);
     if (!business) {
         throw new error_1.NotFoundError("Business not found!");
     }
     if (String(business.userId) == String(userId)) {
         throw new error_1.BadRequestError("You cannot review your own service!");
     }
-    const isReviewed = yield reviewService.isReviewedbyUser(businessId, userId);
+    const isReviewed = await reviewService.isReviewedbyUser(businessId, userId);
     if (isReviewed) {
         throw new error_1.BadRequestError("You have previously reviewed this business!");
     }
@@ -177,19 +165,19 @@ exports.reviewBusinessController = (0, error_handler_1.catchAsync)((req, res) =>
         rating,
         comment
     };
-    const data = yield reviewService.addReview(payload);
-    (_a = business.reviews) === null || _a === void 0 ? void 0 : _a.push(String(data._id));
-    yield business.save();
+    const data = await reviewService.addReview(payload);
+    business.reviews?.push(String(data._id));
+    await business.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.compareBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.compareBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
     const { businessId } = req.params;
-    const business = yield businessService.fetchSingleBusiness(businessId);
+    const business = await businessService.fetchSingleBusiness(businessId);
     if (!business) {
         throw new error_1.NotFoundError("No service found!");
     }
-    const user = yield authService.findUserById(userId);
+    const user = await authService.findUserById(userId);
     if (!user) {
         throw new error_1.NotFoundError("User not found");
     }
@@ -200,89 +188,89 @@ exports.compareBusinessController = (0, error_handler_1.catchAsync)((req, res) =
     else {
         user.comparedBusinesses.push(businessId);
     }
-    yield user.save();
+    await user.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
         message: "Compared businesses updated successfully",
         comparedBusinesses: user.comparedBusinesses,
     });
-}));
-exports.fetchAllComparedBusinessesController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchAllComparedBusinessesController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
-    const user = yield authService.findUserById(userId);
+    const user = await authService.findUserById(userId);
     if (!user) {
         throw new error_1.NotFoundError("User not found");
     }
     ;
-    const businesses = yield businessService.fetchAllComparedBusinesses(user.comparedBusinesses);
+    const businesses = await businessService.fetchAllComparedBusinesses(user.comparedBusinesses);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, businesses);
-}));
-exports.likeBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.likeBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     const { businessId } = req.params;
-    const business = yield businessService.fetchSingleBusiness(businessId);
+    const business = await businessService.fetchSingleBusiness(businessId);
     if (!business) {
         throw new error_1.NotFoundError("Service not found!");
     }
     ;
-    const existingLike = yield businessService.ifLikedBusiness(businessId, userId);
+    const existingLike = await businessService.ifLikedBusiness(businessId, userId);
     if (existingLike) {
         throw new error_1.BadRequestError("Service previously liked!");
     }
     ;
-    const data = yield businessService.createBusinessLike({ business: businessId, user: userId });
+    const data = await businessService.createBusinessLike({ business: businessId, user: userId });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.unlikeBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.unlikeBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
     const { businessId } = req.params;
-    const data = yield businessService.unlikeBusiness(businessId, userId);
+    const data = await businessService.unlikeBusiness(businessId, userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchOtherBusinessByUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchOtherBusinessByUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { userId } = req.params;
-    const data = yield businessService.otherBusinessesByUser(userId);
+    const data = await businessService.otherBusinessesByUser(userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchSimilarBusinessByUserController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchSimilarBusinessByUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { businessId } = req.params;
-    const data = yield businessService.fetchSimilarBusinesses(businessId);
+    const data = await businessService.fetchSimilarBusinesses(businessId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchBusinessReviewsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchBusinessReviewsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { businessId } = req.params;
     const { page = 1, limit = 10, sortBy } = req.query;
-    const data = yield businessService.fetchBusinessReviews(businessId, Number(page), Number(limit), sortBy);
+    const data = await businessService.fetchBusinessReviews(businessId, Number(page), Number(limit), sortBy);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.markReviewController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.markReviewController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { reviewId } = req.params;
     const { userId, isHelpful } = req.body;
-    const data = yield businessService.markReviewHelpful(reviewId, isHelpful, userId);
+    const data = await businessService.markReviewHelpful(reviewId, isHelpful, userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.muteBusinessController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.muteBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { businessId } = req.params;
     const userId = req.user._id;
-    const business = yield businessService.fetchSingleBusiness(businessId);
+    const business = await businessService.fetchSingleBusiness(businessId);
     if (!business) {
         throw new error_1.NotFoundError("Service not found!");
     }
     if (String(userId) === String(business.userId)) {
         throw new error_1.BadRequestError("You cannot mute your own business!");
     }
-    const user = yield authService.findUserById(userId);
-    const isMuted = user === null || user === void 0 ? void 0 : user.mutedBusinesses.includes(businessId);
+    const user = await authService.findUserById(userId);
+    const isMuted = user?.mutedBusinesses.includes(businessId);
     if (isMuted) {
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Business is already muted.");
     }
     user.mutedBusinesses.push(businessId);
-    yield (user === null || user === void 0 ? void 0 : user.save());
+    await user?.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Business muted successfully");
-}));
-exports.deleteBusinessItemController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.deleteBusinessItemController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { businessId, itemType, itemId } = req.params;
     const userId = req.user._id;
-    const business = yield businessService.deleteBusinessItem(businessId, itemType, itemId, userId);
+    const business = await businessService.deleteBusinessItem(businessId, itemType, itemId, userId);
     if (!business) {
         throw new error_1.NotFoundError("Business not found or not owned by the user");
     }
@@ -310,4 +298,4 @@ exports.deleteBusinessItemController = (0, error_handler_1.catchAsync)((req, res
         default:
             throw new error_1.BadRequestError("Invalid itemType provided");
     }
-}));
+});

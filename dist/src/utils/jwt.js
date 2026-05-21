@@ -8,7 +8,7 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const error_1 = require("../errors/error");
 const generateJWTwithExpiryDate = (payload) => {
     const exp = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60; // 7 days
-    const userJWT = jsonwebtoken_1.default.sign(Object.assign(Object.assign({}, payload), { exp }), process.env.JWT_SECRET);
+    const userJWT = jsonwebtoken_1.default.sign({ ...payload, exp }, process.env.JWT_SECRET);
     return userJWT;
 };
 exports.generateJWTwithExpiryDate = generateJWTwithExpiryDate;

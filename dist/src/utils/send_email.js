@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendEmail = void 0;
 const config_1 = require("./config");
@@ -22,7 +13,7 @@ config_1.config;
  * @returns {promise} -- Returns the promise of send email
  */
 const sendEmail = (to, subject, html) => {
-    new Promise((resolve, reject) => __awaiter(void 0, void 0, void 0, function* () {
+    new Promise(async (resolve, reject) => {
         try {
             const from = config_1.config.senderEmail;
             const transporter = nodemailer.createTransport({
@@ -40,13 +31,13 @@ const sendEmail = (to, subject, html) => {
                 subject,
                 html
             };
-            const data = yield transporter.sendMail(mailOptions);
+            const data = await transporter.sendMail(mailOptions);
             resolve(data);
         }
         catch (error) {
             console.error("error", error);
             reject(error);
         }
-    }));
+    });
 };
 exports.sendEmail = sendEmail;

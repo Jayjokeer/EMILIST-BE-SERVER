@@ -29,7 +29,6 @@ import * as verificationService from "../services/verification.service";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
-      userName,
       email,
       password,
     } = req.body;
@@ -37,12 +36,9 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
 
     if(isEmailExists) throw new BadRequestError("User with email already exists!");
 
-    const isUserNameExists = await authService.findUserByUserName(userName);
-    if(isUserNameExists) throw new BadRequestError("UserName already exists!");
     const encryptPwd = await hashPassword(password);
 
     const user: ICreateUser= {
-      userName,
       email: email.toLowerCase(),
       password: encryptPwd,
       uniqueId:generateShortUUID()
@@ -66,7 +62,7 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     const subscription = await subscriptionService.createSubscription({userId: data._id, planId: plan._id, startDate: new Date(), perks: plan.perks});
     data.subscription = subscription._id;
     await data.save();
-    const {html, subject} = otpMessage(userName, otp);
+    const {html, subject} = otpMessage( otp);
     sendEmail(email, subject,html); 
    return successResponse(res,StatusCodes.CREATED, data);
 });
@@ -96,7 +92,6 @@ export const loginController = catchAsync(async (req: Request, res: Response) =>
   const token = await generateJWTwithExpiryDate({
     email: foundUser.email,
     id: foundUser._id,
-    userName: foundUser.userName
   });
   const userData = await authService.findUserById(String(foundUser._id));
 const user = {
@@ -143,8 +138,8 @@ export const forgetPasswordController = catchAsync(async (req: Request, res: Res
   foundUser.passwordResetOtp = otp;
   await foundUser.save();
 
-  const { html, subject } = passwordResetMessage(foundUser.userName, otp);
-  await sendEmail(email, subject, html); 
+  const { html, subject } = passwordResetMessage('user', otp);
+   sendEmail(email, subject, html); 
 
   return successResponse(res, StatusCodes.OK, "Password reset OTP sent to your email.");
 });
@@ -255,7 +250,7 @@ export const changePasswordController = catchAsync(async (req: JwtPayload, res: 
 export const currentUserController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId  = req.user.id;
 
-  const user = await authService.findUserById(userId);
+  const user = await authService.findCurrentUserById(userId);
   if (!user) throw new NotFoundError("User not found!");
 
 
@@ -305,7 +300,7 @@ export const resendVerificationOtpController = catchAsync(async (req: Request, r
     user.otpExpiresAt = otpExpiryTime;
     user.registrationOtp = otp;
     await user.save();
-    const {html, subject} =await otpMessage(user.userName, otp);
+    const {html, subject} =await otpMessage( otp);
     await sendEmail(email, subject,html); 
     return successResponse(res, StatusCodes.OK, "Otp sent successfully");
 });
@@ -316,7 +311,6 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
   const token =  generateJWTwithExpiryDate({
     email: loggedIn.email,
     id: loggedIn.id,
-    userName: loggedIn.userName,
   });
   const userData = await authService.findUserById(loggedIn.id);
 

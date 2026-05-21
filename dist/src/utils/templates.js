@@ -2,10 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateReminderEmail = exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
 const config_1 = require("./config");
-const otpMessage = (name, otp) => {
+const otpMessage = (otp) => {
     const subject = "Otp Email";
     const html = `
-        ${name} your otp is ${otp}, valid for 10 minutes!`;
+        Your otp is ${otp}, valid for 5 minutes!`;
     return { html, subject };
 };
 exports.otpMessage = otpMessage;
@@ -19,7 +19,7 @@ exports.welcomeMessageAdmin = welcomeMessageAdmin;
 const passwordResetMessage = (name, otp) => {
     const subject = "Password reset otp";
     const html = `
-        ${name} your password reset otp is ${otp}, valid for 10 minutes!`;
+        Your password reset otp is ${otp}, valid for 10 minutes!`;
     return { html, subject };
 };
 exports.passwordResetMessage = passwordResetMessage;

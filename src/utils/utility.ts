@@ -22,7 +22,7 @@ export const generateShortUUID = (): string => {
      const otp = totp.generate(secret + String(userId));
      let time = new Date();
      const otpCreatedAt = time;
-     const minutes = 10
+     const minutes = 5
      const otpExpiryTime = AddMinutesToDate(time, minutes );
      return { otp, otpCreatedAt, otpExpiryTime };
   };

@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -57,11 +48,11 @@ const moment_1 = __importDefault(require("moment"));
 const userService = __importStar(require("./auth.service"));
 const business_model_1 = __importDefault(require("../models/business.model"));
 const recurring_job_model_1 = __importDefault(require("../models/recurring-job.model"));
-const createJob = (data) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield jobs_model_1.default.create(data);
-});
+const createJob = async (data) => {
+    return await jobs_model_1.default.create(data);
+};
 exports.createJob = createJob;
-const fetchAllUserJobs = (userId_1, page_1, limit_1, ...args_1) => __awaiter(void 0, [userId_1, page_1, limit_1, ...args_1], void 0, function* (userId, page, limit, search = null, filters = {}) {
+const fetchAllUserJobs = async (userId, page, limit, search = null, filters = {}) => {
     const skip = (page - 1) * limit;
     const searchCriteria = { userId };
     if (search) {
@@ -80,17 +71,17 @@ const fetchAllUserJobs = (userId_1, page_1, limit_1, ...args_1) => __awaiter(voi
         if (filters.service)
             searchCriteria.service = { $regex: new RegExp(filters.service, 'i') };
     }
-    const jobs = yield jobs_model_1.default.find(searchCriteria).sort({ createdAt: -1 }).skip(skip).limit(limit);
-    const totalJobs = yield jobs_model_1.default.countDocuments(searchCriteria);
+    const jobs = await jobs_model_1.default.find(searchCriteria).sort({ createdAt: -1 }).skip(skip).limit(limit);
+    const totalJobs = await jobs_model_1.default.countDocuments(searchCriteria);
     return {
         jobs,
         totalPages: Math.ceil(totalJobs / limit),
         currentPage: page,
         totalJobs,
     };
-});
+};
 exports.fetchAllUserJobs = fetchAllUserJobs;
-const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __awaiter(void 0, [page_1, limit_1, userId_1, search_1, ...args_1], void 0, function* (page, limit, userId, search, filters = {}) {
+const fetchAllJobs = async (page, limit, userId, search, filters = {}) => {
     const skip = (page - 1) * limit;
     const searchCriteria = {
         type: { $ne: jobs_enum_1.JobType.direct },
@@ -109,7 +100,7 @@ const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __await
             searchCriteria.description = { $regex: new RegExp(filters.description, 'i') };
     }
     if (userId) {
-        const user = yield userService.fetchUserMutedJobs(userId);
+        const user = await userService.fetchUserMutedJobs(userId);
         if (user && user.mutedJobs && user.mutedJobs.length > 0) {
             searchCriteria._id = { $nin: user.mutedJobs };
         }
@@ -128,7 +119,10 @@ const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __await
             orConditions.push({ 'userId.userName': { $regex: regex } });
             orConditions.push({ 'userId.fullName': { $regex: regex } });
         });
-        jobsQuery = yield jobs_model_1.default.find(Object.assign(Object.assign({}, searchCriteria), { $or: orConditions }))
+        jobsQuery = await jobs_model_1.default.find({
+            ...searchCriteria,
+            $or: orConditions,
+        })
             .populate({
             path: 'userId',
             select: 'userName fullName',
@@ -136,25 +130,33 @@ const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __await
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
-        totalJobs = yield jobs_model_1.default.countDocuments(Object.assign(Object.assign({}, searchCriteria), { $or: orConditions }));
+        totalJobs = await jobs_model_1.default.countDocuments({ ...searchCriteria,
+            $or: orConditions,
+        });
     }
     else {
-        jobsQuery = yield jobs_model_1.default.find(searchCriteria)
+        jobsQuery = await jobs_model_1.default.find(searchCriteria)
             .populate('userId', 'userName fullName')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
-        totalJobs = yield jobs_model_1.default.countDocuments(searchCriteria);
+        totalJobs = await jobs_model_1.default.countDocuments(searchCriteria);
     }
     const jobs = jobsQuery;
     let jobsWithLikeStatus;
     if (userId) {
-        const likedJobs = yield joblike_model_1.default.find({ user: userId }).select('job').lean();
+        const likedJobs = await joblike_model_1.default.find({ user: userId }).select('job').lean();
         const likedJobIds = likedJobs.map((like) => like.job.toString());
-        jobsWithLikeStatus = jobs.map((job) => (Object.assign(Object.assign({}, job.toObject()), { liked: likedJobIds.includes(job._id.toString()) })));
+        jobsWithLikeStatus = jobs.map((job) => ({
+            ...job.toObject(),
+            liked: likedJobIds.includes(job._id.toString()),
+        }));
     }
     else {
-        jobsWithLikeStatus = jobs.map((job) => (Object.assign(Object.assign({}, job.toObject()), { liked: false })));
+        jobsWithLikeStatus = jobs.map((job) => ({
+            ...job.toObject(),
+            liked: false,
+        }));
     }
     return {
         jobs: jobsWithLikeStatus,
@@ -162,22 +164,22 @@ const fetchAllJobs = (page_1, limit_1, userId_1, search_1, ...args_1) => __await
         currentPage: page,
         totalJobs,
     };
-});
+};
 exports.fetchAllJobs = fetchAllJobs;
-const fetchJobById = (jobId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield jobs_model_1.default.findById(jobId);
-});
+const fetchJobById = async (jobId) => {
+    return await jobs_model_1.default.findById(jobId);
+};
 exports.fetchJobById = fetchJobById;
-const fetchJobByIdWithUserId = (jobId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield jobs_model_1.default.findById(jobId)
+const fetchJobByIdWithUserId = async (jobId) => {
+    return await jobs_model_1.default.findById(jobId)
         .populate({
         path: 'acceptedApplicationId',
         populate: { path: 'user', select: '_id' }
     });
-});
+};
 exports.fetchJobByIdWithUserId = fetchJobByIdWithUserId;
-const fetchJobByIdWithDetails = (jobId) => __awaiter(void 0, void 0, void 0, function* () {
-    const job = yield jobs_model_1.default.findById(jobId)
+const fetchJobByIdWithDetails = async (jobId) => {
+    const job = await jobs_model_1.default.findById(jobId)
         .populate('userId', 'fullName userName email location level profileImage')
         .populate({
         path: 'applications',
@@ -186,8 +188,8 @@ const fetchJobByIdWithDetails = (jobId) => __awaiter(void 0, void 0, void 0, fun
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
     const creatorId = job.userId;
-    const totalJobsPosted = yield jobs_model_1.default.countDocuments({ userId: creatorId });
-    const totalArtisansHired = yield project_model_1.default.countDocuments({
+    const totalJobsPosted = await jobs_model_1.default.countDocuments({ userId: creatorId });
+    const totalArtisansHired = await project_model_1.default.countDocuments({
         creator: creatorId,
         status: 'accepted',
     });
@@ -201,31 +203,38 @@ const fetchJobByIdWithDetails = (jobId) => __awaiter(void 0, void 0, void 0, fun
             }
         }
         jobDueDate = (0, date_fns_1.add)(job.startDate, { days: cumulativeDays });
-        milestones = job.milestones.map((milestone) => (Object.assign(Object.assign({}, milestone.toObject()), { dueDate: (0, date_fns_1.add)(job.startDate, { days: cumulativeDays }) })));
+        milestones = job.milestones.map((milestone) => ({
+            ...milestone.toObject(),
+            dueDate: (0, date_fns_1.add)(job.startDate, { days: cumulativeDays }),
+        }));
     }
     else {
         milestones = job.milestones;
     }
     return {
-        job: Object.assign(Object.assign({}, job.toObject()), { dueDate: jobDueDate, milestones: milestones }),
+        job: {
+            ...job.toObject(),
+            dueDate: jobDueDate,
+            milestones: milestones,
+        },
         totalJobsPosted,
         totalArtisansHired,
     };
-});
+};
 exports.fetchJobByIdWithDetails = fetchJobByIdWithDetails;
-const ifLikedJob = (jobId, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield joblike_model_1.default.findOne({ job: jobId, user: userId });
-});
+const ifLikedJob = async (jobId, userId) => {
+    return await joblike_model_1.default.findOne({ job: jobId, user: userId });
+};
 exports.ifLikedJob = ifLikedJob;
-const createJobLike = (data) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield joblike_model_1.default.create(data);
-});
+const createJobLike = async (data) => {
+    return await joblike_model_1.default.create(data);
+};
 exports.createJobLike = createJobLike;
-const fetchLikedJobs = (userId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchLikedJobs = async (userId, page, limit) => {
     const skip = (page - 1) * limit;
-    const likedJobs = yield joblike_model_1.default.find({ user: userId }).select('job').lean();
+    const likedJobs = await joblike_model_1.default.find({ user: userId }).select('job').lean();
     const likedJobIds = likedJobs.map((like) => like.job);
-    const jobs = yield jobs_model_1.default.find({ _id: { $in: likedJobIds } })
+    const jobs = await jobs_model_1.default.find({ _id: { $in: likedJobIds } })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
@@ -236,21 +245,21 @@ const fetchLikedJobs = (userId, page, limit) => __awaiter(void 0, void 0, void 0
         currentPage: page,
         totalLikedJobs,
     };
-});
+};
 exports.fetchLikedJobs = fetchLikedJobs;
-const unlikeJob = (jobId, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield joblike_model_1.default.findOneAndDelete({ user: userId, job: jobId });
-});
+const unlikeJob = async (jobId, userId) => {
+    return await joblike_model_1.default.findOneAndDelete({ user: userId, job: jobId });
+};
 exports.unlikeJob = unlikeJob;
-const deleteJobApplication = (jobId, projectId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield jobs_model_1.default.updateOne({ _id: jobId }, { $pull: { applications: projectId } });
-});
+const deleteJobApplication = async (jobId, projectId) => {
+    return await jobs_model_1.default.updateOne({ _id: jobId }, { $pull: { applications: projectId } });
+};
 exports.deleteJobApplication = deleteJobApplication;
-const deleteJobById = (jobId, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield jobs_model_1.default.findOneAndDelete({ userId: userId, _id: jobId });
-});
+const deleteJobById = async (jobId, userId) => {
+    return await jobs_model_1.default.findOneAndDelete({ userId: userId, _id: jobId });
+};
 exports.deleteJobById = deleteJobById;
-const fetchJobByUserIdAndStatus = (userId, status) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchJobByUserIdAndStatus = async (userId, status) => {
     const query = { userId };
     if (Array.isArray(status)) {
         query.status = { $in: status };
@@ -258,11 +267,11 @@ const fetchJobByUserIdAndStatus = (userId, status) => __awaiter(void 0, void 0, 
     else {
         query.status = status;
     }
-    return yield jobs_model_1.default.find(query);
-});
+    return await jobs_model_1.default.find(query);
+};
 exports.fetchJobByUserIdAndStatus = fetchJobByUserIdAndStatus;
-const fetchUserJobApplications = (userId_1, skip_1, limit_1, status_1, page_1, ...args_1) => __awaiter(void 0, [userId_1, skip_1, limit_1, status_1, page_1, ...args_1], void 0, function* (userId, skip, limit, status, page, search = null, filters = {}) {
-    const userProjects = yield project_model_1.default.find({ user: userId }).select('_id');
+const fetchUserJobApplications = async (userId, skip, limit, status, page, search = null, filters = {}) => {
+    const userProjects = await project_model_1.default.find({ user: userId }).select('_id');
     const projectIds = userProjects.map((project) => project._id);
     let query = { applications: { $in: projectIds } };
     if (status) {
@@ -287,15 +296,14 @@ const fetchUserJobApplications = (userId_1, skip_1, limit_1, status_1, page_1, .
         if (filters.service)
             query.service = { $regex: new RegExp(filters.service, 'i') };
     }
-    const userApplications = yield jobs_model_1.default.find(query)
+    const userApplications = await jobs_model_1.default.find(query)
         .populate('applications', 'title description status')
         .sort({ createdAt: -1 });
-    const applicationsWithDueDates = yield Promise.all(userApplications.map((job) => __awaiter(void 0, void 0, void 0, function* () {
-        var _a;
+    const applicationsWithDueDates = await Promise.all(userApplications.map(async (job) => {
         if (job.status !== jobs_enum_1.JobStatusEnum.active && job.status !== jobs_enum_1.JobStatusEnum.paused) {
             return job.toObject();
         }
-        let accumulatedTime = (_a = job.startDate) === null || _a === void 0 ? void 0 : _a.getTime();
+        let accumulatedTime = job.startDate?.getTime();
         let milestoneDueDate = null;
         const totalMilestones = job.milestones.length;
         let completedMilestones = 0;
@@ -315,10 +323,13 @@ const fetchUserJobApplications = (userId_1, skip_1, limit_1, status_1, page_1, .
         });
         const milestoneProgress = `${completedMilestones}/${totalMilestones}`;
         const overallDueDate = new Date(accumulatedTime);
-        return Object.assign(Object.assign({}, job.toObject()), { milestoneDueDate,
+        return {
+            ...job.toObject(),
+            milestoneDueDate,
             overallDueDate,
-            milestoneProgress });
-    })));
+            milestoneProgress,
+        };
+    }));
     const filteredApplications = applicationsWithDueDates.filter((job) => {
         if (status === jobs_enum_1.JobStatusEnum.active) {
             return job.overallDueDate > new Date();
@@ -336,21 +347,21 @@ const fetchUserJobApplications = (userId_1, skip_1, limit_1, status_1, page_1, .
         limit,
         applications: paginatedApplications,
     };
-});
+};
 exports.fetchUserJobApplications = fetchUserJobApplications;
-const fetchUserApplications = (userId, skip, limit, status, page) => __awaiter(void 0, void 0, void 0, function* () {
-    const userProjects = yield project_model_1.default.find({ user: userId,
+const fetchUserApplications = async (userId, skip, limit, status, page) => {
+    const userProjects = await project_model_1.default.find({ user: userId,
         status: status,
     }).select('_id');
     const projectIds = userProjects.map((project) => project._id);
-    const userApplications = yield jobs_model_1.default.find({
+    const userApplications = await jobs_model_1.default.find({
         applications: { $in: projectIds },
     })
         .populate('applications', 'title description status')
         .skip(skip)
         .limit(Number(limit))
         .sort({ createdAt: -1 });
-    const totalApplications = yield jobs_model_1.default.countDocuments({
+    const totalApplications = await jobs_model_1.default.countDocuments({
         applications: { $in: projectIds },
     });
     return {
@@ -359,9 +370,9 @@ const fetchUserApplications = (userId, skip, limit, status, page) => __awaiter(v
         limit: Number(limit),
         applications: userApplications,
     };
-});
+};
 exports.fetchUserApplications = fetchUserApplications;
-const jobAnalytics = (...args_1) => __awaiter(void 0, [...args_1], void 0, function* (year = (0, moment_1.default)().year(), month, startDate, endDate, userId) {
+const jobAnalytics = async (year = (0, moment_1.default)().year(), month, startDate, endDate, userId) => {
     let start, end;
     if (startDate && endDate) {
         start = (0, moment_1.default)(startDate);
@@ -388,11 +399,10 @@ const jobAnalytics = (...args_1) => __awaiter(void 0, [...args_1], void 0, funct
         dateRange.push(currentDate.clone());
         currentDate = currentDate.add(1, interval);
     }
-    const analyticsData = yield Promise.all(dateRange.map((date) => __awaiter(void 0, void 0, void 0, function* () {
-        var _a, _b, _c, _d, _e;
+    const analyticsData = await Promise.all(dateRange.map(async (date) => {
         const dayStart = date.startOf(interval).toDate();
         const dayEnd = date.endOf(interval).toDate();
-        const jobs = yield jobs_model_1.default.aggregate([
+        const jobs = await jobs_model_1.default.aggregate([
             {
                 $match: {
                     userId,
@@ -437,18 +447,18 @@ const jobAnalytics = (...args_1) => __awaiter(void 0, [...args_1], void 0, funct
         ]);
         return {
             period: date.format(interval === 'months' ? 'MMM YYYY' : 'MMM D, YYYY'),
-            totalJobs: ((_a = jobs[0]) === null || _a === void 0 ? void 0 : _a.totalJobs) || 0,
-            totalActiveJobs: ((_b = jobs[0]) === null || _b === void 0 ? void 0 : _b.totalActiveJobs) || 0,
-            totalOverdueJobs: ((_c = jobs[0]) === null || _c === void 0 ? void 0 : _c.totalOverdueJobs) || 0,
-            totalPausedJobs: ((_d = jobs[0]) === null || _d === void 0 ? void 0 : _d.totalPausedJobs) || 0,
-            totalCompletedJobs: ((_e = jobs[0]) === null || _e === void 0 ? void 0 : _e.totalCompletedJobs) || 0,
+            totalJobs: jobs[0]?.totalJobs || 0,
+            totalActiveJobs: jobs[0]?.totalActiveJobs || 0,
+            totalOverdueJobs: jobs[0]?.totalOverdueJobs || 0,
+            totalPausedJobs: jobs[0]?.totalPausedJobs || 0,
+            totalCompletedJobs: jobs[0]?.totalCompletedJobs || 0,
         };
-    })));
+    }));
     return analyticsData;
-});
+};
 exports.jobAnalytics = jobAnalytics;
-const fetchJobCount = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const jobs = yield jobs_model_1.default.find({ userId });
+const fetchJobCount = async (userId) => {
+    const jobs = await jobs_model_1.default.find({ userId });
     const now = new Date();
     let totalPendingJobs = 0;
     let totalActiveJobs = 0;
@@ -463,11 +473,10 @@ const fetchJobCount = (userId) => __awaiter(void 0, void 0, void 0, function* ()
             totalPausedJobs++;
         if (status === jobs_enum_1.JobStatusEnum.complete)
             totalCompletedJobs++;
-        if (status === jobs_enum_1.JobStatusEnum.active && startDate && (milestones === null || milestones === void 0 ? void 0 : milestones.length) > 0) {
+        if (status === jobs_enum_1.JobStatusEnum.active && startDate && milestones?.length > 0) {
             let totalDays = 0;
             milestones.forEach((m) => {
-                var _a;
-                if (((_a = m.timeFrame) === null || _a === void 0 ? void 0 : _a.period) === "days" &&
+                if (m.timeFrame?.period === "days" &&
                     !isNaN(parseInt(m.timeFrame.number))) {
                     totalDays += parseInt(m.timeFrame.number);
                 }
@@ -492,25 +501,24 @@ const fetchJobCount = (userId) => __awaiter(void 0, void 0, void 0, function* ()
         totalPausedJobs,
         totalCompletedJobs
     };
-});
+};
 exports.fetchJobCount = fetchJobCount;
-const fetchProjectCounts = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d;
-    const userProjects = yield project_model_1.default.find({ user: userId });
+const fetchProjectCounts = async (userId) => {
+    const userProjects = await project_model_1.default.find({ user: userId });
     let totalPendingProjects = 0;
     let totalOverdueProjects = 0;
     let totalDueProjects = 0;
     const currentDate = new Date();
     const userProjectIds = userProjects.map((project) => project._id);
-    const totalActiveProjectsRaw = yield jobs_model_1.default.find({
+    const totalActiveProjectsRaw = await jobs_model_1.default.find({
         acceptedApplicationId: { $in: userProjectIds },
         status: jobs_enum_1.JobStatusEnum.active,
     });
-    const totalPausedProjects = yield jobs_model_1.default.countDocuments({
+    const totalPausedProjects = await jobs_model_1.default.countDocuments({
         acceptedApplicationId: { $in: userProjectIds },
         status: jobs_enum_1.JobStatusEnum.paused,
     });
-    const totalCompletedProjects = yield jobs_model_1.default.countDocuments({
+    const totalCompletedProjects = await jobs_model_1.default.countDocuments({
         acceptedApplicationId: { $in: userProjectIds },
         status: jobs_enum_1.JobStatusEnum.complete,
     });
@@ -521,14 +529,14 @@ const fetchProjectCounts = (userId) => __awaiter(void 0, void 0, void 0, functio
     });
     let totalActiveProjects = 0;
     for (const job of totalActiveProjectsRaw) {
-        if (!job.startDate || !((_a = job.milestones) === null || _a === void 0 ? void 0 : _a.length)) {
+        if (!job.startDate || !job.milestones?.length) {
             totalActiveProjects++;
             continue;
         }
         let accumulatedTime = job.startDate.getTime();
         for (const milestone of job.milestones) {
-            const timeMultiplier = ((_b = milestone.timeFrame) === null || _b === void 0 ? void 0 : _b.period) === "days" ? 86400000 : 604800000;
-            const milestoneDuration = ((_d = (_c = milestone.timeFrame) === null || _c === void 0 ? void 0 : _c.number) !== null && _d !== void 0 ? _d : 0) * timeMultiplier;
+            const timeMultiplier = milestone.timeFrame?.period === "days" ? 86400000 : 604800000;
+            const milestoneDuration = (milestone.timeFrame?.number ?? 0) * timeMultiplier;
             accumulatedTime += milestoneDuration;
         }
         const overallDueDate = new Date(accumulatedTime);
@@ -551,9 +559,9 @@ const fetchProjectCounts = (userId) => __awaiter(void 0, void 0, void 0, functio
         totalOverdueProjects,
         totalDueProjects,
     };
-});
+};
 exports.fetchProjectCounts = fetchProjectCounts;
-const projectAnalytics = (...args_1) => __awaiter(void 0, [...args_1], void 0, function* (year = (0, moment_1.default)().year(), month, startDate, endDate, userId) {
+const projectAnalytics = async (year = (0, moment_1.default)().year(), month, startDate, endDate, userId) => {
     let start, end;
     if (startDate && endDate) {
         start = (0, moment_1.default)(startDate, 'YYYY-MM-DD', true);
@@ -577,13 +585,12 @@ const projectAnalytics = (...args_1) => __awaiter(void 0, [...args_1], void 0, f
         dateRange.push(currentDate.clone());
         currentDate = currentDate.add(1, interval);
     }
-    const projects = yield project_model_1.default.find({ user: userId }).select('_id');
+    const projects = await project_model_1.default.find({ user: userId }).select('_id');
     const projectIds = projects.map(project => project._id);
-    const analyticsData = yield Promise.all(dateRange.map((date) => __awaiter(void 0, void 0, void 0, function* () {
-        var _a, _b, _c, _d, _e;
+    const analyticsData = await Promise.all(dateRange.map(async (date) => {
         const dayStart = date.startOf(interval).toDate();
         const dayEnd = date.endOf(interval).toDate();
-        const jobs = yield jobs_model_1.default.aggregate([
+        const jobs = await jobs_model_1.default.aggregate([
             {
                 $match: {
                     acceptedApplicationId: { $in: projectIds },
@@ -628,29 +635,28 @@ const projectAnalytics = (...args_1) => __awaiter(void 0, [...args_1], void 0, f
         ]);
         return {
             period: date.format(interval === 'months' ? 'MMM YYYY' : 'MMM D, YYYY'),
-            totalProjects: ((_a = jobs[0]) === null || _a === void 0 ? void 0 : _a.totalProjects) || 0,
-            totalActiveProjects: ((_b = jobs[0]) === null || _b === void 0 ? void 0 : _b.totalActiveProjects) || 0,
-            totalOverdueProjects: ((_c = jobs[0]) === null || _c === void 0 ? void 0 : _c.totalOverdueProjects) || 0,
-            totalPausedProjects: ((_d = jobs[0]) === null || _d === void 0 ? void 0 : _d.totalPausedProjects) || 0,
-            totalCompletedProjects: ((_e = jobs[0]) === null || _e === void 0 ? void 0 : _e.totalCompletedProjects) || 0,
+            totalProjects: jobs[0]?.totalProjects || 0,
+            totalActiveProjects: jobs[0]?.totalActiveProjects || 0,
+            totalOverdueProjects: jobs[0]?.totalOverdueProjects || 0,
+            totalPausedProjects: jobs[0]?.totalPausedProjects || 0,
+            totalCompletedProjects: jobs[0]?.totalCompletedProjects || 0,
         };
-    })));
+    }));
     return analyticsData;
-});
+};
 exports.projectAnalytics = projectAnalytics;
-const fetchAllJobsForAdminDashboard = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield jobs_model_1.default.countDocuments();
-});
+const fetchAllJobsForAdminDashboard = async () => {
+    return await jobs_model_1.default.countDocuments();
+};
 exports.fetchAllJobsForAdminDashboard = fetchAllJobsForAdminDashboard;
-const fetchAllUserJobsAdmin = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield jobs_model_1.default.find({ userId })
+const fetchAllUserJobsAdmin = async (userId) => {
+    return await jobs_model_1.default.find({ userId })
         .sort({ createdAt: -1 })
         .populate('applications', 'title description status')
         .lean();
-});
+};
 exports.fetchAllUserJobsAdmin = fetchAllUserJobsAdmin;
-const fetchAllJobsAdmin = (status, page, limit, search) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+const fetchAllJobsAdmin = async (status, page, limit, search) => {
     const pageNum = Math.max(1, Number(page));
     const limitNum = Math.max(1, Number(limit));
     const skip = (pageNum - 1) * limitNum;
@@ -680,15 +686,18 @@ const fetchAllJobsAdmin = (status, page, limit, search) => __awaiter(void 0, voi
             }
         },
         {
-            $match: Object.assign(Object.assign({}, matchQuery), (search ? {
-                $or: [
-                    { title: { $regex: search, $options: 'i' } },
-                    { description: { $regex: search, $options: 'i' } },
-                    { jobId: { $regex: search, $options: 'i' } },
-                    { 'user.userName': { $regex: search, $options: 'i' } },
-                    { 'user.fullName': { $regex: search, $options: 'i' } }
-                ]
-            } : {}))
+            $match: {
+                ...matchQuery,
+                ...(search ? {
+                    $or: [
+                        { title: { $regex: search, $options: 'i' } },
+                        { description: { $regex: search, $options: 'i' } },
+                        { jobId: { $regex: search, $options: 'i' } },
+                        { 'user.userName': { $regex: search, $options: 'i' } },
+                        { 'user.fullName': { $regex: search, $options: 'i' } }
+                    ]
+                } : {})
+            }
         }
     ];
     const jobsPipeline = [
@@ -701,29 +710,29 @@ const fetchAllJobsAdmin = (status, page, limit, search) => __awaiter(void 0, voi
         ...pipeline,
         { $count: 'total' }
     ];
-    const [jobs, countResult] = yield Promise.all([
+    const [jobs, countResult] = await Promise.all([
         jobs_model_1.default.aggregate(jobsPipeline),
         jobs_model_1.default.aggregate(countPipeline)
     ]);
-    const totalJobs = ((_a = countResult[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
+    const totalJobs = countResult[0]?.total || 0;
     return {
         totalJobs,
         jobs,
         page: pageNum,
         totalPages: Math.ceil(totalJobs / limitNum)
     };
-});
+};
 exports.fetchAllJobsAdmin = fetchAllJobsAdmin;
-const fetchAllLikedJobs = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const likedJobs = yield joblike_model_1.default.countDocuments({ user: userId });
+const fetchAllLikedJobs = async (userId) => {
+    const likedJobs = await joblike_model_1.default.countDocuments({ user: userId });
     return {
         totalLikedJobs: likedJobs,
     };
-});
+};
 exports.fetchAllLikedJobs = fetchAllLikedJobs;
-const fetchJobLeads = (userId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchJobLeads = async (userId, page, limit) => {
     const skip = (page - 1) * limit;
-    const businesses = yield business_model_1.default.find({ userId: userId }).exec();
+    const businesses = await business_model_1.default.find({ userId: userId }).exec();
     let offeredServices = [];
     businesses.forEach(business => {
         if (business.services && business.services.length) {
@@ -736,7 +745,7 @@ const fetchJobLeads = (userId, page, limit) => __awaiter(void 0, void 0, void 0,
         isClosed: false,
         userId: { $ne: userId }
     };
-    const [jobs, total] = yield Promise.all([
+    const [jobs, total] = await Promise.all([
         jobs_model_1.default.find(filter).skip(skip).limit(limit).exec(),
         jobs_model_1.default.countDocuments(filter)
     ]);
@@ -746,45 +755,45 @@ const fetchJobLeads = (userId, page, limit) => __awaiter(void 0, void 0, void 0,
         totalPages: Math.ceil(total / limit),
         totalLeads: total,
     };
-});
+};
 exports.fetchJobLeads = fetchJobLeads;
-const updateMilestone = (jobId, milestoneId, updateData) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield jobs_model_1.default.updateOne({ _id: jobId, 'milestones._id': milestoneId }, {
+const updateMilestone = async (jobId, milestoneId, updateData) => {
+    return await jobs_model_1.default.updateOne({ _id: jobId, 'milestones._id': milestoneId }, {
         $set: {
             'milestones.$.paymentStatus': updateData.paymentStatus,
             'milestones.$.paymentInfo': updateData.paymentInfo,
         },
     });
-});
+};
 exports.updateMilestone = updateMilestone;
-const createRecurringJob = (payload) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield recurring_job_model_1.default.create(payload);
-});
+const createRecurringJob = async (payload) => {
+    return await recurring_job_model_1.default.create(payload);
+};
 exports.createRecurringJob = createRecurringJob;
-const findRecurringJobsDue = (today) => __awaiter(void 0, void 0, void 0, function* () {
+const findRecurringJobsDue = async (today) => {
     const normalizedToday = (0, date_fns_1.startOfDay)(today);
-    return yield recurring_job_model_1.default.find({
+    return await recurring_job_model_1.default.find({
         nextMaintenanceDate: { $lte: normalizedToday },
         endDate: { $gte: normalizedToday },
     });
-});
+};
 exports.findRecurringJobsDue = findRecurringJobsDue;
-const findRecurringJobsWithReminders = (today) => __awaiter(void 0, void 0, void 0, function* () {
+const findRecurringJobsWithReminders = async (today) => {
     const formattedDate = (0, date_fns_1.format)(today, 'yyyy-MM-dd');
-    return yield recurring_job_model_1.default.find({
+    return await recurring_job_model_1.default.find({
         'reminderDates.day': formattedDate,
     });
-});
+};
 exports.findRecurringJobsWithReminders = findRecurringJobsWithReminders;
-const activePendingJobs = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield jobs_model_1.default.find({
+const activePendingJobs = async () => {
+    return await jobs_model_1.default.find({
         status: { $in: ["active", "paused"] },
         isClosed: false,
     });
-});
+};
 exports.activePendingJobs = activePendingJobs;
-const fetchAllRecurringJobs = (userId, limit, page) => __awaiter(void 0, void 0, void 0, function* () {
-    const jobs = yield recurring_job_model_1.default.find()
+const fetchAllRecurringJobs = async (userId, limit, page) => {
+    const jobs = await recurring_job_model_1.default.find()
         .populate({
         path: "jobId",
         match: { userId },
@@ -792,7 +801,7 @@ const fetchAllRecurringJobs = (userId, limit, page) => __awaiter(void 0, void 0,
         .limit(limit)
         .skip((page - 1) * limit)
         .then(results => results.filter(r => r.jobId));
-    const totalJobs = yield recurring_job_model_1.default.countDocuments()
+    const totalJobs = await recurring_job_model_1.default.countDocuments()
         .populate({
         path: "jobId",
         match: { userId },
@@ -801,9 +810,9 @@ const fetchAllRecurringJobs = (userId, limit, page) => __awaiter(void 0, void 0,
         totalJobs,
         jobs
     };
-});
+};
 exports.fetchAllRecurringJobs = fetchAllRecurringJobs;
-const fetchJobsByUserId = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield jobs_model_1.default.find({ userId: userId });
-});
+const fetchJobsByUserId = async (userId) => {
+    return await jobs_model_1.default.find({ userId: userId });
+};
 exports.fetchJobsByUserId = fetchJobsByUserId;

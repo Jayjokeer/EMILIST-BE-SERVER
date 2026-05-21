@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getChatsController = exports.getMessagesController = exports.sendMessageController = void 0;
 const error_handler_1 = require("../errors/error-handler");
@@ -55,18 +46,18 @@ const notificationService = __importStar(require("../services/notification.servi
 const userService = __importStar(require("../services/auth.service"));
 const send_email_1 = require("../utils/send_email");
 const templates_1 = require("../utils/templates");
-exports.sendMessageController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.sendMessageController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { receiverId } = req.params;
     const { content } = req.body;
     const userId = req.user._id;
     let isNewChat = false;
-    let chat = yield chatService.findChat(receiverId, userId);
+    let chat = await chatService.findChat(receiverId, userId);
     if (!chat) {
         const payload = {
             participants: [receiverId, userId],
             messages: [],
         };
-        chat = yield chatService.createChat(payload);
+        chat = await chatService.createChat(payload);
         isNewChat = true;
     }
     const msgPayload = {
@@ -75,16 +66,16 @@ exports.sendMessageController = (0, error_handler_1.catchAsync)((req, res) => __
         content,
         chatId: chat._id,
     };
-    const newMessage = yield messageService.createMessage(msgPayload);
+    const newMessage = await messageService.createMessage(msgPayload);
     chat.messages.push(newMessage._id);
-    yield Promise.all([chat.save(), newMessage.save()]);
+    await Promise.all([chat.save(), newMessage.save()]);
     const data = newMessage;
     const receiverSocketId = (0, socket_1.getReceiverId)(receiverId);
     if (receiverSocketId && server_1.io) {
         server_1.io.to(receiverSocketId).emit("newMessage", data);
     }
     else {
-        const receiver = yield userService.findUserById(receiverId);
+        const receiver = await userService.findUserById(receiverId);
         if (receiver) {
             const notificationPayload = {
                 userId: receiverId,
@@ -92,9 +83,9 @@ exports.sendMessageController = (0, error_handler_1.catchAsync)((req, res) => __
                 message: `${req.user.userName} sent you a message!`,
                 type: notification_enum_1.NotificationTypeEnum.info,
             };
-            yield notificationService.createNotification(notificationPayload);
+            await notificationService.createNotification(notificationPayload);
             const { html, subject } = (0, templates_1.sendMessage)(receiver.userName, req.user.userName);
-            yield (0, send_email_1.sendEmail)(receiver.email, subject, html);
+            await (0, send_email_1.sendEmail)(receiver.email, subject, html);
         }
     }
     ;
@@ -113,15 +104,15 @@ exports.sendMessageController = (0, error_handler_1.catchAsync)((req, res) => __
     //   await notificationService.createNotification(notificationPayload);
     // }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.getMessagesController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.getMessagesController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { userId } = req.params;
     const loggedInUserId = req.user._id;
-    const data = yield chatService.findChatWithMessages(loggedInUserId, userId);
+    const data = await chatService.findChatWithMessages(loggedInUserId, userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.getChatsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.getChatsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const loggedInUserId = req.user._id;
-    const data = yield chatService.getChatsWithLastMessages(loggedInUserId);
+    const data = await chatService.getChatsWithLastMessages(loggedInUserId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
+});

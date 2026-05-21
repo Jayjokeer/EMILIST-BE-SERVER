@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -20,21 +11,21 @@ const review_model_1 = __importDefault(require("../models/review.model"));
 const error_1 = require("../errors/error");
 const users_model_1 = __importDefault(require("../models/users.model"));
 const categories_model_1 = __importDefault(require("../models/categories.model"));
-const createProduct = (data) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield product_model_1.default.create(data);
-});
+const createProduct = async (data) => {
+    return await product_model_1.default.create(data);
+};
 exports.createProduct = createProduct;
-const fetchProductById = (productId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield product_model_1.default.findById(productId);
-});
+const fetchProductById = async (productId) => {
+    return await product_model_1.default.findById(productId);
+};
 exports.fetchProductById = fetchProductById;
-const fetchProductByIdWithDetails = (productId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield product_model_1.default.findById(productId)
+const fetchProductByIdWithDetails = async (productId) => {
+    return await product_model_1.default.findById(productId)
         .populate('userId', 'fullName email userName profileImage level _id uniqueId')
         .populate('reviews', 'rating');
-});
+};
 exports.fetchProductByIdWithDetails = fetchProductByIdWithDetails;
-const fetchAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, function* (page = 1, limit = 10, userId, filters = {}, search) {
+const fetchAllProducts = async (page = 1, limit = 10, userId, filters = {}, search) => {
     const currentPage = Number(page) > 0 ? Number(page) : 1;
     const pageLimit = Number(limit) > 0 ? Number(limit) : 10;
     const skip = (currentPage - 1) * pageLimit;
@@ -74,8 +65,8 @@ const fetchAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, f
             });
         });
     }
-    const totalProducts = yield product_model_1.default.countDocuments(query);
-    const products = yield product_model_1.default.find(query)
+    const totalProducts = await product_model_1.default.countDocuments(query);
+    const products = await product_model_1.default.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(pageLimit)
@@ -89,7 +80,7 @@ const fetchAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, f
         .lean();
     const filteredProducts = products.filter((product) => product.userId !== null);
     const productIds = filteredProducts.map((product) => product._id);
-    const reviews = yield review_model_1.default.aggregate([
+    const reviews = await review_model_1.default.aggregate([
         { $match: { productId: { $in: productIds } } },
         {
             $group: {
@@ -107,10 +98,11 @@ const fetchAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, f
         return map;
     }, {});
     const enhancedProducts = filteredProducts
-        .map((product) => {
-        var _a, _b;
-        return (Object.assign(Object.assign({}, product), { averageRating: ((_a = reviewMap[product._id.toString()]) === null || _a === void 0 ? void 0 : _a.averageRating) || 0, numberOfRatings: ((_b = reviewMap[product._id.toString()]) === null || _b === void 0 ? void 0 : _b.numberOfRatings) || 0 }));
-    })
+        .map((product) => ({
+        ...product,
+        averageRating: reviewMap[product._id.toString()]?.averageRating || 0,
+        numberOfRatings: reviewMap[product._id.toString()]?.numberOfRatings || 0,
+    }))
         .filter((product) => {
         if (filters.minRating && product.averageRating < filters.minRating)
             return false;
@@ -120,16 +112,24 @@ const fetchAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, f
     });
     let productsWithDetails;
     if (userId) {
-        const likedProducts = yield productLike_model_1.default.find({ user: userId })
+        const likedProducts = await productLike_model_1.default.find({ user: userId })
             .select("product")
             .lean();
         const likedProductIds = likedProducts.map((like) => like.product.toString());
-        const user = yield users_model_1.default.findById(userId);
-        const comparedProductIds = (user === null || user === void 0 ? void 0 : user.comparedProducts.map((id) => id.toString())) || [];
-        productsWithDetails = enhancedProducts.map((product) => (Object.assign(Object.assign({}, product), { liked: likedProductIds.includes(product._id.toString()), isCompared: comparedProductIds.includes(product._id.toString()) })));
+        const user = await users_model_1.default.findById(userId);
+        const comparedProductIds = user?.comparedProducts.map((id) => id.toString()) || [];
+        productsWithDetails = enhancedProducts.map((product) => ({
+            ...product,
+            liked: likedProductIds.includes(product._id.toString()),
+            isCompared: comparedProductIds.includes(product._id.toString()),
+        }));
     }
     else {
-        productsWithDetails = enhancedProducts.map((product) => (Object.assign(Object.assign({}, product), { liked: false, isCompared: false })));
+        productsWithDetails = enhancedProducts.map((product) => ({
+            ...product,
+            liked: false,
+            isCompared: false,
+        }));
     }
     return {
         products: productsWithDetails,
@@ -137,47 +137,51 @@ const fetchAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, f
         currentPage,
         totalProducts: productsWithDetails.length,
     };
-});
+};
 exports.fetchAllProducts = fetchAllProducts;
-const deleteProduct = (productId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield product_model_1.default.findByIdAndDelete(productId);
-});
+const deleteProduct = async (productId) => {
+    return await product_model_1.default.findByIdAndDelete(productId);
+};
 exports.deleteProduct = deleteProduct;
-const fetchUserProducts = (userId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchUserProducts = async (userId, page, limit) => {
     const skip = (page - 1) * limit;
-    const totalProducts = yield product_model_1.default.countDocuments({ userId: userId });
-    const products = yield product_model_1.default.find({ userId: userId })
+    const totalProducts = await product_model_1.default.countDocuments({ userId: userId });
+    const products = await product_model_1.default.find({ userId: userId })
         .skip(skip)
         .limit(limit)
         .populate('reviews', 'rating');
-    const enhancedProducts = yield Promise.all(products.map((product) => __awaiter(void 0, void 0, void 0, function* () {
+    const enhancedProducts = await Promise.all(products.map(async (product) => {
         const totalReviews = product.reviews.length;
         const averageRating = totalReviews > 0
             ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
-        return Object.assign(Object.assign({}, product.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
-    })));
+        return {
+            ...product.toObject(),
+            totalReviews,
+            averageRating: parseFloat(averageRating.toFixed(2)),
+        };
+    }));
     return {
         products: enhancedProducts,
         totalPages: Math.ceil(totalProducts / limit),
         currentPage: page,
         totalProducts
     };
-});
+};
 exports.fetchUserProducts = fetchUserProducts;
-const ifLikedProduct = (productId, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield productLike_model_1.default.findOne({ product: productId, user: userId });
-});
+const ifLikedProduct = async (productId, userId) => {
+    return await productLike_model_1.default.findOne({ product: productId, user: userId });
+};
 exports.ifLikedProduct = ifLikedProduct;
-const createProductLike = (data) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield productLike_model_1.default.create(data);
-});
+const createProductLike = async (data) => {
+    return await productLike_model_1.default.create(data);
+};
 exports.createProductLike = createProductLike;
-const fetchLikedProducts = (userId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchLikedProducts = async (userId, page, limit) => {
     const skip = (page - 1) * limit;
-    const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();
+    const likedProducts = await productLike_model_1.default.find({ user: userId }).select('product').lean();
     const likedProductsId = likedProducts.map((like) => like.product);
-    const products = yield product_model_1.default.find({ _id: { $in: likedProductsId } })
+    const products = await product_model_1.default.find({ _id: { $in: likedProductsId } })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -189,18 +193,18 @@ const fetchLikedProducts = (userId, page, limit) => __awaiter(void 0, void 0, vo
         currentPage: page,
         totalLikedProducts,
     };
-});
+};
 exports.fetchLikedProducts = fetchLikedProducts;
-const unlikeProduct = (productId, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield productLike_model_1.default.findOneAndDelete({ user: userId, product: productId });
-});
+const unlikeProduct = async (productId, userId) => {
+    return await productLike_model_1.default.findOneAndDelete({ user: userId, product: productId });
+};
 exports.unlikeProduct = unlikeProduct;
-const fetchReviewForProduct = (productId) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchReviewForProduct = async (productId) => {
     if (!mongoose_1.default.Types.ObjectId.isValid(productId)) {
         throw new Error("Invalid productId");
     }
     const objectId = new mongoose_1.default.Types.ObjectId(productId);
-    const result = yield review_model_1.default.aggregate([
+    const result = await review_model_1.default.aggregate([
         {
             $match: { productId: objectId },
         },
@@ -249,17 +253,17 @@ const fetchReviewForProduct = (productId) => __awaiter(void 0, void 0, void 0, f
         };
     }
     return result[0];
-});
+};
 exports.fetchReviewForProduct = fetchReviewForProduct;
-const fetchAllProductsForAdmin = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield product_model_1.default.countDocuments();
-});
+const fetchAllProductsForAdmin = async () => {
+    return await product_model_1.default.countDocuments();
+};
 exports.fetchAllProductsForAdmin = fetchAllProductsForAdmin;
-const fetchAllUserProductsAdmin = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield product_model_1.default.find({ userId });
-});
+const fetchAllUserProductsAdmin = async (userId) => {
+    return await product_model_1.default.find({ userId });
+};
 exports.fetchAllUserProductsAdmin = fetchAllUserProductsAdmin;
-const fetchAllProductsAdmin = (page, limit, search) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllProductsAdmin = async (page, limit, search) => {
     const pageNum = Math.max(1, Number(page));
     const limitNum = Math.max(1, Number(limit));
     const skip = (pageNum - 1) * limitNum;
@@ -277,7 +281,7 @@ const fetchAllProductsAdmin = (page, limit, search) => __awaiter(void 0, void 0,
             ]
         };
     }
-    const [materials, totalMaterials] = yield Promise.all([
+    const [materials, totalMaterials] = await Promise.all([
         product_model_1.default.find(query)
             .populate('userId', 'fullName userName')
             .sort({ createdAt: -1 })
@@ -290,11 +294,11 @@ const fetchAllProductsAdmin = (page, limit, search) => __awaiter(void 0, void 0,
         materials,
         totalMaterials,
     };
-});
+};
 exports.fetchAllProductsAdmin = fetchAllProductsAdmin;
-const otherProductsByUser = (userId, page, limit) => __awaiter(void 0, void 0, void 0, function* () {
+const otherProductsByUser = async (userId, page, limit) => {
     const skip = (page - 1) * limit;
-    const products = yield product_model_1.default.find({ userId })
+    const products = await product_model_1.default.find({ userId })
         .sort({ createdAt: -1 })
         .populate('reviews', 'rating')
         .skip(skip)
@@ -302,11 +306,15 @@ const otherProductsByUser = (userId, page, limit) => __awaiter(void 0, void 0, v
         path: 'userId',
         select: 'fullName email userName profileImage level uniqueId isPrimeMember',
     }).lean();
-    const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();
+    const likedProducts = await productLike_model_1.default.find({ user: userId }).select('product').lean();
     const likedProductIds = likedProducts.map((like) => like.product.toString());
-    const user = yield users_model_1.default.findById(userId);
-    const comparedProductIds = (user === null || user === void 0 ? void 0 : user.comparedProducts.map((id) => id.toString())) || [];
-    const productsWithDetails = products.map((product) => (Object.assign(Object.assign({}, product), { liked: likedProductIds.includes(product._id.toString()), isCompared: comparedProductIds.includes(product._id.toString()) })));
+    const user = await users_model_1.default.findById(userId);
+    const comparedProductIds = user?.comparedProducts.map((id) => id.toString()) || [];
+    const productsWithDetails = products.map((product) => ({
+        ...product,
+        liked: likedProductIds.includes(product._id.toString()),
+        isCompared: comparedProductIds.includes(product._id.toString()),
+    }));
     const totalProducts = productsWithDetails.length;
     return {
         products: productsWithDetails,
@@ -315,11 +323,11 @@ const otherProductsByUser = (userId, page, limit) => __awaiter(void 0, void 0, v
         limit,
         totalProducts,
     };
-});
+};
 exports.otherProductsByUser = otherProductsByUser;
-const fetchSimilarProducts = (productId, limit, page, userId) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchSimilarProducts = async (productId, limit, page, userId) => {
     const skip = (page - 1) * limit;
-    const targetProduct = yield product_model_1.default.findById(productId);
+    const targetProduct = await product_model_1.default.findById(productId);
     if (!targetProduct) {
         throw new error_1.NotFoundError("Product not found!");
     }
@@ -336,7 +344,7 @@ const fetchSimilarProducts = (productId, limit, page, userId) => __awaiter(void 
         ];
     }
     ;
-    const similarProducts = yield product_model_1.default.find(query)
+    const similarProducts = await product_model_1.default.find(query)
         .limit(Number(limit))
         .skip(skip)
         .populate('reviews', 'rating')
@@ -344,23 +352,35 @@ const fetchSimilarProducts = (productId, limit, page, userId) => __awaiter(void 
         path: 'userId',
         select: 'fullName email userName profileImage level uniqueId isPrimeMember',
     });
-    const enhancedProducts = yield Promise.all(similarProducts.map((product) => __awaiter(void 0, void 0, void 0, function* () {
+    const enhancedProducts = await Promise.all(similarProducts.map(async (product) => {
         const totalReviews = product.reviews.length;
         const averageRating = totalReviews > 0
             ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
-        return Object.assign(Object.assign({}, product.toObject()), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
-    })));
+        return {
+            ...product.toObject(),
+            totalReviews,
+            averageRating: parseFloat(averageRating.toFixed(2)),
+        };
+    }));
     let productsWithDetails;
     if (userId) {
-        const likedProducts = yield productLike_model_1.default.find({ user: userId }).select('product').lean();
+        const likedProducts = await productLike_model_1.default.find({ user: userId }).select('product').lean();
         const likedProductIds = likedProducts.map((like) => like.product.toString());
-        const user = yield users_model_1.default.findById(userId);
-        const comparedProductIds = (user === null || user === void 0 ? void 0 : user.comparedProducts.map((id) => id.toString())) || [];
-        productsWithDetails = enhancedProducts.map((product) => (Object.assign(Object.assign({}, product), { liked: likedProductIds.includes(product._id.toString()), isCompared: comparedProductIds.includes(product._id.toString()) })));
+        const user = await users_model_1.default.findById(userId);
+        const comparedProductIds = user?.comparedProducts.map((id) => id.toString()) || [];
+        productsWithDetails = enhancedProducts.map((product) => ({
+            ...product,
+            liked: likedProductIds.includes(product._id.toString()),
+            isCompared: comparedProductIds.includes(product._id.toString()),
+        }));
     }
     else {
-        productsWithDetails = enhancedProducts.map((product) => (Object.assign(Object.assign({}, product), { liked: false, isCompared: false })));
+        productsWithDetails = enhancedProducts.map((product) => ({
+            ...product,
+            liked: false,
+            isCompared: false,
+        }));
     }
     const totalProducts = productsWithDetails.length;
     return {
@@ -370,22 +390,22 @@ const fetchSimilarProducts = (productId, limit, page, userId) => __awaiter(void 
         limit,
         totalProducts,
     };
-});
+};
 exports.fetchSimilarProducts = fetchSimilarProducts;
-const fetchProductReviews = (productId_1, page_1, limit_1, ...args_1) => __awaiter(void 0, [productId_1, page_1, limit_1, ...args_1], void 0, function* (productId, page, limit, sortBy = 'newest') {
-    const product = yield product_model_1.default.findById(productId);
+const fetchProductReviews = async (productId, page, limit, sortBy = 'newest') => {
+    const product = await product_model_1.default.findById(productId);
     if (!product) {
         throw new error_1.NotFoundError('Material not found!');
     }
     const skip = (Number(page) - 1) * Number(limit);
     const sortCriteria = sortBy === 'mostRelevant' ? { helpfulCount: -1, createdAt: -1 } : { createdAt: -1 };
-    const reviews = yield review_model_1.default.find({ productId })
+    const reviews = await review_model_1.default.find({ productId })
         .skip(skip)
         .limit(Number(limit))
         .sort(sortCriteria)
         .populate('userId', 'profileImage fullName userName uniqueId gender level')
         .lean();
-    const allReviews = yield review_model_1.default.find({ productId }).lean();
+    const allReviews = await review_model_1.default.find({ productId }).lean();
     const starCounts = [1, 2, 3, 4, 5].reduce((acc, star) => {
         acc[star] = allReviews.filter((review) => review.rating === star).length;
         return acc;
@@ -403,45 +423,49 @@ const fetchProductReviews = (productId_1, page_1, limit_1, ...args_1) => __await
         totalPages: Math.ceil(totalRatings / Number(limit)),
     };
     return data;
-});
+};
 exports.fetchProductReviews = fetchProductReviews;
-const fetchAllComparedProducts = (productIds) => __awaiter(void 0, void 0, void 0, function* () {
-    const products = yield product_model_1.default.find({ _id: { $in: productIds } })
+const fetchAllComparedProducts = async (productIds) => {
+    const products = await product_model_1.default.find({ _id: { $in: productIds } })
         .populate('userId', 'fullName email userName uniqueId profileImage level gender')
         .populate('reviews', 'rating').lean();
-    const enhancedProducts = yield Promise.all(products.map((product) => __awaiter(void 0, void 0, void 0, function* () {
+    const enhancedProducts = await Promise.all(products.map(async (product) => {
         const reviews = product.reviews || [];
         const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
             ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
             : 0;
-        return Object.assign(Object.assign({}, product), { totalReviews, averageRating: parseFloat(averageRating.toFixed(2)) });
-    })));
+        return {
+            ...product,
+            totalReviews,
+            averageRating: parseFloat(averageRating.toFixed(2)),
+        };
+    }));
     return {
         enhancedProducts
     };
-});
+};
 exports.fetchAllComparedProducts = fetchAllComparedProducts;
-const fetchAllLikedProducts = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const likedProducts = yield productLike_model_1.default.countDocuments({ user: userId });
+const fetchAllLikedProducts = async (userId) => {
+    const likedProducts = await productLike_model_1.default.countDocuments({ user: userId });
     return {
         totalProductsLikes: likedProducts,
     };
-});
+};
 exports.fetchAllLikedProducts = fetchAllLikedProducts;
-const createCategory = (payload) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield categories_model_1.default.create(payload);
-});
+const createCategory = async (payload) => {
+    return await categories_model_1.default.create(payload);
+};
 exports.createCategory = createCategory;
-const deleteCategory = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield categories_model_1.default.findByIdAndDelete(id);
-});
+const deleteCategory = async (id) => {
+    return await categories_model_1.default.findByIdAndDelete(id);
+};
 exports.deleteCategory = deleteCategory;
-const fetchSingleCategory = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield categories_model_1.default.findById(id);
-});
+const fetchSingleCategory = async (id) => {
+    return await categories_model_1.default.findById(id);
+};
 exports.fetchSingleCategory = fetchSingleCategory;
-const fetchAllCategories = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield categories_model_1.default.find({ isActive: true });
-});
+const fetchAllCategories = async () => {
+    return await categories_model_1.default.find({ isActive: true });
+};
 exports.fetchAllCategories = fetchAllCategories;

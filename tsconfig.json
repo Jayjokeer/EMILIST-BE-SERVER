@@ -1,18 +1,13 @@
 {
-    "compilerOptions": {
-      "target": "ES6",
-      "module": "commonjs",
-      "strict": true,
-      "esModuleInterop": true,
-      "skipLibCheck": true,
-      "outDir": "./dist",
-      "noEmit": false,
-      "incremental": true,
-      // "tsBuildInfoFile": "./.tsbuildinfo",
-      "noEmitOnError": false, 
-      "moduleResolution": "node"
-      
-    },
-    "include": ["src/**/*"],
-    "exclude": ["node_modules"]
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "incremental": true
   }
+}

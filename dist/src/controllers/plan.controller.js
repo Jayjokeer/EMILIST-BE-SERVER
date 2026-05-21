@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPlansController = exports.createPlanController = void 0;
 const planService = __importStar(require("../services/plan.service"));
@@ -49,18 +40,18 @@ const http_status_codes_1 = require("http-status-codes");
 const success_response_1 = require("../helpers/success-response");
 const plan_enum_1 = require("../enums/plan.enum");
 const error_1 = require("../errors/error");
-exports.createPlanController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.createPlanController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { name, price, duration, perks, offers } = req.body;
-    const data = yield planService.createPlan({ name, price, duration, perks, offers });
+    const data = await planService.createPlan({ name, price, duration, perks, offers });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.getPlansController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.getPlansController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { duration } = req.query;
     if (!duration) {
         throw new error_1.BadRequestError('Duration is required');
     }
     let data;
-    const plans = yield planService.getPlans();
+    const plans = await planService.getPlans();
     if (duration === 'yearly') {
         const data = plans.map((plan) => {
             if (plan.name === plan_enum_1.PlanEnum.basic) {
@@ -75,4 +66,4 @@ exports.getPlansController = (0, error_handler_1.catchAsync)((req, res) => __awa
     }
     data = plans;
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
+});

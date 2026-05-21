@@ -1,88 +1,83 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.findUserWithoutPhoneNumberDetailsById = exports.findUserWithoutDetailsById = exports.findUserUsingUniqueIdEmailUserId = exports.verifyUser = exports.fetchAllUsersAdmin = exports.fetchAllUsersAdminDashboard = exports.fetchUserMutedBusinesses = exports.fetchUserMutedJobs = exports.findSpecificUser = exports.findUserByEmailOrUserNameDirectJob = exports.findUserByEmailOrUserName = exports.findUserByUniqueId = exports.findUserByIdWithPassword = exports.findUserByUserName = exports.updateUserById = exports.findTokenService = exports.createUser = exports.findUserById = exports.findUserByEmail = void 0;
+exports.deleteUser = exports.findUserWithoutPhoneNumberDetailsById = exports.findUserWithoutDetailsById = exports.findUserUsingUniqueIdEmailUserId = exports.verifyUser = exports.fetchAllUsersAdmin = exports.fetchAllUsersAdminDashboard = exports.fetchUserMutedBusinesses = exports.fetchUserMutedJobs = exports.findSpecificUser = exports.findUserByEmailOrUserNameDirectJob = exports.findUserByEmailOrUserName = exports.findUserByUniqueId = exports.findUserByIdWithPassword = exports.findUserByUserName = exports.updateUserById = exports.findTokenService = exports.findCurrentUserById = exports.createUser = exports.findUserById = exports.findUserByEmail = void 0;
 const users_model_1 = __importDefault(require("../models/users.model"));
-const findUserByEmail = (email) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findOne({ email: email });
-});
+const findUserByEmail = async (email) => {
+    return await users_model_1.default.findOne({ email: email });
+};
 exports.findUserByEmail = findUserByEmail;
-const findUserById = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findById(id, { password: 0 }).populate({
+const findUserById = async (id) => {
+    return await users_model_1.default.findById(id, { password: 0 }).populate({
         path: 'businesses',
         select: 'businessId businessName',
     }).populate('wallets')
         .populate('subscription');
-});
+};
 exports.findUserById = findUserById;
-const createUser = (data) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.create(data);
-});
+const createUser = async (data) => {
+    return await users_model_1.default.create(data);
+};
 exports.createUser = createUser;
-const findTokenService = (registrationOtp) => __awaiter(void 0, void 0, void 0, function* () {
-    const tokenData = yield users_model_1.default.findOne({ registrationOtp: registrationOtp });
+const findCurrentUserById = async (id) => {
+    return await users_model_1.default.findById(id).select("fullName uniqueId email language isProfileComplete isVerified");
+};
+exports.findCurrentUserById = findCurrentUserById;
+const findTokenService = async (registrationOtp) => {
+    const tokenData = await users_model_1.default.findOne({ registrationOtp: registrationOtp });
     if (!tokenData)
         return null;
     if (tokenData.otpExpiresAt && tokenData.otpExpiresAt.getTime() < Date.now()) {
         return null;
     }
     return tokenData;
-});
+};
 exports.findTokenService = findTokenService;
-const updateUserById = (id, data) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findByIdAndUpdate(id, { $set: Object.assign({}, data) }, { new: true });
-});
+const updateUserById = async (id, data) => {
+    return await users_model_1.default.findByIdAndUpdate(id, { $set: { ...data } }, { new: true });
+};
 exports.updateUserById = updateUserById;
-const findUserByUserName = (userName) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findOne({ userName: userName });
-});
+const findUserByUserName = async (userName) => {
+    return await users_model_1.default.findOne({ userName: userName });
+};
 exports.findUserByUserName = findUserByUserName;
-const findUserByIdWithPassword = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findById(id);
-});
+const findUserByIdWithPassword = async (id) => {
+    return await users_model_1.default.findById(id);
+};
 exports.findUserByIdWithPassword = findUserByIdWithPassword;
-const findUserByUniqueId = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findOne({ uniqueId: id });
-});
+const findUserByUniqueId = async (id) => {
+    return await users_model_1.default.findOne({ uniqueId: id });
+};
 exports.findUserByUniqueId = findUserByUniqueId;
-const findUserByEmailOrUserName = (email, userName) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findOne({ $or: [{ email }, { userName }] });
-});
+const findUserByEmailOrUserName = async (email, userName) => {
+    return await users_model_1.default.findOne({ $or: [{ email }, { userName }] });
+};
 exports.findUserByEmailOrUserName = findUserByEmailOrUserName;
-const findUserByEmailOrUserNameDirectJob = (user) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findOne({ $or: [{ email: user }, { userName: user }] });
-});
+const findUserByEmailOrUserNameDirectJob = async (user) => {
+    return await users_model_1.default.findOne({ $or: [{ email: user }, { userName: user }] });
+};
 exports.findUserByEmailOrUserNameDirectJob = findUserByEmailOrUserNameDirectJob;
-const findSpecificUser = (query) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findOne({
+const findSpecificUser = async (query) => {
+    return await users_model_1.default.findOne({
         $or: [{ userName: query }, { email: query }],
     }).select('-password');
-});
+};
 exports.findSpecificUser = findSpecificUser;
-const fetchUserMutedJobs = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchUserMutedJobs = async (userId) => {
     return users_model_1.default.findById(userId).select('mutedJobs').lean();
-});
+};
 exports.fetchUserMutedJobs = fetchUserMutedJobs;
-const fetchUserMutedBusinesses = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchUserMutedBusinesses = async (userId) => {
     return users_model_1.default.findById(userId).select('mutedBusinesses').lean();
-});
+};
 exports.fetchUserMutedBusinesses = fetchUserMutedBusinesses;
-const fetchAllUsersAdminDashboard = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.countDocuments();
-});
+const fetchAllUsersAdminDashboard = async () => {
+    return await users_model_1.default.countDocuments();
+};
 exports.fetchAllUsersAdminDashboard = fetchAllUsersAdminDashboard;
-const fetchAllUsersAdmin = (page, limit, q, search) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchAllUsersAdmin = async (page, limit, q, search) => {
     const skip = (page - 1) * limit;
     let query = {};
     if (q === "verified") {
@@ -103,33 +98,33 @@ const fetchAllUsersAdmin = (page, limit, q, search) => __awaiter(void 0, void 0,
             { uniqueId: searchRegex },
         ];
     }
-    const totalUsers = yield users_model_1.default.countDocuments(query);
-    const users = yield users_model_1.default.find(query)
+    const totalUsers = await users_model_1.default.countDocuments(query);
+    const users = await users_model_1.default.find(query)
         .skip(skip)
         .limit(limit);
     return { users, totalUsers };
-});
+};
 exports.fetchAllUsersAdmin = fetchAllUsersAdmin;
-const verifyUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findByIdAndUpdate(userId, { $set: { isVerified: true } }, { new: true });
-});
+const verifyUser = async (userId) => {
+    return await users_model_1.default.findByIdAndUpdate(userId, { $set: { isVerified: true } }, { new: true });
+};
 exports.verifyUser = verifyUser;
-const findUserUsingUniqueIdEmailUserId = (identifier) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findOne({
+const findUserUsingUniqueIdEmailUserId = async (identifier) => {
+    return await users_model_1.default.findOne({
         $or: [
             { _id: identifier },
             { username: identifier },
             { uniqueId: identifier },
         ],
     });
-});
+};
 exports.findUserUsingUniqueIdEmailUserId = findUserUsingUniqueIdEmailUserId;
-const findUserWithoutDetailsById = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findById(id, { password: 0 });
-});
+const findUserWithoutDetailsById = async (id) => {
+    return await users_model_1.default.findById(id, { password: 0 });
+};
 exports.findUserWithoutDetailsById = findUserWithoutDetailsById;
-const findUserWithoutPhoneNumberDetailsById = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findById(id, { password: 0,
+const findUserWithoutPhoneNumberDetailsById = async (id) => {
+    return await users_model_1.default.findById(id, { password: 0,
         number1: 0,
         number2: 0,
         whatsAppNo: 0,
@@ -155,9 +150,9 @@ const findUserWithoutPhoneNumberDetailsById = (id) => __awaiter(void 0, void 0, 
         createdAt: 0,
         updatedAt: 0,
     });
-});
+};
 exports.findUserWithoutPhoneNumberDetailsById = findUserWithoutPhoneNumberDetailsById;
-const deleteUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield users_model_1.default.findByIdAndDelete(userId);
-});
+const deleteUser = async (userId) => {
+    return await users_model_1.default.findByIdAndDelete(userId);
+};
 exports.deleteUser = deleteUser;

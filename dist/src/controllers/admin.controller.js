@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -75,32 +66,32 @@ const order_enum_1 = require("../enums/order.enum");
 const adminService = __importStar(require("../services/admin.service"));
 const hashing_1 = require("../utils/hashing");
 const jwt_1 = require("../utils/jwt");
-exports.adminDashboardController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.adminDashboardController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { currency, year } = req.query;
     const data = {
-        totalProducts: yield productService.fetchAllProductsForAdmin(),
-        totalUsers: yield userService.fetchAllUsersAdminDashboard(),
-        totalJobs: yield jobService.fetchAllJobsForAdminDashboard(),
-        totalPrivateExperts: yield privateExpertService.fetchCountPrivateExpertsAdminDashboard(),
-        totalTransactions: yield transactionService.fetchTransactionChartAdminDashboard(year, currency),
+        totalProducts: await productService.fetchAllProductsForAdmin(),
+        totalUsers: await userService.fetchAllUsersAdminDashboard(),
+        totalJobs: await jobService.fetchAllJobsForAdminDashboard(),
+        totalPrivateExperts: await privateExpertService.fetchCountPrivateExpertsAdminDashboard(),
+        totalTransactions: await transactionService.fetchTransactionChartAdminDashboard(year, currency),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page, limit, q, search } = req.query;
     let userData = [];
-    const { users, totalUsers } = yield userService.fetchAllUsersAdmin(page, limit, q, search);
+    const { users, totalUsers } = await userService.fetchAllUsersAdmin(page, limit, q, search);
     for (const user of users) {
-        const subcription = yield subscriptionService.getSubscriptionById(String(user.subscription));
-        const plan = yield planService.getPlanById(String(subcription.planId));
-        const transactions = yield transactionService.fetchAllUserEarningsAdmin(String(user._id));
+        const subcription = await subscriptionService.getSubscriptionById(String(user.subscription));
+        const plan = await planService.getPlanById(String(subcription.planId));
+        const transactions = await transactionService.fetchAllUserEarningsAdmin(String(user._id));
         userData.push({
             userName: user.userName,
             userId: user._id,
             name: user.fullName,
             email: user.email,
             status: user.status,
-            subscription: (plan === null || plan === void 0 ? void 0 : plan.name) || null,
+            subscription: plan?.name || null,
             dateRegistered: user.createdAt,
             totalEarnings: transactions || 0,
         });
@@ -113,10 +104,10 @@ exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)((req, res
         totalPages: Math.ceil(totalUsers / limit),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.verifyUserAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.verifyUserAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { verificationId } = req.query;
-    const verification = yield verificationService.findById(verificationId);
+    const verification = await verificationService.findById(verificationId);
     if (!verification) {
         throw new error_1.NotFoundError("Verification not found");
     }
@@ -124,27 +115,27 @@ exports.verifyUserAdminController = (0, error_handler_1.catchAsync)((req, res) =
         throw new error_1.BadRequestError("You cannot complete this verification as it has not been paid");
     }
     if (verification.type === user_enums_1.VerificationEnum.user) {
-        yield userService.verifyUser(String(verification.userId));
+        await userService.verifyUser(String(verification.userId));
         verification.status = jobs_enum_1.QuoteStatusEnum.accepted;
-        yield verification.save();
+        await verification.save();
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, 'User verified successfully');
     }
     else if (verification.type === user_enums_1.VerificationEnum.business) {
-        yield businessService.verifyBusinessAdmin(String(verification.businessId));
+        await businessService.verifyBusinessAdmin(String(verification.businessId));
         verification.status = jobs_enum_1.QuoteStatusEnum.accepted;
-        yield verification.save();
+        await verification.save();
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, 'Business verified successfully');
     }
     else if (verification.type === user_enums_1.VerificationEnum.certificate) {
-        const { message, certificate } = yield businessService.verifyCertificateAdmin(String(verification.businessId), String(verification.certificateId));
+        const { message, certificate } = await businessService.verifyCertificateAdmin(String(verification.businessId), String(verification.certificateId));
         verification.status = jobs_enum_1.QuoteStatusEnum.accepted;
-        yield verification.save();
+        await verification.save();
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, message);
     }
-}));
-exports.suspendUserAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.suspendUserAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { userId } = req.params;
-    const user = yield userService.findUserById(userId);
+    const user = await userService.findUserById(userId);
     if (!user) {
         throw new error_1.NotFoundError("User not found");
     }
@@ -154,13 +145,13 @@ exports.suspendUserAdminController = (0, error_handler_1.catchAsync)((req, res) 
     else {
         user.status = user_enums_1.UserStatus.suspended;
     }
-    yield user.save();
+    await user.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, 'User suspended successfully');
-}));
-exports.fetchUserDetails = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchUserDetails = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { userId } = req.params;
     const { q } = req.query;
-    const user = yield userService.findUserById(userId);
+    const user = await userService.findUserById(userId);
     if (!user) {
         throw new error_1.NotFoundError("User not found");
     }
@@ -183,40 +174,40 @@ exports.fetchUserDetails = (0, error_handler_1.catchAsync)((req, res) => __await
             languages: user.language,
             location: user.location,
         };
-        data = Object.assign(Object.assign({}, data), payload);
+        data = { ...data, ...payload };
     }
     else if (q === "services") {
-        const business = yield businessService.fetchAllUserBusinessesAdmin(String(user._id));
+        const business = await businessService.fetchAllUserBusinessesAdmin(String(user._id));
         const payload = {
             businesses: business,
         };
-        data = Object.assign(Object.assign({}, data), payload);
+        data = { ...data, ...payload };
     }
     else if (q === "jobs") {
-        const jobs = yield jobService.fetchAllUserJobsAdmin(String(user._id));
+        const jobs = await jobService.fetchAllUserJobsAdmin(String(user._id));
         const payload = {
             jobs,
         };
-        data = Object.assign(Object.assign({}, data), payload);
+        data = { ...data, ...payload };
     }
     else if (q === "projects") {
-        const projects = yield projectService.fetchAllUserProjectsAdmin(String(user._id));
+        const projects = await projectService.fetchAllUserProjectsAdmin(String(user._id));
         const payload = {
             projects,
         };
-        data = Object.assign(Object.assign({}, data), payload);
+        data = { ...data, ...payload };
     }
     else if (q === "materials") {
-        const materials = yield productService.fetchAllUserProductsAdmin(String(user._id));
+        const materials = await productService.fetchAllUserProductsAdmin(String(user._id));
         const payload = {
             materials,
         };
-        data = Object.assign(Object.assign({}, data), payload);
+        data = { ...data, ...payload };
     }
     else if (q === "subscriptions") {
-        const subscription = yield subscriptionService.getActiveSubscriptionWithoutDetails(String(user._id));
-        const subscriptionTransactions = yield transactionService.fetchTransactionsByService(String(user._id), transaction_enum_1.ServiceEnum.subscription);
-        const plan = yield planService.getPlanById(String(subscription.planId));
+        const subscription = await subscriptionService.getActiveSubscriptionWithoutDetails(String(user._id));
+        const subscriptionTransactions = await transactionService.fetchTransactionsByService(String(user._id), transaction_enum_1.ServiceEnum.subscription);
+        const plan = await planService.getPlanById(String(subscription.planId));
         console.log(plan);
         const payload = {
             subscription,
@@ -224,53 +215,52 @@ exports.fetchUserDetails = (0, error_handler_1.catchAsync)((req, res) => __await
             price: plan.price,
             subscriptionTransactions,
         };
-        data = Object.assign(Object.assign({}, data), payload);
+        data = { ...data, ...payload };
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.addUserAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.addUserAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { userName, email, } = req.body;
-    const isEmailExists = yield authService.findUserByEmail(email);
+    const isEmailExists = await authService.findUserByEmail(email);
     if (isEmailExists)
         throw new error_1.BadRequestError("User with email already exists!");
-    const isUserNameExists = yield authService.findUserByUserName(userName);
+    const isUserNameExists = await authService.findUserByUserName(userName);
     if (isUserNameExists)
         throw new error_1.BadRequestError("UserName already exists!");
     const user = {
-        userName,
         email: email.toLowerCase(),
         uniqueId: (0, utility_1.generateShortUUID)()
     };
-    const data = yield authService.createUser(user);
-    yield data.save();
+    const data = await authService.createUser(user);
+    await data.save();
     const walletPayload = {
         userId: data._id,
         isDefault: true
     };
-    const wallet = yield walletService.createWallet(walletPayload);
+    const wallet = await walletService.createWallet(walletPayload);
     data.wallets.push(wallet._id);
-    yield data.save();
-    const plan = yield planService.getPlanByName(plan_enum_1.PlanEnum.basic);
+    await data.save();
+    const plan = await planService.getPlanByName(plan_enum_1.PlanEnum.basic);
     if (!plan)
         throw new error_1.NotFoundError("Plan not found!");
-    const subscription = yield subscriptionService.createSubscription({ userId: data._id, planId: plan._id, startDate: new Date(), perks: plan.perks });
+    const subscription = await subscriptionService.createSubscription({ userId: data._id, planId: plan._id, startDate: new Date(), perks: plan.perks });
     data.subscription = subscription._id;
-    yield data.save();
+    await data.save();
     const { html, subject } = (0, templates_1.welcomeMessageAdmin)(userName);
     (0, send_email_1.sendEmail)(email, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.fetchJobsAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchJobsAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { status, page = 1, limit = 10, search } = req.query;
     let allJobs = [];
-    const { totalJobs, jobs } = yield jobService.fetchAllJobsAdmin(status, page, limit, search);
+    const { totalJobs, jobs } = await jobService.fetchAllJobsAdmin(status, page, limit, search);
     for (const job of jobs) {
-        const user = yield userService.findUserById(job.userId);
+        const user = await userService.findUserById(job.userId);
         allJobs.push({
             jobId: job._id,
             title: job.title,
-            poster: user === null || user === void 0 ? void 0 : user.fullName,
-            userName: user === null || user === void 0 ? void 0 : user.userName,
+            poster: user?.fullName,
+            userName: user?.userName,
             createdAt: job.createdAt,
             status: job.status,
             type: job.type,
@@ -283,13 +273,13 @@ exports.fetchJobsAdminController = (0, error_handler_1.catchAsync)((req, res) =>
         totalPages: Math.ceil(totalJobs / limit),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchSingleJobAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchSingleJobAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { jobId } = req.params;
-    const data = yield jobService.fetchJobByIdWithDetails(jobId);
+    const data = await jobService.fetchJobByIdWithDetails(jobId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.createJobAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.createJobAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const job = req.body;
     const files = req.files;
     if (files && files.length > 0) {
@@ -303,38 +293,38 @@ exports.createJobAdminController = (0, error_handler_1.catchAsync)((req, res) =>
     if (!req.body.identifier) {
         throw new error_1.BadRequestError('uniqueId, user ID or email is required!');
     }
-    user = yield authService.findUserUsingUniqueIdEmailUserId(req.body.identifier);
+    user = await authService.findUserUsingUniqueIdEmailUserId(req.body.identifier);
     if (!user)
         throw new error_1.NotFoundError("User not found!");
     if (job.type == jobs_enum_1.JobType.direct && (job.email || job.userName)) {
         const userId = user.id;
         job.userId = userId;
-        const data = yield jobService.createJob(job);
+        const data = await jobService.createJob(job);
         const payload = {
             job: data._id,
             user: user._id,
             creator: userId,
             directJobStatus: project_enum_1.ProjectStatusEnum.pending,
         };
-        const project = yield projectService.createProject(payload);
+        const project = await projectService.createProject(payload);
         data.applications = [];
         data.applications.push(String(project._id));
         data.acceptedApplicationId = String(project._id);
         data.save();
         const { html, subject } = (0, templates_1.directJobApplicationMessage)(user.userName, req.user.userName, String(data._id));
-        yield (0, send_email_1.sendEmail)(user.email, subject, html);
+        await (0, send_email_1.sendEmail)(user.email, subject, html);
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
     else {
         job.userId = String(user._id);
-        const data = yield jobService.createJob(job);
+        const data = await jobService.createJob(job);
         (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
-}));
-exports.fetchAllMaterialsAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchAllMaterialsAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { q, page = 1, limit = 10, search } = req.query;
     let products;
-    const { materials, totalMaterials } = yield productService.fetchAllProductsAdmin(page, limit, search);
+    const { materials, totalMaterials } = await productService.fetchAllProductsAdmin(page, limit, search);
     if (q == 'inStock') {
         products = materials.filter((material) => material.availableQuantity > 0);
     }
@@ -351,15 +341,15 @@ exports.fetchAllMaterialsAdminController = (0, error_handler_1.catchAsync)((req,
         totalPages: Math.ceil(totalMaterials / limit),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchSingleMaterialController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchSingleMaterialController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { materialId } = req.params;
-    const data = yield productService.fetchProductByIdWithDetails(materialId);
+    const data = await productService.fetchProductByIdWithDetails(materialId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchSubscriptionsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchSubscriptionsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { limit = 10, page = 1, search = "", status } = req.query;
-    const { subscriptions, totalSubscriptions, totalBasic, totalSilver, totalGold, totalPlatinum, } = yield subscriptionService.fetchAllSubscriptionsAdmin(Number(limit), Number(page), search, status);
+    const { subscriptions, totalSubscriptions, totalBasic, totalSilver, totalGold, totalPlatinum, } = await subscriptionService.fetchAllSubscriptionsAdmin(Number(limit), Number(page), search, status);
     const data = {
         subscriptions,
         totalSubscriptions,
@@ -371,10 +361,10 @@ exports.fetchSubscriptionsController = (0, error_handler_1.catchAsync)((req, res
         totalPages: Math.ceil(totalSubscriptions / Number(limit)),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchAllTransactionsAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchAllTransactionsAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { limit, page, search } = req.query;
-    const { transactions, totalTransactions } = yield transactionService.fetchAllTransactionsAdmin(limit, page, search);
+    const { transactions, totalTransactions } = await transactionService.fetchAllTransactionsAdmin(limit, page, search);
     const data = {
         transactions,
         totalTransactions,
@@ -382,21 +372,21 @@ exports.fetchAllTransactionsAdminController = (0, error_handler_1.catchAsync)((r
         totalPages: Math.ceil(totalTransactions / limit),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchSingleTransactionAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchSingleTransactionAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { transactionId } = req.params;
-    const data = yield transactionService.fetchTransactionAdmin(transactionId);
+    const data = await transactionService.fetchTransactionAdmin(transactionId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.updateVatController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.updateVatController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { vat } = req.body;
-    const data = yield transactionService.changeVatServiceAdmin(vat);
+    const data = await transactionService.changeVatServiceAdmin(vat);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchAllPrivateExpertsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchAllPrivateExpertsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
-    const experts = yield privateExpertService.fetchAllPrivateExpertsAdminDashboard(page, limit);
-    const totalExperts = yield privateExpertService.fetchCountPrivateExpertsAdminDashboard();
+    const experts = await privateExpertService.fetchAllPrivateExpertsAdminDashboard(page, limit);
+    const totalExperts = await privateExpertService.fetchCountPrivateExpertsAdminDashboard();
     const totalLikedExperts = experts.length;
     const data = {
         experts,
@@ -405,20 +395,20 @@ exports.fetchAllPrivateExpertsController = (0, error_handler_1.catchAsync)((req,
         page,
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchPrivateExpertByIdController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchPrivateExpertByIdController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { id } = req.params;
-    const data = yield privateExpertService.fetchPrivateExpertById(id);
+    const data = await privateExpertService.fetchPrivateExpertById(String(id));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.updateJobPaymentStatusController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.updateJobPaymentStatusController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { jobId } = req.params;
     const { status, milestoneId } = req.body;
     if (!jobId && !milestoneId) {
         throw new error_1.NotFoundError("Ids required!");
     }
     ;
-    const job = yield jobService.fetchJobById(String(jobId));
+    const job = await jobService.fetchJobById(String(jobId));
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
     const milestone = job.milestones.find((milestone) => String(milestone._id) === milestoneId);
@@ -429,56 +419,56 @@ exports.updateJobPaymentStatusController = (0, error_handler_1.catchAsync)((req,
     if (status === jobs_enum_1.MilestonePaymentStatus.paid) {
         milestone.datePaid = new Date();
         milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.paid;
-        const transaction = yield transactionService.fetchSingleTransactionByMilestoneId(String(milestone._id));
+        const transaction = await transactionService.fetchSingleTransactionByMilestoneId(String(milestone._id));
         if (!transaction) {
             throw new error_1.NotFoundError('Transaction not found!');
         }
         transaction.status = transaction_enum_1.TransactionEnum.completed;
         transaction.isSettled = true;
-        yield transaction.save();
+        await transaction.save();
     }
-    yield job.save();
+    await job.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, job);
-}));
-exports.addCategoriesController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.addCategoriesController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { category } = req.body;
     const payload = {
         category,
     };
-    const data = yield productService.createCategory(payload);
+    const data = await productService.createCategory(payload);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-}));
-exports.deleteCategoryController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.deleteCategoryController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { id } = req.params;
-    yield productService.deleteCategory(id);
+    await productService.deleteCategory(String(id));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Category deleted successfully");
-}));
-exports.fetchSingleCategoryController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchSingleCategoryController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { id } = req.params;
-    const data = yield productService.fetchSingleCategory(id);
+    const data = await productService.fetchSingleCategory(String(id));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchAllCategoriesController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const data = yield productService.fetchAllCategories();
+});
+exports.fetchAllCategoriesController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const data = await productService.fetchAllCategories();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchUserAccountDetailsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchUserAccountDetailsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { userId } = req.params;
-    const user = yield userService.findUserById(userId);
+    const user = await userService.findUserById(String(userId));
     if (!user) {
         throw new error_1.NotFoundError("user not found");
     }
     const data = {
-        accountNumber: user === null || user === void 0 ? void 0 : user.accountDetails.number,
-        bank: user === null || user === void 0 ? void 0 : user.accountDetails.bank,
-        holderName: user === null || user === void 0 ? void 0 : user.accountDetails.holdersName
+        accountNumber: user?.accountDetails.number,
+        bank: user?.accountDetails.bank,
+        holderName: user?.accountDetails.holdersName
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchUserSubscriptionsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchUserSubscriptionsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { limit, page } = req.query;
     const { userId } = req.params;
-    const { subscriptions, totalSubscriptions } = yield subscriptionService.fetchAllUserSubscriptionsAdmin(limit, page, userId);
+    const { subscriptions, totalSubscriptions } = await subscriptionService.fetchAllUserSubscriptionsAdmin(limit, page, userId);
     const data = {
         subscriptions,
         totalSubscriptions,
@@ -486,34 +476,34 @@ exports.fetchUserSubscriptionsController = (0, error_handler_1.catchAsync)((req,
         totalPages: Math.ceil(totalSubscriptions / limit),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.fetchAllVerificationsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchAllVerificationsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { limit, page } = req.query;
-    const data = yield verificationService.fetchAllVerifications(page, limit);
+    const data = await verificationService.fetchAllVerifications(page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
-exports.createAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.createAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { fullName, mobile, email, password } = req.body;
-    const isEmailExists = yield adminService.getAdminByEmail(email.toLowerCase());
+    const isEmailExists = await adminService.getAdminByEmail(email.toLowerCase());
     if (isEmailExists) {
         throw new error_1.BadRequestError('Email exists');
     }
-    const encryptPwd = yield (0, hashing_1.hashPassword)(password);
-    const data = yield adminService.createAdmin({
+    const encryptPwd = await (0, hashing_1.hashPassword)(password);
+    const data = await adminService.createAdmin({
         fullName,
         mobile,
         email: email.toLowerCase(),
         password: encryptPwd
     });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, "Admin created");
-}));
-exports.loginAdminController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.loginAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { email, password } = req.body;
-    const foundUser = yield adminService.getAdminByEmail(email.toLowerCase());
+    const foundUser = await adminService.getAdminByEmail(email.toLowerCase());
     if (!foundUser)
         throw new error_1.NotFoundError("Invalid credentials!");
     const userPwd = foundUser.password;
-    const pwdCompare = yield (0, hashing_1.comparePassword)(password, userPwd);
+    const pwdCompare = await (0, hashing_1.comparePassword)(password, userPwd);
     if (!pwdCompare)
         throw new error_1.NotFoundError("Invalid credentials!");
     if (foundUser.status == user_enums_1.UserStatus.deactivated) {
@@ -525,44 +515,43 @@ exports.loginAdminController = (0, error_handler_1.catchAsync)((req, res) => __a
     //   if(foundUser.isEmailVerified == false){
     //     throw new BadRequestError("Kindly verify your email!");
     //   }
-    const token = yield (0, jwt_1.generateJWTwithExpiryDate)({
+    const token = await (0, jwt_1.generateJWTwithExpiryDate)({
         email: foundUser.email,
         id: foundUser._id,
-        userName: foundUser.fullName
     });
-    const userData = yield authService.findUserById(String(foundUser._id));
+    const userData = await authService.findUserById(String(foundUser._id));
     const user = {
         token,
         userData
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, user);
-}));
-exports.changeStatusAdmin = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.changeStatusAdmin = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { status, id } = req.body;
-    const admin = yield adminService.getAdminById(id);
+    const admin = await adminService.getAdminById(id);
     if (!admin) {
         throw new error_1.NotFoundError('Admin not found');
     }
     admin.status = status;
-    yield admin.save();
+    await admin.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Admin status changed");
-}));
-exports.forgetPasswordController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.forgetPasswordController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { email } = req.body;
-    const foundUser = yield adminService.getAdminByEmail(email.toLowerCase());
+    const foundUser = await adminService.getAdminByEmail(email.toLowerCase());
     if (!foundUser)
         throw new error_1.NotFoundError("Admin not found!");
-    const { otp, otpExpiryTime } = yield (0, utility_1.generateOTPData)(String(foundUser._id));
+    const { otp, otpExpiryTime } = await (0, utility_1.generateOTPData)(String(foundUser._id));
     foundUser.otpExpiresAt = otpExpiryTime;
     foundUser.passwordResetOtp = otp;
-    yield foundUser.save();
+    await foundUser.save();
     const { html, subject } = (0, templates_1.passwordResetMessage)(String(foundUser.fullName), otp);
-    yield (0, send_email_1.sendEmail)(email, subject, html);
+    await (0, send_email_1.sendEmail)(email, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Password reset OTP sent to your email.");
-}));
-exports.resetPasswordController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.resetPasswordController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { email, otp, newPassword } = req.body;
-    const foundUser = yield adminService.getAdminByEmail(email.toLowerCase());
+    const foundUser = await adminService.getAdminByEmail(email.toLowerCase());
     if (!foundUser)
         throw new error_1.NotFoundError("User not found!");
     if (foundUser.passwordResetOtp !== otp)
@@ -571,19 +560,19 @@ exports.resetPasswordController = (0, error_handler_1.catchAsync)((req, res) => 
     if (foundUser.otpExpiresAt && Date.now() > expiresAt) {
         throw new error_1.BadRequestError("OTP expired, request a new one.");
     }
-    const hashedPassword = yield (0, hashing_1.hashPassword)(newPassword);
+    const hashedPassword = await (0, hashing_1.hashPassword)(newPassword);
     foundUser.password = hashedPassword;
     foundUser.passwordResetOtp = undefined;
     foundUser.otpExpiresAt = undefined;
     if (foundUser.isEmailVerified == false) {
         foundUser.isEmailVerified = true;
     }
-    yield foundUser.save();
+    await foundUser.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Password reset successfully!");
-}));
-exports.fetchAdminsController = (0, error_handler_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+exports.fetchAdminsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page = 1, limit = 10, search } = req.query;
-    const { admins, totalAdmins } = yield adminService.fetchAllAdmins(Number(page), Number(limit), String(search));
+    const { admins, totalAdmins } = await adminService.fetchAllAdmins(Number(page), Number(limit), String(search));
     const data = {
         admins,
         totalAdmins,
@@ -591,4 +580,4 @@ exports.fetchAdminsController = (0, error_handler_1.catchAsync)((req, res) => __
         totalPages: Math.ceil(totalAdmins / Number(limit)),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-}));
+});

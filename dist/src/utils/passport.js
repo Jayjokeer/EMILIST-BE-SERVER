@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -30,22 +21,22 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
     clientID: config_1.config.googleClientId,
     clientSecret: config_1.config.googleClientSecret,
     callbackURL: `${config_1.config.baseUrl}/api/v1/auth/google/callback`,
-}, (accessToken, refreshToken, profile, done) => __awaiter(void 0, void 0, void 0, function* () {
-    const existingUserByGoogleId = yield users_model_1.default.findOne({ googleId: profile.id });
+}, async (accessToken, refreshToken, profile, done) => {
+    const existingUserByGoogleId = await users_model_1.default.findOne({ googleId: profile.id });
     console.log(existingUserByGoogleId);
     if (existingUserByGoogleId) {
         existingUserByGoogleId.accessToken = accessToken;
-        yield existingUserByGoogleId.save();
+        await existingUserByGoogleId.save();
         return done(null, existingUserByGoogleId);
     }
-    const existingUserByEmail = yield users_model_1.default.findOne({ email: profile.emails[0].value });
+    const existingUserByEmail = await users_model_1.default.findOne({ email: profile.emails[0].value });
     console.log(existingUserByEmail);
     if (existingUserByEmail) {
         existingUserByEmail.accessToken = accessToken;
-        yield existingUserByEmail.save();
+        await existingUserByEmail.save();
         return done(null, existingUserByEmail);
     }
-    const newUser = yield new users_model_1.default({
+    const newUser = await new users_model_1.default({
         googleId: profile.id,
         userName: profile.displayName,
         email: profile.emails[0].value,
@@ -54,7 +45,7 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
         accessToken: accessToken
     }).save();
     return done(null, newUser);
-})));
+}));
 // passport.serializeUser((user: Express.User, done) => {
 //   done(null, user);
 // });
