@@ -1,6 +1,6 @@
 import { ExpertTypeEnum } from "../enums/business.enum";
 import { BadRequestError, NotFoundError } from "../errors/error";
-import IBusiness from "../interfaces/business.interface";
+import IBusiness, { BusinessProfileDto, SetupServiceDto, VerifyExpertiseDto } from "../interfaces/business.interface";
 import Business from "../models/business.model";
 import Review from "../models/review.model";
 import * as userService from "./auth.service";
@@ -9,6 +9,9 @@ import BusinessLike from "../models/businessLike.model";
 import Projects from "../models/project.model";
 import { JobStatusEnum } from "../enums/jobs.enum";
 import { ProjectStatusEnum } from "../enums/project.enum";
+import { Types } from "mongoose";
+import Users from "../models/users.model";
+import { assertAllProfileFieldsPresent, assertServiceFieldsPresent } from "../helpers/validation.helper";
 
 export const createBusiness = async (data:  IBusiness) =>{
     return await Business.create(data);
@@ -635,4 +638,259 @@ export const deleteBusinessItem = async (
     default:
       throw new BadRequestError("Invalid itemType provided");
   }
+};
+
+export const createBusinessProfile = async (
+  userId: string,
+  dto: BusinessProfileDto
+) => {
+  const userObjectId = new Types.ObjectId(userId);
+ 
+  const user = await Users.findById(userObjectId).select(
+    'isProfileComplete firstName lastName mobile countryCode language houseAddress city state country bio displayImage'
+  );
+  if (!user) throw new Error('User not found');
+ 
+  const hasProfile = user.isProfileComplete === true;
+  let businessSet: Record<string, unknown>;
+ 
+  if (!hasProfile) {
+    assertAllProfileFieldsPresent(dto);
+ 
+    const payloads = userService.buildProfilePayload(dto);
+ 
+    await Users.findByIdAndUpdate(
+      userObjectId,
+      { $set: { ...payloads.userSet, isProfileComplete: true } },
+      { runValidators: true }
+    );
+ 
+    businessSet = payloads.businessSet;
+  } else {
+    const { businessSet: fromUser } = userService.buildProfilePayload({
+      firstName:    user.firstName,
+      lastName:     user.lastName,
+      mobile:       user.mobile,
+      countryCode:  user.countryCode,
+      language:     user.language,
+      houseAddress: user.houseAddress,
+      city:         user.city,
+      state:        user.state,
+      country:      user.country,
+      bio:          user.bio,
+      displayImage: user.displayImage,
+    });
+ 
+    businessSet = fromUser;
+  }
+ 
+  const business = await Business.create({
+    userId: userObjectId,
+    ...businessSet,
+  });
+ 
+  await Users.findByIdAndUpdate(userObjectId, {
+    $addToSet: { businesses: business._id },
+  });
+ 
+  return { profileCreated: !hasProfile, business };
+};
+
+export const setupService = async (
+  userId: string,
+  businessId: string,
+  dto: SetupServiceDto
+) => {
+  const userObjectId = new Types.ObjectId(userId);
+ 
+  assertServiceFieldsPresent(dto);
+ 
+  let businessAddress = dto.businessAddress;
+  let businessState   = dto.businessState;
+  let businessCountry = dto.businessCountry;
+ 
+  if (dto.sameAsProfile) {
+    const user = await Users.findById(userObjectId).select(
+      'houseAddress state country'
+    );
+    if (!user) throw new Error('User not found');
+    businessAddress = user.houseAddress ?? dto.businessAddress;
+    businessState   = user.state        ?? dto.businessState;
+    businessCountry = user.country      ?? dto.businessCountry;
+  }
+ 
+  const businessImages = (dto.businessImages ?? []).map((url) => ({
+    imageUrl: url,
+  }));
+ 
+  const serviceSet: Record<string, unknown> = {
+    services:            dto.services,
+    coverageArea:        dto.coverageArea,
+    businessName:        dto.businessName.trim(),
+    yearFounded:         dto.yearFounded.trim(),
+    numberOfEmployee:    dto.numberOfEmployee,
+    businessAddress:     businessAddress.trim(),
+    businessState:       businessState.trim(),
+    businessCountry:     businessCountry.trim(),
+    startingPrice:       dto.startingPrice,
+    currency:            dto.currency.trim(),
+    rateUnit:            dto.rateUnit.trim(),
+    noticePeriod:        dto.noticePeriod.trim(),
+    businessDescription: dto.businessDescription.trim(),
+    ...(businessImages.length > 0 && { businessImages }),
+  };
+ 
+  const business = await Business.findOneAndUpdate(
+    { _id: new Types.ObjectId(businessId), userId: userObjectId },
+    { $set: serviceSet },
+    { new: true, runValidators: true }
+  );
+ 
+  if (!business) throw new Error('Business not found');
+  return business;
+};
+
+export const updateService = async (
+  userId: string,
+  businessId: string,
+  dto: Partial<SetupServiceDto>
+) => {
+  const userObjectId = new Types.ObjectId(userId);
+ 
+  if (dto.coverageArea && dto.coverageArea.length > 5) {
+    throw new Error('Coverage area cannot exceed 5 locations');
+  }
+  if (dto.businessImages && dto.businessImages.length > 5) {
+    throw new Error('You can upload a maximum of 5 business images');
+  }
+ 
+  const serviceSet: Record<string, unknown> = {};
+ 
+  if (dto.services)                               serviceSet.services            = dto.services;
+  if (dto.coverageArea)                           serviceSet.coverageArea        = dto.coverageArea;
+  if (dto.businessName?.trim())                   serviceSet.businessName        = dto.businessName.trim();
+  if (dto.yearFounded?.trim())                    serviceSet.yearFounded         = dto.yearFounded.trim();
+  if (dto.numberOfEmployee !== undefined)         serviceSet.numberOfEmployee    = dto.numberOfEmployee;
+  if (dto.startingPrice    !== undefined)         serviceSet.startingPrice       = dto.startingPrice;
+  if (dto.currency?.trim())                       serviceSet.currency            = dto.currency.trim();
+  if (dto.rateUnit?.trim())                       serviceSet.rateUnit            = dto.rateUnit.trim();
+  if (dto.noticePeriod?.trim())                   serviceSet.noticePeriod        = dto.noticePeriod.trim();
+  if (dto.businessDescription?.trim())            serviceSet.businessDescription = dto.businessDescription.trim();
+ 
+  if (dto.sameAsProfile) {
+    const user = await Users.findById(userObjectId).select('houseAddress state country');
+    if (!user) throw new Error('User not found');
+    serviceSet.businessAddress = user.houseAddress;
+    serviceSet.businessState   = user.state;
+    serviceSet.businessCountry = user.country;
+  } else {
+    if (dto.businessAddress?.trim()) serviceSet.businessAddress = dto.businessAddress.trim();
+    if (dto.businessState?.trim())   serviceSet.businessState   = dto.businessState.trim();
+    if (dto.businessCountry?.trim()) serviceSet.businessCountry = dto.businessCountry.trim();
+  }
+ 
+  if (dto.businessImages) {
+    serviceSet.businessImages = dto.businessImages.map((url) => ({ imageUrl: url }));
+  }
+ 
+  const business = await Business.findOneAndUpdate(
+    { _id: new Types.ObjectId(businessId), userId: userObjectId },
+    { $set: serviceSet },
+    { new: true, runValidators: true }
+  );
+ 
+  if (!business) throw new Error('Business not found');
+  return business;
+};
+
+export const verifyExpertise = async (
+  userId: string,
+  dto: VerifyExpertiseDto,
+  options: { replace?: boolean; businessId?: string } = {}
+) => {
+  const userObjectId = new Types.ObjectId(userId);
+  const { replace = false, businessId } = options;
+ 
+  const filter = businessId
+    ? { _id: new Types.ObjectId(businessId), userId: userObjectId }
+    : { userId: userObjectId };
+ 
+  const business = await Business.findOne(filter).sort({ createdAt: -1 });
+  if (!business) {
+    throw new Error('Business not found. Complete business setup first.');
+  }
+ 
+  if (dto.certificates !== undefined) {
+    if (replace) {
+      business.certification = dto.certificates as any;
+    } else {
+      business.certification?.push(...(dto.certificates as any[]));
+    }
+  }
+ 
+  if (dto.memberships !== undefined) {
+    if (replace) {
+      business.membership = dto.memberships as any;
+    } else {
+      business.membership?.push(...(dto.memberships as any[]));
+    }
+  }
+ 
+  if (dto.insurances !== undefined) {
+    if (replace) {
+      business.insurance = dto.insurances as any;
+    } else {
+      business.insurance?.push(...(dto.insurances as any[]));
+    }
+  }
+ 
+  await business.save();
+  return business;
+};
+ 
+
+export const removeExpertiseItem = async (
+  userId: string,
+  section: 'certification' | 'membership' | 'insurance',
+  itemId: string,
+  businessId?: string
+) => {
+  const userObjectId = new Types.ObjectId(userId);
+ 
+  const filter = businessId
+    ? { _id: new Types.ObjectId(businessId), userId: userObjectId }
+    : { userId: userObjectId };
+ 
+  const business = await Business.findOneAndUpdate(
+    filter,
+    { $pull: { [section]: { _id: new Types.ObjectId(itemId) } } },
+    { new: true }
+  );
+ 
+  if (!business) throw new Error('Business not found');
+  return business;
+};
+ 
+
+export const getExpertiseProfile = async (
+  userId: string,
+  businessId?: string
+) => {
+  const userObjectId = new Types.ObjectId(userId);
+ 
+  const filter = businessId
+    ? { _id: new Types.ObjectId(businessId), userId: userObjectId }
+    : { userId: userObjectId };
+ 
+  const business = await Business.findOne(filter)
+    .sort({ createdAt: -1 })
+    .select('certification membership insurance');
+ 
+  if (!business) return { certification: [], membership: [], insurance: [] };
+ 
+  return {
+    certification: business.certification,
+    membership:    business.membership,
+    insurance:     business.insurance,
+  };
 };

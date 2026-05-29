@@ -68,3 +68,76 @@ export interface IBusiness extends Document {
 }
 
 export default IBusiness;
+
+export type ExpertProfileContext =
+  | 'FIRST_JOIN'
+  | 'SETTINGS_FIRST'
+  | 'SETTINGS_UPDATE'
+  | 'NEW_BUSINESS';
+ 
+ 
+export interface UserProfileDto {
+  firstName?: string;
+  lastName?: string;
+  countryCode?: string;
+  mobile?: string;
+  language?: string;      // stored as languages: [string] on Business
+  houseAddress?: string;  // stored as address on Business
+  city?: string;
+  state?: string;
+  country?: string;
+  bio?: string;
+  displayImage?: string; 
+} 
+ 
+
+export interface BusinessProfileDto extends UserProfileDto {}
+ 
+export interface CertificateDto {
+  certificate?: string;         // uploaded file URL
+  issuingOrganisation: string;
+  verificationNumber?: string;
+  issuingDate?: Date;
+  expiringDate?: Date;
+  isCertificateExpire?: boolean;
+}
+ 
+export interface MembershipDto {
+  organisation: string;
+  positionHeld?: string;
+  startDate?: Date;
+  endDate?: Date;
+  isMembershipExpire?: boolean;
+}
+ 
+export interface InsuranceDto {
+  issuingOrganisation: string;
+  coverage?: string;
+  description?: string;
+}
+ 
+export interface VerifyExpertiseDto {
+  certificates?: CertificateDto[];
+  memberships?: MembershipDto[];
+  insurances?: InsuranceDto[];
+}
+ 
+
+export interface SetupServiceDto {
+  services: string[];
+  coverageArea: string[];
+  sameAsProfile?: boolean;
+  businessName: string;
+  yearFounded: string;
+  numberOfEmployee: number;
+  businessAddress: string;
+  businessState: string;
+  businessCountry: string;
+  startingPrice: number;
+  currency: string;
+  rateUnit: string;
+  noticePeriod: string;
+  businessDescription: string;
+  businessImages?: string[];
+}
+ 

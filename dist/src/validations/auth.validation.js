@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validatePaymentForVerification = exports.validateChangePassword = exports.validateUpdateAccountDetails = exports.validateResetPassword = exports.validateForgetPassword = exports.validateVerifyEmail = exports.validateLoginUser = exports.validateRegisterUser = void 0;
+exports.validateUpdateUser = exports.validatePaymentForVerification = exports.validateChangePassword = exports.validateUpdateAccountDetails = exports.validateResetPassword = exports.validateForgetPassword = exports.validateVerifyEmail = exports.validateLoginUser = exports.validateRegisterUser = void 0;
 const joi_1 = __importDefault(require("joi"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const validateRegisterUser = (req, res, next) => {
@@ -174,3 +174,59 @@ const validatePaymentForVerification = (req, res, next) => {
     next();
 };
 exports.validatePaymentForVerification = validatePaymentForVerification;
+const validateUpdateUser = (req, res, next) => {
+    const schema = joi_1.default.object({
+        firstName: joi_1.default.string().required().messages({
+            "string.base": "First Name must be a string",
+            "string.empty": "first Name is required",
+        }),
+        lastName: joi_1.default.string().required().messages({
+            "string.base": "Last Name must be a string",
+            "string.empty": "Last Name is required",
+        }),
+        gender: joi_1.default.string().required().messages({
+            "string.base": "Gender must be a string",
+            "string.empty": "Gender is required",
+        }),
+        countryCode: joi_1.default.string().required().messages({
+            "string.base": "Country Code must be a string",
+            "string.empty": "Country Code is required",
+        }),
+        language: joi_1.default.string().required().messages({
+            "string.base": "Language must be a string",
+            "string.empty": "Language is required",
+        }),
+        houseAddress: joi_1.default.string().required().messages({
+            "string.base": "House Address must be a string",
+            "string.empty": "House Address is required",
+        }),
+        mobile: joi_1.default.string().required().messages({
+            "string.base": "Mobile must be a string",
+            "string.empty": "Mobile is required",
+        }),
+        city: joi_1.default.string().required().messages({
+            "string.base": "City must be a string",
+            "string.empty": "City is required",
+        }),
+        state: joi_1.default.string().required().messages({
+            "string.base": "State must be a string",
+            "string.empty": "State is required",
+        }),
+        country: joi_1.default.string().required().messages({
+            "string.base": "Country must be a string",
+            "string.empty": "Country is required",
+        }),
+        bio: joi_1.default.string().required().messages({
+            "string.base": "Bio must be a string",
+            "string.empty": "Bio is required",
+        }),
+    });
+    const { error } = schema.validate(req.body, { abortEarly: false });
+    if (error) {
+        const errorMessages = error.details.map((detail) => detail.message);
+        res.status(400).json({ errors: errorMessages });
+        return;
+    }
+    next();
+};
+exports.validateUpdateUser = validateUpdateUser;

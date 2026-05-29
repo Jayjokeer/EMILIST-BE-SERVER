@@ -123,8 +123,16 @@ export const verifyEmailController = catchAsync(async (req: Request, res: Respon
   foundUser.registrationOtp = undefined;
   foundUser.otpExpiresAt = undefined;
   await foundUser.save();
-
-  return successResponse(res, StatusCodes.OK, "Email verified successfully!");
+    const token = await generateJWTwithExpiryDate({
+    email: foundUser.email,
+    id: foundUser._id,
+  });
+  const userData = await authService.findUserById(String(foundUser._id));
+  const user = {
+  token,
+  userData
+};
+  return successResponse(res, StatusCodes.OK, user);
 });
 
 export const forgetPasswordController = catchAsync(async (req: Request, res: Response) => {
@@ -177,13 +185,16 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
   const userId = req.user.id;
   
   const {
-    fullName,
+    firstName,
+    lastName,
     gender,
+    countryCode,
     language,
-    number1,
-    number2,
-    whatsAppNo,
-    location,
+    houseAddress,
+    mobile,
+    city,
+    state,
+    country,
     bio,
   } = req.body;
 
@@ -191,21 +202,24 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
   if (!foundUser) throw new NotFoundError("User not found!");
 
 
-  foundUser.fullName = fullName || foundUser.fullName;
+  foundUser.firstName = firstName || foundUser.firstName;
+  foundUser.lastName = lastName || foundUser.lastName;
   foundUser.gender = gender || foundUser.gender;
   foundUser.language = language || foundUser.language;
-  foundUser.number1 = number1 || foundUser.number1;
-  foundUser.number2 = number2 || foundUser.number2;
-  foundUser.whatsAppNo = whatsAppNo || foundUser.whatsAppNo;
-  foundUser.location = location || foundUser.location;
+  foundUser.mobile = mobile || foundUser.mobile;
+  foundUser.countryCode = countryCode || foundUser.countryCode;
+  foundUser.houseAddress = houseAddress || foundUser.houseAddress;
+  foundUser.city = city || foundUser.city;
   foundUser.bio = bio || foundUser.bio;
+  foundUser.state = state || foundUser.state;
+  foundUser.country = country || foundUser.country;
+  foundUser.isProfileComplete = true;
   if (req.file) {
-     foundUser.profileImage = req.file.path;
+     foundUser.displayImage = req.file.path;
   }
 
   await foundUser.save();
-
-  return successResponse(res, StatusCodes.OK, foundUser);
+  return successResponse(res, StatusCodes.OK, 'User profile updated successfully');
 });
 export const updateAccountDetailsController = catchAsync(async (req: JwtPayload, res: Response) => {
   const email = req.user.email;
@@ -250,10 +264,17 @@ export const changePasswordController = catchAsync(async (req: JwtPayload, res: 
 export const currentUserController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId  = req.user.id;
 
-  const user = await authService.findCurrentUserById(userId);
-  if (!user) throw new NotFoundError("User not found!");
+  const foundUser = await authService.findCurrentUserById(userId);
+  if (!foundUser) throw new NotFoundError("User not found!");
 
-
+  const token = await generateJWTwithExpiryDate({
+    email: foundUser.email,
+    id: foundUser._id,
+  });
+  const user = {
+  token,
+  userData: foundUser
+};
   return successResponse(res, StatusCodes.OK, user);
 });
 export const uploadImage = catchAsync( async(req: Request, res: Response) => {
@@ -603,3 +624,21 @@ export const deleteUserController = catchAsync(async (req: JwtPayload, res: Resp
 
   return successResponse(res, StatusCodes.OK, 'User deleted sucessfully');
 });
+
+export const getProfileContext = catchAsync(async (req: JwtPayload, res: Response) => {
+  const userId = req.user?.id;
+  const forceNewBusiness = req.query.newBusiness === 'true';
+ 
+      const result = await authService.getProfileContextService(
+        userId,
+        forceNewBusiness
+      );
+   return successResponse(res, StatusCodes.OK, result);
+
+  });
+  export const saveUserProfile = catchAsync(async (req: JwtPayload, res: Response) => {
+  const userId = req.user?.id;
+    const result = await authService.saveUserProfile(userId, req.body, req.files);
+   return successResponse(res, StatusCodes.OK, result);
+  });
+

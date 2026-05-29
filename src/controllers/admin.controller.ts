@@ -62,7 +62,7 @@ export const fetchAllUsersAdminController = catchAsync(async (req: JwtPayload, r
          userData.push({
             userName: user.userName,
             userId: user._id,
-            name: user.fullName,
+            name: user.firstName + " " + user.lastName,
             email: user.email,
             status: user.status,
             subscription: plan?.name || null,
@@ -137,11 +137,11 @@ export const fetchUserDetails = catchAsync(async (req: JwtPayload, res: Response
         throw new NotFoundError("User not found");
     }
     let data = {
-        profileImage: user.profileImage,
-        name: user.fullName,
+        profileImage: user.displayImage,
+        name: user.firstName + " " + user.lastName,
         level: user.level,
         uniqueId: user.uniqueId,
-        fullName: user.fullName,
+        fullName: user.firstName + " " + user.lastName,
         status: user.status,
         accountDetails: user.accountDetails,
     };
@@ -149,11 +149,10 @@ export const fetchUserDetails = catchAsync(async (req: JwtPayload, res: Response
     const payload = {
         email: user.email,
         userName: user.userName,
-        phoneNumber: [user.number1, user.number2],
-        whatsappNumber: user.whatsAppNo,
+        phoneNumber: user.mobile,
         bio: user.bio,
         languages: user.language,  
-        location: user.location,
+        location: user.houseAddress,
     };
     data = {...data, ...payload};
     }else if(q === "services"){
@@ -243,7 +242,7 @@ export const fetchJobsAdminController = catchAsync(async(req: JwtPayload, res: R
         allJobs.push( {
             jobId: job._id,
             title: job.title,
-            poster: user?.fullName,
+            poster: user?.firstName + " " + user?.lastName,
             userName: user?.userName, 
             createdAt: job.createdAt,
             status: job.status,

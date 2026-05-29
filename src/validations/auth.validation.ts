@@ -181,3 +181,61 @@ export const validatePaymentForVerification = (req: Request, res: Response, next
     
       next();
     };
+
+export const validateUpdateUser = (req: Request, res: Response, next: NextFunction) => {
+    const schema = Joi.object({
+      firstName: Joi.string().required().messages({
+        "string.base": "First Name must be a string",
+        "string.empty": "first Name is required",
+      }),
+      lastName: Joi.string().required().messages({
+        "string.base": "Last Name must be a string",
+        "string.empty": "Last Name is required",
+      }),
+      gender: Joi.string().required().messages({
+        "string.base": "Gender must be a string",
+        "string.empty": "Gender is required",
+      }),      
+      countryCode: Joi.string().required().messages({
+        "string.base": "Country Code must be a string",
+        "string.empty": "Country Code is required",
+      }),      
+      language: Joi.string().required().messages({
+        "string.base": "Language must be a string",
+        "string.empty": "Language is required",
+      }),      
+      houseAddress: Joi.string().required().messages({
+        "string.base": "House Address must be a string",
+        "string.empty": "House Address is required",
+      }),      
+      mobile: Joi.string().required().messages({
+        "string.base": "Mobile must be a string",
+        "string.empty": "Mobile is required",
+      }),      
+      city: Joi.string().required().messages({
+        "string.base": "City must be a string",
+        "string.empty": "City is required",
+      }),      
+      state: Joi.string().required().messages({
+        "string.base": "State must be a string",
+        "string.empty": "State is required",
+      }),
+      country: Joi.string().required().messages({
+        "string.base": "Country must be a string",
+        "string.empty": "Country is required",
+      }),
+      bio: Joi.string().required().messages({
+        "string.base": "Bio must be a string",
+        "string.empty": "Bio is required",
+      }),
+    });
+  
+    const { error } = schema.validate(req.body, { abortEarly: false });
+    if (error) {
+      const errorMessages = error.details.map((detail) => detail.message);
+       res.status(400).json({ errors: errorMessages });
+       return;
+    }
+  
+    next();
+  };

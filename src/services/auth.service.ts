@@ -1,13 +1,17 @@
 import { ICreateUser } from "../interfaces/user.interface";
-import Users from "../models/users.model"
+import Users from "../models/users.model";
+import Business from "../models/business.model";
+import { ExpertProfileContext, UserProfileDto } from "../interfaces/business.interface";
+import { Types } from "mongoose";
+import { assertAllProfileFieldsPresent } from "../helpers/validation.helper";
+
+
 export const findUserByEmail = async (email: string) => {
     return await Users.findOne({email: email});
   };
 export const findUserById = async (id: string)=>{
-    return await Users.findById(id,{password: 0}).populate({
-      path: 'businesses',
-      select: 'businessId businessName', 
-    }).populate('wallets')
+    return await Users.findById(id,{password: 0})
+    .populate('wallets')
     .populate('subscription');
 };
 export const createUser = async (data:  ICreateUser) =>{
@@ -144,3 +148,111 @@ export const findUserWithoutPhoneNumberDetailsById = async (id: string)=>{
 export const deleteUser = async(userId: string)=>{
  return await Users.findByIdAndDelete(userId)
 }
+
+export const resolveExpertContext = async (
+  userId: Types.ObjectId,
+  forceNewBusiness = false
+): Promise<ExpertProfileContext> => {
+   const user = await Users.findById(userId).select(
+    'isProfileComplete businesses'
+  );
+ 
+  if (!user) throw new Error('User not found');
+ 
+  const hasBusiness = user.businesses && user.businesses.length > 0;
+  const profileComplete = user.isProfileComplete === true;
+ 
+  if (!hasBusiness && !profileComplete) return 'FIRST_JOIN';
+ 
+
+  if (forceNewBusiness && profileComplete) return 'NEW_BUSINESS';
+ 
+  if (hasBusiness && !profileComplete) return 'SETTINGS_FIRST';
+ 
+  return 'SETTINGS_UPDATE';
+};
+
+export const getProfileContextService = async (
+  userId: string,
+  forceNewBusiness = false
+): Promise<{ context: ExpertProfileContext; prefill: Partial<UserProfileDto> }> => {
+  const userObjectId = new Types.ObjectId(userId);
+  const context = await resolveExpertContext(userObjectId, forceNewBusiness);
+ 
+  let prefill: Partial<UserProfileDto> = {};
+ 
+  if (context === 'NEW_BUSINESS') {
+    const user = await Users.findById(userObjectId).select(
+      'firstName lastName mobile countryCode language houseAddress city state country bio displayImage'
+    );
+    if (user) {
+      prefill = {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        mobile: user.mobile,
+        countryCode: user.countryCode,
+        language: user.language,
+        houseAddress: user.houseAddress,
+        city: user.city,
+        state: user.state,
+        country: user.country,
+        bio: user.bio,
+        displayImage: user.displayImage,
+      };
+    }
+  }
+ 
+  return { context, prefill };
+};
+const pick = (v: string | undefined): string | undefined =>
+  v !== undefined && v.trim() !== '' ? v.trim() : undefined;
+ 
+
+export const buildProfilePayload = (dto: UserProfileDto) => {
+  const userSet: Record<string, unknown> = {};
+  const businessSet: Record<string, unknown> = {};
+ 
+  if (pick(dto.firstName))    { userSet.firstName    = pick(dto.firstName);    businessSet.firstName    = pick(dto.firstName); }
+  if (pick(dto.lastName))     { userSet.lastName     = pick(dto.lastName);     businessSet.lastName     = pick(dto.lastName); }
+  if (pick(dto.countryCode))  { userSet.countryCode  = pick(dto.countryCode); }
+  if (pick(dto.mobile))       { userSet.mobile       = pick(dto.mobile);       businessSet.phoneNumber  = pick(dto.mobile); }
+  if (pick(dto.language))     { userSet.language     = pick(dto.language);     businessSet.languages    = [pick(dto.language)]; }
+  if (pick(dto.houseAddress)) { userSet.houseAddress = pick(dto.houseAddress); businessSet.address      = pick(dto.houseAddress); }
+  if (pick(dto.city))         { userSet.city         = pick(dto.city);         businessSet.city         = pick(dto.city); }
+  if (pick(dto.state))        { userSet.state        = pick(dto.state);        businessSet.state        = pick(dto.state); }
+  if (pick(dto.country))      { userSet.country      = pick(dto.country);      businessSet.country      = pick(dto.country); }
+  if (pick(dto.bio))          { userSet.bio          = pick(dto.bio);          businessSet.bio          = pick(dto.bio); }
+  if (pick(dto.displayImage)) { userSet.displayImage = pick(dto.displayImage); businessSet.profileImage = pick(dto.displayImage); }
+ 
+  return { userSet, businessSet };
+};
+export const saveUserProfile = async (
+  userId: string,
+  dto: UserProfileDto,
+  files: any
+) => {
+  const userObjectId = new Types.ObjectId(userId);
+ 
+  const user = await Users.findById(userObjectId).select('isProfileComplete');
+  if (!user) throw new Error('User not found');
+ 
+  const isFirstTime = !user.isProfileComplete;
+ 
+  if (isFirstTime) assertAllProfileFieldsPresent(dto);
+     if (files && files['profileImage'] && files['profileImage'][0]) {
+        dto.displayImage = files['profileImage'][0].path;
+    }
+  const { userSet } = buildProfilePayload(dto);
+ 
+  if (isFirstTime) userSet.isProfileComplete = true;
+ 
+  const updatedUser = await Users.findByIdAndUpdate(
+    userObjectId,
+    { $set: userSet },
+    { new: true, runValidators: true }
+  ).select('-password -registrationOtp -passwordResetOtp -otpExpiresAt');
+ 
+  if (!updatedUser) throw new Error('User not found');
+ 
+  return { isFirstTime, user: updatedUser };
+};

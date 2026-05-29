@@ -88,7 +88,7 @@ exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)(async (re
         userData.push({
             userName: user.userName,
             userId: user._id,
-            name: user.fullName,
+            name: user.firstName + " " + user.lastName,
             email: user.email,
             status: user.status,
             subscription: plan?.name || null,
@@ -156,11 +156,11 @@ exports.fetchUserDetails = (0, error_handler_1.catchAsync)(async (req, res) => {
         throw new error_1.NotFoundError("User not found");
     }
     let data = {
-        profileImage: user.profileImage,
-        name: user.fullName,
+        profileImage: user.displayImage,
+        name: user.firstName + " " + user.lastName,
         level: user.level,
         uniqueId: user.uniqueId,
-        fullName: user.fullName,
+        fullName: user.firstName + " " + user.lastName,
         status: user.status,
         accountDetails: user.accountDetails,
     };
@@ -168,11 +168,10 @@ exports.fetchUserDetails = (0, error_handler_1.catchAsync)(async (req, res) => {
         const payload = {
             email: user.email,
             userName: user.userName,
-            phoneNumber: [user.number1, user.number2],
-            whatsappNumber: user.whatsAppNo,
+            phoneNumber: user.mobile,
             bio: user.bio,
             languages: user.language,
-            location: user.location,
+            location: user.houseAddress,
         };
         data = { ...data, ...payload };
     }
@@ -259,7 +258,7 @@ exports.fetchJobsAdminController = (0, error_handler_1.catchAsync)(async (req, r
         allJobs.push({
             jobId: job._id,
             title: job.title,
-            poster: user?.fullName,
+            poster: user?.firstName + " " + user?.lastName,
             userName: user?.userName,
             createdAt: job.createdAt,
             status: job.status,

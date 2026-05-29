@@ -78,7 +78,7 @@ router.route("/subscribe-newsletter").post(authController.subscribeNewsLetterCon
 router.route("/user-details/:userId").get(authController.getUserDetailsController);
 //Protected routes
 router.route("/log-out").get(current_user_1.userAuth, authController.logoutController);
-router.route("/update-profile").patch(current_user_1.userAuth, image_upload_1.singleUpload, authController.updateUserController);
+router.route("/update-profile").patch(current_user_1.userAuth, auth_validation_1.validateUpdateUser, image_upload_1.singleUpload, authController.updateUserController);
 router.route("/change-password").patch(current_user_1.userAuth, auth_validation_1.validateChangePassword, authController.changePasswordController);
 router.route("/current-user").get(current_user_1.userAuth, authController.currentUserController);
 router.route("/deactivate-user").patch(current_user_1.userAuth, authController.deactivateUserController);
@@ -89,3 +89,4 @@ router.route("/insights").get(current_user_1.userAuth, authController.insightsCo
 router.route("/update-account-details").patch(current_user_1.userAuth, auth_validation_1.validateUpdateAccountDetails, authController.updateAccountDetailsController);
 router.route("/pay-for-verification").post(current_user_1.userAuth, auth_validation_1.validatePaymentForVerification, paymentController.payforVerificationController);
 router.route("/delete-user/:userId").delete(current_user_1.userAuth, authController.deleteUserController);
+router.route("/get-profile-context").get(current_user_1.userAuth, authController.getProfileContext);

@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUserController = exports.getUserDetailsController = exports.subscribeNewsLetterController = exports.countClicksController = exports.insightsController = exports.requestVerificationController = exports.inviteUserController = exports.findUserController = exports.deactivateUserController = exports.logoutController = exports.googleRedirectController = exports.resendVerificationOtpController = exports.uploadMultipleFiles = exports.uploadImage = exports.currentUserController = exports.changePasswordController = exports.updateAccountDetailsController = exports.updateUserController = exports.resetPasswordController = exports.forgetPasswordController = exports.verifyEmailController = exports.loginController = exports.registerUserController = void 0;
+exports.saveUserProfile = exports.getProfileContext = exports.deleteUserController = exports.getUserDetailsController = exports.subscribeNewsLetterController = exports.countClicksController = exports.insightsController = exports.requestVerificationController = exports.inviteUserController = exports.findUserController = exports.deactivateUserController = exports.logoutController = exports.googleRedirectController = exports.resendVerificationOtpController = exports.uploadMultipleFiles = exports.uploadImage = exports.currentUserController = exports.changePasswordController = exports.updateAccountDetailsController = exports.updateUserController = exports.resetPasswordController = exports.forgetPasswordController = exports.verifyEmailController = exports.loginController = exports.registerUserController = void 0;
 const success_response_1 = require("../helpers/success-response");
 const authService = __importStar(require("../services/auth.service"));
 const http_status_codes_1 = require("http-status-codes");
@@ -145,7 +145,16 @@ exports.verifyEmailController = (0, error_handler_1.catchAsync)(async (req, res)
     foundUser.registrationOtp = undefined;
     foundUser.otpExpiresAt = undefined;
     await foundUser.save();
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Email verified successfully!");
+    const token = await (0, jwt_1.generateJWTwithExpiryDate)({
+        email: foundUser.email,
+        id: foundUser._id,
+    });
+    const userData = await authService.findUserById(String(foundUser._id));
+    const user = {
+        token,
+        userData
+    };
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, user);
 });
 exports.forgetPasswordController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { email } = req.body;
@@ -189,23 +198,27 @@ exports.resetPasswordController = (0, error_handler_1.catchAsync)(async (req, re
 });
 exports.updateUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
-    const { fullName, gender, language, number1, number2, whatsAppNo, location, bio, } = req.body;
+    const { firstName, lastName, gender, countryCode, language, houseAddress, mobile, city, state, country, bio, } = req.body;
     const foundUser = await authService.findUserById(userId);
     if (!foundUser)
         throw new error_1.NotFoundError("User not found!");
-    foundUser.fullName = fullName || foundUser.fullName;
+    foundUser.firstName = firstName || foundUser.firstName;
+    foundUser.lastName = lastName || foundUser.lastName;
     foundUser.gender = gender || foundUser.gender;
     foundUser.language = language || foundUser.language;
-    foundUser.number1 = number1 || foundUser.number1;
-    foundUser.number2 = number2 || foundUser.number2;
-    foundUser.whatsAppNo = whatsAppNo || foundUser.whatsAppNo;
-    foundUser.location = location || foundUser.location;
+    foundUser.mobile = mobile || foundUser.mobile;
+    foundUser.countryCode = countryCode || foundUser.countryCode;
+    foundUser.houseAddress = houseAddress || foundUser.houseAddress;
+    foundUser.city = city || foundUser.city;
     foundUser.bio = bio || foundUser.bio;
+    foundUser.state = state || foundUser.state;
+    foundUser.country = country || foundUser.country;
+    foundUser.isProfileComplete = true;
     if (req.file) {
-        foundUser.profileImage = req.file.path;
+        foundUser.displayImage = req.file.path;
     }
     await foundUser.save();
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, foundUser);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, 'User profile updated successfully');
 });
 exports.updateAccountDetailsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const email = req.user.email;
@@ -238,9 +251,17 @@ exports.changePasswordController = (0, error_handler_1.catchAsync)(async (req, r
 });
 exports.currentUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
-    const user = await authService.findCurrentUserById(userId);
-    if (!user)
+    const foundUser = await authService.findCurrentUserById(userId);
+    if (!foundUser)
         throw new error_1.NotFoundError("User not found!");
+    const token = await (0, jwt_1.generateJWTwithExpiryDate)({
+        email: foundUser.email,
+        id: foundUser._id,
+    });
+    const user = {
+        token,
+        userData: foundUser
+    };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, user);
 });
 exports.uploadImage = (0, error_handler_1.catchAsync)(async (req, res) => {
@@ -546,4 +567,15 @@ exports.deleteUserController = (0, error_handler_1.catchAsync)(async (req, res) 
     const { userId } = req.params;
     const data = await authService.deleteUser(userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, 'User deleted sucessfully');
+});
+exports.getProfileContext = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = req.user?.id;
+    const forceNewBusiness = req.query.newBusiness === 'true';
+    const result = await authService.getProfileContextService(userId, forceNewBusiness);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, result);
+});
+exports.saveUserProfile = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = req.user?.id;
+    const result = await authService.saveUserProfile(userId, req.body, req.files);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, result);
 });

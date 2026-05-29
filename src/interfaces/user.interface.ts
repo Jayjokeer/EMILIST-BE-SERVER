@@ -2,24 +2,27 @@ import { JobExpertLevel } from "../enums/jobs.enum";
 import { UserRolesEnum } from "../enums/user.enums";
 
 export interface IUser {
-    fullName: string;
+    firstName: string;
+    lastName: string;
     email: string;
     password: string;
     userName: string;
     uniqueId?: string;
     gender?: string;
     language?: string;
-    number1?: string;
-    number2?: string;
-    whatsAppNo?: string;
-    location?: string;
+    houseAddress?: string;
+    countryCode?: string;
+    mobile?: string;
+    city?: string;
     bio?: string;
+    state?: string;
+    country?: string;
     membership?: object;
     isEmailVerified?: boolean;
     otpExpiresAt?: Date;
     registrationOtp?: string;
     passwordResetOtp?: String;
-    profileImage?: string;
+    displayImage?: string;
     status?: string; 
     accessToken?: string;
     businesses?: any;
@@ -38,6 +41,7 @@ export interface IUser {
     comparedProducts?: any;
     sharedCount?: number;
     mutedBusinesses?: any;
+    isProfileComplete?: boolean;
   }
   
 export interface ICreateUser {

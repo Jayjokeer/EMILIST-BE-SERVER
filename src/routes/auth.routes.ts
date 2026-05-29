@@ -3,7 +3,7 @@ import * as authController from "../controllers/auth.controller";
 import { userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload } from "../utils/image-upload";
 import passport from "passport";
-import { validateRegisterUser, validateLoginUser, validateVerifyEmail, validateForgetPassword, validateResetPassword, validateChangePassword, validateUpdateAccountDetails, validatePaymentForVerification } from "../validations/auth.validation";
+import { validateRegisterUser, validateLoginUser, validateVerifyEmail, validateForgetPassword, validateResetPassword, validateChangePassword, validateUpdateAccountDetails, validatePaymentForVerification, validateUpdateUser } from "../validations/auth.validation";
 import *  as paymentController from "../controllers/payment.controller";
 import { config } from "../utils/config";
 
@@ -49,7 +49,7 @@ router.route("/user-details/:userId").get( authController.getUserDetailsControll
 
 //Protected routes
 router.route("/log-out").get(userAuth, authController.logoutController);
-router.route("/update-profile").patch(userAuth,singleUpload,authController.updateUserController);
+router.route("/update-profile").patch(userAuth,validateUpdateUser,singleUpload,authController.updateUserController);
 router.route("/change-password").patch(userAuth,validateChangePassword, authController.changePasswordController);
 router.route("/current-user").get(userAuth,authController.currentUserController);
 router.route("/deactivate-user").patch(userAuth,authController.deactivateUserController);
@@ -60,5 +60,5 @@ router.route("/insights").get(userAuth, authController.insightsController);
 router.route("/update-account-details").patch(userAuth,validateUpdateAccountDetails, authController.updateAccountDetailsController);
 router.route("/pay-for-verification").post(userAuth,validatePaymentForVerification , paymentController.payforVerificationController);
 router.route("/delete-user/:userId").delete(userAuth,  authController.deleteUserController);
-
+router.route("/get-profile-context").get(userAuth, authController.getProfileContext);
 export { router as AuthRoute };
