@@ -75,36 +75,6 @@ const validateBusinessRegistration = (req, res, next) => {
 exports.validateBusinessRegistration = validateBusinessRegistration;
 const validateBusinessUpdate = (req, res, next) => {
     const businessValidation = joi_1.default.object({
-        firstName: joi_1.default.string().optional().messages({
-            'string.empty': 'First name cannot be empty',
-        }),
-        lastName: joi_1.default.string().optional().messages({
-            'string.empty': 'Last name cannot be empty',
-        }),
-        services: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            'string.base': 'Each service must be a string',
-        }),
-        languages: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            'string.base': 'Each language must be a string',
-        }),
-        address: joi_1.default.string().optional().messages({
-            'string.base': 'Address must be a string',
-        }),
-        phoneNumber: joi_1.default.string().optional().messages({
-            'string.base': 'Phone number must be a string',
-        }),
-        city: joi_1.default.string().optional().messages({
-            'string.base': 'City must be a string',
-        }),
-        state: joi_1.default.string().optional().messages({
-            'string.base': 'State must be a string',
-        }),
-        country: joi_1.default.string().optional().messages({
-            'string.base': 'Country must be a string',
-        }),
-        bio: joi_1.default.string().optional().messages({
-            'string.base': 'Bio must be a string',
-        }),
         currency: joi_1.default.string().optional().messages({
             'string.base': 'Currency must be a string',
         }),

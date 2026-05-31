@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createBusinessProfileService = exports.getExpertiseProfile = exports.removeExpertiseItem = exports.verifyExpertise = exports.updateService = exports.setupService = exports.deleteBusinessItem = exports.verifyCertificateAdmin = exports.verifyBusinessAdmin = exports.fetchAllLikedBusinesses = exports.markReviewHelpful = exports.fetchBusinessReviews = exports.fetchSimilarBusinesses = exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
+exports.createBusinessProfileService = exports.setupService = exports.deleteBusinessItem = exports.verifyCertificateAdmin = exports.verifyBusinessAdmin = exports.fetchAllLikedBusinesses = exports.markReviewHelpful = exports.fetchBusinessReviews = exports.fetchSimilarBusinesses = exports.otherBusinessesByUser = exports.unlikeBusiness = exports.createBusinessLike = exports.ifLikedBusiness = exports.fetchAllComparedBusinesses = exports.fetchAllUserBusinessesAdmin = exports.deleteBusiness = exports.fetchAllBusiness = exports.fetchSingleBusinessWithDetails = exports.fetchSingleBusiness = exports.fetchUserBusiness = exports.updateBusiness = exports.createBusiness = void 0;
 const error_1 = require("../errors/error");
 const business_model_1 = __importDefault(require("../models/business.model"));
 const review_model_1 = __importDefault(require("../models/review.model"));
@@ -56,7 +56,7 @@ const updateBusiness = async (businessId, businessData, files) => {
     try {
         const business = await business_model_1.default.findById(businessId);
         if (!business)
-            throw new Error('Business not found');
+            throw new error_1.NotFoundError('Business not found');
         if (businessData.renderedServices) {
             businessData.renderedServices.forEach((newService) => {
                 const existingServiceIndex = business.renderedServices.findIndex((service) => String(service._id) == String(newService.id));
@@ -75,7 +75,6 @@ const updateBusiness = async (businessId, businessData, files) => {
             businessData.certification.forEach((newCert) => {
                 const certId = newCert.id || newCert._id;
                 const existingCert = business.certification.find((cert) => String(cert._id) === String(certId));
-                // normalize uploaded certificate path
                 let certificatePath;
                 if (files?.certificate) {
                     certificatePath = Array.isArray(files.certificate)
@@ -106,7 +105,6 @@ const updateBusiness = async (businessId, businessData, files) => {
                 }
             });
         }
-        // ---------- END CERT FIX ----------
         if (businessData.membership) {
             businessData.membership.forEach((newMembership) => {
                 const existingMembership = business.membership.find((membership) => String(membership._id) === String(newMembership.id));
@@ -136,15 +134,6 @@ const updateBusiness = async (businessId, businessData, files) => {
                 }
             });
         }
-        business.firstName = businessData.firstName || business.firstName;
-        business.lastName = businessData.lastName || business.lastName;
-        business.languages = businessData.languages || business.languages;
-        business.address = businessData.address || business.address;
-        business.phoneNumber = businessData.phoneNumber || business.phoneNumber;
-        business.city = businessData.city || business.city;
-        business.state = businessData.state || business.state;
-        business.country = businessData.country || business.country;
-        business.bio = businessData.bio || business.bio;
         business.businessName = businessData.businessName || business.businessName;
         business.yearFounded = businessData.yearFounded || business.yearFounded;
         business.numberOfEmployee = businessData.numberOfEmployee || business.numberOfEmployee;
@@ -156,8 +145,8 @@ const updateBusiness = async (businessId, businessData, files) => {
         business.noticePeriod = businessData.noticePeriod || business.noticePeriod;
         business.businessDescription = businessData.businessDescription || business.businessDescription;
         business.currency = businessData.currency || business.currency;
-        if (files?.profileImage) {
-            business.profileImage = files.profileImage[0].path;
+        if (files?.displayImage) {
+            business.displayImage = files.displayImage[0].path;
         }
         if (files?.businessImages?.length > 0) {
             const newBusinessImages = files.businessImages.map((file) => ({
@@ -600,126 +589,6 @@ const setupService = async (userId, businessId, dto, files) => {
     return business;
 };
 exports.setupService = setupService;
-const updateService = async (userId, businessId, dto) => {
-    const userObjectId = new mongoose_1.Types.ObjectId(userId);
-    if (dto.coverageArea && dto.coverageArea.length > 5) {
-        throw new Error('Coverage area cannot exceed 5 locations');
-    }
-    if (dto.businessImages && dto.businessImages.length > 5) {
-        throw new Error('You can upload a maximum of 5 business images');
-    }
-    const serviceSet = {};
-    if (dto.services)
-        serviceSet.services = dto.services;
-    if (dto.coverageArea)
-        serviceSet.coverageArea = dto.coverageArea;
-    if (dto.businessName?.trim())
-        serviceSet.businessName = dto.businessName.trim();
-    if (dto.yearFounded?.trim())
-        serviceSet.yearFounded = dto.yearFounded.trim();
-    if (dto.numberOfEmployee !== undefined)
-        serviceSet.numberOfEmployee = dto.numberOfEmployee;
-    if (dto.startingPrice !== undefined)
-        serviceSet.startingPrice = dto.startingPrice;
-    if (dto.currency?.trim())
-        serviceSet.currency = dto.currency.trim();
-    if (dto.rateUnit?.trim())
-        serviceSet.rateUnit = dto.rateUnit.trim();
-    if (dto.noticePeriod?.trim())
-        serviceSet.noticePeriod = dto.noticePeriod.trim();
-    if (dto.businessDescription?.trim())
-        serviceSet.businessDescription = dto.businessDescription.trim();
-    if (dto.sameAsProfile) {
-        const user = await users_model_1.default.findById(userObjectId).select('houseAddress state country');
-        if (!user)
-            throw new Error('User not found');
-        serviceSet.businessAddress = user.houseAddress;
-        serviceSet.businessState = user.state;
-        serviceSet.businessCountry = user.country;
-    }
-    else {
-        if (dto.businessAddress?.trim())
-            serviceSet.businessAddress = dto.businessAddress.trim();
-        if (dto.businessState?.trim())
-            serviceSet.businessState = dto.businessState.trim();
-        if (dto.businessCountry?.trim())
-            serviceSet.businessCountry = dto.businessCountry.trim();
-    }
-    if (dto.businessImages) {
-        serviceSet.businessImages = dto.businessImages.map((url) => ({ imageUrl: url }));
-    }
-    const business = await business_model_1.default.findOneAndUpdate({ _id: new mongoose_1.Types.ObjectId(businessId), userId: userObjectId }, { $set: serviceSet }, { new: true, runValidators: true });
-    if (!business)
-        throw new error_1.NotFoundError('Business not found');
-    return business;
-};
-exports.updateService = updateService;
-const verifyExpertise = async (userId, dto, options = {}) => {
-    const userObjectId = new mongoose_1.Types.ObjectId(userId);
-    const { replace = false, businessId } = options;
-    const filter = businessId
-        ? { _id: new mongoose_1.Types.ObjectId(businessId), userId: userObjectId }
-        : { userId: userObjectId };
-    const business = await business_model_1.default.findOne(filter).sort({ createdAt: -1 });
-    if (!business) {
-        throw new Error('Business not found. Complete business setup first.');
-    }
-    if (dto.certificates !== undefined) {
-        if (replace) {
-            business.certification = dto.certificates;
-        }
-        else {
-            business.certification?.push(...dto.certificates);
-        }
-    }
-    if (dto.memberships !== undefined) {
-        if (replace) {
-            business.membership = dto.memberships;
-        }
-        else {
-            business.membership?.push(...dto.memberships);
-        }
-    }
-    if (dto.insurances !== undefined) {
-        if (replace) {
-            business.insurance = dto.insurances;
-        }
-        else {
-            business.insurance?.push(...dto.insurances);
-        }
-    }
-    await business.save();
-    return business;
-};
-exports.verifyExpertise = verifyExpertise;
-const removeExpertiseItem = async (userId, section, itemId, businessId) => {
-    const userObjectId = new mongoose_1.Types.ObjectId(userId);
-    const filter = businessId
-        ? { _id: new mongoose_1.Types.ObjectId(businessId), userId: userObjectId }
-        : { userId: userObjectId };
-    const business = await business_model_1.default.findOneAndUpdate(filter, { $pull: { [section]: { _id: new mongoose_1.Types.ObjectId(itemId) } } }, { new: true });
-    if (!business)
-        throw new error_1.NotFoundError('Business not found');
-    return business;
-};
-exports.removeExpertiseItem = removeExpertiseItem;
-const getExpertiseProfile = async (userId, businessId) => {
-    const userObjectId = new mongoose_1.Types.ObjectId(userId);
-    const filter = businessId
-        ? { _id: new mongoose_1.Types.ObjectId(businessId), userId: userObjectId }
-        : { userId: userObjectId };
-    const business = await business_model_1.default.findOne(filter)
-        .sort({ createdAt: -1 })
-        .select('certification membership insurance');
-    if (!business)
-        return { certification: [], membership: [], insurance: [] };
-    return {
-        certification: business.certification,
-        membership: business.membership,
-        insurance: business.insurance,
-    };
-};
-exports.getExpertiseProfile = getExpertiseProfile;
 const createBusinessProfileService = async (userId, dto, files) => {
     const userObjectId = new mongoose_1.Types.ObjectId(userId);
     const user = await users_model_1.default.findById(userObjectId).select('isProfileComplete firstName lastName mobile countryCode language houseAddress city state country bio displayImage');

@@ -6,30 +6,30 @@ interface IServicesRendered {
   status?: string;
 }
 
-interface IMembership {
-  organisation?: string;
-  positionHeld?: string;
-  startDate?: Date;
-  endDate?: Date;
-  isMembershipExpire?: boolean;
-}
+// interface IMembership {
+//   organisation?: string;
+//   positionHeld?: string;
+//   startDate?: Date;
+//   endDate?: Date;
+//   isMembershipExpire?: boolean;
+// }
 
-interface ICertification {
-  id?: string;
-  certificate?: string;
-  issuingOrganisation?: string;
-  verificationNumber?: string;
-  issuingDate?: Date;
-  expiringDate?: Date;
-  isCertificateExpire?: boolean;
-  isVerified?: boolean;
-}
+// interface ICertification {
+//   id?: string;
+//   certificate?: string;
+//   issuingOrganisation?: string;
+//   verificationNumber?: string;
+//   issuingDate?: Date;
+//   expiringDate?: Date;
+//   isCertificateExpire?: boolean;
+//   isVerified?: boolean;
+// }
 
-interface IInsurance {
-  issuingOrganisation?: string;
-  coverage?: string;
-  description?: Date;
-}
+// interface IInsurance {
+//   issuingOrganisation?: string;
+//   coverage?: string;
+//   description?: Date;
+// }
 
 export interface IBusiness extends Document {
   services?: string[];
@@ -44,9 +44,9 @@ export interface IBusiness extends Document {
   bio?: string;
   profileImage?: string;
   renderedServices?: IServicesRendered[];
-  certification?: ICertification[];
-  membership?: IMembership[];
-  insurance?: IInsurance[];
+  certification?: CertificateDto[];
+  membership?: MembershipDto[];
+  insurance?: InsuranceDto[];
   coverageArea?: string[];
   userId?: Types.ObjectId;
   businessName?:string;
@@ -100,6 +100,7 @@ export interface CertificateDto {
   issuingDate?: Date;
   expiringDate?: Date;
   isCertificateExpire?: boolean;
+  isVerified?: boolean;
 }
  
 export interface MembershipDto {
