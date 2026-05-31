@@ -26,6 +26,7 @@ import * as businessService from "../services/business.service";
 import * as productService from "../services/product.service";
 import * as newsLetterService from "../services/newsletter.service";
 import * as verificationService from "../services/verification.service";
+import { extractProfileDto } from "../helpers/validation.helper";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -626,19 +627,21 @@ export const deleteUserController = catchAsync(async (req: JwtPayload, res: Resp
 });
 
 export const getProfileContext = catchAsync(async (req: JwtPayload, res: Response) => {
-  const userId = req.user?.id;
+  const userId = (req.user as { id?: string } | undefined)?.id;
   const forceNewBusiness = req.query.newBusiness === 'true';
  
       const result = await authService.getProfileContextService(
-        userId,
+        userId!,
         forceNewBusiness
       );
    return successResponse(res, StatusCodes.OK, result);
 
   });
-  export const saveUserProfile = catchAsync(async (req: JwtPayload, res: Response) => {
-  const userId = req.user?.id;
-    const result = await authService.saveUserProfile(userId, req.body, req.files);
+
+  export const saveUserProfile = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req.user as { id?: string } | undefined)?.id;
+  const data = extractProfileDto(req);
+    const result = await authService.saveUserProfile(userId!, data, req.files);
    return successResponse(res, StatusCodes.OK, result);
   });
 

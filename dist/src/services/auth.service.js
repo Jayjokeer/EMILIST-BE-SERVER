@@ -7,6 +7,7 @@ exports.saveUserProfile = exports.buildProfilePayload = exports.getProfileContex
 const users_model_1 = __importDefault(require("../models/users.model"));
 const mongoose_1 = require("mongoose");
 const validation_helper_1 = require("../helpers/validation.helper");
+const error_1 = require("../errors/error");
 const findUserByEmail = async (email) => {
     return await users_model_1.default.findOne({ email: email });
 };
@@ -247,22 +248,28 @@ const buildProfilePayload = (dto) => {
 };
 exports.buildProfilePayload = buildProfilePayload;
 const saveUserProfile = async (userId, dto, files) => {
-    const userObjectId = new mongoose_1.Types.ObjectId(userId);
-    const user = await users_model_1.default.findById(userObjectId).select('isProfileComplete');
-    if (!user)
-        throw new Error('User not found');
-    const isFirstTime = !user.isProfileComplete;
-    if (isFirstTime)
-        (0, validation_helper_1.assertAllProfileFieldsPresent)(dto);
-    if (files && files['profileImage'] && files['profileImage'][0]) {
-        dto.displayImage = files['profileImage'][0].path;
+    try {
+        const userObjectId = new mongoose_1.Types.ObjectId(userId);
+        const user = await users_model_1.default.findById(userObjectId).select('isProfileComplete');
+        if (!user)
+            throw new error_1.NotFoundError('User not found');
+        const isFirstTime = !user.isProfileComplete;
+        if (isFirstTime)
+            (0, validation_helper_1.assertAllProfileFieldsPresent)(dto);
+        if (files && files['profileImage'] && files['profileImage'][0]) {
+            dto.displayImage = files['profileImage'][0].path;
+        }
+        const { userSet } = (0, exports.buildProfilePayload)(dto);
+        if (isFirstTime)
+            userSet.isProfileComplete = true;
+        const updatedUser = await users_model_1.default.findByIdAndUpdate(userObjectId, { $set: userSet }, { new: true, runValidators: true }).select('-password -registrationOtp -passwordResetOtp -otpExpiresAt');
+        if (!updatedUser)
+            throw new error_1.NotFoundError('User not found');
+        return { isFirstTime, user: updatedUser };
     }
-    const { userSet } = (0, exports.buildProfilePayload)(dto);
-    if (isFirstTime)
-        userSet.isProfileComplete = true;
-    const updatedUser = await users_model_1.default.findByIdAndUpdate(userObjectId, { $set: userSet }, { new: true, runValidators: true }).select('-password -registrationOtp -passwordResetOtp -otpExpiresAt');
-    if (!updatedUser)
-        throw new Error('User not found');
-    return { isFirstTime, user: updatedUser };
+    catch (error) {
+        console.error(`Error in saveUserProfile: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(`Failed to save user profile: ${error instanceof Error ? error.message : String(error)}`);
+    }
 };
 exports.saveUserProfile = saveUserProfile;

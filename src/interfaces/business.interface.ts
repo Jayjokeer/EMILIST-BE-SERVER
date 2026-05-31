@@ -81,8 +81,8 @@ export interface UserProfileDto {
   lastName?: string;
   countryCode?: string;
   mobile?: string;
-  language?: string;      // stored as languages: [string] on Business
-  houseAddress?: string;  // stored as address on Business
+  language?: string;      
+  houseAddress?: string;  
   city?: string;
   state?: string;
   country?: string;

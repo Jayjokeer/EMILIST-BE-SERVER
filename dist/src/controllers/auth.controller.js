@@ -61,6 +61,7 @@ const businessService = __importStar(require("../services/business.service"));
 const productService = __importStar(require("../services/product.service"));
 const newsLetterService = __importStar(require("../services/newsletter.service"));
 const verificationService = __importStar(require("../services/verification.service"));
+const validation_helper_1 = require("../helpers/validation.helper");
 exports.registerUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { email, password, } = req.body;
     const isEmailExists = await authService.findUserByEmail(email.toLowerCase());
@@ -576,6 +577,7 @@ exports.getProfileContext = (0, error_handler_1.catchAsync)(async (req, res) => 
 });
 exports.saveUserProfile = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user?.id;
-    const result = await authService.saveUserProfile(userId, req.body, req.files);
+    const data = (0, validation_helper_1.extractProfileDto)(req);
+    const result = await authService.saveUserProfile(userId, data, req.files);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, result);
 });

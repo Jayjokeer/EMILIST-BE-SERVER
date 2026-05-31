@@ -1,5 +1,6 @@
 import { NotFoundError } from "../errors/error";
 import {  SetupServiceDto, UserProfileDto } from "../interfaces/business.interface";
+import { Request } from "express";
 
 export const PROFILE_FIELDS: (keyof UserProfileDto)[] = [
   'firstName',
@@ -55,4 +56,28 @@ export const assertServiceFieldsPresent = (dto: SetupServiceDto): void => {
   if (dto.businessImages && dto.businessImages.length > 5) {
     throw new Error('You can upload a maximum of 5 business images');
   }
+};
+const resolveFileUrl = (req: Request): string | undefined =>
+  (req as any).fileUrl ??
+  (req as any).file?.location ??
+  (req as any).file?.path ??
+  req.body!.displayImage;
+ 
+
+export const extractProfileDto = (req: Request): UserProfileDto => {
+  const body = req.body || {};
+
+  return {
+    firstName: body.firstName,
+    lastName: body.lastName,
+    countryCode: body.countryCode,
+    mobile: body.mobile,
+    language: body.language,
+    houseAddress: body.houseAddress,
+    city: body.city,
+    state: body.state,
+    country: body.country,
+    bio: body.bio,
+    displayImage: resolveFileUrl(req),
+  };
 };

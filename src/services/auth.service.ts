@@ -4,6 +4,7 @@ import Business from "../models/business.model";
 import { ExpertProfileContext, UserProfileDto } from "../interfaces/business.interface";
 import { Types } from "mongoose";
 import { assertAllProfileFieldsPresent } from "../helpers/validation.helper";
+import {  NotFoundError } from "../errors/error";
 
 
 export const findUserByEmail = async (email: string) => {
@@ -231,10 +232,11 @@ export const saveUserProfile = async (
   dto: UserProfileDto,
   files: any
 ) => {
+  try{
   const userObjectId = new Types.ObjectId(userId);
  
   const user = await Users.findById(userObjectId).select('isProfileComplete');
-  if (!user) throw new Error('User not found');
+  if (!user) throw new NotFoundError('User not found');
  
   const isFirstTime = !user.isProfileComplete;
  
@@ -252,7 +254,11 @@ export const saveUserProfile = async (
     { new: true, runValidators: true }
   ).select('-password -registrationOtp -passwordResetOtp -otpExpiresAt');
  
-  if (!updatedUser) throw new Error('User not found');
+  if (!updatedUser) throw new NotFoundError('User not found');
  
   return { isFirstTime, user: updatedUser };
+}catch (error) { 
+      console.error(`Error in saveUserProfile: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to save user profile: ${error instanceof Error ? error.message : String(error)}`);
+  }
 };

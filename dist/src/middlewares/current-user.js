@@ -48,7 +48,6 @@ const userAuth = async (req, res, next) => {
     else if (req.cookies.sessionId) {
         token = req.cookies?.sessionId;
     }
-    console.log(req.cookies?.sessionId);
     if (!token) {
         res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({ message: "Kindly login" });
         return;

@@ -28,7 +28,7 @@ exports.singleUpload = singleUpload;
 const multipleUpload = (0, multer_1.default)({ storage }).array('files', 10);
 exports.multipleUpload = multipleUpload;
 const uploadBusinessImages = (0, multer_1.default)({ storage }).fields([
-    { name: 'profileImage', maxCount: 1 },
+    { name: 'displayImage', maxCount: 1 },
     { name: 'certificate', maxCount: 10 },
     { name: 'businessImages', maxCount: 10 },
 ]);

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.assertServiceFieldsPresent = exports.PROFILE_FIELDS = void 0;
+exports.extractProfileDto = exports.assertServiceFieldsPresent = exports.PROFILE_FIELDS = void 0;
 exports.assertAllProfileFieldsPresent = assertAllProfileFieldsPresent;
 const error_1 = require("../errors/error");
 exports.PROFILE_FIELDS = [
@@ -55,3 +55,24 @@ const assertServiceFieldsPresent = (dto) => {
     }
 };
 exports.assertServiceFieldsPresent = assertServiceFieldsPresent;
+const resolveFileUrl = (req) => req.fileUrl ??
+    req.file?.location ??
+    req.file?.path ??
+    req.body.displayImage;
+const extractProfileDto = (req) => {
+    const body = req.body || {};
+    return {
+        firstName: body.firstName,
+        lastName: body.lastName,
+        countryCode: body.countryCode,
+        mobile: body.mobile,
+        language: body.language,
+        houseAddress: body.houseAddress,
+        city: body.city,
+        state: body.state,
+        country: body.country,
+        bio: body.bio,
+        displayImage: resolveFileUrl(req),
+    };
+};
+exports.extractProfileDto = extractProfileDto;

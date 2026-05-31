@@ -25,7 +25,7 @@ const singleUpload = multer({ storage }).single('image');
 const multipleUpload = multer({ storage }).array('files', 10);
 
 const uploadBusinessImages = multer({ storage }).fields([
-  { name: 'profileImage', maxCount: 1 },
+  { name: 'displayImage', maxCount: 1 },
   { name: 'certificate', maxCount: 10 },
   { name: 'businessImages', maxCount: 10 },
 ]);
