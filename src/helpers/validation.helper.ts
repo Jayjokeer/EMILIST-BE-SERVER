@@ -81,3 +81,7 @@ export const extractProfileDto = (req: Request): UserProfileDto => {
     displayImage: resolveFileUrl(req),
   };
 };
+
+export const getUserId  = (req: Request): string | undefined => {
+  return (req.user as { id?: string } | undefined)?.id;
+}

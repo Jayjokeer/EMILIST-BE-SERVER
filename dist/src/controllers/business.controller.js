@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteBusinessItemController = exports.muteBusinessController = exports.markReviewController = exports.fetchBusinessReviewsController = exports.fetchSimilarBusinessByUserController = exports.fetchOtherBusinessByUserController = exports.unlikeBusinessController = exports.likeBusinessController = exports.fetchAllComparedBusinessesController = exports.compareBusinessController = exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
+exports.updateServiceController = exports.getExpertiseProfileController = exports.removeExpertiseItemController = exports.verifyExpertiseController = exports.createBusinessProfileController = exports.deleteBusinessItemController = exports.muteBusinessController = exports.markReviewController = exports.fetchBusinessReviewsController = exports.fetchSimilarBusinessByUserController = exports.fetchOtherBusinessByUserController = exports.unlikeBusinessController = exports.likeBusinessController = exports.fetchAllComparedBusinessesController = exports.compareBusinessController = exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = exports.createBusinessController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -41,6 +41,7 @@ const error_1 = require("../errors/error");
 const businessService = __importStar(require("../services/business.service"));
 const authService = __importStar(require("../services/auth.service"));
 const reviewService = __importStar(require("../services/review.service"));
+const validation_helper_1 = require("../helpers/validation.helper");
 exports.createBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const businessData = req.body;
     const userId = req.user._id;
@@ -298,4 +299,69 @@ exports.deleteBusinessItemController = (0, error_handler_1.catchAsync)(async (re
         default:
             throw new error_1.BadRequestError("Invalid itemType provided");
     }
+});
+//NEW CONTROLLERS FOR BUSINESS PROFILE CREATION WITHIN USER PROFILE SETUP AND EXPERTISE VERIFICATION
+exports.createBusinessProfileController = (0, error_handler_1.catchAsync)(async (req, res, _next) => {
+    const userId = (0, validation_helper_1.getUserId)(req);
+    const dto = req.body;
+    const result = await businessService.createBusinessProfileService(userId, dto, req.files);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, {
+        profileCreated: result.profileCreated,
+        business: result.business,
+        service: result.service,
+    });
+});
+exports.verifyExpertiseController = (0, error_handler_1.catchAsync)(async (req, res, _next) => {
+    const userId = (0, validation_helper_1.getUserId)(req);
+    const dto = {
+        certificates: req.body.certificates,
+        memberships: req.body.memberships,
+        insurances: req.body.insurances,
+    };
+    const business = await businessService.verifyExpertise(userId, dto, {
+        replace: req.query.replace === 'true',
+        businessId: req.query.businessId,
+    });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { business });
+});
+exports.removeExpertiseItemController = (0, error_handler_1.catchAsync)(async (req, res, _next) => {
+    const userId = (0, validation_helper_1.getUserId)(req);
+    const { section, itemId } = req.params;
+    const allowed = ['certification', 'membership', 'insurance'];
+    if (!allowed.includes(section)) {
+        return res.status(400).json({
+            success: false,
+            message: `Invalid section. Must be one of: ${allowed.join(', ')}`,
+        });
+    }
+    const business = await businessService.removeExpertiseItem(userId, section, itemId, req.query.businessId);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { business });
+});
+exports.getExpertiseProfileController = (0, error_handler_1.catchAsync)(async (req, res, _next) => {
+    const userId = (0, validation_helper_1.getUserId)(req);
+    const data = await businessService.getExpertiseProfile(userId, req.query.businessId);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { data });
+});
+exports.updateServiceController = (0, error_handler_1.catchAsync)(async (req, res, _next) => {
+    const userId = (0, validation_helper_1.getUserId)(req);
+    const { id: businessId } = req.params;
+    const dto = {
+        ...(req.body.services !== undefined && { services: req.body.services }),
+        ...(req.body.coverageArea !== undefined && { coverageArea: req.body.coverageArea }),
+        ...(req.body.sameAsProfile !== undefined && { sameAsProfile: req.body.sameAsProfile === true || req.body.sameAsProfile === 'true' }),
+        ...(req.body.businessName !== undefined && { businessName: req.body.businessName }),
+        ...(req.body.yearFounded !== undefined && { yearFounded: req.body.yearFounded }),
+        ...(req.body.numberOfEmployee !== undefined && { numberOfEmployee: Number(req.body.numberOfEmployee) }),
+        ...(req.body.businessAddress !== undefined && { businessAddress: req.body.businessAddress }),
+        ...(req.body.businessState !== undefined && { businessState: req.body.businessState }),
+        ...(req.body.businessCountry !== undefined && { businessCountry: req.body.businessCountry }),
+        ...(req.body.startingPrice !== undefined && { startingPrice: Number(req.body.startingPrice) }),
+        ...(req.body.currency !== undefined && { currency: req.body.currency }),
+        ...(req.body.rateUnit !== undefined && { rateUnit: req.body.rateUnit }),
+        ...(req.body.noticePeriod !== undefined && { noticePeriod: req.body.noticePeriod }),
+        ...(req.body.businessDescription !== undefined && { businessDescription: req.body.businessDescription }),
+        ...(req.body.businessImages !== undefined && { businessImages: req.body.businessImages }),
+    };
+    const business = await businessService.updateService(userId, String(businessId), dto);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { business });
 });

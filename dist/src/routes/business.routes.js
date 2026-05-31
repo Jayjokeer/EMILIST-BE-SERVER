@@ -41,7 +41,7 @@ const image_upload_1 = require("../utils/image-upload");
 const business_validation_1 = require("../validations/business.validation");
 const router = (0, express_1.Router)();
 exports.BusinessRoute = router;
-router.route("/register-business").post(current_user_1.userAuth, image_upload_1.uploadBusinessImages, business_validation_1.validateBusinessRegistration, businesController.createBusinessController);
+router.route("/register-business").post(current_user_1.userAuth, image_upload_1.uploadBusinessImages, image_upload_1.parseBusinessOnboarding, business_validation_1.validateBusinessRegistration, businesController.createBusinessProfileController);
 router.route("/update-business/:businessId").patch(current_user_1.userAuth, image_upload_1.uploadBusinessImages, business_validation_1.validateBusinessUpdate, businesController.updateBusinessController);
 router.route("/fetch-single-business/:businessId").get(businesController.fetchSingleBusinessController);
 router.route("/fetch-user-business").get(current_user_1.userAuth, businesController.fetchUserBusinessController);

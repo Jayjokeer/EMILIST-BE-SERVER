@@ -1,155 +1,90 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 
-export const validateBusinessRegistration = (req: Request, res: Response, next: NextFunction) => {
-    const businessValidation = Joi.object({
-      firstName: Joi.string().required().messages({
-        'string.empty': 'First name is required',
-      }),
-      lastName: Joi.string().required().messages({
-        'string.empty': 'Last name is required',
-      }),
-      services: Joi.array().items(Joi.string()).optional().messages({
-        'string.base': 'Each service must be a string',
-      }),
-      languages: Joi.array().items(Joi.string()).optional().messages({
-        'string.base': 'Each language must be a string',
-      }),
-      address: Joi.string().optional().messages({
-        'string.base': 'Address must be a string',
-      }),
-      currency: Joi.string().optional().messages({
-        'string.base': 'Currency must be a string',
-      }),
-      phoneNumber: Joi.string().optional().messages({
-        'string.base': 'Phone number must be a string',
-      }),
-      city: Joi.string().optional().messages({
-        'string.base': 'City must be a string',
-      }),
-      state: Joi.string().optional().messages({
-        'string.base': 'State must be a string',
-      }),
-      country: Joi.string().optional().messages({
-        'string.base': 'Country must be a string',
-      }),
-      bio: Joi.string().optional().messages({
-        'string.base': 'Bio must be a string',
-      }),
-      coverageArea: Joi.array().items(Joi.string()).optional().messages({
-        'string.base': 'Each coverage area must be a string',
-      }),
-      renderedServices: Joi.array().items(
-        Joi.object({
-          name: Joi.string().optional().messages({
-            'string.base': 'Service name must be a string',
-          }),
-          status: Joi.string().optional().messages({
-            'string.base': 'Status must be a string',
-          }),
-        })
-      ).optional(),
-      certification: Joi.array().items(
-        Joi.object({
-          issuingOrganisation: Joi.string().optional().messages({
-            'string.base': 'Issuing organisation must be a string',
-          }),
-          verificationNumber: Joi.string().optional().messages({
-            'string.base': 'Verification number must be a string',
-          }),
-          issuingDate: Joi.date().optional().messages({
-            'date.base': 'Issuing date must be a valid date',
-          }),
-          expiringDate: Joi.date().optional().messages({
-            'date.base': 'Expiring date must be a valid date',
-          }),
-          isCertificateExpire: Joi.boolean().optional().messages({
-            'boolean.base': 'Certificate expiry must be a boolean',
-          }),
-        })
-      ).optional(),
-      membership: Joi.array().items(
-        Joi.object({
-          organisation: Joi.string().optional().messages({
-            'string.base': 'Organisation must be a string',
-          }),
-          positionHeld: Joi.string().optional().messages({
-            'string.base': 'Position held must be a string',
-          }),
-          startDate: Joi.date().optional().messages({
-            'date.base': 'Start date must be a valid date',
-          }),
-          endDate: Joi.date().optional().messages({
-            'date.base': 'End date must be a valid date',
-          }),
-          isMembershipExpire: Joi.boolean().optional().messages({
-            'boolean.base': 'Membership expiry must be a boolean',
-          }),
-        })
-      ).optional(),
-      insurance: Joi.array().items(
-        Joi.object({
-          issuingOrganisation: Joi.string().optional().messages({
-            'string.base': 'Issuing organisation must be a string',
-          }),
-          coverage: Joi.string().optional().messages({
-            'string.base': 'Coverage must be a string',
-          }),
-          description: Joi.string().optional().messages({
-            'date.base': 'Description must be a valid string',
-          }),
-        })
-      ).optional(),
-      businessName: Joi.string().required().messages({
-        'string.base': 'Business name must be a string',
-        'string.empty': 'Business name is required',
-      }),
-      yearFounded: Joi.string().required().messages({
-        'string.base': 'Year founded must be a string',
-        'string.empty': 'Year founded is required',
-      }),
-      numberOfEmployee: Joi.number().required().messages({
-        'number.base': 'number of employees must be a number',
-        'number.empty': 'number of employees is required',
-      }),
-      businessAddress: Joi.string().optional().messages({
-        'string.base': 'Business address must be a string',
-      }),
-      businessCity: Joi.string().optional().messages({
-        'string.base': 'City must be a string',
-      }),
-      businessState: Joi.string().required().messages({
-        'string.base': 'State must be a string',
-        'string.empty': 'State is required',
-      }),
-      businessCountry: Joi.string().required().messages({
-        'string.base': 'Country must be a string',
-        'string.empty': 'Country is required',
-      }),
-      startingPrice: Joi.number().required().messages({
-        'number.base': 'Starting price must be a number',
-        'number.empty': 'Starting Price is required',
-      }),
-      noticePeriod: Joi.string().required().messages({
-        'string.base': 'Notice period must be a string',
-        'string.empty': 'Notice period is required',
-      }),
-      businessDescription: Joi.string().required().messages({
-        'string.base': 'Description must be a string',
-        'string.empty': 'Description is required',
-      }),
+export const validateBusinessRegistration = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const profileSchema = Joi.object({
+    firstName: Joi.string().optional(),
+    lastName: Joi.string().optional(),
+    countryCode: Joi.string().optional(),
+    mobile: Joi.string().optional(),
+    language: Joi.string().optional(),
+    houseAddress: Joi.string().optional(),
+    city: Joi.string().optional(),
+    state: Joi.string().optional(),
+    country: Joi.string().optional(),
+    bio: Joi.string().optional(),
+  });
+
+  const certificationSchema = Joi.object({
+    issuingOrganisation: Joi.string().optional(),
+    verificationNumber: Joi.string().optional(),
+    issuingDate: Joi.date().optional(),
+    expiringDate: Joi.date().optional(),
+    isCertificateExpire: Joi.boolean().optional(),
+    isVerified: Joi.boolean().optional(),
+    certificate: Joi.string().optional(),
+  });
+
+  const membershipSchema = Joi.object({
+    organisation: Joi.string().optional(),
+    positionHeld: Joi.string().optional(),
+    startDate: Joi.date().optional(),
+    endDate: Joi.date().optional(),
+    isMembershipExpire: Joi.boolean().optional(),
+  });
+
+  const insuranceSchema = Joi.object({
+    issuingOrganisation: Joi.string().optional(),
+    coverage: Joi.string().optional(),
+    description: Joi.string().optional(),
+  });
+
+  const businessSchema = Joi.object({
+    services: Joi.array().items(Joi.string()).required(),
+    coverageArea: Joi.array().items(Joi.string()).required(),
+
+    businessName: Joi.string().required(),
+    yearFounded: Joi.string().required(),
+    numberOfEmployee: Joi.number().required(),
+
+    businessAddress: Joi.string().required(),
+    businessState: Joi.string().required(),
+    businessCountry: Joi.string().required(),
+
+    startingPrice: Joi.number().required(),
+    currency: Joi.string().required(),
+    rateUnit: Joi.string().required(),
+    noticePeriod: Joi.string().required(),
+    businessDescription: Joi.string().required(),
+
+    businessImages: Joi.array().items(Joi.string()).optional(),
+
+    certifications: Joi.array().items(certificationSchema).optional(),
+    memberships: Joi.array().items(membershipSchema).optional(),
+    insurances: Joi.array().items(insuranceSchema).optional(),
+  });
+
+  const schema = Joi.object({
+    profile: profileSchema.required(),
+    business: businessSchema.required(),
+  });
+
+  const { error } = schema.validate(req.body, {
+    abortEarly: false,
+  });
+
+  if (error) {
+    return res.status(400).json({
+      errors: error.details.map((d) => d.message),
     });
-  
-    const { error } = businessValidation.validate(req.body, { abortEarly: false });
-    
-    if (error) {
-      const errorMessages = error.details.map((detail) => detail.message);
-       res.status(400).json({ errors: errorMessages });
-       return
-    }
-  
-    next();
-  };
+  }
+
+  next();
+};
 
   export const validateBusinessUpdate = (req: Request, res: Response, next: NextFunction) => {
     const businessValidation = Joi.object({

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.saveUserProfile = exports.buildProfilePayload = exports.getProfileContextService = exports.resolveExpertContext = exports.deleteUser = exports.findUserWithoutPhoneNumberDetailsById = exports.findUserWithoutDetailsById = exports.findUserUsingUniqueIdEmailUserId = exports.verifyUser = exports.fetchAllUsersAdmin = exports.fetchAllUsersAdminDashboard = exports.fetchUserMutedBusinesses = exports.fetchUserMutedJobs = exports.findSpecificUser = exports.findUserByEmailOrUserNameDirectJob = exports.findUserByEmailOrUserName = exports.findUserByUniqueId = exports.findUserByIdWithPassword = exports.findUserByUserName = exports.updateUserById = exports.findTokenService = exports.findCurrentUserById = exports.createUser = exports.findUserById = exports.findUserByEmail = void 0;
+exports.saveUserProfile = exports.buildProfilePayload = exports.getProfileContextService = exports.resolveExpertContext = exports.deleteUser = exports.findUserWithoutPhoneNumberDetailsById = exports.findUserWithoutDetailsById = exports.findUserUsingUniqueIdEmailUserId = exports.verifyUser = exports.fetchAllUsersAdmin = exports.fetchAllUsersAdminDashboard = exports.fetchUserMutedBusinesses = exports.fetchUserMutedJobs = exports.findSpecificUser = exports.findUserByEmailOrUserNameDirectJob = exports.findUserByEmailOrUserName = exports.findUserByUniqueId = exports.findUserByIdWithPassword = exports.findUserByUserName = exports.updateUserById = exports.findTokenService = exports.findUserByIdForBusiness = exports.findCurrentUserById = exports.createUser = exports.findUserById = exports.findUserByEmail = void 0;
 const users_model_1 = __importDefault(require("../models/users.model"));
 const mongoose_1 = require("mongoose");
 const validation_helper_1 = require("../helpers/validation.helper");
@@ -23,9 +23,13 @@ const createUser = async (data) => {
 };
 exports.createUser = createUser;
 const findCurrentUserById = async (id) => {
-    return await users_model_1.default.findById(id).select("fullName uniqueId email language isProfileComplete isVerified");
+    return await users_model_1.default.findById(id).select("firstName lastName uniqueId email language isProfileComplete isVerified");
 };
 exports.findCurrentUserById = findCurrentUserById;
+const findUserByIdForBusiness = async (id) => {
+    return await users_model_1.default.findById(id).select('isProfileComplete firstName lastName mobile countryCode language houseAddress city state country bio displayImage');
+};
+exports.findUserByIdForBusiness = findUserByIdForBusiness;
 const findTokenService = async (registrationOtp) => {
     const tokenData = await users_model_1.default.findOne({ registrationOtp: registrationOtp });
     if (!tokenData)
@@ -201,48 +205,62 @@ const pick = (v) => v !== undefined && v.trim() !== '' ? v.trim() : undefined;
 const buildProfilePayload = (dto) => {
     const userSet = {};
     const businessSet = {};
-    if (pick(dto.firstName)) {
-        userSet.firstName = pick(dto.firstName);
-        businessSet.firstName = pick(dto.firstName);
+    const firstName = pick(dto.firstName);
+    const lastName = pick(dto.lastName);
+    const countryCode = pick(dto.countryCode);
+    const mobile = pick(dto.mobile);
+    const language = pick(dto.language);
+    const houseAddress = pick(dto.houseAddress);
+    const city = pick(dto.city);
+    const state = pick(dto.state);
+    const country = pick(dto.country);
+    const bio = pick(dto.bio);
+    const displayImage = pick(dto.displayImage);
+    if (firstName) {
+        userSet.firstName = firstName;
+        businessSet.firstName = firstName;
     }
-    if (pick(dto.lastName)) {
-        userSet.lastName = pick(dto.lastName);
-        businessSet.lastName = pick(dto.lastName);
+    if (lastName) {
+        userSet.lastName = lastName;
+        businessSet.lastName = lastName;
     }
-    if (pick(dto.countryCode)) {
-        userSet.countryCode = pick(dto.countryCode);
+    if (countryCode) {
+        userSet.countryCode = countryCode;
     }
-    if (pick(dto.mobile)) {
-        userSet.mobile = pick(dto.mobile);
-        businessSet.phoneNumber = pick(dto.mobile);
+    if (mobile) {
+        userSet.mobile = mobile;
+        businessSet.phoneNumber = mobile;
     }
-    if (pick(dto.language)) {
-        userSet.language = pick(dto.language);
-        businessSet.languages = [pick(dto.language)];
+    if (language) {
+        userSet.language = language;
+        businessSet.languages = [language];
     }
-    if (pick(dto.houseAddress)) {
-        userSet.houseAddress = pick(dto.houseAddress);
-        businessSet.address = pick(dto.houseAddress);
+    if (houseAddress) {
+        userSet.houseAddress = houseAddress;
+        businessSet.address = houseAddress;
     }
-    if (pick(dto.city)) {
-        userSet.city = pick(dto.city);
-        businessSet.city = pick(dto.city);
+    if (city) {
+        userSet.city = city;
+        businessSet.city = city;
+        businessSet.businessCity = city;
     }
-    if (pick(dto.state)) {
-        userSet.state = pick(dto.state);
-        businessSet.state = pick(dto.state);
+    if (state) {
+        userSet.state = state;
+        businessSet.state = state;
+        businessSet.businessState = state;
     }
-    if (pick(dto.country)) {
-        userSet.country = pick(dto.country);
-        businessSet.country = pick(dto.country);
+    if (country) {
+        userSet.country = country;
+        businessSet.country = country;
+        businessSet.businessCountry = country;
     }
-    if (pick(dto.bio)) {
-        userSet.bio = pick(dto.bio);
-        businessSet.bio = pick(dto.bio);
+    if (bio) {
+        userSet.bio = bio;
+        businessSet.bio = bio;
     }
-    if (pick(dto.displayImage)) {
-        userSet.displayImage = pick(dto.displayImage);
-        businessSet.profileImage = pick(dto.displayImage);
+    if (displayImage) {
+        userSet.displayImage = displayImage;
+        businessSet.displayImage = displayImage;
     }
     return { userSet, businessSet };
 };

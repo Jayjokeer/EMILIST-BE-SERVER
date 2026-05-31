@@ -1,12 +1,12 @@
 import { Router, Request, Response } from "express";
 import * as businesController from "../controllers/business.controller";
 import { userAuth } from "../middlewares/current-user";
-import { multipleUpload, singleUpload, uploadBusinessImages } from "../utils/image-upload";
+import { multipleUpload, parseBusinessOnboarding, singleUpload, uploadBusinessImages } from "../utils/image-upload";
 import { validateBusinessRegistration, validateBusinessUpdate, validateMarkBusinessReview, validateReviewBusiness } from "../validations/business.validation";
 
 const router = Router();
 
-router.route("/register-business").post(userAuth,uploadBusinessImages,validateBusinessRegistration,businesController.createBusinessController);
+router.route("/register-business").post(userAuth,uploadBusinessImages,parseBusinessOnboarding,validateBusinessRegistration,businesController.createBusinessProfileController);
 router.route("/update-business/:businessId").patch(userAuth,uploadBusinessImages,validateBusinessUpdate,businesController.updateBusinessController);
 router.route("/fetch-single-business/:businessId").get(businesController.fetchSingleBusinessController);
 router.route("/fetch-user-business").get(userAuth,businesController.fetchUserBusinessController);

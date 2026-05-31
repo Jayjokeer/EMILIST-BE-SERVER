@@ -1,10 +1,11 @@
 import { ICreateUser } from "../interfaces/user.interface";
 import Users from "../models/users.model";
 import Business from "../models/business.model";
-import { ExpertProfileContext, UserProfileDto } from "../interfaces/business.interface";
+import { CreateBusinessWithProfileDto, ExpertProfileContext, UserProfileDto } from "../interfaces/business.interface";
 import { Types } from "mongoose";
 import { assertAllProfileFieldsPresent } from "../helpers/validation.helper";
 import {  NotFoundError } from "../errors/error";
+import { setupService } from "./business.service";
 
 
 export const findUserByEmail = async (email: string) => {
@@ -19,7 +20,12 @@ export const createUser = async (data:  ICreateUser) =>{
     return await Users.create(data);
 };
 export const findCurrentUserById = async (id: string)=>{
-    return await Users.findById(id).select("fullName uniqueId email language isProfileComplete isVerified");
+    return await Users.findById(id).select("firstName lastName uniqueId email language isProfileComplete isVerified");
+};
+export const findUserByIdForBusiness = async (id: string)=>{
+return await Users.findById(id).select(
+    'isProfileComplete firstName lastName mobile countryCode language houseAddress city state country bio displayImage'
+  );
 };
 export const findTokenService = async (
     registrationOtp: string
@@ -212,21 +218,79 @@ const pick = (v: string | undefined): string | undefined =>
 export const buildProfilePayload = (dto: UserProfileDto) => {
   const userSet: Record<string, unknown> = {};
   const businessSet: Record<string, unknown> = {};
- 
-  if (pick(dto.firstName))    { userSet.firstName    = pick(dto.firstName);    businessSet.firstName    = pick(dto.firstName); }
-  if (pick(dto.lastName))     { userSet.lastName     = pick(dto.lastName);     businessSet.lastName     = pick(dto.lastName); }
-  if (pick(dto.countryCode))  { userSet.countryCode  = pick(dto.countryCode); }
-  if (pick(dto.mobile))       { userSet.mobile       = pick(dto.mobile);       businessSet.phoneNumber  = pick(dto.mobile); }
-  if (pick(dto.language))     { userSet.language     = pick(dto.language);     businessSet.languages    = [pick(dto.language)]; }
-  if (pick(dto.houseAddress)) { userSet.houseAddress = pick(dto.houseAddress); businessSet.address      = pick(dto.houseAddress); }
-  if (pick(dto.city))         { userSet.city         = pick(dto.city);         businessSet.city         = pick(dto.city); }
-  if (pick(dto.state))        { userSet.state        = pick(dto.state);        businessSet.state        = pick(dto.state); }
-  if (pick(dto.country))      { userSet.country      = pick(dto.country);      businessSet.country      = pick(dto.country); }
-  if (pick(dto.bio))          { userSet.bio          = pick(dto.bio);          businessSet.bio          = pick(dto.bio); }
-  if (pick(dto.displayImage)) { userSet.displayImage = pick(dto.displayImage); businessSet.profileImage = pick(dto.displayImage); }
- 
+
+  const firstName = pick(dto.firstName);
+  const lastName = pick(dto.lastName);
+  const countryCode = pick(dto.countryCode);
+  const mobile = pick(dto.mobile);
+  const language = pick(dto.language);
+  const houseAddress = pick(dto.houseAddress);
+  const city = pick(dto.city);
+  const state = pick(dto.state);
+  const country = pick(dto.country);
+  const bio = pick(dto.bio);
+  const displayImage = pick(dto.displayImage);
+
+  if (firstName) {
+    userSet.firstName = firstName;
+    businessSet.firstName = firstName;
+  }
+
+  if (lastName) {
+    userSet.lastName = lastName;
+    businessSet.lastName = lastName;
+  }
+
+  if (countryCode) {
+    userSet.countryCode = countryCode;
+  }
+
+  if (mobile) {
+    userSet.mobile = mobile;
+    businessSet.phoneNumber = mobile;
+  }
+
+  if (language) {
+    userSet.language = language;
+    businessSet.languages = [language];
+  }
+
+  if (houseAddress) {
+    userSet.houseAddress = houseAddress;
+    businessSet.address = houseAddress; 
+  }
+
+  if (city) {
+    userSet.city = city;
+    businessSet.city = city;
+    businessSet.businessCity = city;
+  }
+
+  if (state) {
+    userSet.state = state;
+    businessSet.state = state;
+    businessSet.businessState = state;
+  }
+
+  if (country) {
+    userSet.country = country;
+    businessSet.country = country;
+    businessSet.businessCountry = country;
+  }
+
+  if (bio) {
+    userSet.bio = bio;
+    businessSet.bio = bio;
+  }
+
+  if (displayImage) {
+    userSet.displayImage = displayImage;
+    businessSet.displayImage = displayImage;
+  }
+
   return { userSet, businessSet };
 };
+
 export const saveUserProfile = async (
   userId: string,
   dto: UserProfileDto,

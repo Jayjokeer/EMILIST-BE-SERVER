@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.extractProfileDto = exports.assertServiceFieldsPresent = exports.PROFILE_FIELDS = void 0;
+exports.getUserId = exports.extractProfileDto = exports.assertServiceFieldsPresent = exports.PROFILE_FIELDS = void 0;
 exports.assertAllProfileFieldsPresent = assertAllProfileFieldsPresent;
 const error_1 = require("../errors/error");
 exports.PROFILE_FIELDS = [
@@ -76,3 +76,7 @@ const extractProfileDto = (req) => {
     };
 };
 exports.extractProfileDto = extractProfileDto;
+const getUserId = (req) => {
+    return req.user?.id;
+};
+exports.getUserId = getUserId;

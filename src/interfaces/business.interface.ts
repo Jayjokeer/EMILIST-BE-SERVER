@@ -127,17 +127,48 @@ export interface SetupServiceDto {
   services: string[];
   coverageArea: string[];
   sameAsProfile?: boolean;
+
   businessName: string;
   yearFounded: string;
   numberOfEmployee: number;
+
   businessAddress: string;
   businessState: string;
   businessCountry: string;
+
   startingPrice: number;
   currency: string;
   rateUnit: string;
   noticePeriod: string;
   businessDescription: string;
+
   businessImages?: string[];
+
+  certifications?: CertificateDto[];
+  memberships?: MembershipDto[];
+  insurances?: InsuranceDto[];
 }
- 
+
+export interface CreateBusinessWithProfileDto {
+  profile?: BusinessProfileDto;   
+  business: {
+    services: string[];
+    coverageArea: string[];
+    sameAsProfile?: boolean;
+    businessName: string;
+    yearFounded: string;
+    numberOfEmployee: number;
+    businessAddress: string;
+    businessState: string;
+    businessCountry: string;
+    startingPrice: number;
+    currency: string;
+    rateUnit: string;
+    noticePeriod: string;
+    businessDescription: string;
+    businessImages?: string[];
+  certifications?: CertificateDto[];
+  memberships?: MembershipDto[];
+  insurances?: InsuranceDto[];
+  };
+}

@@ -6,140 +6,69 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateReviewBusiness = exports.validateMarkBusinessReview = exports.validateBusinessUpdate = exports.validateBusinessRegistration = void 0;
 const joi_1 = __importDefault(require("joi"));
 const validateBusinessRegistration = (req, res, next) => {
-    const businessValidation = joi_1.default.object({
-        firstName: joi_1.default.string().required().messages({
-            'string.empty': 'First name is required',
-        }),
-        lastName: joi_1.default.string().required().messages({
-            'string.empty': 'Last name is required',
-        }),
-        services: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            'string.base': 'Each service must be a string',
-        }),
-        languages: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            'string.base': 'Each language must be a string',
-        }),
-        address: joi_1.default.string().optional().messages({
-            'string.base': 'Address must be a string',
-        }),
-        currency: joi_1.default.string().optional().messages({
-            'string.base': 'Currency must be a string',
-        }),
-        phoneNumber: joi_1.default.string().optional().messages({
-            'string.base': 'Phone number must be a string',
-        }),
-        city: joi_1.default.string().optional().messages({
-            'string.base': 'City must be a string',
-        }),
-        state: joi_1.default.string().optional().messages({
-            'string.base': 'State must be a string',
-        }),
-        country: joi_1.default.string().optional().messages({
-            'string.base': 'Country must be a string',
-        }),
-        bio: joi_1.default.string().optional().messages({
-            'string.base': 'Bio must be a string',
-        }),
-        coverageArea: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            'string.base': 'Each coverage area must be a string',
-        }),
-        renderedServices: joi_1.default.array().items(joi_1.default.object({
-            name: joi_1.default.string().optional().messages({
-                'string.base': 'Service name must be a string',
-            }),
-            status: joi_1.default.string().optional().messages({
-                'string.base': 'Status must be a string',
-            }),
-        })).optional(),
-        certification: joi_1.default.array().items(joi_1.default.object({
-            issuingOrganisation: joi_1.default.string().optional().messages({
-                'string.base': 'Issuing organisation must be a string',
-            }),
-            verificationNumber: joi_1.default.string().optional().messages({
-                'string.base': 'Verification number must be a string',
-            }),
-            issuingDate: joi_1.default.date().optional().messages({
-                'date.base': 'Issuing date must be a valid date',
-            }),
-            expiringDate: joi_1.default.date().optional().messages({
-                'date.base': 'Expiring date must be a valid date',
-            }),
-            isCertificateExpire: joi_1.default.boolean().optional().messages({
-                'boolean.base': 'Certificate expiry must be a boolean',
-            }),
-        })).optional(),
-        membership: joi_1.default.array().items(joi_1.default.object({
-            organisation: joi_1.default.string().optional().messages({
-                'string.base': 'Organisation must be a string',
-            }),
-            positionHeld: joi_1.default.string().optional().messages({
-                'string.base': 'Position held must be a string',
-            }),
-            startDate: joi_1.default.date().optional().messages({
-                'date.base': 'Start date must be a valid date',
-            }),
-            endDate: joi_1.default.date().optional().messages({
-                'date.base': 'End date must be a valid date',
-            }),
-            isMembershipExpire: joi_1.default.boolean().optional().messages({
-                'boolean.base': 'Membership expiry must be a boolean',
-            }),
-        })).optional(),
-        insurance: joi_1.default.array().items(joi_1.default.object({
-            issuingOrganisation: joi_1.default.string().optional().messages({
-                'string.base': 'Issuing organisation must be a string',
-            }),
-            coverage: joi_1.default.string().optional().messages({
-                'string.base': 'Coverage must be a string',
-            }),
-            description: joi_1.default.string().optional().messages({
-                'date.base': 'Description must be a valid string',
-            }),
-        })).optional(),
-        businessName: joi_1.default.string().required().messages({
-            'string.base': 'Business name must be a string',
-            'string.empty': 'Business name is required',
-        }),
-        yearFounded: joi_1.default.string().required().messages({
-            'string.base': 'Year founded must be a string',
-            'string.empty': 'Year founded is required',
-        }),
-        numberOfEmployee: joi_1.default.number().required().messages({
-            'number.base': 'number of employees must be a number',
-            'number.empty': 'number of employees is required',
-        }),
-        businessAddress: joi_1.default.string().optional().messages({
-            'string.base': 'Business address must be a string',
-        }),
-        businessCity: joi_1.default.string().optional().messages({
-            'string.base': 'City must be a string',
-        }),
-        businessState: joi_1.default.string().required().messages({
-            'string.base': 'State must be a string',
-            'string.empty': 'State is required',
-        }),
-        businessCountry: joi_1.default.string().required().messages({
-            'string.base': 'Country must be a string',
-            'string.empty': 'Country is required',
-        }),
-        startingPrice: joi_1.default.number().required().messages({
-            'number.base': 'Starting price must be a number',
-            'number.empty': 'Starting Price is required',
-        }),
-        noticePeriod: joi_1.default.string().required().messages({
-            'string.base': 'Notice period must be a string',
-            'string.empty': 'Notice period is required',
-        }),
-        businessDescription: joi_1.default.string().required().messages({
-            'string.base': 'Description must be a string',
-            'string.empty': 'Description is required',
-        }),
+    const profileSchema = joi_1.default.object({
+        firstName: joi_1.default.string().optional(),
+        lastName: joi_1.default.string().optional(),
+        countryCode: joi_1.default.string().optional(),
+        mobile: joi_1.default.string().optional(),
+        language: joi_1.default.string().optional(),
+        houseAddress: joi_1.default.string().optional(),
+        city: joi_1.default.string().optional(),
+        state: joi_1.default.string().optional(),
+        country: joi_1.default.string().optional(),
+        bio: joi_1.default.string().optional(),
     });
-    const { error } = businessValidation.validate(req.body, { abortEarly: false });
+    const certificationSchema = joi_1.default.object({
+        issuingOrganisation: joi_1.default.string().optional(),
+        verificationNumber: joi_1.default.string().optional(),
+        issuingDate: joi_1.default.date().optional(),
+        expiringDate: joi_1.default.date().optional(),
+        isCertificateExpire: joi_1.default.boolean().optional(),
+        isVerified: joi_1.default.boolean().optional(),
+        certificate: joi_1.default.string().optional(),
+    });
+    const membershipSchema = joi_1.default.object({
+        organisation: joi_1.default.string().optional(),
+        positionHeld: joi_1.default.string().optional(),
+        startDate: joi_1.default.date().optional(),
+        endDate: joi_1.default.date().optional(),
+        isMembershipExpire: joi_1.default.boolean().optional(),
+    });
+    const insuranceSchema = joi_1.default.object({
+        issuingOrganisation: joi_1.default.string().optional(),
+        coverage: joi_1.default.string().optional(),
+        description: joi_1.default.string().optional(),
+    });
+    const businessSchema = joi_1.default.object({
+        services: joi_1.default.array().items(joi_1.default.string()).required(),
+        coverageArea: joi_1.default.array().items(joi_1.default.string()).required(),
+        businessName: joi_1.default.string().required(),
+        yearFounded: joi_1.default.string().required(),
+        numberOfEmployee: joi_1.default.number().required(),
+        businessAddress: joi_1.default.string().required(),
+        businessState: joi_1.default.string().required(),
+        businessCountry: joi_1.default.string().required(),
+        startingPrice: joi_1.default.number().required(),
+        currency: joi_1.default.string().required(),
+        rateUnit: joi_1.default.string().required(),
+        noticePeriod: joi_1.default.string().required(),
+        businessDescription: joi_1.default.string().required(),
+        businessImages: joi_1.default.array().items(joi_1.default.string()).optional(),
+        certifications: joi_1.default.array().items(certificationSchema).optional(),
+        memberships: joi_1.default.array().items(membershipSchema).optional(),
+        insurances: joi_1.default.array().items(insuranceSchema).optional(),
+    });
+    const schema = joi_1.default.object({
+        profile: profileSchema.required(),
+        business: businessSchema.required(),
+    });
+    const { error } = schema.validate(req.body, {
+        abortEarly: false,
+    });
     if (error) {
-        const errorMessages = error.details.map((detail) => detail.message);
-        res.status(400).json({ errors: errorMessages });
-        return;
+        return res.status(400).json({
+            errors: error.details.map((d) => d.message),
+        });
     }
     next();
 };

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadBusinessImages = exports.multipleUpload = exports.singleUpload = exports.cloudinary = void 0;
+exports.uploadBusinessImages = exports.multipleUpload = exports.singleUpload = exports.cloudinary = exports.parseBusinessOnboarding = void 0;
 const cloudinary_1 = require("cloudinary");
 Object.defineProperty(exports, "cloudinary", { enumerable: true, get: function () { return cloudinary_1.v2; } });
 const multer_storage_cloudinary_1 = require("multer-storage-cloudinary");
@@ -33,3 +33,20 @@ const uploadBusinessImages = (0, multer_1.default)({ storage }).fields([
     { name: 'businessImages', maxCount: 10 },
 ]);
 exports.uploadBusinessImages = uploadBusinessImages;
+const parseBusinessOnboarding = (req, res, next) => {
+    try {
+        if (req.body.profile) {
+            req.body.profile = JSON.parse(req.body.profile);
+        }
+        if (req.body.business) {
+            req.body.business = JSON.parse(req.body.business);
+        }
+        next();
+    }
+    catch (err) {
+        return res.status(400).json({
+            message: "Invalid JSON in profile or business field",
+        });
+    }
+};
+exports.parseBusinessOnboarding = parseBusinessOnboarding;

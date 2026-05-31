@@ -6,11 +6,14 @@ import * as jobService from "../services/job.service";
 import { IJob, IMilestone, IUpdateJob } from "../interfaces/jobs.interface";
 import { JwtPayload } from "jsonwebtoken";
 import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/error";
-import IBusiness from "../interfaces/business.interface";
+import IBusiness, { BusinessProfileDto, CreateBusinessWithProfileDto, SetupServiceDto, VerifyExpertiseDto } from "../interfaces/business.interface";
 import * as  businessService from "../services/business.service";
 import * as  authService from "../services/auth.service";
 import * as reviewService from "../services/review.service";
 import { ExpertTypeEnum } from "../enums/business.enum";
+import { assertAllProfileFieldsPresent, extractProfileDto, getUserId } from "../helpers/validation.helper";
+import { Types } from "mongoose";
+import { buildProfilePayload } from "../services/auth.service";
 
 export const createBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
     const businessData = req.body;
@@ -341,3 +344,124 @@ export const markReviewController = catchAsync(async (req: JwtPayload, res: Resp
       throw new BadRequestError("Invalid itemType provided");
   }
 });
+//NEW CONTROLLERS FOR BUSINESS PROFILE CREATION WITHIN USER PROFILE SETUP AND EXPERTISE VERIFICATION
+export const createBusinessProfileController = catchAsync(
+  async (req: Request, res: Response, _next: NextFunction) => {
+    const userId = getUserId(req);
+
+    const dto: CreateBusinessWithProfileDto = req.body;
+
+    const result = await businessService.createBusinessProfileService(
+      userId!,
+      dto,
+      req.files
+    );
+
+    return successResponse(res, StatusCodes.CREATED, {
+      profileCreated: result.profileCreated,
+      business: result.business,
+      service: result.service,
+    });
+  }
+);
+
+
+export const verifyExpertiseController = catchAsync(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction
+) => {
+    const userId = getUserId(req);
+ 
+    const dto: VerifyExpertiseDto = {
+      certificates: req.body.certificates,
+      memberships:  req.body.memberships,
+      insurances:   req.body.insurances,
+    };
+ 
+    const business = await businessService.verifyExpertise(userId!, dto, {
+      replace:    req.query.replace === 'true',
+      businessId: req.query.businessId as string | undefined,
+    });
+ 
+    return successResponse(res, StatusCodes.OK, { business });
+
+});
+
+export const removeExpertiseItemController = catchAsync(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction
+) => {
+    const userId = getUserId(req);
+    const { section, itemId } = req.params as {
+      section: 'certification' | 'membership' | 'insurance';
+      itemId: string;
+    };
+ 
+    const allowed = ['certification', 'membership', 'insurance'];
+    if (!allowed.includes(section)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid section. Must be one of: ${allowed.join(', ')}`,
+      });
+    }
+ 
+    const business = await businessService.removeExpertiseItem(
+      userId!,
+      section,
+      itemId,
+      req.query.businessId as string | undefined
+    );
+ 
+    return successResponse(res, StatusCodes.OK, { business });
+
+});
+ 
+
+export const getExpertiseProfileController = catchAsync(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction
+) => {
+    const userId = getUserId(req);
+    const data = await businessService.getExpertiseProfile(
+      userId!,
+      req.query.businessId as string | undefined
+    );
+    return successResponse(res, StatusCodes.OK, { data });
+
+});
+ 
+
+export const updateServiceController = catchAsync(async (
+  req: Request,
+  res: Response,
+  _next: NextFunction
+) => {
+    const userId = getUserId(req);
+    const { id: businessId } = req.params;
+ 
+    const dto: Partial<SetupServiceDto> = {
+      ...(req.body.services            !== undefined && { services:            req.body.services }),
+      ...(req.body.coverageArea        !== undefined && { coverageArea:        req.body.coverageArea }),
+      ...(req.body.sameAsProfile       !== undefined && { sameAsProfile:       req.body.sameAsProfile === true || req.body.sameAsProfile === 'true' }),
+      ...(req.body.businessName        !== undefined && { businessName:        req.body.businessName }),
+      ...(req.body.yearFounded         !== undefined && { yearFounded:         req.body.yearFounded }),
+      ...(req.body.numberOfEmployee    !== undefined && { numberOfEmployee:    Number(req.body.numberOfEmployee) }),
+      ...(req.body.businessAddress     !== undefined && { businessAddress:     req.body.businessAddress }),
+      ...(req.body.businessState       !== undefined && { businessState:       req.body.businessState }),
+      ...(req.body.businessCountry     !== undefined && { businessCountry:     req.body.businessCountry }),
+      ...(req.body.startingPrice       !== undefined && { startingPrice:       Number(req.body.startingPrice) }),
+      ...(req.body.currency            !== undefined && { currency:            req.body.currency }),
+      ...(req.body.rateUnit            !== undefined && { rateUnit:            req.body.rateUnit }),
+      ...(req.body.noticePeriod        !== undefined && { noticePeriod:        req.body.noticePeriod }),
+      ...(req.body.businessDescription !== undefined && { businessDescription: req.body.businessDescription }),
+      ...(req.body.businessImages      !== undefined && { businessImages:      req.body.businessImages }),
+    };
+ 
+    const business = await businessService.updateService(userId!, String(businessId), dto);
+    return successResponse(res, StatusCodes.OK, { business });
+
+});
+ 
