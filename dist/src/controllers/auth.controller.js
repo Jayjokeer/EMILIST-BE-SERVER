@@ -68,12 +68,12 @@ exports.registerUserController = (0, error_handler_1.catchAsync)(async (req, res
     if (isEmailExists)
         throw new error_1.BadRequestError("User with email already exists!");
     const encryptPwd = await (0, hashing_1.hashPassword)(password);
-    const user = {
+    const newUser = {
         email: email.toLowerCase(),
         password: encryptPwd,
         uniqueId: (0, utility_1.generateShortUUID)()
     };
-    const data = await authService.createUser(user);
+    const data = await authService.createUser(newUser);
     const userId = String(data._id);
     const { otp, otpCreatedAt, otpExpiryTime } = await (0, utility_1.generateOTPData)(userId);
     data.otpExpiresAt = otpExpiryTime;
@@ -94,7 +94,16 @@ exports.registerUserController = (0, error_handler_1.catchAsync)(async (req, res
     await data.save();
     const { html, subject } = (0, templates_1.otpMessage)(otp);
     (0, send_email_1.sendEmail)(email, subject, html);
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    const token = await (0, jwt_1.generateJWTwithExpiryDate)({
+        email: data.email,
+        id: data._id,
+    });
+    const userData = await authService.findUserByIdAlone(String(data._id));
+    const user = {
+        token,
+        userData
+    };
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, user);
 });
 exports.loginController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { email, password } = req.body;
@@ -119,7 +128,7 @@ exports.loginController = (0, error_handler_1.catchAsync)(async (req, res) => {
         email: foundUser.email,
         id: foundUser._id,
     });
-    const userData = await authService.findUserById(String(foundUser._id));
+    const userData = await authService.findUserByIdAlone(String(foundUser._id));
     const user = {
         token,
         userData
@@ -150,7 +159,7 @@ exports.verifyEmailController = (0, error_handler_1.catchAsync)(async (req, res)
         email: foundUser.email,
         id: foundUser._id,
     });
-    const userData = await authService.findUserById(String(foundUser._id));
+    const userData = await authService.findUserByIdAlone(String(foundUser._id));
     const user = {
         token,
         userData
@@ -252,7 +261,7 @@ exports.changePasswordController = (0, error_handler_1.catchAsync)(async (req, r
 });
 exports.currentUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
-    const foundUser = await authService.findCurrentUserById(userId);
+    const foundUser = await authService.findUserByIdAlone(userId);
     if (!foundUser)
         throw new error_1.NotFoundError("User not found!");
     const token = await (0, jwt_1.generateJWTwithExpiryDate)({

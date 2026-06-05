@@ -12,7 +12,7 @@ export const generateShortUUID = (): string => {
   export const generateOTPData = ( userId: string ) => {
     
     const period = 60;
-     const digits = 5;
+     const digits = 6;
      const options = {
       step: period,
       digits,

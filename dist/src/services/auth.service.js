@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.saveUserProfile = exports.buildProfilePayload = exports.getProfileContextService = exports.resolveExpertContext = exports.deleteUser = exports.findUserWithoutPhoneNumberDetailsById = exports.findUserWithoutDetailsById = exports.findUserUsingUniqueIdEmailUserId = exports.verifyUser = exports.fetchAllUsersAdmin = exports.fetchAllUsersAdminDashboard = exports.fetchUserMutedBusinesses = exports.fetchUserMutedJobs = exports.findSpecificUser = exports.findUserByEmailOrUserNameDirectJob = exports.findUserByEmailOrUserName = exports.findUserByUniqueId = exports.findUserByIdWithPassword = exports.findUserByUserName = exports.updateUserById = exports.findTokenService = exports.findUserByIdForBusiness = exports.findCurrentUserById = exports.createUser = exports.findUserById = exports.findUserByEmail = void 0;
+exports.saveUserProfile = exports.buildProfilePayload = exports.getProfileContextService = exports.resolveExpertContext = exports.deleteUser = exports.findUserWithoutPhoneNumberDetailsById = exports.findUserWithoutDetailsById = exports.findUserUsingUniqueIdEmailUserId = exports.verifyUser = exports.fetchAllUsersAdmin = exports.fetchAllUsersAdminDashboard = exports.fetchUserMutedBusinesses = exports.fetchUserMutedJobs = exports.findSpecificUser = exports.findUserByEmailOrUserNameDirectJob = exports.findUserByEmailOrUserName = exports.findUserByUniqueId = exports.findUserByIdWithPassword = exports.findUserByUserName = exports.updateUserById = exports.findTokenService = exports.findUserByIdForBusiness = exports.findCurrentUserById = exports.createUser = exports.findUserByIdAlone = exports.findUserById = exports.findUserByEmail = void 0;
 const users_model_1 = __importDefault(require("../models/users.model"));
 const mongoose_1 = require("mongoose");
 const validation_helper_1 = require("../helpers/validation.helper");
@@ -18,6 +18,10 @@ const findUserById = async (id) => {
         .populate('subscription');
 };
 exports.findUserById = findUserById;
+const findUserByIdAlone = async (id) => {
+    return await users_model_1.default.findById(id, { password: 0 });
+};
+exports.findUserByIdAlone = findUserByIdAlone;
 const createUser = async (data) => {
     return await users_model_1.default.create(data);
 };

@@ -39,13 +39,13 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
 
     const encryptPwd = await hashPassword(password);
 
-    const user: ICreateUser= {
+    const newUser: ICreateUser= {
       email: email.toLowerCase(),
       password: encryptPwd,
       uniqueId:generateShortUUID()
     };
     
-    const data = await authService.createUser(user);
+    const data = await authService.createUser(newUser);
     const userId = String(data._id);
     const {otp, otpCreatedAt, otpExpiryTime} = await generateOTPData(userId);
     data.otpExpiresAt = otpExpiryTime;
@@ -65,7 +65,17 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     await data.save();
     const {html, subject} = otpMessage( otp);
     sendEmail(email, subject,html); 
-   return successResponse(res,StatusCodes.CREATED, data);
+
+  const token = await generateJWTwithExpiryDate({
+    email: data.email,
+    id: data._id,
+  });
+  const userData = await authService.findUserByIdAlone(String(data._id));
+const user = {
+  token,
+  userData
+};
+   return successResponse(res,StatusCodes.CREATED, user);
 });
 
 export const loginController = catchAsync(async (req: Request, res: Response) => {
@@ -94,7 +104,7 @@ export const loginController = catchAsync(async (req: Request, res: Response) =>
     email: foundUser.email,
     id: foundUser._id,
   });
-  const userData = await authService.findUserById(String(foundUser._id));
+  const userData = await authService.findUserByIdAlone(String(foundUser._id));
 const user = {
   token,
   userData
@@ -128,7 +138,7 @@ export const verifyEmailController = catchAsync(async (req: Request, res: Respon
     email: foundUser.email,
     id: foundUser._id,
   });
-  const userData = await authService.findUserById(String(foundUser._id));
+  const userData = await authService.findUserByIdAlone(String(foundUser._id));
   const user = {
   token,
   userData
@@ -265,7 +275,7 @@ export const changePasswordController = catchAsync(async (req: JwtPayload, res: 
 export const currentUserController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId  = req.user.id;
 
-  const foundUser = await authService.findCurrentUserById(userId);
+  const foundUser = await authService.findUserByIdAlone(userId);
   if (!foundUser) throw new NotFoundError("User not found!");
 
   const token = await generateJWTwithExpiryDate({

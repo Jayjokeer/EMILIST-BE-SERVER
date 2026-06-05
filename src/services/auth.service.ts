@@ -16,6 +16,11 @@ export const findUserById = async (id: string)=>{
     .populate('wallets')
     .populate('subscription');
 };
+
+export const findUserByIdAlone = async (id: string)=>{
+    return await Users.findById(id,{password: 0})
+
+};
 export const createUser = async (data:  ICreateUser) =>{
     return await Users.create(data);
 };

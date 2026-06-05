@@ -48,7 +48,7 @@ const AddMinutesToDate = (time, minutes) => {
 };
 const generateOTPData = (userId) => {
     const period = 60;
-    const digits = 5;
+    const digits = 6;
     const options = {
         step: period,
         digits,
