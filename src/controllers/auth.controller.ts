@@ -70,7 +70,7 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     email: data.email,
     id: data._id,
   });
-  const userData = await authService.findUserByIdAlone(String(data._id));
+  const userData = await authService.findCurrentUserById(String(data._id));
 const user = {
   token,
   userData
@@ -104,7 +104,7 @@ export const loginController = catchAsync(async (req: Request, res: Response) =>
     email: foundUser.email,
     id: foundUser._id,
   });
-  const userData = await authService.findUserByIdAlone(String(foundUser._id));
+  const userData = await authService.findCurrentUserById(String(foundUser._id));
 const user = {
   token,
   userData
@@ -138,7 +138,7 @@ export const verifyEmailController = catchAsync(async (req: Request, res: Respon
     email: foundUser.email,
     id: foundUser._id,
   });
-  const userData = await authService.findUserByIdAlone(String(foundUser._id));
+  const userData = await authService.findCurrentUserById(String(foundUser._id));
   const user = {
   token,
   userData
@@ -275,7 +275,7 @@ export const changePasswordController = catchAsync(async (req: JwtPayload, res: 
 export const currentUserController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId  = req.user.id;
 
-  const foundUser = await authService.findUserByIdAlone(userId);
+  const foundUser = await authService.findCurrentUserById(userId);
   if (!foundUser) throw new NotFoundError("User not found!");
 
   const token = await generateJWTwithExpiryDate({
@@ -344,7 +344,7 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
     email: loggedIn.email,
     id: loggedIn.id,
   });
-  const userData = await authService.findUserById(loggedIn.id);
+  const userData = await authService.findCurrentUserById(loggedIn.id);
 
 
   res.cookie('sessionId', token, {

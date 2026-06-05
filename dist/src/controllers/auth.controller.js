@@ -98,7 +98,7 @@ exports.registerUserController = (0, error_handler_1.catchAsync)(async (req, res
         email: data.email,
         id: data._id,
     });
-    const userData = await authService.findUserByIdAlone(String(data._id));
+    const userData = await authService.findCurrentUserById(String(data._id));
     const user = {
         token,
         userData
@@ -128,7 +128,7 @@ exports.loginController = (0, error_handler_1.catchAsync)(async (req, res) => {
         email: foundUser.email,
         id: foundUser._id,
     });
-    const userData = await authService.findUserByIdAlone(String(foundUser._id));
+    const userData = await authService.findCurrentUserById(String(foundUser._id));
     const user = {
         token,
         userData
@@ -159,7 +159,7 @@ exports.verifyEmailController = (0, error_handler_1.catchAsync)(async (req, res)
         email: foundUser.email,
         id: foundUser._id,
     });
-    const userData = await authService.findUserByIdAlone(String(foundUser._id));
+    const userData = await authService.findCurrentUserById(String(foundUser._id));
     const user = {
         token,
         userData
@@ -261,7 +261,7 @@ exports.changePasswordController = (0, error_handler_1.catchAsync)(async (req, r
 });
 exports.currentUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
-    const foundUser = await authService.findUserByIdAlone(userId);
+    const foundUser = await authService.findCurrentUserById(userId);
     if (!foundUser)
         throw new error_1.NotFoundError("User not found!");
     const token = await (0, jwt_1.generateJWTwithExpiryDate)({
@@ -317,7 +317,7 @@ exports.googleRedirectController = (0, error_handler_1.catchAsync)(async (req, r
         email: loggedIn.email,
         id: loggedIn.id,
     });
-    const userData = await authService.findUserById(loggedIn.id);
+    const userData = await authService.findCurrentUserById(loggedIn.id);
     res.cookie('sessionId', token, {
         httpOnly: false,
         secure: true,
