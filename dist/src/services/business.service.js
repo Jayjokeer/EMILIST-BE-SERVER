@@ -555,14 +555,13 @@ const setupService = async (userId, businessId, dto, files) => {
             imageUrl: file.path,
         }));
     }
-    const certifications = dto.certifications ?? [];
-    if (files?.certificate?.length && certifications.length) {
-        certifications.forEach((cert, index) => {
-            if (!cert.certificate && files.certificate[index]) {
-                cert.certificate = files.certificate[index].path;
-            }
-        });
-    }
+    const certifications = (dto.certifications ?? []).map((cert, index) => {
+        const indexedFile = files?.[`certificate_${index}`]?.[0];
+        return {
+            ...cert,
+            ...(indexedFile && { certificate: indexedFile.path }),
+        };
+    });
     const serviceSet = {
         services: dto.services,
         coverageArea: dto.coverageArea,

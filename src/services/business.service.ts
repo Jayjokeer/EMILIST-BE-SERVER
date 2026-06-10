@@ -643,7 +643,6 @@ export const setupService = async (
   let businessImages: { imageUrl: string }[] = [];
   let profileImage: string | undefined;
 
-
   if (files?.profileImage?.[0]) {
     profileImage = files.profileImage[0].path;
   }
@@ -654,17 +653,14 @@ export const setupService = async (
     }));
   }
 
+  const certifications = (dto.certifications ?? []).map((cert, index) => {
+    const indexedFile = files?.[`certificate_${index}`]?.[0];
 
-  const certifications = dto.certifications ?? [];
-
-  if (files?.certificate?.length && certifications.length) {
-    certifications.forEach((cert, index) => {
-      if (!cert.certificate && files.certificate[index]) {
-        cert.certificate = files.certificate[index].path;
-      }
-    });
-  }
-
+    return {
+      ...cert,
+      ...(indexedFile && { certificate: indexedFile.path }),
+    };
+  });
 
   const serviceSet: Record<string, unknown> = {
     services: dto.services,
@@ -691,7 +687,6 @@ export const setupService = async (
     ...(businessImages.length > 0 && { businessImages }),
     ...(profileImage && { profileImage }),
   };
-
 
   const business = await Business.findOneAndUpdate(
     { _id: new Types.ObjectId(businessId), userId: userObjectId },

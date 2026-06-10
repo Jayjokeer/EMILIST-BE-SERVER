@@ -11,23 +11,34 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: async (req, file) => {
+  params: async (req: Request, file: Express.Multer.File) => {
+    let folder = 'uploads';
+    let publicId = file.originalname.split('.')[0] + Date.now();
+
+    if (file.fieldname.startsWith('certificate_')) {
+      const index = file.fieldname.split('_')[1];
+      folder = 'uploads/certificates';
+      publicId = `cert_${index}_${Date.now()}`;
+    }
+
     return {
-      folder: 'uploads',
+      folder,
       allowed_formats: ['jpg', 'png', 'jpeg', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv'],
-      public_id: file.originalname.split('.')[0] + Date.now(), 
+      public_id: publicId,
     };
   },
 });
-
 const singleUpload = multer({ storage }).single('image');
 
 const multipleUpload = multer({ storage }).array('files', 10);
 
 const uploadBusinessImages = multer({ storage }).fields([
   { name: 'displayImage', maxCount: 1 },
-  { name: 'certificate', maxCount: 10 },
   { name: 'businessImages', maxCount: 10 },
+  ...Array.from({ length: 20 }, (_, i) => ({
+    name: `certificate_${i}`,
+    maxCount: 1,
+  })),
 ]);
 
 export const parseBusinessOnboarding = (

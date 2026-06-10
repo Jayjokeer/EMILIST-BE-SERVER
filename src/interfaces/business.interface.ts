@@ -94,7 +94,7 @@ export interface UserProfileDto {
 export interface BusinessProfileDto extends UserProfileDto {}
  
 export interface CertificateDto {
-  certificate?: string;         // uploaded file URL
+  certificate?: string;         
   issuingOrganisation: string;
   verificationNumber?: string;
   issuingDate?: Date;
