@@ -27,7 +27,7 @@ const createUser = async (data) => {
 };
 exports.createUser = createUser;
 const findCurrentUserById = async (id) => {
-    return await users_model_1.default.findById(id).select("firstName lastName uniqueId email language isProfileComplete isVerified");
+    return await users_model_1.default.findById(id).select("firstName lastName uniqueId email language isProfileComplete isVerified isEmailVerified");
 };
 exports.findCurrentUserById = findCurrentUserById;
 const findUserByIdForBusiness = async (id) => {

@@ -25,7 +25,7 @@ export const createUser = async (data:  ICreateUser) =>{
     return await Users.create(data);
 };
 export const findCurrentUserById = async (id: string)=>{
-    return await Users.findById(id).select("firstName lastName uniqueId email language isProfileComplete isVerified");
+    return await Users.findById(id).select("firstName lastName uniqueId email language isProfileComplete isVerified isEmailVerified");
 };
 export const findUserByIdForBusiness = async (id: string)=>{
 return await Users.findById(id).select(
