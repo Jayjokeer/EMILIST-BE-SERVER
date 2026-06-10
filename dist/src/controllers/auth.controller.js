@@ -208,14 +208,14 @@ exports.resetPasswordController = (0, error_handler_1.catchAsync)(async (req, re
 });
 exports.updateUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
-    const { firstName, lastName, gender, countryCode, language, houseAddress, mobile, city, state, country, bio, } = req.body;
+    const { firstName, lastName, gender, countryCode, languages, houseAddress, mobile, city, state, country, bio, } = req.body;
     const foundUser = await authService.findUserById(userId);
     if (!foundUser)
         throw new error_1.NotFoundError("User not found!");
     foundUser.firstName = firstName || foundUser.firstName;
     foundUser.lastName = lastName || foundUser.lastName;
     foundUser.gender = gender || foundUser.gender;
-    foundUser.language = language || foundUser.language;
+    foundUser.languages = languages || foundUser.languages || [];
     foundUser.mobile = mobile || foundUser.mobile;
     foundUser.countryCode = countryCode || foundUser.countryCode;
     foundUser.houseAddress = houseAddress || foundUser.houseAddress;

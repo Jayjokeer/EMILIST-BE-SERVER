@@ -200,9 +200,9 @@ export const validateUpdateUser = (req: Request, res: Response, next: NextFuncti
         "string.base": "Country Code must be a string",
         "string.empty": "Country Code is required",
       }),      
-      language: Joi.string().required().messages({
-        "string.base": "Language must be a string",
-        "string.empty": "Language is required",
+      languages: Joi.array().items(Joi.string()).required().messages({
+        "array.base": "Languages must be an array",
+        "string.empty": "Languages is required",
       }),      
       houseAddress: Joi.string().required().messages({
         "string.base": "House Address must be a string",

@@ -46,7 +46,7 @@ const userSchema = new mongoose_1.default.Schema({
     userName: { type: String },
     uniqueId: { type: String, unique: true },
     gender: { type: String },
-    language: { type: String },
+    languages: [{ type: String }],
     mobile: { type: String },
     city: { type: String },
     state: { type: String },

@@ -200,7 +200,7 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
     lastName,
     gender,
     countryCode,
-    language,
+    languages,
     houseAddress,
     mobile,
     city,
@@ -216,7 +216,7 @@ export const updateUserController = catchAsync(async (req: JwtPayload, res: Resp
   foundUser.firstName = firstName || foundUser.firstName;
   foundUser.lastName = lastName || foundUser.lastName;
   foundUser.gender = gender || foundUser.gender;
-  foundUser.language = language || foundUser.language;
+  foundUser.languages = languages || foundUser.languages || [];
   foundUser.mobile = mobile || foundUser.mobile;
   foundUser.countryCode = countryCode || foundUser.countryCode;
   foundUser.houseAddress = houseAddress || foundUser.houseAddress;

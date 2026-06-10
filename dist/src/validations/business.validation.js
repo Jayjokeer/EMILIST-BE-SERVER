@@ -11,7 +11,7 @@ const validateBusinessRegistration = (req, res, next) => {
         lastName: joi_1.default.string().optional(),
         countryCode: joi_1.default.string().optional(),
         mobile: joi_1.default.string().optional(),
-        language: joi_1.default.string().optional(),
+        languages: joi_1.default.array().items(joi_1.default.string()).optional(),
         houseAddress: joi_1.default.string().optional(),
         city: joi_1.default.string().optional(),
         state: joi_1.default.string().optional(),

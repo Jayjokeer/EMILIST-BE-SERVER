@@ -618,7 +618,7 @@ const createBusinessProfileService = async (userId, dto, files) => {
             lastName: user.lastName,
             mobile: user.mobile,
             countryCode: user.countryCode,
-            language: user.language,
+            languages: user.languages || [],
             houseAddress: user.houseAddress,
             city: user.city,
             state: user.state,

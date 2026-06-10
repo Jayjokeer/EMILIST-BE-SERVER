@@ -9,7 +9,7 @@ export interface IUser {
     userName: string;
     uniqueId?: string;
     gender?: string;
-    language?: string;
+    languages?: string[];
     houseAddress?: string;
     countryCode?: string;
     mobile?: string;

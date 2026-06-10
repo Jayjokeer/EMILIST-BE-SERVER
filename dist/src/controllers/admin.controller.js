@@ -170,7 +170,7 @@ exports.fetchUserDetails = (0, error_handler_1.catchAsync)(async (req, res) => {
             userName: user.userName,
             phoneNumber: user.mobile,
             bio: user.bio,
-            languages: user.language,
+            languages: user.languages || [],
             location: user.houseAddress,
         };
         data = { ...data, ...payload };

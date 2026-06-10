@@ -203,7 +203,7 @@ export const getProfileContextService = async (
         lastName: user.lastName,
         mobile: user.mobile,
         countryCode: user.countryCode,
-        language: user.language,
+        languages: user.languages || [],
         houseAddress: user.houseAddress,
         city: user.city,
         state: user.state,
@@ -228,7 +228,7 @@ export const buildProfilePayload = (dto: UserProfileDto) => {
   const lastName = pick(dto.lastName);
   const countryCode = pick(dto.countryCode);
   const mobile = pick(dto.mobile);
-  const language = pick(dto.language);
+  const languages: string[] = Array.isArray(dto.languages) ? dto.languages.map(pick).filter((v): v is string => !!v) : [];
   const houseAddress = pick(dto.houseAddress);
   const city = pick(dto.city);
   const state = pick(dto.state);
@@ -255,9 +255,9 @@ export const buildProfilePayload = (dto: UserProfileDto) => {
     businessSet.phoneNumber = mobile;
   }
 
-  if (language) {
-    userSet.language = language;
-    businessSet.languages = [language];
+  if (languages.length > 0) {
+    userSet.languages = languages;
+    businessSet.languages = languages;
   }
 
   if (houseAddress) {

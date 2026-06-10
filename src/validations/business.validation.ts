@@ -11,7 +11,7 @@ export const validateBusinessRegistration = (
     lastName: Joi.string().optional(),
     countryCode: Joi.string().optional(),
     mobile: Joi.string().optional(),
-    language: Joi.string().optional(),
+    languages: Joi.array().items(Joi.string()).optional(),
     houseAddress: Joi.string().optional(),
     city: Joi.string().optional(),
     state: Joi.string().optional(),

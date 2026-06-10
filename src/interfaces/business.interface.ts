@@ -81,7 +81,7 @@ export interface UserProfileDto {
   lastName?: string;
   countryCode?: string;
   mobile?: string;
-  language?: string;      
+  languages?: string[];      
   houseAddress?: string;  
   city?: string;
   state?: string;

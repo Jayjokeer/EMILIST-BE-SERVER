@@ -151,7 +151,7 @@ export const fetchUserDetails = catchAsync(async (req: JwtPayload, res: Response
         userName: user.userName,
         phoneNumber: user.mobile,
         bio: user.bio,
-        languages: user.language,  
+        languages: user.languages || [],  
         location: user.houseAddress,
     };
     data = {...data, ...payload};
