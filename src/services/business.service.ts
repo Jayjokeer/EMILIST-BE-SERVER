@@ -773,7 +773,7 @@ export const createBusinessProfileService = async (
 
   const setupResult = await setupService(
     userId,
-    business._id.toString(),
+    business.id.toString(),
     serviceDto,
     files
   );

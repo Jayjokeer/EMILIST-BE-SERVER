@@ -3,7 +3,7 @@ import * as authController from "../controllers/auth.controller";
 import { userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload } from "../utils/image-upload";
 import passport from "passport";
-import { validateRegisterUser, validateLoginUser, validateVerifyEmail, validateForgetPassword, validateResetPassword, validateChangePassword, validateUpdateAccountDetails, validatePaymentForVerification, validateUpdateUser } from "../validations/auth.validation";
+import { validateRegisterUser, validateLoginUser, validateVerifyEmail, validateForgetPassword, validateResetPassword, validateChangePassword, validateUpdateAccountDetails, validatePaymentForVerification, validateUpdateUser, validatePasswordOtp } from "../validations/auth.validation";
 import *  as paymentController from "../controllers/payment.controller";
 import { config } from "../utils/config";
 
@@ -17,6 +17,7 @@ router.route("/sign-up").post(validateRegisterUser, authController.registerUserC
 router.route("/login").post(validateLoginUser, authController.loginController);
 router.route("/verify-email").post(validateVerifyEmail, authController.verifyEmailController);
 router.route("/forgot-password").post(validateForgetPassword, authController.forgetPasswordController);
+router.route("/verify-password-otp").post(validatePasswordOtp, authController.verifyPasswordOtpController);
 router.route("/reset-password").post(validateResetPassword, authController.resetPasswordController);
 //file uploads
 router.route("/upload-image").post(singleUpload, authController.uploadImage);

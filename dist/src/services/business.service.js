@@ -636,7 +636,7 @@ const createBusinessProfileService = async (userId, dto, files) => {
         $addToSet: { businesses: business._id },
     });
     const serviceDto = dto.business;
-    const setupResult = await (0, exports.setupService)(userId, business._id.toString(), serviceDto, files);
+    const setupResult = await (0, exports.setupService)(userId, business.id.toString(), serviceDto, files);
     return {
         profileCreated: !user.isProfileComplete,
         business,

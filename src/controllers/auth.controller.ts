@@ -27,6 +27,7 @@ import * as productService from "../services/product.service";
 import * as newsLetterService from "../services/newsletter.service";
 import * as verificationService from "../services/verification.service";
 import { extractProfileDto } from "../helpers/validation.helper";
+import Users from "../models/users.model";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -148,8 +149,8 @@ export const verifyEmailController = catchAsync(async (req: Request, res: Respon
 
 export const forgetPasswordController = catchAsync(async (req: Request, res: Response) => {
   const { email } = req.body;
-
   const foundUser = await authService.findUserByEmail(email);
+
   if (!foundUser) throw new NotFoundError("User not found!");
 
   const { otp, otpExpiryTime } = await generateOTPData(String(foundUser._id));
@@ -164,20 +165,14 @@ export const forgetPasswordController = catchAsync(async (req: Request, res: Res
 });
 
 export const resetPasswordController = catchAsync(async (req: Request, res: Response) => {
-  const { email, otp, newPassword } = req.body;
+  const { email, newPassword } = req.body;
 
   const foundUser = await authService.findUserByEmail(email);
   if (!foundUser) throw new NotFoundError("User not found!");
 
-  if (foundUser.passwordResetOtp !== otp) throw new BadRequestError("Invalid OTP");
-  if (foundUser.otpExpiresAt && Date.now() > foundUser.otpExpiresAt.getTime()) {
-    throw new BadRequestError("OTP expired, request a new one.");
-  }
 
   const hashedPassword = await hashPassword(newPassword);
   foundUser.password = hashedPassword;
-  foundUser.passwordResetOtp = undefined;
-  foundUser.otpExpiresAt = undefined;
   if(foundUser.isEmailVerified == false){
     foundUser.isEmailVerified = true;
   }
@@ -190,6 +185,26 @@ export const resetPasswordController = catchAsync(async (req: Request, res: Resp
   }
   await notificationService.createNotification(notificationPayload);
   return successResponse(res, StatusCodes.OK, "Password reset successfully!");
+});
+export const verifyPasswordOtpController = catchAsync(async (req: Request, res: Response) => {
+  const { email, otp } = req.body;
+
+  const foundUser = await authService.findUserByEmail(email);
+  if (!foundUser) throw new NotFoundError("User not found!");
+
+  if (foundUser.passwordResetOtp !== otp) throw new BadRequestError("Invalid OTP");
+  if (foundUser.otpExpiresAt && Date.now() > foundUser.otpExpiresAt.getTime()) {
+    throw new BadRequestError("OTP expired, request a new one.");
+  }
+
+  foundUser.passwordResetOtp = undefined;
+  foundUser.otpExpiresAt = undefined;
+
+  await foundUser.save();
+ const data ={
+    email: email
+  }
+  return successResponse(res, StatusCodes.OK,data);
 });
 
 export const updateUserController = catchAsync(async (req: JwtPayload, res: Response) => {

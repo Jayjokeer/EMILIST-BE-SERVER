@@ -91,12 +91,29 @@ export const validateRegisterUser = (req: Request, res: Response, next: NextFunc
   export const validateResetPassword = (req: Request, res: Response, next: NextFunction) => {
     const schema = Joi.object({
       email: Joi.string().email().required(),
-      otp: Joi.string().required(),
       newPassword: Joi.string().min(6).required(),
     }).messages({
       "any.required": "{#label} is required",
       "string.email": "Invalid email format",
       "string.min": "Password must be at least 6 characters",
+    });
+  
+    const { error } = schema.validate(req.body, { abortEarly: false });
+    if (error) {
+      const errorMessages = error.details.map((detail) => detail.message);
+       res.status(400).json({ errors: errorMessages });
+       return;
+    }
+  
+    next();
+  };
+    export const validatePasswordOtp = (req: Request, res: Response, next: NextFunction) => {
+    const schema = Joi.object({
+      email: Joi.string().email().required(),
+      otp: Joi.string().required(),
+    }).messages({
+      "any.required": "{#label} is required",
+      "string.email": "Invalid email format",
     });
   
     const { error } = schema.validate(req.body, { abortEarly: false });

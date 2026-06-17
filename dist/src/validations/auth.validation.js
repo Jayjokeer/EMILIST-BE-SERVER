@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateUpdateUser = exports.validatePaymentForVerification = exports.validateChangePassword = exports.validateUpdateAccountDetails = exports.validateResetPassword = exports.validateForgetPassword = exports.validateVerifyEmail = exports.validateLoginUser = exports.validateRegisterUser = void 0;
+exports.validateUpdateUser = exports.validatePaymentForVerification = exports.validateChangePassword = exports.validateUpdateAccountDetails = exports.validatePasswordOtp = exports.validateResetPassword = exports.validateForgetPassword = exports.validateVerifyEmail = exports.validateLoginUser = exports.validateRegisterUser = void 0;
 const joi_1 = __importDefault(require("joi"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const validateRegisterUser = (req, res, next) => {
@@ -90,7 +90,6 @@ exports.validateForgetPassword = validateForgetPassword;
 const validateResetPassword = (req, res, next) => {
     const schema = joi_1.default.object({
         email: joi_1.default.string().email().required(),
-        otp: joi_1.default.string().required(),
         newPassword: joi_1.default.string().min(6).required(),
     }).messages({
         "any.required": "{#label} is required",
@@ -106,6 +105,23 @@ const validateResetPassword = (req, res, next) => {
     next();
 };
 exports.validateResetPassword = validateResetPassword;
+const validatePasswordOtp = (req, res, next) => {
+    const schema = joi_1.default.object({
+        email: joi_1.default.string().email().required(),
+        otp: joi_1.default.string().required(),
+    }).messages({
+        "any.required": "{#label} is required",
+        "string.email": "Invalid email format",
+    });
+    const { error } = schema.validate(req.body, { abortEarly: false });
+    if (error) {
+        const errorMessages = error.details.map((detail) => detail.message);
+        res.status(400).json({ errors: errorMessages });
+        return;
+    }
+    next();
+};
+exports.validatePasswordOtp = validatePasswordOtp;
 const validateUpdateAccountDetails = (req, res, next) => {
     const schema = joi_1.default.object({
         password: joi_1.default.string().required(),

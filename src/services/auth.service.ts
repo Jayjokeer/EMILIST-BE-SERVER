@@ -9,7 +9,7 @@ import { setupService } from "./business.service";
 
 
 export const findUserByEmail = async (email: string) => {
-    return await Users.findOne({email: email});
+    return await Users.findOne({email: email.toLowerCase().trim()});
   };
 export const findUserById = async (id: string)=>{
     return await Users.findById(id,{password: 0})

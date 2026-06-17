@@ -9,7 +9,7 @@ const mongoose_1 = require("mongoose");
 const validation_helper_1 = require("../helpers/validation.helper");
 const error_1 = require("../errors/error");
 const findUserByEmail = async (email) => {
-    return await users_model_1.default.findOne({ email: email });
+    return await users_model_1.default.findOne({ email: email.toLowerCase().trim() });
 };
 exports.findUserByEmail = findUserByEmail;
 const findUserById = async (id) => {
