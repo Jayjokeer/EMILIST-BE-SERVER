@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { IProduct } from "../interfaces/product.interface";
 import Product from "../models/product.model";
 import ProductLike from "../models/productLike.model";
@@ -6,9 +6,51 @@ import Review from "../models/review.model";
 import { NotFoundError } from "../errors/error";
 import User from "../models/users.model";
 import Category from "../models/categories.model";
+import slugify from "slugify";
 
-export const createProduct = async (data: IProduct)=>{
-    return await Product.create(data);
+export const createProduct = async (userId: string, data: IProduct) => {
+  const payload: any = { ...data };
+
+  payload.userId = new Types.ObjectId(userId);
+
+
+  if (typeof payload.category === "string") {
+    const categoryName = payload.category.trim();
+
+    let category = await Category.findOne({
+      name: payload.category,
+    });
+
+     if (!category) {
+    category = await Category.create({
+      name: categoryName,
+      slug: slugify(categoryName, {
+        lower: true,
+        strict: true,
+      }),
+      isActive: true,
+    });
+  }
+
+    payload.category = category._id;
+  }
+
+  payload.status = "pending";
+  payload.isDeleted = false;
+
+  payload.clicks = {
+    users: [],
+    clickCount: 0,
+  };
+
+  if (payload.images) {
+    payload.images = payload.images.map((img: any) => ({
+      imageUrl: img.imageUrl,
+      isPrimary: img.isPrimary ?? false,
+    }));
+  }
+
+  return await Product.create(payload);
 };
 
 export const fetchProductById = async (productId: any) =>{
@@ -391,16 +433,16 @@ export const fetchSimilarProducts = async (productId: string, limit: number, pag
     _id: { $ne: productId }, 
   };
 
-  if (targetProduct.location || targetProduct.category || targetProduct.subCategory || targetProduct.brand || targetProduct.name) {
-    query.$or = [
-      { location : targetProduct.location },
-      { category: targetProduct.category},
-      { subCategory: targetProduct.subCategory},
-      { brand: targetProduct.brand},
-      { name: targetProduct.name},
+  // if (targetProduct.location || targetProduct.category || targetProduct.subCategory || targetProduct.brand || targetProduct.name) {
+  //   query.$or = [
+  //     { location : targetProduct.location },
+  //     { category: targetProduct.category},
+  //     { subCategory: targetProduct.subCategory},
+  //     { brand: targetProduct.brand},
+  //     { name: targetProduct.name},
 
-    ];
-  };
+  //   ];
+  // };
   const similarProducts =  await Product.find(query)
   .limit(Number(limit))
   .skip(skip)

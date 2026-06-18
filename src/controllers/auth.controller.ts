@@ -510,9 +510,9 @@ export const insightsController = catchAsync(async (req: JwtPayload, res: Respon
   const totalMaterialsClicks = await productService.fetchAllUserProductsAdmin(userId);
   for (const material of totalMaterialsClicks){
     totalCount += Number(material?.clicks?.clickCount || 0);
-    if (material?.clicks?.userId) {
-      uniqueClicks.add(String(material.clicks.userId));
-    }
+    // if (material?.clicks?.userId) {
+    //   uniqueClicks.add(String(material.clicks.userId));
+    // }
   };
 
   const totalBusinessClicks = await businessService.fetchAllUserBusinessesAdmin(userId);

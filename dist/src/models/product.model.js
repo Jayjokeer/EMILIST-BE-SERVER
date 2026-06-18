@@ -34,29 +34,155 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
-const ProductImagesSchema = new mongoose_1.Schema({
-    imageUrl: { type: String },
-});
-const productSchema = new mongoose_1.default.Schema({
-    name: { type: String },
-    category: { type: String },
-    subCategory: { type: String },
-    brand: { type: String },
-    description: { type: String },
-    images: [{ type: ProductImagesSchema }],
-    availableQuantity: { type: Number },
-    price: { type: Number },
-    storeName: { type: String },
-    location: { type: String },
-    currency: { type: String },
-    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users' },
-    discountedPrice: { type: Number },
-    isDiscounted: { type: Boolean, default: false },
-    // orders: [{type:  Schema.Types.ObjectId, ref: 'Order'}],
-    reviews: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Review' }],
-    clicks: {
-        users: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Users' }],
-        clickCount: { type: Number, default: 0 }
+const ProductImageSchema = new mongoose_1.Schema({
+    imageUrl: {
+        type: String,
+        required: true,
+        trim: true,
     },
-}, { timestamps: true });
-exports.default = mongoose_1.default.model('Product', productSchema);
+    isPrimary: {
+        type: Boolean,
+        default: false,
+    },
+}, { _id: true });
+const DeliveryLocationSchema = new mongoose_1.Schema({
+    state: { type: String, index: true },
+    lga: { type: String, index: true },
+}, { _id: false });
+const ProductSchema = new mongoose_1.Schema({
+    userId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "Users",
+        required: true,
+        index: true,
+    },
+    name: {
+        type: String,
+        required: true,
+        trim: true,
+        maxlength: 150,
+    },
+    slug: {
+        type: String,
+        unique: true,
+        lowercase: true,
+        index: true,
+    },
+    category: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "Category",
+        required: true,
+        index: true,
+    },
+    subCategory: {
+        type: String,
+        trim: true,
+        index: true,
+    },
+    brand: {
+        type: String,
+        trim: true,
+        index: true,
+    },
+    description: {
+        type: String,
+        required: true,
+        maxlength: 3000,
+    },
+    images: [ProductImageSchema],
+    availableQuantity: {
+        type: Number,
+        required: true,
+        min: 1,
+        index: true,
+    },
+    quantityMetric: {
+        type: String,
+        enum: ["bag", "kg", "ton"],
+        required: true,
+    },
+    price: {
+        type: Number,
+        required: true,
+        min: 0,
+        index: true,
+    },
+    currency: {
+        type: String,
+        default: "NGN",
+    },
+    priceMetric: {
+        type: String,
+        enum: ["bag", "kg", "ton"],
+        required: true,
+    },
+    merchantName: {
+        type: String,
+        required: true,
+        trim: true,
+        index: true,
+    },
+    storeName: {
+        type: String,
+        trim: true,
+        index: true,
+    },
+    deliveryLocations: {
+        type: [DeliveryLocationSchema],
+        index: true,
+    },
+    isDiscounted: {
+        type: Boolean,
+        default: false,
+    },
+    discountedPrice: Number,
+    status: {
+        type: String,
+        enum: ["draft", "pending", "active", "rejected", "inactive", "sold_out"],
+        default: "pending",
+        index: true,
+    },
+    approvedBy: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "Users",
+    },
+    approvedAt: Date,
+    rejectionReason: {
+        type: String,
+    },
+    reviews: [
+        {
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: "Review",
+        },
+    ],
+    clicks: {
+        users: [
+            {
+                type: mongoose_1.Schema.Types.ObjectId,
+                ref: "Users",
+            },
+        ],
+        clickCount: {
+            type: Number,
+            default: 0,
+        },
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false,
+        index: true,
+    },
+}, {
+    timestamps: true,
+});
+ProductSchema.index({ category: 1, status: 1 });
+ProductSchema.index({ brand: 1, status: 1 });
+ProductSchema.index({ price: 1 });
+ProductSchema.index({ "deliveryLocations.state": 1, "deliveryLocations.lga": 1 });
+ProductSchema.index({
+    name: "text",
+    brand: "text",
+    category: "text",
+});
+exports.default = mongoose_1.default.model("Product", ProductSchema);

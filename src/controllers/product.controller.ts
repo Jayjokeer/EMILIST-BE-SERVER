@@ -11,42 +11,51 @@ import * as subscriptionService from "../services/subscription.service";
 import { SubscriptionPerksEnum } from "../enums/suscribtion.enum";
 import * as userService from "../services/auth.service";
 
-export const createProductController = catchAsync(async (req: JwtPayload, res: Response) => {
+export const createProductController = catchAsync(
+  async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
-    const payload = req.body;
-  
+    const payload = { ...req.body };
+
     payload.userId = userId;
-  
-    if (req.files) {
-      payload.images = req.files.map((file: Express.Multer.File) => ({
+
+    if (req.files && Array.isArray(req.files)) {
+      payload.images = (req.files as Express.Multer.File[]).map((file) => ({
         imageUrl: file.path,
+        isPrimary: false,
       }));
     }
-  
+
     const subscription = await subscriptionService.getActiveSubscription(userId);
-  
+
     if (!subscription) {
-        throw new BadRequestError("You do not have an active subscription.");
+      throw new BadRequestError("You do not have an active subscription.");
     }
+
     const productPerk = subscription.perks.find(
-        (perk) => perk.name === SubscriptionPerksEnum.product
+      (perk) => perk.name === SubscriptionPerksEnum.product
+    );
+
+    if (!productPerk) {
+      throw new BadRequestError(
+        "Your subscription does not include product creation."
       );
-    
-      if (!productPerk) {
-        throw new BadRequestError("Your subscription does not include the ability to create products.");
-      }
-    
-      if (productPerk.used >= productPerk.limit) {
-        throw new BadRequestError("You have reached the limit of products you can create with your subscription.");
-      }
-    
-      const data = await productService.createProduct(payload);
-    
-      productPerk.used += 1;
-    
-      await subscription.save();
+    }
+
+    if (productPerk.used >= productPerk.limit) {
+      throw new BadRequestError(
+        "Product creation limit reached for your subscription."
+      );
+    }
+
+    const data = await productService.createProduct(userId, payload);
+
+    // increment usage
+    productPerk.used += 1;
+    await subscription.save();
+
     return successResponse(res, StatusCodes.CREATED, data);
-  });
+  }
+);
 export const updateProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
     const {productId} = req.params;
@@ -169,15 +178,15 @@ export const deleteProductImageController = catchAsync(async (req: JwtPayload, r
         throw new NotFoundError("Product not found!");
     }
 
-    const imageIndex = product.images?.findIndex(
-        (image: { _id: any }) => image._id.toString() === imageId
-    );
+    // const imageIndex = product.images?.findIndex(
+    //     (image: { _id: any }) => image._id.toString() === imageId
+    // );
 
-    if (imageIndex === -1) {
-        throw new NotFoundError("Image not found");
-    }
+    // if (imageIndex === -1) {
+    //     throw new NotFoundError("Image not found");
+    // }
 
-    product.images?.splice(imageIndex, 1);
+    // product.images?.splice(imageIndex, 1);
     await product.save();
     return successResponse(res, StatusCodes.OK, "Image deleted successfully!");
 });
@@ -251,7 +260,7 @@ export const reviewProductController = catchAsync(async (req: JwtPayload, res: R
         comment
     }
     const data = await reviewService.addReview(payload);
-    product.reviews?.push(String(data._id));
+    // product.reviews?.push(String(data._id));
     await product.save()
     return successResponse(res, StatusCodes.OK, data);
 });

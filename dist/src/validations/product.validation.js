@@ -8,47 +8,74 @@ const joi_1 = __importDefault(require("joi"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const validateProduct = (req, res, next) => {
     const productValidation = joi_1.default.object({
-        name: joi_1.default.string().required().messages({
+        name: joi_1.default.string().trim().max(150).required().messages({
             "string.base": "Product name must be a string",
             "string.empty": "Product name is required",
+            "string.max": "Product name is too long",
         }),
-        category: joi_1.default.string().optional().messages({
-            "array.base": "Category must be a string",
+        category: joi_1.default.string().required().messages({
+            "string.base": "Category must be a string",
+            "string.empty": "Category is required",
         }),
-        subCategory: joi_1.default.string().optional().messages({
-            "array.base": "Sub Category must be a string",
-        }),
-        brand: joi_1.default.string().optional().messages({
-            "array.base": "Brand must be a of string",
-        }),
-        description: joi_1.default.string().optional().messages({
+        subCategory: joi_1.default.string().trim().optional(),
+        brand: joi_1.default.string().trim().optional(),
+        description: joi_1.default.string().trim().max(3000).required().messages({
             "string.base": "Description must be a string",
+            "string.empty": "Description is required",
         }),
-        availableQuantity: joi_1.default.number().required().messages({
+        availableQuantity: joi_1.default.number().positive().required().messages({
             "number.base": "Available quantity must be a number",
-            "number.empty": "Available quantity is required",
+            "number.positive": "Available quantity must be greater than 0",
         }),
-        price: joi_1.default.number().required().messages({
+        quantityMetric: joi_1.default.string()
+            .valid("bag", "kg", "ton")
+            .required()
+            .messages({
+            "any.only": "Quantity metric must be bag, kg, or ton",
+        }),
+        price: joi_1.default.number().positive().required().messages({
             "number.base": "Price must be a number",
-            "number.empty": "Price is required",
+            "number.positive": "Price must be greater than 0",
         }),
-        storeName: joi_1.default.string().optional().messages({
-            "string.base": "Store name must be a string",
+        priceMetric: joi_1.default.string()
+            .valid("bag", "kg", "ton")
+            .required()
+            .messages({
+            "any.only": "Price metric must be bag, kg, or ton",
         }),
-        location: joi_1.default.string().required().messages({
-            "string.base": "Location must be a string",
-            "string.empty": "location is required",
+        currency: joi_1.default.string().default("NGN"),
+        merchantName: joi_1.default.string().trim().required().messages({
+            "string.base": "Merchant name must be a string",
+            "string.empty": "Merchant name is required",
         }),
-        currency: joi_1.default.string().optional().messages({
-            "string.base": "Currency must be a string",
-            "string.empty": "Currency is required",
+        storeName: joi_1.default.string().trim().optional(),
+        deliveryLocations: joi_1.default.array()
+            .items(joi_1.default.object({
+            state: joi_1.default.string().required(),
+            lga: joi_1.default.string().required(),
+        }))
+            .min(1)
+            .required()
+            .messages({
+            "array.base": "Delivery locations must be an array",
+            "array.min": "At least one delivery location is required",
         }),
+        isDiscounted: joi_1.default.boolean().optional(),
+        discountedPrice: joi_1.default.number().optional(),
+        status: joi_1.default.string()
+            .valid("draft", "pending", "active", "rejected", "inactive", "sold_out")
+            .optional(),
     });
-    const { error } = productValidation.validate(req.body, { abortEarly: false });
+    const { error } = productValidation.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+    });
     if (error) {
-        const errorMessages = error.details.map((detail) => detail.message);
-        res.status(400).json({ errors: errorMessages });
-        return;
+        const errorMessages = error.details.map((d) => d.message);
+        return res.status(400).json({
+            success: false,
+            errors: errorMessages,
+        });
     }
     next();
 };

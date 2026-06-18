@@ -45,11 +45,12 @@ const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const userService = __importStar(require("../services/auth.service"));
 exports.createProductController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
-    const payload = req.body;
+    const payload = { ...req.body };
     payload.userId = userId;
-    if (req.files) {
+    if (req.files && Array.isArray(req.files)) {
         payload.images = req.files.map((file) => ({
             imageUrl: file.path,
+            isPrimary: false,
         }));
     }
     const subscription = await subscriptionService.getActiveSubscription(userId);
@@ -58,12 +59,13 @@ exports.createProductController = (0, error_handler_1.catchAsync)(async (req, re
     }
     const productPerk = subscription.perks.find((perk) => perk.name === suscribtion_enum_1.SubscriptionPerksEnum.product);
     if (!productPerk) {
-        throw new error_1.BadRequestError("Your subscription does not include the ability to create products.");
+        throw new error_1.BadRequestError("Your subscription does not include product creation.");
     }
     if (productPerk.used >= productPerk.limit) {
-        throw new error_1.BadRequestError("You have reached the limit of products you can create with your subscription.");
+        throw new error_1.BadRequestError("Product creation limit reached for your subscription.");
     }
-    const data = await productService.createProduct(payload);
+    const data = await productService.createProduct(userId, payload);
+    // increment usage
     productPerk.used += 1;
     await subscription.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
@@ -160,11 +162,13 @@ exports.deleteProductImageController = (0, error_handler_1.catchAsync)(async (re
     if (!product) {
         throw new error_1.NotFoundError("Product not found!");
     }
-    const imageIndex = product.images?.findIndex((image) => image._id.toString() === imageId);
-    if (imageIndex === -1) {
-        throw new error_1.NotFoundError("Image not found");
-    }
-    product.images?.splice(imageIndex, 1);
+    // const imageIndex = product.images?.findIndex(
+    //     (image: { _id: any }) => image._id.toString() === imageId
+    // );
+    // if (imageIndex === -1) {
+    //     throw new NotFoundError("Image not found");
+    // }
+    // product.images?.splice(imageIndex, 1);
     await product.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Image deleted successfully!");
 });
@@ -231,7 +235,7 @@ exports.reviewProductController = (0, error_handler_1.catchAsync)(async (req, re
         comment
     };
     const data = await reviewService.addReview(payload);
-    product.reviews?.push(String(data._id));
+    // product.reviews?.push(String(data._id));
     await product.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });

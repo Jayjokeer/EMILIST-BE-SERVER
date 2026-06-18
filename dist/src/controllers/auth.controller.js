@@ -464,9 +464,9 @@ exports.insightsController = (0, error_handler_1.catchAsync)(async (req, res) =>
     const totalMaterialsClicks = await productService.fetchAllUserProductsAdmin(userId);
     for (const material of totalMaterialsClicks) {
         totalCount += Number(material?.clicks?.clickCount || 0);
-        if (material?.clicks?.userId) {
-            uniqueClicks.add(String(material.clicks.userId));
-        }
+        // if (material?.clicks?.userId) {
+        //   uniqueClicks.add(String(material.clicks.userId));
+        // }
     }
     ;
     const totalBusinessClicks = await businessService.fetchAllUserBusinessesAdmin(userId);

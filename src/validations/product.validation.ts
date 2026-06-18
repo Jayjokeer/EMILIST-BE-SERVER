@@ -4,51 +4,94 @@ import { PaymentMethodEnum, WalletEnum } from "../enums/transaction.enum";
 
 export const validateProduct = (req: Request, res: Response, next: NextFunction) => {
   const productValidation = Joi.object({
-    name: Joi.string().required().messages({
+    name: Joi.string().trim().max(150).required().messages({
       "string.base": "Product name must be a string",
       "string.empty": "Product name is required",
+      "string.max": "Product name is too long",
     }),
-    category: Joi.string().optional().messages({
-      "array.base": "Category must be a string",
+
+    category: Joi.string().required().messages({
+      "string.base": "Category must be a string",
+      "string.empty": "Category is required",
     }),
-    subCategory: Joi.string().optional().messages({
-        "array.base": "Sub Category must be a string",
-      }),
-    brand: Joi.string().optional().messages({
-      "array.base": "Brand must be a of string",
-    }),
-    description: Joi.string().optional().messages({
+
+    subCategory: Joi.string().trim().optional(),
+
+    brand: Joi.string().trim().optional(),
+
+    description: Joi.string().trim().max(3000).required().messages({
       "string.base": "Description must be a string",
+      "string.empty": "Description is required",
     }),
-    availableQuantity: Joi.number().required().messages({
+
+    availableQuantity: Joi.number().positive().required().messages({
       "number.base": "Available quantity must be a number",
-      "number.empty": "Available quantity is required",
+      "number.positive": "Available quantity must be greater than 0",
     }),
-    price: Joi.number().required().messages({
+
+    quantityMetric: Joi.string()
+      .valid("bag", "kg", "ton")
+      .required()
+      .messages({
+        "any.only": "Quantity metric must be bag, kg, or ton",
+      }),
+
+    price: Joi.number().positive().required().messages({
       "number.base": "Price must be a number",
-      "number.empty": "Price is required",
+      "number.positive": "Price must be greater than 0",
     }),
-    storeName: Joi.string().optional().messages({
-      "string.base": "Store name must be a string",
-    }),
-    location: Joi.string().required().messages({
-      "string.base": "Location must be a string",
-      "string.empty": "location is required",
 
-    }),
-    currency: Joi.string().optional().messages({
-      "string.base": "Currency must be a string",
-      "string.empty": "Currency is required",
+    priceMetric: Joi.string()
+      .valid("bag", "kg", "ton")
+      .required()
+      .messages({
+        "any.only": "Price metric must be bag, kg, or ton",
+      }),
 
+    currency: Joi.string().default("NGN"),
+
+    merchantName: Joi.string().trim().required().messages({
+      "string.base": "Merchant name must be a string",
+      "string.empty": "Merchant name is required",
     }),
+
+    storeName: Joi.string().trim().optional(),
+
+    deliveryLocations: Joi.array()
+      .items(
+        Joi.object({
+          state: Joi.string().required(),
+          lga: Joi.string().required(),
+        })
+      )
+      .min(1)
+      .required()
+      .messages({
+        "array.base": "Delivery locations must be an array",
+        "array.min": "At least one delivery location is required",
+      }),
+
+    isDiscounted: Joi.boolean().optional(),
+
+    discountedPrice: Joi.number().optional(),
+
+    status: Joi.string()
+      .valid("draft", "pending", "active", "rejected", "inactive", "sold_out")
+      .optional(),
   });
 
-  const { error } = productValidation.validate(req.body, { abortEarly: false });
+  const { error } = productValidation.validate(req.body, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
 
   if (error) {
-    const errorMessages = error.details.map((detail) => detail.message);
-   res.status(400).json({ errors: errorMessages });
-   return ;
+    const errorMessages = error.details.map((d) => d.message);
+
+    return res.status(400).json({
+      success: false,
+      errors: errorMessages,
+    });
   }
 
   next();

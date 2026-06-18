@@ -1,18 +1,83 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchAllCategories = exports.fetchSingleCategory = exports.deleteCategory = exports.createCategory = exports.fetchAllLikedProducts = exports.fetchAllComparedProducts = exports.fetchProductReviews = exports.fetchSimilarProducts = exports.otherProductsByUser = exports.fetchAllProductsAdmin = exports.fetchAllUserProductsAdmin = exports.fetchAllProductsForAdmin = exports.fetchReviewForProduct = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
-const mongoose_1 = __importDefault(require("mongoose"));
+const mongoose_1 = __importStar(require("mongoose"));
 const product_model_1 = __importDefault(require("../models/product.model"));
 const productLike_model_1 = __importDefault(require("../models/productLike.model"));
 const review_model_1 = __importDefault(require("../models/review.model"));
 const error_1 = require("../errors/error");
 const users_model_1 = __importDefault(require("../models/users.model"));
 const categories_model_1 = __importDefault(require("../models/categories.model"));
-const createProduct = async (data) => {
-    return await product_model_1.default.create(data);
+const slugify_1 = __importDefault(require("slugify"));
+const createProduct = async (userId, data) => {
+    const payload = { ...data };
+    payload.userId = new mongoose_1.Types.ObjectId(userId);
+    if (typeof payload.category === "string") {
+        const categoryName = payload.category.trim();
+        let category = await categories_model_1.default.findOne({
+            name: payload.category,
+        });
+        if (!category) {
+            category = await categories_model_1.default.create({
+                name: categoryName,
+                slug: (0, slugify_1.default)(categoryName, {
+                    lower: true,
+                    strict: true,
+                }),
+                isActive: true,
+            });
+        }
+        payload.category = category._id;
+    }
+    payload.status = "pending";
+    payload.isDeleted = false;
+    payload.clicks = {
+        users: [],
+        clickCount: 0,
+    };
+    if (payload.images) {
+        payload.images = payload.images.map((img) => ({
+            imageUrl: img.imageUrl,
+            isPrimary: img.isPrimary ?? false,
+        }));
+    }
+    return await product_model_1.default.create(payload);
 };
 exports.createProduct = createProduct;
 const fetchProductById = async (productId) => {
@@ -334,16 +399,15 @@ const fetchSimilarProducts = async (productId, limit, page, userId) => {
     const query = {
         _id: { $ne: productId },
     };
-    if (targetProduct.location || targetProduct.category || targetProduct.subCategory || targetProduct.brand || targetProduct.name) {
-        query.$or = [
-            { location: targetProduct.location },
-            { category: targetProduct.category },
-            { subCategory: targetProduct.subCategory },
-            { brand: targetProduct.brand },
-            { name: targetProduct.name },
-        ];
-    }
-    ;
+    // if (targetProduct.location || targetProduct.category || targetProduct.subCategory || targetProduct.brand || targetProduct.name) {
+    //   query.$or = [
+    //     { location : targetProduct.location },
+    //     { category: targetProduct.category},
+    //     { subCategory: targetProduct.subCategory},
+    //     { brand: targetProduct.brand},
+    //     { name: targetProduct.name},
+    //   ];
+    // };
     const similarProducts = await product_model_1.default.find(query)
         .limit(Number(limit))
         .skip(skip)
