@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Request, Response } from "express"; 
 import { successResponse } from "../helpers/success-response";
 import * as authService from '../services/auth.service';
 import { ICreateUser, ISignUser } from "../interfaces/user.interface";
