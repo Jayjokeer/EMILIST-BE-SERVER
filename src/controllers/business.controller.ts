@@ -14,7 +14,7 @@ import { ExpertTypeEnum } from "../enums/business.enum";
 import { assertAllProfileFieldsPresent, extractProfileDto, getUserId } from "../helpers/validation.helper";
 import { Types } from "mongoose";
 import { buildProfilePayload } from "../services/auth.service";
-
+ 
 
 export const updateBusinessController = catchAsync( async (req: JwtPayload, res: Response) => {
     const businessData = req.body;
