@@ -127,27 +127,10 @@ export const updateProductController = catchAsync(async (req: JwtPayload, res: R
   
 
 export const getAllProductsController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const {
-        page = 1, 
-        limit = 10,
-        priceRange,
-        minRating,
-        minReviews,
-        isPrimeMember,
-        location,
-        search,
-        currency,
-    } = req.query;
+
     const userId = req.query.userId ? req.query.userId : null; 
-    const filters ={
-        priceRange,
-        minRating,
-        minReviews,
-        isPrimeMember,
-        location,
-        currency,
-    };
-    const products = await productService.fetchAllProducts(Number(page), Number(limit),  userId, filters, search);
+
+    const products = await productService.fetchAllProducts(req.query);
     const data = products;
     return successResponse(res, StatusCodes.OK, data);
 });
