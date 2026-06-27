@@ -343,6 +343,8 @@ export const resendVerificationOtpController = catchAsync(async (req: Request, r
     const {otp, otpCreatedAt, otpExpiryTime} = await generateOTPData(userId);
     user.otpExpiresAt = otpExpiryTime;
     user.registrationOtp = otp;
+    user.passwordResetOtp = otp;
+
     await user.save();
     const {html, subject} =await otpMessage( otp);
     await sendEmail(email, subject,html); 

@@ -313,6 +313,7 @@ exports.resendVerificationOtpController = (0, error_handler_1.catchAsync)(async 
     const { otp, otpCreatedAt, otpExpiryTime } = await (0, utility_1.generateOTPData)(userId);
     user.otpExpiresAt = otpExpiryTime;
     user.registrationOtp = otp;
+    user.passwordResetOtp = otp;
     await user.save();
     const { html, subject } = await (0, templates_1.otpMessage)(otp);
     await (0, send_email_1.sendEmail)(email, subject, html);
