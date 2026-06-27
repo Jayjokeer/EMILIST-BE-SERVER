@@ -57,11 +57,11 @@ export const fetchProductById = async (productId: any) =>{
     return await Product.findById(productId);
     
 };
-export const fetchProductByIdWithDetails = async (productId: any) =>{
-    return await Product.findById(productId)
+export const fetchProductByIdWithDetails = async (productId: string) => {
+  return await Product.findOne({ _id: productId, isDeleted: false })
     .populate('userId', 'fullName email userName profileImage level _id uniqueId')
-    .populate('reviews', 'rating');
-
+    .populate('category', 'name slug')
+    .lean();
 };
 
 export const fetchAllProducts = async (query: any) => {

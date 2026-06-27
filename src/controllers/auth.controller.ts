@@ -339,9 +339,6 @@ export const resendVerificationOtpController = catchAsync(async (req: Request, r
       throw new NotFoundError("User not found");
     }
 
-    if (user.isEmailVerified) {
-      throw new BadRequestError("Email not verified!")
-    }
     const userId = String(user._id);
     const {otp, otpCreatedAt, otpExpiryTime} = await generateOTPData(userId);
     user.otpExpiresAt = otpExpiryTime;

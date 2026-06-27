@@ -85,9 +85,10 @@ const fetchProductById = async (productId) => {
 };
 exports.fetchProductById = fetchProductById;
 const fetchProductByIdWithDetails = async (productId) => {
-    return await product_model_1.default.findById(productId)
+    return await product_model_1.default.findOne({ _id: productId, isDeleted: false })
         .populate('userId', 'fullName email userName profileImage level _id uniqueId')
-        .populate('reviews', 'rating');
+        .populate('category', 'name slug')
+        .lean();
 };
 exports.fetchProductByIdWithDetails = fetchProductByIdWithDetails;
 const fetchAllProducts = async (query) => {

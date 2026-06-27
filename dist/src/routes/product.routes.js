@@ -60,3 +60,4 @@ router.route("/fetch-other-products-by-user/:userId").get(productController.fetc
 router.route("/fetch-product-reviews/:productId").get(productController.fetchProductReviewsController);
 router.route("/compare-product/:productId").patch(current_user_1.userAuth, productController.compareProductController);
 router.route("/fetch-compared-products").get(current_user_1.userAuth, productController.fetchAllComparedProductsController);
+router.route("/fetch-product-reviews/:productId").get(productController.getProductReviewsController);

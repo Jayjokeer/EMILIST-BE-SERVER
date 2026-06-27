@@ -25,5 +25,6 @@ router.route("/fetch-other-products-by-user/:userId").get( productController.fet
 router.route("/fetch-product-reviews/:productId").get( productController.fetchProductReviewsController);
 router.route("/compare-product/:productId").patch(userAuth, productController.compareProductController);
 router.route("/fetch-compared-products").get(userAuth, productController.fetchAllComparedProductsController);
+router.route("/fetch-product-reviews/:productId").get( productController.getProductReviewsController);
 
 export { router as ProductRoute };

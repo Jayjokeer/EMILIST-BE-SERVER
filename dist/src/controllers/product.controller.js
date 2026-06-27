@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllComparedProductsController = exports.compareProductController = exports.fetchProductReviewsController = exports.fetchSimilarProductByUserController = exports.fetchOtherProductByUserController = exports.addDiscountToProductController = exports.reviewProductController = exports.unlikeProductsController = exports.fetchAllLikedProductsController = exports.likeProductsController = exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
+exports.getProductReviewsController = exports.fetchAllComparedProductsController = exports.compareProductController = exports.fetchProductReviewsController = exports.fetchSimilarProductByUserController = exports.fetchOtherProductByUserController = exports.addDiscountToProductController = exports.reviewProductController = exports.unlikeProductsController = exports.fetchAllLikedProductsController = exports.likeProductsController = exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -97,8 +97,8 @@ exports.updateProductController = (0, error_handler_1.catchAsync)(async (req, re
 });
 exports.getSingleProductController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { productId } = req.params;
-    const product = await productService.fetchProductByIdWithDetails(productId);
     const { userId } = req.query;
+    const product = await productService.fetchProductByIdWithDetails(productId);
     if (!product) {
         throw new error_1.NotFoundError("Product not found!");
     }
@@ -112,14 +112,20 @@ exports.getSingleProductController = (0, error_handler_1.catchAsync)(async (req,
             isCompared = user.comparedProducts.some((id) => id.toString() === productId);
         }
     }
-    const reviewAggregation = await productService.fetchReviewForProduct(productId);
-    const review = reviewAggregation[0] || { averageRating: 0, numberOfRatings: 0, reviews: [] };
+    const reviewAggregation = await reviewService.fetchReviewForProduct(productId, 1, 4);
+    const review = reviewAggregation[0] || {
+        averageRating: 0,
+        numberOfRatings: 0,
+        ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+        reviews: [],
+    };
     const data = {
         product,
         liked,
         isCompared,
         averageRating: review.averageRating || 0,
         numberOfRatings: review.numberOfRatings || 0,
+        ratingDistribution: review.ratingDistribution,
         reviewsData: review.reviews || [],
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
@@ -298,4 +304,29 @@ exports.fetchAllComparedProductsController = (0, error_handler_1.catchAsync)(asy
     ;
     const products = await productService.fetchAllComparedProducts(user.comparedProducts);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, products);
+});
+exports.getProductReviewsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const { productId } = req.params;
+    const { page = "1", limit = "4", search } = req.query;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const reviewAggregation = await reviewService.fetchReviewForProduct(String(productId), pageNum, limitNum);
+    const review = reviewAggregation[0] || {
+        averageRating: 0,
+        numberOfRatings: 0,
+        ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+        reviews: [],
+    };
+    const data = {
+        averageRating: review.averageRating || 0,
+        numberOfRatings: review.numberOfRatings || 0,
+        ratingDistribution: review.ratingDistribution,
+        reviews: review.reviews || [],
+        pagination: {
+            page: pageNum,
+            limit: limitNum,
+            hasMore: review.reviews?.length === limitNum,
+        },
+    };
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
