@@ -979,79 +979,115 @@ const products = await  Product.find({userId})
   }; 
 };
 
-export const fetchSimilarProducts = async (productId: string, limit: number, page: number, userId: string) => {
- const skip = (page -1) * limit;
+export const fetchSimilarProducts = async (
+  productId: string,
+  limit = 8
+) => {
+  const currentProduct = await Product.findById(productId).select(
+    "category subCategory brand price deliveryLocations"
+  );
 
-  const targetProduct  = await Product.findById(productId);
-
-  if(!targetProduct){
-    throw new NotFoundError("Product not found!");
+  if (!currentProduct) {
+    return [];
   }
-  const query: Record<string, any> = {
-    _id: { $ne: productId }, 
+
+  const matchStage: any = {
+    _id: { $ne: new mongoose.Types.ObjectId(productId) },
+    isDeleted: false,
+    status: "active",
   };
 
-  // if (targetProduct.location || targetProduct.category || targetProduct.subCategory || targetProduct.brand || targetProduct.name) {
-  //   query.$or = [
-  //     { location : targetProduct.location },
-  //     { category: targetProduct.category},
-  //     { subCategory: targetProduct.subCategory},
-  //     { brand: targetProduct.brand},
-  //     { name: targetProduct.name},
+  matchStage.category = currentProduct.category;
 
-  //   ];
-  // };
-  const similarProducts =  await Product.find(query)
-  .limit(Number(limit))
-  .skip(skip)
-  .populate('reviews', 'rating')
-  .populate({
-    path: 'userId',
-    select: 'fullName email userName profileImage level uniqueId isPrimeMember',
-  });
-  
-  const enhancedProducts = await Promise.all(
-    similarProducts.map(async (product: any) => {
-      const totalReviews = product.reviews.length;
-      const averageRating =
-        totalReviews > 0
-          ? product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
-          : 0;
+  const similarProducts = await Product.aggregate([
+    { $match: matchStage },
 
-      return {
-        ...product.toObject(),
-        totalReviews,
-        averageRating: parseFloat(averageRating.toFixed(2)),
-      };
+    // Score relevance: same subCategory and/or brand ranks higher
+    {
+      $addFields: {
+        relevanceScore: {
+          $sum: [
+            {
+              $cond: [
+                { $eq: ["$subCategory", currentProduct.subCategory] },
+                2,
+                0,
+              ],
+            },
+            {
+              $cond: [{ $eq: ["$brand", currentProduct.brand] }, 1, 0],
+            },
+          ],
+        },
+        priceDiff: {
+          $abs: { $subtract: ["$price", currentProduct.price] },
+        },
+      },
+    },
+
+    { $sort: { relevanceScore: -1, priceDiff: 1, createdAt: -1 } },
+    { $limit: limit },
+
+    {
+      $lookup: {
+        from: "users",
+        localField: "userId",
+        foreignField: "_id",
+        as: "user",
+      },
+    },
+    { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+
+    {
+      $lookup: {
+        from: "reviews",
+        localField: "reviews",
+        foreignField: "_id",
+        as: "reviewDocs",
+      },
+    },
+
+    {
+      $project: {
+        name: 1,
+        images: 1,
+        price: 1,
+        priceMetric: 1,
+        currency: 1,
+        availableQuantity: 1,
+        quantityMetric: 1,
+        merchantName: 1,
+        deliveryLocations: 1,
+        isDiscounted: 1,
+        discountedPrice: 1,
+        createdAt: 1,
+        "user._id": 1,
+        "user.fullName": 1,
+        "user.profileImage": 1,
+        averageRating: { $avg: "$reviewDocs.rating" },
+        numberOfRatings: { $size: "$reviewDocs" },
+      },
+    },
+  ]);
+
+  if (similarProducts.length < 4 && currentProduct.brand) {
+    const fallback = await Product.find({
+      _id: {
+        $ne: productId,
+        $nin: similarProducts.map((p) => p._id),
+      },
+      brand: currentProduct.brand,
+      isDeleted: false,
+      status: "active",
     })
-  );
-  let productsWithDetails;
-  if (userId) {
-    const likedProducts = await ProductLike.find({ user: userId }).select('product').lean();
-    const likedProductIds = likedProducts.map((like) => like.product.toString());
-      const user = await User.findById(userId);
-      const comparedProductIds = user?.comparedProducts.map((id: any) => id.toString()) || [];
-      
-    productsWithDetails = enhancedProducts.map((product) => ({
-      ...product,
-      liked: likedProductIds.includes(product._id.toString()),
-      isCompared: comparedProductIds.includes(product._id.toString()),
-    }));
-  } else {
-    productsWithDetails = enhancedProducts.map((product) => ({
-      ...product,
-      liked: false,
-      isCompared: false,
-    }));
+      .limit(limit - similarProducts.length)
+      .select("name images price priceMetric currency merchantName deliveryLocations")
+      .lean();
+
+    return [...similarProducts, ...fallback];
   }
-  const totalProducts = productsWithDetails.length;
-  return {
-    products: productsWithDetails,
-    currentPage: page,
-    totalPages: Math.ceil(totalProducts / limit),
-    limit,
-    totalProducts,
-  }; 
+
+  return similarProducts;
 };
 export const fetchProductReviews = async (
   productId: string,

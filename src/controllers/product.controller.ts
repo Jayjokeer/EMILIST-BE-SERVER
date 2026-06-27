@@ -281,12 +281,21 @@ export const fetchOtherProductByUserController = catchAsync(async (req: JwtPaylo
   });
 
   export const fetchSimilarProductByUserController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const {productId} = req.params; 
-    const {page = 1, limit = 10 , userId} = req.query;
+     const { productId } = req.params;
+     const { limit = "8" } = req.query;
 
-     const data = await productService.fetchSimilarProducts(productId, limit, page , userId); 
-   return successResponse(res, StatusCodes.OK, data);
-  });
+  const product = await productService.fetchProductByIdWithDetails(productId);
+  if (!product) {
+    throw new NotFoundError("Product not found!");
+  }
+
+  const similarProducts = await productService.fetchSimilarProducts(
+    productId,
+    parseInt(limit as string, 10)
+  );
+
+  return successResponse(res, StatusCodes.OK, { similarProducts });
+});
   export const fetchProductReviewsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {productId} = req.params; 
     const {page = 1, limit = 10, sortBy } = req.query;

@@ -852,70 +852,98 @@ const otherProductsByUser = async (userId, page, limit) => {
     };
 };
 exports.otherProductsByUser = otherProductsByUser;
-const fetchSimilarProducts = async (productId, limit, page, userId) => {
-    const skip = (page - 1) * limit;
-    const targetProduct = await product_model_1.default.findById(productId);
-    if (!targetProduct) {
-        throw new error_1.NotFoundError("Product not found!");
+const fetchSimilarProducts = async (productId, limit = 8) => {
+    const currentProduct = await product_model_1.default.findById(productId).select("category subCategory brand price deliveryLocations");
+    if (!currentProduct) {
+        return [];
     }
-    const query = {
-        _id: { $ne: productId },
+    const matchStage = {
+        _id: { $ne: new mongoose_1.default.Types.ObjectId(productId) },
+        isDeleted: false,
+        status: "active",
     };
-    // if (targetProduct.location || targetProduct.category || targetProduct.subCategory || targetProduct.brand || targetProduct.name) {
-    //   query.$or = [
-    //     { location : targetProduct.location },
-    //     { category: targetProduct.category},
-    //     { subCategory: targetProduct.subCategory},
-    //     { brand: targetProduct.brand},
-    //     { name: targetProduct.name},
-    //   ];
-    // };
-    const similarProducts = await product_model_1.default.find(query)
-        .limit(Number(limit))
-        .skip(skip)
-        .populate('reviews', 'rating')
-        .populate({
-        path: 'userId',
-        select: 'fullName email userName profileImage level uniqueId isPrimeMember',
-    });
-    const enhancedProducts = await Promise.all(similarProducts.map(async (product) => {
-        const totalReviews = product.reviews.length;
-        const averageRating = totalReviews > 0
-            ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
-            : 0;
-        return {
-            ...product.toObject(),
-            totalReviews,
-            averageRating: parseFloat(averageRating.toFixed(2)),
-        };
-    }));
-    let productsWithDetails;
-    if (userId) {
-        const likedProducts = await productLike_model_1.default.find({ user: userId }).select('product').lean();
-        const likedProductIds = likedProducts.map((like) => like.product.toString());
-        const user = await users_model_1.default.findById(userId);
-        const comparedProductIds = user?.comparedProducts.map((id) => id.toString()) || [];
-        productsWithDetails = enhancedProducts.map((product) => ({
-            ...product,
-            liked: likedProductIds.includes(product._id.toString()),
-            isCompared: comparedProductIds.includes(product._id.toString()),
-        }));
+    matchStage.category = currentProduct.category;
+    const similarProducts = await product_model_1.default.aggregate([
+        { $match: matchStage },
+        // Score relevance: same subCategory and/or brand ranks higher
+        {
+            $addFields: {
+                relevanceScore: {
+                    $sum: [
+                        {
+                            $cond: [
+                                { $eq: ["$subCategory", currentProduct.subCategory] },
+                                2,
+                                0,
+                            ],
+                        },
+                        {
+                            $cond: [{ $eq: ["$brand", currentProduct.brand] }, 1, 0],
+                        },
+                    ],
+                },
+                priceDiff: {
+                    $abs: { $subtract: ["$price", currentProduct.price] },
+                },
+            },
+        },
+        { $sort: { relevanceScore: -1, priceDiff: 1, createdAt: -1 } },
+        { $limit: limit },
+        {
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "user",
+            },
+        },
+        { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+        {
+            $lookup: {
+                from: "reviews",
+                localField: "reviews",
+                foreignField: "_id",
+                as: "reviewDocs",
+            },
+        },
+        {
+            $project: {
+                name: 1,
+                images: 1,
+                price: 1,
+                priceMetric: 1,
+                currency: 1,
+                availableQuantity: 1,
+                quantityMetric: 1,
+                merchantName: 1,
+                deliveryLocations: 1,
+                isDiscounted: 1,
+                discountedPrice: 1,
+                createdAt: 1,
+                "user._id": 1,
+                "user.fullName": 1,
+                "user.profileImage": 1,
+                averageRating: { $avg: "$reviewDocs.rating" },
+                numberOfRatings: { $size: "$reviewDocs" },
+            },
+        },
+    ]);
+    if (similarProducts.length < 4 && currentProduct.brand) {
+        const fallback = await product_model_1.default.find({
+            _id: {
+                $ne: productId,
+                $nin: similarProducts.map((p) => p._id),
+            },
+            brand: currentProduct.brand,
+            isDeleted: false,
+            status: "active",
+        })
+            .limit(limit - similarProducts.length)
+            .select("name images price priceMetric currency merchantName deliveryLocations")
+            .lean();
+        return [...similarProducts, ...fallback];
     }
-    else {
-        productsWithDetails = enhancedProducts.map((product) => ({
-            ...product,
-            liked: false,
-            isCompared: false,
-        }));
-    }
-    const totalProducts = productsWithDetails.length;
-    return {
-        products: productsWithDetails,
-        currentPage: page,
-        totalPages: Math.ceil(totalProducts / limit),
-        limit,
-        totalProducts,
-    };
+    return similarProducts;
 };
 exports.fetchSimilarProducts = fetchSimilarProducts;
 const fetchProductReviews = async (productId, page, limit, sortBy = 'newest') => {

@@ -260,9 +260,13 @@ exports.fetchOtherProductByUserController = (0, error_handler_1.catchAsync)(asyn
 });
 exports.fetchSimilarProductByUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { productId } = req.params;
-    const { page = 1, limit = 10, userId } = req.query;
-    const data = await productService.fetchSimilarProducts(productId, limit, page, userId);
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    const { limit = "8" } = req.query;
+    const product = await productService.fetchProductByIdWithDetails(productId);
+    if (!product) {
+        throw new error_1.NotFoundError("Product not found!");
+    }
+    const similarProducts = await productService.fetchSimilarProducts(productId, parseInt(limit, 10));
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { similarProducts });
 });
 exports.fetchProductReviewsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { productId } = req.params;
