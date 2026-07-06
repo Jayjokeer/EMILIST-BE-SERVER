@@ -48,6 +48,12 @@ const slugify_1 = __importDefault(require("slugify"));
 const createProduct = async (userId, data) => {
     const payload = { ...data };
     payload.userId = new mongoose_1.Types.ObjectId(userId);
+    if (payload.name) {
+        payload.slug = (0, slugify_1.default)(payload.name, {
+            lower: true,
+            strict: true,
+        });
+    }
     if (typeof payload.category === "string") {
         const categoryName = payload.category.trim();
         let category = await categories_model_1.default.findOne({

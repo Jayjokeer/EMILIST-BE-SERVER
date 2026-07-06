@@ -13,6 +13,12 @@ export const createProduct = async (userId: string, data: IProduct) => {
 
   payload.userId = new Types.ObjectId(userId);
 
+  if (payload.name) {
+    payload.slug = slugify(payload.name, {
+      lower: true,
+      strict: true,
+    });
+  }
 
   if (typeof payload.category === "string") {
     const categoryName = payload.category.trim();
