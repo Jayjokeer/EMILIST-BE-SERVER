@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as cartController from "../controllers/cart.controller";
-import { userAuth } from "../middlewares/current-user";
+import { adminAuth, userAuth } from "../middlewares/current-user";
 import { validateAddToCart, validateCheckout } from "../validations/cart.validation";
 
 const router = Router();
@@ -12,7 +12,7 @@ router.route("/increase-quantity/:productId").patch(userAuth, cartController.inc
 router.route("/remove-from-cart/:productId").patch(userAuth, cartController.removeFromCartController);
 router.route("/clear").delete(userAuth, cartController.clearCartController);
 router.route("/apply-discount-code").post(userAuth, cartController.applyDiscountCode);
-router.route("/generate-discount-code").post(userAuth, cartController.generateDiscountCode);//this should be for admin
+router.route("/generate-discount-code").post(adminAuth, cartController.generateDiscountCode);//this should be for admin
 router.route("/get-cart-items").get(userAuth, cartController.getCartController);
 
 export { router as CartRoute };
