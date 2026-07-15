@@ -24,6 +24,17 @@ import { calculateVat } from "../utils/utility";
 import * as verificationService from "../services/verification.service";
 import { VerificationEnum } from "../enums/user.enums";
 
+const consumeCartStock = async (cart: any) => {
+  for (const item of cart.products || []) {
+    const product = await productService.fetchProductById(String((item.productId as any)._id || item.productId));
+    if (!product || Number(product.availableQuantity) < item.quantity) {
+      throw new BadRequestError(`Insufficient stock for ${product?.name || "a cart item"}`);
+    }
+    product.availableQuantity -= item.quantity;
+    await product.save();
+  }
+};
+
 export const payforProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
     const {cartId, paymentMethod, currency} = req.body;
@@ -41,8 +52,13 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
     if(!order){
       throw new NotFoundError("Your order cannot be found");
     }
+    if (order.paymentStatus === OrderPaymentStatus.paid) {
+      throw new BadRequestError("This order has already been paid for");
+    }
 
-    const {vatAmount,totalAmount } = await calculateVat(order.totalAmount!);
+    // Order totals already include tax and shipping at checkout. Do not tax them again.
+    const totalAmount = order.totalAmount!;
+    const vatAmount = order.taxAmount || 0;
 
     for (const item of cart.products!) {
       const product = item.productId as any; 
@@ -77,6 +93,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
         await transaction.save();
           cart.isPaid = true;
           order.paymentStatus = OrderPaymentStatus.paid;
+          await consumeCartStock(cart);
           await order.save();
           cart.status = CartStatus.checkedOut;
          await cart.save();
@@ -100,7 +117,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
             const transaction = await transactionService.createTransaction(transactionPayload);
             transaction.paymentService = PaymentServiceEnum.paystack;
             await transaction.save();
-            const paymentLink = await generatePaystackPaymentLink(transaction.reference, cart.totalAmount!, req.user.email);
+            const paymentLink = await generatePaystackPaymentLink(transaction.reference, totalAmount, req.user.email);
             data = { paymentLink, transaction };
       }
     }
@@ -345,6 +362,10 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
     }
     const verifyPayment = await  verifyPaystackPayment(reference);
     if(verifyPayment == "success"){
+      if (order.paymentStatus === OrderPaymentStatus.paid) {
+        throw new BadRequestError("This order has already been paid for");
+      }
+      await consumeCartStock(cart);
       cart.isPaid = true;
       cart.status = CartStatus.checkedOut;
       await cart.save();

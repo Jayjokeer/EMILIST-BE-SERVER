@@ -17,7 +17,7 @@ export const fetchCartById = async (cartId: string)=>{
     return await Cart.findById(cartId);
 };
 export const fetchCartByIdPayment = async (cartId: string, userId: string)=>{
-    return await Cart.findById({ _id: cartId, userId }).populate("products.productId");
+    return await Cart.findOne({ _id: cartId, userId }).populate("products.productId");
 };
 export const deleteCart = async (cartId: string) =>{
     return await Cart.findByIdAndDelete(cartId);
@@ -25,10 +25,21 @@ export const deleteCart = async (cartId: string) =>{
 
 export const fetchDiscountCode = async(discountId: string)=>{
     return await Discount.findOne({
-        code: discountId,
+        code: discountId.trim().toUpperCase(),
         isActive: true,
         expiryDate: { $gte: new Date() },
     });
+};
+
+export const incrementDiscountUsage = async (discountId: string) => {
+    return await Discount.findByIdAndUpdate(
+        discountId,
+        [
+            { $set: { useCount: { $add: ["$useCount", 1] } } },
+            { $set: { isActive: { $cond: ["$isSingleUse", false, "$isActive"] } } },
+        ],
+        { new: true }
+    );
 };
 export const createDiscount = async (payload: any)=>{
     return await Discount.create(payload);

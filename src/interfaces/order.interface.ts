@@ -10,10 +10,14 @@ export interface IOrderProduct {
 export interface IOrder extends Document {
     userId?: Schema.Types.ObjectId; 
     products?: IOrderProduct[]; 
+    subtotalAmount?: number;
+    taxAmount?: number;
+    shippingAmount?: number;
     totalAmount?: number; 
     status?: OrderStatus; 
     paymentStatus?: OrderPaymentStatus; 
     shippingAddress?: string;
+    orderNote?: string;
     discountApplied?:boolean;
     discountAmount?: number;
     originalTotalAmount?: number;

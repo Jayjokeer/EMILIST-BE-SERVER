@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createDiscount = exports.fetchDiscountCode = exports.deleteCart = exports.fetchCartByIdPayment = exports.fetchCartById = exports.fetchCartByUserId = exports.fetchCartByUser = exports.createCart = void 0;
+exports.createDiscount = exports.incrementDiscountUsage = exports.fetchDiscountCode = exports.deleteCart = exports.fetchCartByIdPayment = exports.fetchCartById = exports.fetchCartByUserId = exports.fetchCartByUser = exports.createCart = void 0;
 const cart_enum_1 = require("../enums/cart.enum");
 const cart_model_1 = __importDefault(require("../models/cart.model"));
 const discount_model_1 = __importDefault(require("../models/discount.model"));
@@ -24,7 +24,7 @@ const fetchCartById = async (cartId) => {
 };
 exports.fetchCartById = fetchCartById;
 const fetchCartByIdPayment = async (cartId, userId) => {
-    return await cart_model_1.default.findById({ _id: cartId, userId }).populate("products.productId");
+    return await cart_model_1.default.findOne({ _id: cartId, userId }).populate("products.productId");
 };
 exports.fetchCartByIdPayment = fetchCartByIdPayment;
 const deleteCart = async (cartId) => {
@@ -33,12 +33,19 @@ const deleteCart = async (cartId) => {
 exports.deleteCart = deleteCart;
 const fetchDiscountCode = async (discountId) => {
     return await discount_model_1.default.findOne({
-        code: discountId,
+        code: discountId.trim().toUpperCase(),
         isActive: true,
         expiryDate: { $gte: new Date() },
     });
 };
 exports.fetchDiscountCode = fetchDiscountCode;
+const incrementDiscountUsage = async (discountId) => {
+    return await discount_model_1.default.findByIdAndUpdate(discountId, [
+        { $set: { useCount: { $add: ["$useCount", 1] } } },
+        { $set: { isActive: { $cond: ["$isSingleUse", false, "$isActive"] } } },
+    ], { new: true });
+};
+exports.incrementDiscountUsage = incrementDiscountUsage;
 const createDiscount = async (payload) => {
     return await discount_model_1.default.create(payload);
 };

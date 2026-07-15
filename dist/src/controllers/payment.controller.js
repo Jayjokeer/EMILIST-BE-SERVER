@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyPaystackPaymentController = exports.payforVerificationController = exports.payforJobController = exports.payforProductController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
+const productService = __importStar(require("../services/product.service"));
 const cartService = __importStar(require("../services/cart.service"));
 const walletService = __importStar(require("../services/wallet.services"));
 const http_status_codes_1 = require("http-status-codes");
@@ -53,9 +54,18 @@ const planService = __importStar(require("../services/plan.service"));
 const subscriptionService = __importStar(require("../services/subscription.service"));
 const userService = __importStar(require("../services/auth.service"));
 const suscribtion_enum_1 = require("../enums/suscribtion.enum");
-const utility_1 = require("../utils/utility");
 const verificationService = __importStar(require("../services/verification.service"));
 const user_enums_1 = require("../enums/user.enums");
+const consumeCartStock = async (cart) => {
+    for (const item of cart.products || []) {
+        const product = await productService.fetchProductById(String(item.productId._id || item.productId));
+        if (!product || Number(product.availableQuantity) < item.quantity) {
+            throw new error_1.BadRequestError(`Insufficient stock for ${product?.name || "a cart item"}`);
+        }
+        product.availableQuantity -= item.quantity;
+        await product.save();
+    }
+};
 exports.payforProductController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
     const { cartId, paymentMethod, currency } = req.body;
@@ -72,7 +82,12 @@ exports.payforProductController = (0, error_handler_1.catchAsync)(async (req, re
     if (!order) {
         throw new error_1.NotFoundError("Your order cannot be found");
     }
-    const { vatAmount, totalAmount } = await (0, utility_1.calculateVat)(order.totalAmount);
+    if (order.paymentStatus === order_enum_1.OrderPaymentStatus.paid) {
+        throw new error_1.BadRequestError("This order has already been paid for");
+    }
+    // Order totals already include tax and shipping at checkout. Do not tax them again.
+    const totalAmount = order.totalAmount;
+    const vatAmount = order.taxAmount || 0;
     for (const item of cart.products) {
         const product = item.productId;
         if (product.availableQuantity < item.quantity) {
@@ -106,6 +121,7 @@ exports.payforProductController = (0, error_handler_1.catchAsync)(async (req, re
         await transaction.save();
         cart.isPaid = true;
         order.paymentStatus = order_enum_1.OrderPaymentStatus.paid;
+        await consumeCartStock(cart);
         await order.save();
         cart.status = cart_enum_1.CartStatus.checkedOut;
         await cart.save();
@@ -130,7 +146,7 @@ exports.payforProductController = (0, error_handler_1.catchAsync)(async (req, re
             const transaction = await transactionService.createTransaction(transactionPayload);
             transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
             await transaction.save();
-            const paymentLink = await (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, cart.totalAmount, req.user.email);
+            const paymentLink = await (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, totalAmount, req.user.email);
             data = { paymentLink, transaction };
         }
     }
@@ -358,6 +374,10 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)(async 
         }
         const verifyPayment = await (0, paystack_1.verifyPaystackPayment)(reference);
         if (verifyPayment == "success") {
+            if (order.paymentStatus === order_enum_1.OrderPaymentStatus.paid) {
+                throw new error_1.BadRequestError("This order has already been paid for");
+            }
+            await consumeCartStock(cart);
             cart.isPaid = true;
             cart.status = cart_enum_1.CartStatus.checkedOut;
             await cart.save();

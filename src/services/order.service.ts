@@ -7,6 +7,9 @@ export const createOrder= async(payload:any)=>{
 export const fetchOrderByCartId = async (cartId: string)=>{
     return await Order.findOne({cartId});
 }
+export const fetchOrderByCartIdForUser = async (cartId: string, userId: string) => {
+    return await Order.findOne({ cartId, userId });
+};
 export const fetchOrderByOrderId  = async (orderId: string)=>{
     return await Order.findById(orderId);
 }

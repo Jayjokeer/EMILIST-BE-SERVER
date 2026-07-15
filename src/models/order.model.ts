@@ -11,9 +11,13 @@ const OrderProductSchema: Schema = new Schema({
 
 const OrderSchema: Schema = new Schema(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "Users"},
-    products: [OrderProductSchema],
-    totalAmount: { type: Number  },
+    userId: { type: Schema.Types.ObjectId, ref: "Users", required: true },
+    // These are a price snapshot. Product prices must never alter a placed order.
+    products: { type: [OrderProductSchema], required: true },
+    subtotalAmount: { type: Number, required: true },
+    taxAmount: { type: Number, required: true, default: 0 },
+    shippingAmount: { type: Number, required: true, default: 0 },
+    totalAmount: { type: Number, required: true },
     status: {
       type: String,
       enum: OrderStatus,
@@ -24,12 +28,13 @@ const OrderSchema: Schema = new Schema(
       enum: OrderPaymentStatus,
       default: OrderPaymentStatus.unpaid,
     },
-    shippingAddress: { type: String },
+    shippingAddress: { type: String, trim: true },
+    orderNote: { type: String, trim: true, maxlength: 1000 },
     discountApplied: { type: Boolean, default: false },
     discountAmount:{ type: Number },
     originalTotalAmount: { type: Number },
     discountCode:{type: String},
-    cartId: { type: Schema.Types.ObjectId, ref: "Cart"}
+    cartId: { type: Schema.Types.ObjectId, ref: "Cart", required: true, unique: true }
   },
   { timestamps: true }
 );
