@@ -54,6 +54,10 @@ const createProduct = async (userId, data) => {
             strict: true,
         });
     }
+    const isSlugExists = await product_model_1.default.findOne({ slug: payload.slug });
+    if (isSlugExists) {
+        throw new error_1.BadRequestError('A material already exists with the name');
+    }
     if (typeof payload.category === "string") {
         const categoryName = payload.category.trim();
         let category = await categories_model_1.default.findOne({

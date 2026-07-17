@@ -3,7 +3,7 @@ import { IProduct } from "../interfaces/product.interface";
 import Product from "../models/product.model";
 import ProductLike from "../models/productLike.model";
 import Review from "../models/review.model";
-import { NotFoundError } from "../errors/error";
+import { BadRequestError, NotFoundError } from "../errors/error";
 import User from "../models/users.model";
 import Category from "../models/categories.model";
 import slugify from "slugify";
@@ -19,7 +19,10 @@ export const createProduct = async (userId: string, data: IProduct) => {
       strict: true,
     });
   }
-
+  const isSlugExists = await Product.findOne({slug: payload.slug});
+  if (isSlugExists){
+    throw new BadRequestError('A material already exists with the name')
+  }
   if (typeof payload.category === "string") {
     const categoryName = payload.category.trim();
 
