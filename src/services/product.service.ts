@@ -661,7 +661,7 @@ export const fetchAllProducts = async (query: any) => {
              * Pricing
              */
             price: 1,
-
+            priceMetric: 1,
             discountedPrice: 1,
 
             finalPrice: 1,

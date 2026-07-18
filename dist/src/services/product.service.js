@@ -601,6 +601,7 @@ const fetchAllProducts = async (query) => {
                          * Pricing
                          */
                         price: 1,
+                        priceMetric: 1,
                         discountedPrice: 1,
                         finalPrice: 1,
                         discountPercentage: 1,
