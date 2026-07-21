@@ -2,6 +2,7 @@ import mongoose, { Types, PipelineStage } from "mongoose";
 import { IProduct } from "../interfaces/product.interface";
 import Product from "../models/product.model";
 import ProductLike from "../models/productLike.model";
+import ProductFlag from "../models/productFlag.model";
 import Review from "../models/review.model";
 import { BadRequestError, NotFoundError } from "../errors/error";
 import User from "../models/users.model";
@@ -90,7 +91,10 @@ export const fetchAllProducts = async (query: any) => {
     maxDeliveryTime,
     isDiscounted,
     inStock,
+    level,
+    location,
     sort = "newest",
+    userId,
   } = query;
 
   const match: Record<string, any> = {
@@ -98,11 +102,22 @@ export const fetchAllProducts = async (query: any) => {
     isDeleted: false,
   };
 
-  if (
-    category &&
-    mongoose.Types.ObjectId.isValid(category)
-  ) {
-    match.category = new mongoose.Types.ObjectId(category);
+  // Handle comma-separated category IDs
+  if (category) {
+    const categories = category.split(",").filter((c: string) => c.trim());
+    const validIds = categories
+      .map((c: string) => {
+        try {
+          return new mongoose.Types.ObjectId(c.trim());
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    if (validIds.length > 0) {
+      match.category = { $in: validIds };
+    }
   }
 
   if (brand) {
@@ -187,23 +202,31 @@ export const fetchAllProducts = async (query: any) => {
     newest: {
       createdAt: -1,
     },
-
     oldest: {
       createdAt: 1,
     },
-
+    "price:low to high": {
+      price: 1,
+    },
+    "price:high to low": {
+      price: -1,
+    },
+    "highest rated": {
+      averageRating: -1,
+    },
+    "lowest rated": {
+      averageRating: 1,
+    },
+    // Keep backward compatibility
     priceAsc: {
       price: 1,
     },
-
     priceDesc: {
       price: -1,
     },
-
     rating: {
       averageRating: -1,
     },
-
     deliveryTime: {
       deliveryTime: 1,
     },
@@ -253,6 +276,35 @@ export const fetchAllProducts = async (query: any) => {
     },
 
     /**
+     * Filter by seller level
+     */
+    ...(level
+      ? [
+          {
+            $match: {
+              "seller.level": level,
+            },
+          } as PipelineStage,
+        ]
+      : []),
+
+    /**
+     * Filter by seller location (city or state)
+     */
+    ...(location
+      ? [
+          {
+            $match: {
+              $or: [
+                { "seller.city": { $regex: location, $options: "i" } },
+                { "seller.state": { $regex: location, $options: "i" } },
+              ],
+            },
+          } as PipelineStage,
+        ]
+      : []),
+
+    /**
      * Review Aggregation
      * (average rating + review count)
      */
@@ -291,6 +343,34 @@ export const fetchAllProducts = async (query: any) => {
         as: "ratingStats",
       },
     },
+
+    /**
+     * Liked status lookup (if userId provided)
+     */
+    ...(userId
+      ? [
+          {
+            $lookup: {
+              from: "productlikes",
+              let: { productId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $eq: ["$product", "$$productId"] },
+                        { $eq: ["$user", new mongoose.Types.ObjectId(userId)] },
+                      ],
+                    },
+                  },
+                },
+              ],
+              as: "likeData",
+            },
+          } as PipelineStage,
+        ]
+      : []),
+
         /**
      * Compute Product Fields
      */
@@ -325,6 +405,17 @@ export const fetchAllProducts = async (query: any) => {
             0,
           ],
         },
+
+        /**
+         * Is Liked (for authenticated users)
+         */
+        ...(userId
+          ? {
+              isLiked: {
+                $gt: [{ $size: { $ifNull: ["$likeData", []] } }, 0],
+              },
+            }
+          : {}),
 
         /**
          * Seller Full Name
@@ -389,6 +480,11 @@ export const fetchAllProducts = async (query: any) => {
           state: "$seller.state",
           country: "$seller.country",
         },
+
+        /**
+         * Seller Level
+         */
+        sellerLevel: "$seller.level",
 
         /**
          * Date Posted
@@ -650,6 +746,8 @@ export const fetchAllProducts = async (query: any) => {
               isPrimeMember:
                 "$sellerPrimeMember",
 
+              level: "$sellerLevel",
+
               city: "$seller.city",
 
               state: "$seller.state",
@@ -725,6 +823,75 @@ export const fetchAllProducts = async (query: any) => {
       ],
     },
   });
+
+  // Only add isLiked to the final projection if userId is present
+  if (userId) {
+    pipeline[pipeline.length - 1] = {
+      $facet: {
+        products: [
+          {
+            $skip: skip,
+          },
+          {
+            $limit: limit,
+          },
+          {
+            $project: {
+              _id: 0,
+              id: "$_id",
+              name: 1,
+              slug: 1,
+              description: 1,
+              brand: 1,
+              merchantName: 1,
+              storeName: 1,
+              category: {
+                id: "$category._id",
+                name: { $ifNull: ["$category.name", "$category.title"] },
+              },
+              image: "$primaryImage",
+              images: "$images",
+              imageCount: 1,
+              seller: {
+                id: "$seller._id",
+                name: "$sellerName",
+                image: "$sellerImage",
+                verified: "$sellerVerified",
+                isPrimeMember: "$sellerPrimeMember",
+                level: "$sellerLevel",
+                city: "$seller.city",
+                state: "$seller.state",
+                country: "$seller.country",
+              },
+              price: 1,
+              priceMetric: 1,
+              discountedPrice: 1,
+              finalPrice: 1,
+              discountPercentage: 1,
+              currency: 1,
+              isDiscounted: 1,
+              availableQuantity: 1,
+              quantityMetric: 1,
+              availability: 1,
+              averageRating: { $round: ["$averageRating", 1] },
+              reviewCount: 1,
+              hasReviews: 1,
+              deliveryLocations: 1,
+              deliveryTime: 1,
+              hasDiscount: 1,
+              status: 1,
+              datePosted: 1,
+              createdAt: 1,
+              updatedAt: 1,
+              isLiked: 1,
+            },
+          },
+        ],
+        pagination: [{ $count: "total" }],
+      },
+    };
+  }
+
     try {
     const [result] = await Product.aggregate(pipeline);
 
@@ -1135,6 +1302,36 @@ export const fetchProductReviews = async (
       ? allReviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalRatings
       : 0;
 
+  // Get product owner details
+  const productOwner = await User.findById(product.userId)
+    .select('firstName lastName displayImage email userName level uniqueId isPrimeMember')
+    .lean();
+
+  // Compute user/seller rating: average rating across all their products' reviews
+  const sellerProducts = await Product.find({ userId: product.userId, isDeleted: false })
+    .select('_id')
+    .lean();
+  const sellerProductIds = sellerProducts.map((p) => p._id);
+  
+  let sellerAverageRating = 0;
+  let sellerTotalReviews = 0;
+  if (sellerProductIds.length > 0) {
+    const sellerRatingResult = await Review.aggregate([
+      { $match: { productId: { $in: sellerProductIds } } },
+      {
+        $group: {
+          _id: null,
+          averageRating: { $avg: "$rating" },
+          reviewCount: { $sum: 1 },
+        },
+      },
+    ]);
+    if (sellerRatingResult.length > 0) {
+      sellerAverageRating = sellerRatingResult[0].averageRating || 0;
+      sellerTotalReviews = sellerRatingResult[0].reviewCount || 0;
+    }
+  }
+
   const data = {
     averageRating: parseFloat(averageRating.toFixed(2)),
     numberOfRatings: totalRatings,
@@ -1142,6 +1339,20 @@ export const fetchProductReviews = async (
     reviews,
     currentPage: Number(page),
     totalPages: Math.ceil(totalRatings / Number(limit)),
+    productOwner: productOwner
+      ? {
+          _id: productOwner._id,
+          fullName: `${productOwner.firstName || ''} ${productOwner.lastName || ''}`.trim(),
+          profileImage: productOwner.displayImage || '',
+          email: productOwner.email,
+          userName: productOwner.userName,
+          level: productOwner.level,
+          uniqueId: productOwner.uniqueId,
+          isPrimeMember: productOwner.isPrimeMember,
+          averageRating: parseFloat(sellerAverageRating.toFixed(2)),
+          numberOfReviews: sellerTotalReviews,
+        }
+      : null,
   };
 
   return data;
@@ -1197,4 +1408,47 @@ export const fetchSingleCategory = async(id: string)=>{
 
 export const fetchAllCategories = async()=>{
   return await Category.find({isActive: true});
+};
+
+// ==================== Product Flag ====================
+
+export const ifFlaggedProduct = async (productId: string, userId: string) => {
+  return await ProductFlag.findOne({ productId, userId });
+};
+
+export const flagProduct = async (data: any) => {
+  return await ProductFlag.create(data);
+};
+
+export const unflagProduct = async (productId: string, userId: string) => {
+  return await ProductFlag.findOneAndDelete({ productId, userId });
+};
+
+
+export const toggleReviewHelpful = async (reviewId: string, userId: string) => {
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    throw new NotFoundError("Review not found");
+  }
+
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  const alreadyMarked = review.helpfulUsers?.some(
+    (entry: any) => entry.toString() === userId.toString()
+  );
+
+  if (alreadyMarked) {
+    review.helpfulUsers = review.helpfulUsers?.filter(
+      (entry: any) => entry.toString() !== userId.toString()
+
+    );
+
+
+    review.helpfulCount = Math.max(0, (review.helpfulCount || 0) - 1);
+  } else {
+    review.helpfulUsers?.push(userObjectId);
+    review.helpfulCount = (review.helpfulCount || 0) + 1;
+  }
+
+  await review.save();
+  return { helpfulCount: review.helpfulCount, isHelpful: !alreadyMarked };
 };

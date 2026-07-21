@@ -18,10 +18,15 @@ const isReviewedbyUser = async (businessId, userId) => {
     return await review_model_1.default.findOne({ userId: userId, businessId: businessId });
 };
 exports.isReviewedbyUser = isReviewedbyUser;
-const fetchReviewForProduct = async (productId, page = 1, limit = 4) => {
+const fetchReviewForProduct = async (productId, page = 1, limit = 4, search) => {
     const skip = (page - 1) * limit;
+    const matchStage = { productId: new mongoose_1.default.Types.ObjectId(productId) };
+    // If search param is provided, filter reviews by comment
+    if (search) {
+        matchStage.comment = { $regex: search, $options: "i" };
+    }
     return await review_model_1.default.aggregate([
-        { $match: { productId: new mongoose_1.default.Types.ObjectId(productId) } },
+        { $match: matchStage },
         {
             $facet: {
                 stats: [

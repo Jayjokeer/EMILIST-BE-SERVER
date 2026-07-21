@@ -179,7 +179,7 @@ const ProductSchema = new Schema<IProduct>(
   }
 );
 
-
+ 
 ProductSchema.index({ category: 1, status: 1 });
 ProductSchema.index({ brand: 1, status: 1 });
 ProductSchema.index({ price: 1 });

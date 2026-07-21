@@ -26,4 +26,11 @@ router.route("/fetch-product-reviews/:productId").get( productController.getProd
 router.route("/compare-product/:productId").patch(userAuth, productController.compareProductController);
 router.route("/fetch-compared-products").get(userAuth, productController.fetchAllComparedProductsController);
 
+// ====== Flag Product Routes ======
+router.route("/flag-product/:productId").post(userAuth, productController.flagProductController);
+router.route("/unflag-product/:productId").patch(userAuth, productController.unflagProductController);
+
+// ====== Review Helpful Toggle Route ======
+router.route("/review/:reviewId/helpful").post(userAuth, productController.toggleReviewHelpfulController);
+
 export { router as ProductRoute };

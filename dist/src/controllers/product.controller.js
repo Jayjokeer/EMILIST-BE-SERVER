@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getProductReviewsController = exports.fetchAllComparedProductsController = exports.compareProductController = exports.fetchProductReviewsController = exports.fetchSimilarProductByUserController = exports.fetchOtherProductByUserController = exports.addDiscountToProductController = exports.reviewProductController = exports.unlikeProductsController = exports.fetchAllLikedProductsController = exports.likeProductsController = exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
+exports.toggleReviewHelpfulController = exports.unflagProductController = exports.flagProductController = exports.getProductReviewsController = exports.fetchAllComparedProductsController = exports.compareProductController = exports.fetchProductReviewsController = exports.fetchSimilarProductByUserController = exports.fetchOtherProductByUserController = exports.addDiscountToProductController = exports.reviewProductController = exports.unlikeProductsController = exports.fetchAllLikedProductsController = exports.likeProductsController = exports.getUserProductsController = exports.deleteProductImageController = exports.deleteProductController = exports.getAllProductsController = exports.getSingleProductController = exports.updateProductController = exports.createProductController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -97,7 +97,8 @@ exports.updateProductController = (0, error_handler_1.catchAsync)(async (req, re
 });
 exports.getSingleProductController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { productId } = req.params;
-    const { userId } = req.query;
+    // Get userId from authenticated user if available, fallback to query param
+    const userId = req.user?._id || req.query.userId;
     const product = await productService.fetchProductByIdWithDetails(productId);
     if (!product) {
         throw new error_1.NotFoundError("Product not found!");
@@ -121,7 +122,7 @@ exports.getSingleProductController = (0, error_handler_1.catchAsync)(async (req,
     };
     const data = {
         product,
-        liked,
+        isLiked: liked,
         isCompared,
         averageRating: review.averageRating || 0,
         numberOfRatings: review.numberOfRatings || 0,
@@ -131,8 +132,8 @@ exports.getSingleProductController = (0, error_handler_1.catchAsync)(async (req,
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
 exports.getAllProductsController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const userId = req.query.userId ? req.query.userId : null;
-    const products = await productService.fetchAllProducts(req.query);
+    const userId = req.user?._id || req.query.userId || null;
+    const products = await productService.fetchAllProducts({ ...req.query, userId });
     const data = products;
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
@@ -314,7 +315,7 @@ exports.getProductReviewsController = (0, error_handler_1.catchAsync)(async (req
     const { page = "1", limit = "4", search } = req.query;
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
-    const reviewAggregation = await reviewService.fetchReviewForProduct(String(productId), pageNum, limitNum);
+    const reviewAggregation = await reviewService.fetchReviewForProduct(String(productId), pageNum, limitNum, search);
     const review = reviewAggregation[0] || {
         averageRating: 0,
         numberOfRatings: 0,
@@ -333,4 +334,40 @@ exports.getProductReviewsController = (0, error_handler_1.catchAsync)(async (req
         },
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+// ==================== Flag Product Controllers ====================
+exports.flagProductController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = req.user._id;
+    const { productId } = req.params;
+    const { reason } = req.body;
+    const product = await productService.fetchProductById(productId);
+    if (!product) {
+        throw new error_1.NotFoundError("Product not found!");
+    }
+    const existingFlag = await productService.ifFlaggedProduct(productId, userId);
+    if (existingFlag) {
+        throw new error_1.BadRequestError("Product already flagged!");
+    }
+    await productService.flagProduct({
+        productId,
+        userId,
+        reason: reason || "Flagged",
+    });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Product flagged successfully");
+});
+exports.unflagProductController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = req.user._id;
+    const { productId } = req.params;
+    const existingFlag = await productService.ifFlaggedProduct(productId, userId);
+    if (!existingFlag) {
+        throw new error_1.BadRequestError("Product not flagged!");
+    }
+    await productService.unflagProduct(productId, userId);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Product un-flagged successfully");
+});
+exports.toggleReviewHelpfulController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = req.user._id;
+    const { reviewId } = req.params;
+    const result = await productService.toggleReviewHelpful(reviewId, userId);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, result);
 });

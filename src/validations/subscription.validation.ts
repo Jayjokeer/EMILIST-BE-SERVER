@@ -74,7 +74,7 @@ export const promoteJobAndBusinessValidation = (req: Request, res: Response, nex
       'any.required': 'End Date is required',
     }),
   type: Joi.string()
-    .valid('job', 'service')
+    .valid('job', 'service', 'product')
     .required()
     .messages({
       'any.only': 'Type must be either "job" or "service"',

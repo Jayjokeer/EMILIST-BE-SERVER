@@ -49,6 +49,7 @@ const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const userService = __importStar(require("../services/auth.service"));
 const jobService = __importStar(require("../services/job.service"));
 const businessService = __importStar(require("../services/business.service"));
+const productService = __importStar(require("../services/product.service"));
 exports.subscribeToPlan = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { planId, paymentMethod, currency, isRenew, durationType } = req.body;
     const userId = req.user._id;
@@ -187,6 +188,13 @@ exports.promoteJobAndBusinessController = (0, error_handler_1.catchAsync)(async 
             throw new error_1.NotFoundError('Service not found');
         }
         payload.businessId = business._id;
+    }
+    else if (type === "product") {
+        const product = await productService.fetchProductById(id);
+        if (!product) {
+            throw new error_1.NotFoundError('Product not found');
+        }
+        payload.productId = product._id;
     }
     const costPerClick = await subscriptionService.fetchCostPerClick();
     const cost = costPerClick * expectedClicks;

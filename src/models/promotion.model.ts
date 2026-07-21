@@ -6,6 +6,7 @@ import { PromotionPaymentStatus, PromotionTargetEnum } from '../enums/suscribtio
 const PromotionSchema = new Schema<IPromotion>({
   jobId: { type: Schema.Types.ObjectId, ref: 'Jobs', },
   businessId: { type: Schema.Types.ObjectId, ref: 'Business' },
+  productId: { type: Schema.Types.ObjectId, ref: 'Product' },
   userId: { type: Schema.Types.ObjectId, ref: 'Users', required: true },
   target: { type: String,enum: PromotionTargetEnum, required: true },
   startDate: { type: Date, required: true },

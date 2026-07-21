@@ -20,11 +20,28 @@ const cartItemCount = (cart: any) =>
 const cartProductId = (item: any) => String(item.productId?._id || item.productId);
 
 const cartResponse = async (cart: any) => {
-  const populatedCart = await cart.populate("products.productId");
+  const populatedCart = await cart.populate({
+    path: "products.productId",
+    populate: {
+      path: "category",
+      select: "name slug",
+    },
+  });
   const data = populatedCart.toObject();
   return {
     ...data,
-    products: (data.products || []).map((item: any) => ({ ...item, lineTotal: item.quantity * item.price })),
+    products: (data.products || []).map((item: any) => {
+      // Ensure category is properly shaped (id + name, not just an object id)
+      const product = item.productId || {};
+      if (product.category && typeof product.category === 'object' && product.category._id) {
+        product.category = {
+          id: product.category._id,
+          name: product.category.name || '',
+          slug: product.category.slug || '',
+        };
+      }
+      return { ...item, lineTotal: item.quantity * item.price };
+    }),
     cartQuantity: cartItemCount(populatedCart),
     orderSummary: await calculateOrderTotals(data.totalAmount || 0, 0),
   };

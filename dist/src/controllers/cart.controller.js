@@ -48,11 +48,28 @@ const SHIPPING_FEE = 9000;
 const cartItemCount = (cart) => (cart.products || []).reduce((total, item) => total + item.quantity, 0);
 const cartProductId = (item) => String(item.productId?._id || item.productId);
 const cartResponse = async (cart) => {
-    const populatedCart = await cart.populate("products.productId");
+    const populatedCart = await cart.populate({
+        path: "products.productId",
+        populate: {
+            path: "category",
+            select: "name slug",
+        },
+    });
     const data = populatedCart.toObject();
     return {
         ...data,
-        products: (data.products || []).map((item) => ({ ...item, lineTotal: item.quantity * item.price })),
+        products: (data.products || []).map((item) => {
+            // Ensure category is properly shaped (id + name, not just an object id)
+            const product = item.productId || {};
+            if (product.category && typeof product.category === 'object' && product.category._id) {
+                product.category = {
+                    id: product.category._id,
+                    name: product.category.name || '',
+                    slug: product.category.slug || '',
+                };
+            }
+            return { ...item, lineTotal: item.quantity * item.price };
+        }),
         cartQuantity: cartItemCount(populatedCart),
         orderSummary: await calculateOrderTotals(data.totalAmount || 0, 0),
     };

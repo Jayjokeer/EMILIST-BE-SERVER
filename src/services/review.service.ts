@@ -14,12 +14,20 @@ export const isReviewedbyUser = async(businessId: string, userId: string)=>{
 export const fetchReviewForProduct = async (
   productId: string,
   page = 1,
-  limit = 4
+  limit = 4,
+  search?: string
 ) => {
   const skip = (page - 1) * limit;
 
+  const matchStage: any = { productId: new mongoose.Types.ObjectId(productId) };
+
+  // If search param is provided, filter reviews by comment
+  if (search) {
+    matchStage.comment = { $regex: search, $options: "i" };
+  }
+
   return await Review.aggregate([
-    { $match: { productId: new mongoose.Types.ObjectId(productId) } },
+    { $match: matchStage },
 
     {
       $facet: {

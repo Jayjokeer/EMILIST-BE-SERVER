@@ -60,3 +60,8 @@ router.route("/fetch-other-products-by-user/:userId").get(productController.fetc
 router.route("/fetch-product-reviews/:productId").get(productController.getProductReviewsController);
 router.route("/compare-product/:productId").patch(current_user_1.userAuth, productController.compareProductController);
 router.route("/fetch-compared-products").get(current_user_1.userAuth, productController.fetchAllComparedProductsController);
+// ====== Flag Product Routes ======
+router.route("/flag-product/:productId").post(current_user_1.userAuth, productController.flagProductController);
+router.route("/unflag-product/:productId").patch(current_user_1.userAuth, productController.unflagProductController);
+// ====== Review Helpful Toggle Route ======
+router.route("/review/:reviewId/helpful").post(current_user_1.userAuth, productController.toggleReviewHelpfulController);

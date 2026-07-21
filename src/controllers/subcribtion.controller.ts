@@ -18,6 +18,7 @@ import { SubscriptionPeriodEnum, SubscriptionStatusEnum } from '../enums/suscrib
 import * as userService from '../services/auth.service';
 import * as jobService from '../services/job.service';
 import * as businessService from '../services/business.service';
+import * as productService from '../services/product.service';
 
 export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response) => {
     const { planId, paymentMethod, currency, isRenew, durationType } = req.body;
@@ -160,6 +161,12 @@ export const promoteJobAndBusinessController = catchAsync( async(req:JwtPayload,
             throw new NotFoundError('Service not found');
         }
         payload.businessId = business._id;
+    }else if(type === "product"){
+        const product = await productService.fetchProductById(id);
+        if(!product){
+            throw new NotFoundError('Product not found');
+        }
+        payload.productId = product._id;
     }
     
     const costPerClick = await  subscriptionService.fetchCostPerClick();

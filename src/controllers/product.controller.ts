@@ -89,7 +89,8 @@ export const updateProductController = catchAsync(async (req: JwtPayload, res: R
 
 export const getSingleProductController = catchAsync(async (req: JwtPayload, res: Response) => {
   const { productId } = req.params;
-  const { userId } = req.query;
+  // Get userId from authenticated user if available, fallback to query param
+  const userId = req.user?._id || req.query.userId;
 
   const product = await productService.fetchProductByIdWithDetails(productId);
   if (!product) {
@@ -119,7 +120,7 @@ export const getSingleProductController = catchAsync(async (req: JwtPayload, res
 
   const data = {
     product,
-    liked,
+    isLiked: liked,
     isCompared,
     averageRating: review.averageRating || 0,
     numberOfRatings: review.numberOfRatings || 0,
@@ -133,9 +134,9 @@ export const getSingleProductController = catchAsync(async (req: JwtPayload, res
 
 export const getAllProductsController = catchAsync(async (req: JwtPayload, res: Response) => {
 
-    const userId = req.query.userId ? req.query.userId : null; 
+    const userId = req.user?._id || req.query.userId || null; 
 
-    const products = await productService.fetchAllProducts(req.query);
+    const products = await productService.fetchAllProducts({ ...req.query, userId });
     const data = products;
     return successResponse(res, StatusCodes.OK, data);
 });
@@ -357,7 +358,8 @@ export const getProductReviewsController = catchAsync(async (req: Request, res: 
   const reviewAggregation = await reviewService.fetchReviewForProduct(
     String(productId),
     pageNum,
-    limitNum
+    limitNum,
+    search as string
   );
 
   const review = reviewAggregation[0] || {
@@ -380,4 +382,54 @@ export const getProductReviewsController = catchAsync(async (req: Request, res: 
   };
 
   return successResponse(res, StatusCodes.OK, data);
+});
+
+// ==================== Flag Product Controllers ====================
+
+export const flagProductController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const userId = req.user._id;
+  const { productId } = req.params;
+  const { reason } = req.body;
+
+  const product = await productService.fetchProductById(productId);
+  if (!product) {
+    throw new NotFoundError("Product not found!");
+  }
+
+  const existingFlag = await productService.ifFlaggedProduct(productId, userId);
+  if (existingFlag) {
+    throw new BadRequestError("Product already flagged!");
+  }
+
+  await productService.flagProduct({
+    productId,
+    userId,
+    reason: reason || "Flagged",
+  });
+
+  return successResponse(res, StatusCodes.OK, "Product flagged successfully");
+});
+
+export const unflagProductController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const userId = req.user._id;
+  const { productId } = req.params;
+
+  const existingFlag = await productService.ifFlaggedProduct(productId, userId);
+  if (!existingFlag) {
+    throw new BadRequestError("Product not flagged!");
+  }
+
+  await productService.unflagProduct(productId, userId);
+
+  return successResponse(res, StatusCodes.OK, "Product un-flagged successfully");
+});
+
+
+export const toggleReviewHelpfulController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const userId = req.user._id;
+  const { reviewId } = req.params;
+
+  const result = await productService.toggleReviewHelpful(reviewId, userId);
+
+  return successResponse(res, StatusCodes.OK, result);
 });
