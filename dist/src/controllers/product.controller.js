@@ -198,8 +198,7 @@ exports.likeProductsController = (0, error_handler_1.catchAsync)(async (req, res
 });
 exports.fetchAllLikedProductsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
-    const { page = 1, limit = 10 } = req.query;
-    const data = await productService.fetchLikedProducts(userId, page, limit);
+    const data = await productService.fetchLikedProducts(userId, req.query);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
 exports.unlikeProductsController = (0, error_handler_1.catchAsync)(async (req, res) => {

@@ -615,22 +615,328 @@ const createProductLike = async (data) => {
     return await productLike_model_1.default.create(data);
 };
 exports.createProductLike = createProductLike;
-const fetchLikedProducts = async (userId, page, limit) => {
+const fetchLikedProducts = async (userId, query) => {
+    const page = Math.max(parseInt(query.page) || 1, 1);
+    const limit = Math.max(parseInt(query.limit) || 20, 1);
     const skip = (page - 1) * limit;
     const likedProducts = await productLike_model_1.default.find({ user: userId }).select('product').lean();
-    const likedProductsId = likedProducts.map((like) => like.product);
-    const products = await product_model_1.default.find({ _id: { $in: likedProductsId } })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate('userId', 'fullName email userName profileImage level _id uniqueId');
-    const totalLikedProducts = likedProductsId.length;
-    return {
-        products,
-        totalPages: Math.ceil(totalLikedProducts / limit),
-        currentPage: page,
-        totalLikedProducts,
+    const likedProductIds = likedProducts.map((like) => like.product);
+    if (likedProductIds.length === 0) {
+        return {
+            success: true,
+            data: [],
+            meta: {
+                total: 0,
+                currentPage: page,
+                totalPages: 0,
+                hasNext: false,
+                hasPrevious: false,
+                nextPage: null,
+                previousPage: null,
+            },
+        };
+    }
+    const { search, categories, brand, priceRanges, minPrice, maxPrice, state, locations, deliveryTime, merchantRating, verified, inStock, sortBy = "latest", } = query;
+    // ---- BASE MATCH ----
+    const match = {
+        _id: { $in: likedProductIds },
+        status: "active",
+        isDeleted: false,
     };
+    // ---- SEARCH ----
+    if (search) {
+        const searchRegex = { $regex: search, $options: "i" };
+        match.$or = [
+            { name: searchRegex },
+            { description: searchRegex },
+            { merchantName: searchRegex },
+            { brand: searchRegex },
+        ];
+    }
+    // ---- CATEGORY FILTER ----
+    if (categories) {
+        let catArray = [];
+        if (Array.isArray(categories)) {
+            catArray = categories;
+        }
+        else if (typeof categories === "string") {
+            catArray = categories.split(",");
+        }
+        const validIds = catArray
+            .map((c) => {
+            try {
+                return new mongoose_1.default.Types.ObjectId(c.trim());
+            }
+            catch {
+                return null;
+            }
+        })
+            .filter(Boolean);
+        if (validIds.length > 0) {
+            match.category = { $in: validIds };
+        }
+    }
+    // ---- BRAND FILTER ----
+    if (brand) {
+        const brandArray = Array.isArray(brand) ? brand : String(brand).split(",");
+        match.brand = {
+            $in: brandArray.map((b) => new RegExp(`^${b.trim()}$`, "i")),
+        };
+    }
+    // ---- PRICE FILTER ----
+    let priceOrConditions = [];
+    if (priceRanges) {
+        const rangesArray = Array.isArray(priceRanges) ? priceRanges : String(priceRanges).split(",");
+        priceOrConditions = rangesArray
+            .map((range) => {
+            const [rawMin, rawMax] = range.split("-").map((v) => v?.trim());
+            const cond = {};
+            if (rawMin)
+                cond.$gte = Number(rawMin);
+            if (rawMax)
+                cond.$lte = Number(rawMax);
+            return Object.keys(cond).length ? { price: cond } : null;
+        })
+            .filter(Boolean);
+    }
+    if (priceOrConditions.length > 0) {
+        if (match.$or) {
+            match.$and = [{ $or: match.$or }, { $or: priceOrConditions }];
+            delete match.$or;
+        }
+        else {
+            match.$or = priceOrConditions;
+        }
+    }
+    else if (minPrice || maxPrice) {
+        match.price = {};
+        if (minPrice)
+            match.price.$gte = Number(minPrice);
+        if (maxPrice)
+            match.price.$lte = Number(maxPrice);
+    }
+    // ---- IN-STOCK FILTER ----
+    if (inStock === "true") {
+        match.availableQuantity = { $gt: 0 };
+    }
+    // ---- BUILD PIPELINE ----
+    const pipeline = [
+        { $match: match },
+        // Category Lookup
+        {
+            $lookup: {
+                from: "categories",
+                localField: "category",
+                foreignField: "_id",
+                as: "category",
+            },
+        },
+        { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+        // Search by category name
+        ...(search && !categories
+            ? [
+                {
+                    $match: {
+                        $or: [
+                            { name: { $regex: search, $options: "i" } },
+                            { description: { $regex: search, $options: "i" } },
+                            { merchantName: { $regex: search, $options: "i" } },
+                            { brand: { $regex: search, $options: "i" } },
+                            { "category.name": { $regex: search, $options: "i" } },
+                        ],
+                    },
+                },
+            ]
+            : []),
+        // Seller Lookup
+        {
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "seller",
+            },
+        },
+        { $unwind: { path: "$seller", preserveNullAndEmptyArrays: true } },
+        // Seller verified filter
+        ...(verified === "true"
+            ? [{ $match: { "seller.isVerified": true } }]
+            : []),
+        // Delivery location filter by state
+        ...(state
+            ? [{ $match: { "deliveryLocations.state": { $regex: state, $options: "i" } } }]
+            : []),
+        // Delivery location filter by lga
+        ...(locations
+            ? [{
+                    $match: {
+                        "deliveryLocations.lga": {
+                            $in: (Array.isArray(locations) ? locations : [locations]).map((l) => new RegExp(l.trim(), "i")),
+                        },
+                    },
+                }]
+            : []),
+        // Delivery time filter
+        ...(deliveryTime
+            ? [{
+                    $match: {
+                        deliveryTime: {
+                            $in: Array.isArray(deliveryTime) ? deliveryTime : String(deliveryTime).split(","),
+                        },
+                    },
+                }]
+            : []),
+        // Review Aggregation
+        {
+            $lookup: {
+                from: "reviews",
+                let: { productId: "$_id" },
+                pipeline: [
+                    { $match: { $expr: { $eq: ["$productId", "$$productId"] } } },
+                    { $group: { _id: null, averageRating: { $avg: "$rating" }, reviewCount: { $sum: 1 } } },
+                ],
+                as: "ratingStats",
+            },
+        },
+        // Merchant-level rating
+        {
+            $lookup: {
+                from: "products",
+                let: { sellerId: "$userId" },
+                pipeline: [
+                    { $match: { $expr: { $eq: ["$userId", "$$sellerId"] }, status: "active", isDeleted: false } },
+                    { $project: { _id: 1 } },
+                ],
+                as: "sellerProductIds",
+            },
+        },
+        {
+            $lookup: {
+                from: "reviews",
+                let: { productIds: "$sellerProductIds._id" },
+                pipeline: [
+                    { $match: { $expr: { $in: ["$productId", "$$productIds"] } } },
+                    { $group: { _id: null, merchantAverageRating: { $avg: "$rating" }, merchantReviewCount: { $sum: 1 } } },
+                ],
+                as: "merchantRatingStats",
+            },
+        },
+        // ---- ADD FIELDS ----
+        {
+            $addFields: {
+                averageRating: { $ifNull: [{ $arrayElemAt: ["$ratingStats.averageRating", 0] }, 0] },
+                reviewCount: { $ifNull: [{ $arrayElemAt: ["$ratingStats.reviewCount", 0] }, 0] },
+                merchantRating: { $ifNull: [{ $arrayElemAt: ["$merchantRatingStats.merchantAverageRating", 0] }, 0] },
+                merchantReviewCount: { $ifNull: [{ $arrayElemAt: ["$merchantRatingStats.merchantReviewCount", 0] }, 0] },
+                isLiked: true,
+                isFlagged: false,
+                sellerName: { $trim: { input: { $concat: [{ $ifNull: ["$seller.firstName", ""] }, " ", { $ifNull: ["$seller.lastName", ""] }] } } },
+                sellerImage: { $ifNull: ["$seller.displayImage", ""] },
+                sellerVerified: { $ifNull: ["$seller.isVerified", false] },
+                sellerPhone: { $ifNull: ["$seller.mobile", ""] },
+                sellerEmail: { $ifNull: ["$seller.email", ""] },
+                stockStatus: { $cond: [{ $gt: ["$availableQuantity", 0] }, "in_stock", "out_of_stock"] },
+                isAvailable: { $gt: ["$availableQuantity", 0] },
+                thumbnail: {
+                    $let: {
+                        vars: { primary: { $first: { $filter: { input: "$images", as: "img", cond: { $eq: ["$$img.isPrimary", true] } } } } },
+                        in: { $ifNull: ["$$primary.imageUrl", { $arrayElemAt: ["$images.imageUrl", 0] }] },
+                    },
+                },
+                finalPrice: { $cond: ["$isDiscounted", "$discountedPrice", "$price"] },
+            },
+        },
+        // Merchant rating filter
+        ...(merchantRating
+            ? [{ $match: { merchantRating: { $gte: Number(merchantRating) } } }]
+            : []),
+    ];
+    // ---- SORTING ----
+    const sortMap = {
+        latest: { createdAt: -1 },
+        oldest: { createdAt: 1 },
+        price_low_high: { finalPrice: 1 },
+        price_high_low: { finalPrice: -1 },
+        most_sold: { totalUnitsSold: -1 },
+        highest_rated: { averageRating: -1 },
+        nearest: { createdAt: -1 },
+    };
+    pipeline.push({ $sort: sortMap[sortBy] || sortMap.latest });
+    // ---- PAGINATION ----
+    pipeline.push({
+        $facet: {
+            products: [
+                { $skip: skip },
+                { $limit: limit },
+                {
+                    $project: {
+                        _id: 0,
+                        id: "$_id",
+                        name: 1,
+                        slug: 1,
+                        description: 1,
+                        brand: 1,
+                        category: { id: "$category._id", name: { $ifNull: ["$category.name", ""] }, slug: { $ifNull: ["$category.slug", ""] } },
+                        thumbnail: 1,
+                        images: { $map: { input: "$images", as: "img", in: { url: "$$img.imageUrl", order: { $ifNull: ["$$img.order", 0] } } } },
+                        price: 1,
+                        currency: 1,
+                        unit: "$priceMetric",
+                        availableQuantity: 1,
+                        minimumOrder: { $ifNull: ["$minimumOrder", 1] },
+                        maximumOrder: { $ifNull: ["$maximumOrder", null] },
+                        stockStatus: 1,
+                        isAvailable: 1,
+                        isFeatured: { $ifNull: ["$isFeatured", false] },
+                        totalUnitsSold: { $ifNull: ["$totalUnitsSold", 0] },
+                        averageRating: { $round: ["$averageRating", 1] },
+                        reviewCount: 1,
+                        isLiked: 1,
+                        isFlagged: 1,
+                        createdAt: 1,
+                        updatedAt: 1,
+                        merchant: {
+                            id: "$seller._id",
+                            businessName: { $ifNull: ["$seller.businessName", "$merchantName"] },
+                            displayName: "$sellerName",
+                            logo: "$sellerImage",
+                            rating: { $round: ["$merchantRating", 1] },
+                            totalReviews: "$merchantReviewCount",
+                            verified: "$sellerVerified",
+                            phone: "$sellerPhone",
+                            email: "$sellerEmail",
+                        },
+                        delivery: { state: { $arrayElemAt: ["$deliveryLocations.state", 0] }, city: { $arrayElemAt: ["$deliveryLocations.lga", 0] } },
+                        deliveryTime: 1,
+                    },
+                },
+            ],
+            pagination: [{ $count: "total" }],
+        },
+    });
+    try {
+        const [result] = await product_model_1.default.aggregate(pipeline);
+        const products = result?.products ?? [];
+        const total = result?.pagination?.[0]?.total ?? 0;
+        const totalPages = Math.ceil(total / limit) || 1;
+        return {
+            success: true,
+            data: products,
+            meta: {
+                total,
+                currentPage: page,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrevious: page > 1,
+                nextPage: page < totalPages ? page + 1 : null,
+                previousPage: page > 1 ? page - 1 : null,
+            },
+        };
+    }
+    catch (error) {
+        console.error("Fetch Liked Products Error", error);
+        throw error;
+    }
 };
 exports.fetchLikedProducts = fetchLikedProducts;
 const unlikeProduct = async (productId, userId) => {
