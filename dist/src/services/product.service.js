@@ -110,7 +110,10 @@ const fetchAllProducts = async (query) => {
     const page = Math.max(parseInt(query.page) || 1, 1);
     const limit = Math.max(parseInt(query.limit) || 20, 1);
     const skip = (page - 1) * limit;
-    const { search, categories, minPrice, maxPrice, state, locations, deliveryTime, merchantRating, verified, inStock, sortBy = "latest", userId, } = query;
+    const { search, categories, brand, priceRanges, // e.g. "0-20000,21000-50000,500000-" (open-ended max uses trailing dash)
+    minPrice, // still supported for direct/legacy min-max usage
+    maxPrice, state, locations, deliveryTime, // now supports a single value OR array/comma-separated list
+    merchantRating, verified, inStock, sortBy = "latest", userId, } = query;
     // ---- BASE MATCH ----
     const match = {
         status: "active",
@@ -123,12 +126,11 @@ const fetchAllProducts = async (query) => {
             { name: searchRegex },
             { description: searchRegex },
             { merchantName: searchRegex },
+            { brand: searchRegex },
         ];
     }
     // ---- CATEGORY FILTER (array) ----
     if (categories) {
-        // Support both query param formats:
-        // categories[]=id1&categories[]=id2  OR  categories=id1,id2
         let catArray = [];
         if (Array.isArray(categories)) {
             catArray = categories;
@@ -150,8 +152,41 @@ const fetchAllProducts = async (query) => {
             match.category = { $in: validIds };
         }
     }
-    // ---- PRICE FILTER ----
-    if (minPrice || maxPrice) {
+    if (brand) {
+        const brandArray = Array.isArray(brand) ? brand : String(brand).split(",");
+        match.brand = {
+            $in: brandArray.map((b) => new RegExp(`^${b.trim()}$`, "i")),
+        };
+    }
+    let priceOrConditions = [];
+    if (priceRanges) {
+        const rangesArray = Array.isArray(priceRanges)
+            ? priceRanges
+            : String(priceRanges).split(",");
+        priceOrConditions = rangesArray
+            .map((range) => {
+            const [rawMin, rawMax] = range.split("-").map((v) => v?.trim());
+            const cond = {};
+            if (rawMin)
+                cond.$gte = Number(rawMin);
+            if (rawMax)
+                cond.$lte = Number(rawMax);
+            return Object.keys(cond).length ? { price: cond } : null;
+        })
+            .filter(Boolean);
+    }
+    if (priceOrConditions.length > 0) {
+        // Combine with any existing top-level $or (from search) using $and,
+        // since $or is already claimed by the search filter above.
+        if (match.$or) {
+            match.$and = [{ $or: match.$or }, { $or: priceOrConditions }];
+            delete match.$or;
+        }
+        else {
+            match.$or = priceOrConditions;
+        }
+    }
+    else if (minPrice || maxPrice) {
         match.price = {};
         if (minPrice)
             match.price.$gte = Number(minPrice);
@@ -184,6 +219,7 @@ const fetchAllProducts = async (query) => {
                             { name: { $regex: search, $options: "i" } },
                             { description: { $regex: search, $options: "i" } },
                             { merchantName: { $regex: search, $options: "i" } },
+                            { brand: { $regex: search, $options: "i" } },
                             { "category.name": { $regex: search, $options: "i" } },
                         ],
                     },
@@ -226,11 +262,22 @@ const fetchAllProducts = async (query) => {
                 },
             ]
             : []),
-        // Delivery time filter
+        // Delivery time filter — now supports multiple chips selected together
+        // (schema enum: immediately, 1_day, 2_3_days, 1_week, 1_2_weeks, 2_3_weeks, 1_month, 3_months)
         ...(deliveryTime
-            ? [{ $match: { deliveryTime } }]
+            ? [
+                {
+                    $match: {
+                        deliveryTime: {
+                            $in: Array.isArray(deliveryTime)
+                                ? deliveryTime
+                                : String(deliveryTime).split(","),
+                        },
+                    },
+                },
+            ]
             : []),
-        // Review Aggregation (for rating + count)
+        // Product-level Review Aggregation (for this product's own rating + count)
         {
             $lookup: {
                 from: "reviews",
@@ -246,6 +293,44 @@ const fetchAllProducts = async (query) => {
                     },
                 ],
                 as: "ratingStats",
+            },
+        },
+        // ---- MERCHANT-LEVEL RATING ----
+        // "Merchant Rating" in the filters panel is about the SELLER as a whole,
+        // not this single product. Pull every active product this seller owns,
+        // then aggregate review ratings across all of them.
+        {
+            $lookup: {
+                from: "products",
+                let: { sellerId: "$userId" },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: { $eq: ["$userId", "$$sellerId"] },
+                            status: "active",
+                            isDeleted: false,
+                        },
+                    },
+                    { $project: { _id: 1 } },
+                ],
+                as: "sellerProductIds",
+            },
+        },
+        {
+            $lookup: {
+                from: "reviews",
+                let: { productIds: "$sellerProductIds._id" },
+                pipeline: [
+                    { $match: { $expr: { $in: ["$productId", "$$productIds"] } } },
+                    {
+                        $group: {
+                            _id: null,
+                            merchantAverageRating: { $avg: "$rating" },
+                            merchantReviewCount: { $sum: 1 },
+                        },
+                    },
+                ],
+                as: "merchantRatingStats",
             },
         },
         // Liked status lookup (if authenticated)
@@ -280,6 +365,18 @@ const fetchAllProducts = async (query) => {
                 },
                 reviewCount: {
                     $ifNull: [{ $arrayElemAt: ["$ratingStats.reviewCount", 0] }, 0],
+                },
+                merchantRating: {
+                    $ifNull: [
+                        { $arrayElemAt: ["$merchantRatingStats.merchantAverageRating", 0] },
+                        0,
+                    ],
+                },
+                merchantReviewCount: {
+                    $ifNull: [
+                        { $arrayElemAt: ["$merchantRatingStats.merchantReviewCount", 0] },
+                        0,
+                    ],
                 },
                 ...(userId
                     ? {
@@ -338,11 +435,13 @@ const fetchAllProducts = async (query) => {
             },
         },
         // ---- MERCHANT RATING FILTER (post-aggregation) ----
+        // Now correctly filters on the seller's aggregate rating across all
+        // their products, not the rating of this single listing.
         ...(merchantRating
             ? [
                 {
                     $match: {
-                        averageRating: { $gte: Number(merchantRating) },
+                        merchantRating: { $gte: Number(merchantRating) },
                     },
                 },
             ]
@@ -372,6 +471,7 @@ const fetchAllProducts = async (query) => {
                         name: 1,
                         slug: 1,
                         description: 1,
+                        brand: 1,
                         category: {
                             id: "$category._id",
                             name: { $ifNull: ["$category.name", ""] },
@@ -402,15 +502,14 @@ const fetchAllProducts = async (query) => {
                         reviewCount: 1,
                         createdAt: 1,
                         updatedAt: 1,
-                        isLiked: false,
                         ...(userId ? { isLiked: 1 } : {}),
                         merchant: {
                             id: "$seller._id",
                             businessName: { $ifNull: ["$seller.businessName", "$merchantName"] },
                             displayName: "$sellerName",
                             logo: "$sellerImage",
-                            rating: { $round: ["$averageRating", 1] },
-                            totalReviews: "$reviewCount",
+                            rating: { $round: ["$merchantRating", 1] },
+                            totalReviews: "$merchantReviewCount",
                             verified: "$sellerVerified",
                             phone: "$sellerPhone",
                             email: "$sellerEmail",
@@ -418,7 +517,6 @@ const fetchAllProducts = async (query) => {
                         delivery: {
                             state: { $arrayElemAt: ["$deliveryLocations.state", 0] },
                             city: { $arrayElemAt: ["$deliveryLocations.lga", 0] },
-                            area: { $arrayElemAt: ["$deliveryLocations.area", 0] },
                         },
                         deliveryTime: 1,
                     },

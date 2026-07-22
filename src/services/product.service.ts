@@ -82,28 +82,30 @@ export const fetchAllProducts = async (query: any) => {
   const page = Math.max(parseInt(query.page) || 1, 1);
   const limit = Math.max(parseInt(query.limit) || 20, 1);
   const skip = (page - 1) * limit;
-
+ 
   const {
     search,
     categories,
-    minPrice,
+    brand,
+    priceRanges, // e.g. "0-20000,21000-50000,500000-" (open-ended max uses trailing dash)
+    minPrice, // still supported for direct/legacy min-max usage
     maxPrice,
     state,
     locations,
-    deliveryTime,
+    deliveryTime, // now supports a single value OR array/comma-separated list
     merchantRating,
     verified,
     inStock,
     sortBy = "latest",
     userId,
   } = query;
-
+ 
   // ---- BASE MATCH ----
   const match: Record<string, any> = {
     status: "active",
     isDeleted: false,
   };
-
+ 
   // ---- SEARCH ----
   if (search) {
     const searchRegex = { $regex: search, $options: "i" };
@@ -111,20 +113,19 @@ export const fetchAllProducts = async (query: any) => {
       { name: searchRegex },
       { description: searchRegex },
       { merchantName: searchRegex },
+      { brand: searchRegex },
     ];
   }
-
+ 
   // ---- CATEGORY FILTER (array) ----
   if (categories) {
-    // Support both query param formats:
-    // categories[]=id1&categories[]=id2  OR  categories=id1,id2
     let catArray: string[] = [];
     if (Array.isArray(categories)) {
       catArray = categories;
     } else if (typeof categories === "string") {
       catArray = categories.split(",");
     }
-
+ 
     const validIds = catArray
       .map((c: string) => {
         try {
@@ -134,28 +135,63 @@ export const fetchAllProducts = async (query: any) => {
         }
       })
       .filter(Boolean);
-
+ 
     if (validIds.length > 0) {
       match.category = { $in: validIds };
     }
   }
+ 
 
-  // ---- PRICE FILTER ----
-  if (minPrice || maxPrice) {
+  if (brand) {
+    const brandArray = Array.isArray(brand) ? brand : String(brand).split(",");
+    match.brand = {
+      $in: brandArray.map((b: string) => new RegExp(`^${b.trim()}$`, "i")),
+    };
+  }
+ 
+
+  let priceOrConditions: Record<string, any>[] = [];
+ 
+  if (priceRanges) {
+    const rangesArray = Array.isArray(priceRanges)
+      ? priceRanges
+      : String(priceRanges).split(",");
+ 
+    priceOrConditions = rangesArray
+      .map((range: string) => {
+        const [rawMin, rawMax] = range.split("-").map((v) => v?.trim());
+        const cond: Record<string, any> = {};
+        if (rawMin) cond.$gte = Number(rawMin);
+        if (rawMax) cond.$lte = Number(rawMax);
+        return Object.keys(cond).length ? { price: cond } : null;
+      })
+      .filter(Boolean) as Record<string, any>[];
+  }
+ 
+  if (priceOrConditions.length > 0) {
+    // Combine with any existing top-level $or (from search) using $and,
+    // since $or is already claimed by the search filter above.
+    if (match.$or) {
+      match.$and = [{ $or: match.$or }, { $or: priceOrConditions }];
+      delete match.$or;
+    } else {
+      match.$or = priceOrConditions;
+    }
+  } else if (minPrice || maxPrice) {
     match.price = {};
     if (minPrice) match.price.$gte = Number(minPrice);
     if (maxPrice) match.price.$lte = Number(maxPrice);
   }
-
+ 
   // ---- IN-STOCK FILTER ----
   if (inStock === "true") {
     match.availableQuantity = { $gt: 0 };
   }
-
+ 
   // ---- BUILD PIPELINE ----
   const pipeline: PipelineStage[] = [
     { $match: match },
-
+ 
     // Category Lookup
     {
       $lookup: {
@@ -166,7 +202,7 @@ export const fetchAllProducts = async (query: any) => {
       },
     },
     { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-
+ 
     // Search by category name if search is provided (since $or above searches product fields only)
     ...(search && !categories
       ? [
@@ -176,13 +212,14 @@ export const fetchAllProducts = async (query: any) => {
                 { name: { $regex: search, $options: "i" } },
                 { description: { $regex: search, $options: "i" } },
                 { merchantName: { $regex: search, $options: "i" } },
+                { brand: { $regex: search, $options: "i" } },
                 { "category.name": { $regex: search, $options: "i" } },
               ],
             },
           } as PipelineStage,
         ]
       : []),
-
+ 
     // Seller Lookup
     {
       $lookup: {
@@ -193,12 +230,12 @@ export const fetchAllProducts = async (query: any) => {
       },
     },
     { $unwind: { path: "$seller", preserveNullAndEmptyArrays: true } },
-
+ 
     // Seller verified filter
     ...(verified === "true"
       ? [{ $match: { "seller.isVerified": true } } as PipelineStage]
       : []),
-
+ 
     // Delivery location filter by state
     ...(state
       ? [
@@ -209,7 +246,7 @@ export const fetchAllProducts = async (query: any) => {
           } as PipelineStage,
         ]
       : []),
-
+ 
     // Delivery location filter by area/lga (multiple)
     ...(locations
       ? [
@@ -224,13 +261,24 @@ export const fetchAllProducts = async (query: any) => {
           } as PipelineStage,
         ]
       : []),
-
-    // Delivery time filter
+ 
+    // Delivery time filter — now supports multiple chips selected together
+    // (schema enum: immediately, 1_day, 2_3_days, 1_week, 1_2_weeks, 2_3_weeks, 1_month, 3_months)
     ...(deliveryTime
-      ? [{ $match: { deliveryTime } } as PipelineStage]
+      ? [
+          {
+            $match: {
+              deliveryTime: {
+                $in: Array.isArray(deliveryTime)
+                  ? deliveryTime
+                  : String(deliveryTime).split(","),
+              },
+            },
+          } as PipelineStage,
+        ]
       : []),
-
-    // Review Aggregation (for rating + count)
+ 
+    // Product-level Review Aggregation (for this product's own rating + count)
     {
       $lookup: {
         from: "reviews",
@@ -248,7 +296,46 @@ export const fetchAllProducts = async (query: any) => {
         as: "ratingStats",
       },
     },
-
+ 
+    // ---- MERCHANT-LEVEL RATING ----
+    // "Merchant Rating" in the filters panel is about the SELLER as a whole,
+    // not this single product. Pull every active product this seller owns,
+    // then aggregate review ratings across all of them.
+    {
+      $lookup: {
+        from: "products",
+        let: { sellerId: "$userId" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$userId", "$$sellerId"] },
+              status: "active",
+              isDeleted: false,
+            },
+          },
+          { $project: { _id: 1 } },
+        ],
+        as: "sellerProductIds",
+      },
+    },
+    {
+      $lookup: {
+        from: "reviews",
+        let: { productIds: "$sellerProductIds._id" },
+        pipeline: [
+          { $match: { $expr: { $in: ["$productId", "$$productIds"] } } },
+          {
+            $group: {
+              _id: null,
+              merchantAverageRating: { $avg: "$rating" },
+              merchantReviewCount: { $sum: 1 },
+            },
+          },
+        ],
+        as: "merchantRatingStats",
+      },
+    },
+ 
     // Liked status lookup (if authenticated)
     ...(userId
       ? [
@@ -273,7 +360,7 @@ export const fetchAllProducts = async (query: any) => {
           } as PipelineStage,
         ]
       : []),
-
+ 
     // ---- ADD FIELDS ----
     {
       $addFields: {
@@ -282,6 +369,18 @@ export const fetchAllProducts = async (query: any) => {
         },
         reviewCount: {
           $ifNull: [{ $arrayElemAt: ["$ratingStats.reviewCount", 0] }, 0],
+        },
+        merchantRating: {
+          $ifNull: [
+            { $arrayElemAt: ["$merchantRatingStats.merchantAverageRating", 0] },
+            0,
+          ],
+        },
+        merchantReviewCount: {
+          $ifNull: [
+            { $arrayElemAt: ["$merchantRatingStats.merchantReviewCount", 0] },
+            0,
+          ],
         },
         ...(userId
           ? {
@@ -339,19 +438,21 @@ export const fetchAllProducts = async (query: any) => {
         },
       },
     },
-
+ 
     // ---- MERCHANT RATING FILTER (post-aggregation) ----
+    // Now correctly filters on the seller's aggregate rating across all
+    // their products, not the rating of this single listing.
     ...(merchantRating
       ? [
           {
             $match: {
-              averageRating: { $gte: Number(merchantRating) },
+              merchantRating: { $gte: Number(merchantRating) },
             },
           } as PipelineStage,
         ]
       : []),
   ];
-
+ 
   // ---- SORTING ----
   const sortMap: Record<string, Record<string, 1 | -1>> = {
     latest: { createdAt: -1 },
@@ -362,9 +463,9 @@ export const fetchAllProducts = async (query: any) => {
     highest_rated: { averageRating: -1 },
     nearest: { createdAt: -1 }, // Default fallback until geo-coordinates are implemented
   };
-
+ 
   pipeline.push({ $sort: sortMap[sortBy] || sortMap.latest });
-
+ 
   // ---- PAGINATION ----
   pipeline.push({
     $facet: {
@@ -378,6 +479,7 @@ export const fetchAllProducts = async (query: any) => {
             name: 1,
             slug: 1,
             description: 1,
+            brand: 1,
             category: {
               id: "$category._id",
               name: { $ifNull: ["$category.name", ""] },
@@ -408,15 +510,14 @@ export const fetchAllProducts = async (query: any) => {
             reviewCount: 1,
             createdAt: 1,
             updatedAt: 1,
-            isLiked: false,
             ...(userId ? { isLiked: 1 } : {}),
             merchant: {
               id: "$seller._id",
               businessName: { $ifNull: ["$seller.businessName", "$merchantName"] },
               displayName: "$sellerName",
               logo: "$sellerImage",
-              rating: { $round: ["$averageRating", 1] },
-              totalReviews: "$reviewCount",
+              rating: { $round: ["$merchantRating", 1] },
+              totalReviews: "$merchantReviewCount",
               verified: "$sellerVerified",
               phone: "$sellerPhone",
               email: "$sellerEmail",
@@ -424,7 +525,6 @@ export const fetchAllProducts = async (query: any) => {
             delivery: {
               state: { $arrayElemAt: ["$deliveryLocations.state", 0] },
               city: { $arrayElemAt: ["$deliveryLocations.lga", 0] },
-              area: { $arrayElemAt: ["$deliveryLocations.area", 0] },
             },
             deliveryTime: 1,
           },
@@ -433,14 +533,14 @@ export const fetchAllProducts = async (query: any) => {
       pagination: [{ $count: "total" }],
     },
   });
-
+ 
   try {
     const [result] = await Product.aggregate(pipeline);
-
+ 
     const products = result?.products ?? [];
     const total = result?.pagination?.[0]?.total ?? 0;
     const totalPages = Math.ceil(total / limit) || 1;
-
+ 
     return {
       success: true,
       data: products,
