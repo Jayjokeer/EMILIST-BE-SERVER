@@ -209,8 +209,7 @@ export const likeProductsController = catchAsync(async (req: JwtPayload, res: Re
 });
 export const fetchAllLikedProductsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
-    const {page = 1, limit = 10} = req.query;
-    const data = await productService.fetchLikedProducts(userId, page, limit);
+    const data = await productService.fetchLikedProducts(userId, req.query);
 
     return successResponse(res, StatusCodes.OK, data);
 });
