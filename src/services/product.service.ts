@@ -57,6 +57,7 @@ export const createProduct = async (userId: string, data: IProduct) => {
     payload.images = payload.images.map((img: any) => ({
       imageUrl: img.imageUrl,
       isPrimary: img.isPrimary ?? false,
+      order: img.order ?? 0,
     }));
   }
 
@@ -74,6 +75,9 @@ export const fetchProductByIdWithDetails = async (productId: string) => {
     .lean();
 };
 
+// ========================
+// MARKETPLACE fetchAllProducts – FULL REBUILD
+// ========================
 export const fetchAllProducts = async (query: any) => {
   const page = Math.max(parseInt(query.page) || 1, 1);
   const limit = Math.max(parseInt(query.limit) || 20, 1);
@@ -81,31 +85,47 @@ export const fetchAllProducts = async (query: any) => {
 
   const {
     search,
-    category,
-    brand,
+    categories,
     minPrice,
     maxPrice,
-    deliveryState,
-    deliveryLga,
-    minRating,
-    maxDeliveryTime,
-    isDiscounted,
+    state,
+    locations,
+    deliveryTime,
+    merchantRating,
+    verified,
     inStock,
-    level,
-    location,
-    sort = "newest",
+    sortBy = "latest",
     userId,
   } = query;
 
+  // ---- BASE MATCH ----
   const match: Record<string, any> = {
     status: "active",
     isDeleted: false,
   };
 
-  // Handle comma-separated category IDs
-  if (category) {
-    const categories = category.split(",").filter((c: string) => c.trim());
-    const validIds = categories
+  // ---- SEARCH ----
+  if (search) {
+    const searchRegex = { $regex: search, $options: "i" };
+    match.$or = [
+      { name: searchRegex },
+      { description: searchRegex },
+      { merchantName: searchRegex },
+    ];
+  }
+
+  // ---- CATEGORY FILTER (array) ----
+  if (categories) {
+    // Support both query param formats:
+    // categories[]=id1&categories[]=id2  OR  categories=id1,id2
+    let catArray: string[] = [];
+    if (Array.isArray(categories)) {
+      catArray = categories;
+    } else if (typeof categories === "string") {
+      catArray = categories.split(",");
+    }
+
+    const validIds = catArray
       .map((c: string) => {
         try {
           return new mongoose.Types.ObjectId(c.trim());
@@ -120,126 +140,23 @@ export const fetchAllProducts = async (query: any) => {
     }
   }
 
-  if (brand) {
-    match.brand = {
-      $regex: brand,
-      $options: "i",
-    };
-  }
-
-  if (search) {
-    match.$or = [
-      {
-        name: {
-          $regex: search,
-          $options: "i",
-        },
-      },
-      {
-        description: {
-          $regex: search,
-          $options: "i",
-        },
-      },
-      {
-        merchantName: {
-          $regex: search,
-          $options: "i",
-        },
-      },
-      {
-        storeName: {
-          $regex: search,
-          $options: "i",
-        },
-      },
-      {
-        brand: {
-          $regex: search,
-          $options: "i",
-        },
-      },
-    ];
-  }
+  // ---- PRICE FILTER ----
   if (minPrice || maxPrice) {
     match.price = {};
-
-    if (minPrice)
-      match.price.$gte = Number(minPrice);
-
-    if (maxPrice)
-      match.price.$lte = Number(maxPrice);
+    if (minPrice) match.price.$gte = Number(minPrice);
+    if (maxPrice) match.price.$lte = Number(maxPrice);
   }
 
-  if (isDiscounted !== undefined) {
-    match.isDiscounted =
-      isDiscounted === "true";
-  }
-
+  // ---- IN-STOCK FILTER ----
   if (inStock === "true") {
-    match.availableQuantity = {
-      $gt: 0,
-    };
+    match.availableQuantity = { $gt: 0 };
   }
 
-  if (deliveryState || deliveryLga) {
-    match.deliveryLocations = {
-      $elemMatch: {},
-    };
-
-    if (deliveryState) {
-      match.deliveryLocations.$elemMatch.state =
-        deliveryState;
-    }
-
-    if (deliveryLga) {
-      match.deliveryLocations.$elemMatch.lga =
-        deliveryLga;
-    }
-  }
-
-  const sortMap: Record<string, Record<string, 1 | -1>> = {
-    newest: {
-      createdAt: -1,
-    },
-    oldest: {
-      createdAt: 1,
-    },
-    "price:low to high": {
-      price: 1,
-    },
-    "price:high to low": {
-      price: -1,
-    },
-    "highest rated": {
-      averageRating: -1,
-    },
-    "lowest rated": {
-      averageRating: 1,
-    },
-    // Keep backward compatibility
-    priceAsc: {
-      price: 1,
-    },
-    priceDesc: {
-      price: -1,
-    },
-    rating: {
-      averageRating: -1,
-    },
-    deliveryTime: {
-      deliveryTime: 1,
-    },
-  };
-
+  // ---- BUILD PIPELINE ----
   const pipeline: PipelineStage[] = [
-    {
-      $match: match,
-    },
+    { $match: match },
 
-    /**
-     * Category Lookup
-     */
+    // Category Lookup
     {
       $lookup: {
         from: "categories",
@@ -248,17 +165,25 @@ export const fetchAllProducts = async (query: any) => {
         as: "category",
       },
     },
+    { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
 
-    {
-      $unwind: {
-        path: "$category",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
+    // Search by category name if search is provided (since $or above searches product fields only)
+    ...(search && !categories
+      ? [
+          {
+            $match: {
+              $or: [
+                { name: { $regex: search, $options: "i" } },
+                { description: { $regex: search, $options: "i" } },
+                { merchantName: { $regex: search, $options: "i" } },
+                { "category.name": { $regex: search, $options: "i" } },
+              ],
+            },
+          } as PipelineStage,
+        ]
+      : []),
 
-    /**
-     * Seller Lookup
-     */
+    // Seller Lookup
     {
       $lookup: {
         from: "users",
@@ -267,76 +192,56 @@ export const fetchAllProducts = async (query: any) => {
         as: "seller",
       },
     },
+    { $unwind: { path: "$seller", preserveNullAndEmptyArrays: true } },
 
-    {
-      $unwind: {
-        path: "$seller",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
+    // Seller verified filter
+    ...(verified === "true"
+      ? [{ $match: { "seller.isVerified": true } } as PipelineStage]
+      : []),
 
-    /**
-     * Filter by seller level
-     */
-    ...(level
+    // Delivery location filter by state
+    ...(state
       ? [
           {
             $match: {
-              "seller.level": level,
+              "deliveryLocations.state": { $regex: state, $options: "i" },
             },
           } as PipelineStage,
         ]
       : []),
 
-    /**
-     * Filter by seller location (city or state)
-     */
-    ...(location
+    // Delivery location filter by area/lga (multiple)
+    ...(locations
       ? [
           {
             $match: {
-              $or: [
-                { "seller.city": { $regex: location, $options: "i" } },
-                { "seller.state": { $regex: location, $options: "i" } },
-              ],
+              "deliveryLocations.lga": {
+                $in: (Array.isArray(locations) ? locations : [locations]).map(
+                  (l: string) => new RegExp(l.trim(), "i")
+                ),
+              },
             },
           } as PipelineStage,
         ]
       : []),
 
-    /**
-     * Review Aggregation
-     * (average rating + review count)
-     */
+    // Delivery time filter
+    ...(deliveryTime
+      ? [{ $match: { deliveryTime } } as PipelineStage]
+      : []),
+
+    // Review Aggregation (for rating + count)
     {
       $lookup: {
         from: "reviews",
-        let: {
-          productId: "$_id",
-        },
+        let: { productId: "$_id" },
         pipeline: [
-          {
-            $match: {
-              $expr: {
-                $eq: [
-                  "$productId",
-                  "$$productId",
-                ],
-              },
-            },
-          },
-
+          { $match: { $expr: { $eq: ["$productId", "$$productId"] } } },
           {
             $group: {
               _id: null,
-
-              averageRating: {
-                $avg: "$rating",
-              },
-
-              reviewCount: {
-                $sum: 1,
-              },
+              averageRating: { $avg: "$rating" },
+              reviewCount: { $sum: 1 },
             },
           },
         ],
@@ -344,9 +249,7 @@ export const fetchAllProducts = async (query: any) => {
       },
     },
 
-    /**
-     * Liked status lookup (if userId provided)
-     */
+    // Liked status lookup (if authenticated)
     ...(userId
       ? [
           {
@@ -371,44 +274,15 @@ export const fetchAllProducts = async (query: any) => {
         ]
       : []),
 
-        /**
-     * Compute Product Fields
-     */
+    // ---- ADD FIELDS ----
     {
       $addFields: {
-        /**
-         * Average Rating
-         */
         averageRating: {
-          $ifNull: [
-            {
-              $arrayElemAt: [
-                "$ratingStats.averageRating",
-                0,
-              ],
-            },
-            0,
-          ],
+          $ifNull: [{ $arrayElemAt: ["$ratingStats.averageRating", 0] }, 0],
         },
-
-        /**
-         * Total Reviews
-         */
         reviewCount: {
-          $ifNull: [
-            {
-              $arrayElemAt: [
-                "$ratingStats.reviewCount",
-                0,
-              ],
-            },
-            0,
-          ],
+          $ifNull: [{ $arrayElemAt: ["$ratingStats.reviewCount", 0] }, 0],
         },
-
-        /**
-         * Is Liked (for authenticated users)
-         */
         ...(userId
           ? {
               isLiked: {
@@ -416,535 +290,175 @@ export const fetchAllProducts = async (query: any) => {
               },
             }
           : {}),
-
-        /**
-         * Seller Full Name
-         */
         sellerName: {
           $trim: {
             input: {
               $concat: [
-                {
-                  $ifNull: [
-                    "$seller.firstName",
-                    "",
-                  ],
-                },
+                { $ifNull: ["$seller.firstName", ""] },
                 " ",
-                {
-                  $ifNull: [
-                    "$seller.lastName",
-                    "",
-                  ],
-                },
+                { $ifNull: ["$seller.lastName", ""] },
               ],
             },
           },
         },
-
-        /**
-         * Seller Avatar
-         */
-        sellerImage: {
-          $ifNull: [
-            "$seller.displayImage",
-            "",
+        sellerImage: { $ifNull: ["$seller.displayImage", ""] },
+        sellerVerified: { $ifNull: ["$seller.isVerified", false] },
+        sellerPhone: { $ifNull: ["$seller.mobile", ""] },
+        sellerEmail: { $ifNull: ["$seller.email", ""] },
+        stockStatus: {
+          $cond: [
+            { $gt: ["$availableQuantity", 0] },
+            "in_stock",
+            "out_of_stock",
           ],
         },
-
-        /**
-         * Seller Verification
-         */
-        sellerVerified: {
-          $ifNull: [
-            "$seller.isVerified",
-            false,
-          ],
-        },
-
-        /**
-         * Prime Membership
-         */
-        sellerPrimeMember: {
-          $ifNull: [
-            "$seller.isPrimeMember",
-            false,
-          ],
-        },
-
-        /**
-         * Seller Location
-         */
-        sellerLocation: {
-          city: "$seller.city",
-          state: "$seller.state",
-          country: "$seller.country",
-        },
-
-        /**
-         * Seller Level
-         */
-        sellerLevel: "$seller.level",
-
-        /**
-         * Date Posted
-         */
-        datePosted: "$createdAt",
-
-        /**
-         * Primary Product Image
-         */
-        primaryImage: {
+        isAvailable: { $gt: ["$availableQuantity", 0] },
+        thumbnail: {
           $let: {
             vars: {
               primary: {
                 $first: {
                   $filter: {
                     input: "$images",
-                    as: "image",
-                    cond: {
-                      $eq: [
-                        "$$image.isPrimary",
-                        true,
-                      ],
-                    },
+                    as: "img",
+                    cond: { $eq: ["$$img.isPrimary", true] },
                   },
                 },
               },
             },
-
             in: {
               $ifNull: [
                 "$$primary.imageUrl",
-
-                {
-                  $arrayElemAt: [
-                    "$images.imageUrl",
-                    0,
-                  ],
-                },
+                { $arrayElemAt: ["$images.imageUrl", 0] },
               ],
             },
           },
         },
-
-        /**
-         * Effective Price
-         */
         finalPrice: {
-          $cond: [
-            "$isDiscounted",
-            "$discountedPrice",
-            "$price",
-          ],
-        },
-
-        /**
-         * Discount Percentage
-         */
-        discountPercentage: {
-          $cond: [
-            {
-              $and: [
-                "$isDiscounted",
-                {
-                  $gt: [
-                    "$price",
-                    0,
-                  ],
-                },
-                {
-                  $ne: [
-                    "$discountedPrice",
-                    null,
-                  ],
-                },
-              ],
-            },
-
-            {
-              $round: [
-                {
-                  $multiply: [
-                    {
-                      $divide: [
-                        {
-                          $subtract: [
-                            "$price",
-                            "$discountedPrice",
-                          ],
-                        },
-                        "$price",
-                      ],
-                    },
-
-                    100,
-                  ],
-                },
-
-                0,
-              ],
-            },
-
-            0,
-          ],
-        },
-
-        /**
-         * Product Availability
-         */
-        availability: {
-          $cond: [
-            {
-              $gt: [
-                "$availableQuantity",
-                0,
-              ],
-            },
-            "In Stock",
-            "Out of Stock",
-          ],
-        },
-
-        /**
-         * Has Reviews
-         */
-        hasReviews: {
-          $gt: [
-            "$reviewCount",
-            0,
-          ],
-        },
-
-        /**
-         * Has Discount
-         */
-        hasDiscount: {
-          $eq: [
-            "$isDiscounted",
-            true,
-          ],
-        },
-
-        /**
-         * Total Images
-         */
-        imageCount: {
-          $size: {
-            $ifNull: [
-              "$images",
-              [],
-            ],
-          },
+          $cond: ["$isDiscounted", "$discountedPrice", "$price"],
         },
       },
     },
-  ]
-  if (minRating) {
-    pipeline.push({
-      $match: {
-        averageRating: {
-          $gte: Number(minRating),
-        },
-      },
-    });
-  }
 
-  /**
-   * Delivery Time Filter
-   *
-   * NOTE:
-   * This assumes you've added a deliveryTime field
-   * to the Product schema.
-   */
-  if (maxDeliveryTime) {
-    pipeline.push({
-      $match: {
-        deliveryTime: {
-          $lte: Number(maxDeliveryTime),
-        },
-      },
-    });
-  }
+    // ---- MERCHANT RATING FILTER (post-aggregation) ----
+    ...(merchantRating
+      ? [
+          {
+            $match: {
+              averageRating: { $gte: Number(merchantRating) },
+            },
+          } as PipelineStage,
+        ]
+      : []),
+  ];
 
-  /**
-   * Sorting
-   */
-  pipeline.push({
-    $sort: sortMap[sort] || sortMap.newest,
-  });
+  // ---- SORTING ----
+  const sortMap: Record<string, Record<string, 1 | -1>> = {
+    latest: { createdAt: -1 },
+    oldest: { createdAt: 1 },
+    price_low_high: { finalPrice: 1 },
+    price_high_low: { finalPrice: -1 },
+    most_sold: { totalUnitsSold: -1 },
+    highest_rated: { averageRating: -1 },
+    nearest: { createdAt: -1 }, // Default fallback until geo-coordinates are implemented
+  };
 
-  /**
-   * Pagination
-   */
+  pipeline.push({ $sort: sortMap[sortBy] || sortMap.latest });
+
+  // ---- PAGINATION ----
   pipeline.push({
     $facet: {
       products: [
-        {
-          $skip: skip,
-        },
-
-        {
-          $limit: limit,
-        },
-
-        /**
-         * Final API Response
-         */
+        { $skip: skip },
+        { $limit: limit },
         {
           $project: {
             _id: 0,
-
             id: "$_id",
-
             name: 1,
-
             slug: 1,
-
             description: 1,
-
-            brand: 1,
-
-            merchantName: 1,
-
-            storeName: 1,
-
-            /**
-             * Category
-             */
             category: {
               id: "$category._id",
-              name: {
-                $ifNull: [
-                  "$category.name",
-                  "$category.title",
-                ],
+              name: { $ifNull: ["$category.name", ""] },
+              slug: { $ifNull: ["$category.slug", ""] },
+            },
+            thumbnail: 1,
+            images: {
+              $map: {
+                input: "$images",
+                as: "img",
+                in: {
+                  url: "$$img.imageUrl",
+                  order: { $ifNull: ["$$img.order", 0] },
+                },
               },
             },
-
-            /**
-             * Images
-             */
-            image: "$primaryImage",
-
-            images: "$images",
-
-            imageCount: 1,
-
-            /**
-             * Seller
-             */
-            seller: {
-              id: "$seller._id",
-
-              name: "$sellerName",
-
-              image: "$sellerImage",
-
-              verified: "$sellerVerified",
-
-              isPrimeMember:
-                "$sellerPrimeMember",
-
-              level: "$sellerLevel",
-
-              city: "$seller.city",
-
-              state: "$seller.state",
-
-              country: "$seller.country",
-            },
-
-            /**
-             * Pricing
-             */
             price: 1,
-            priceMetric: 1,
-            discountedPrice: 1,
-
-            finalPrice: 1,
-
-            discountPercentage: 1,
-
             currency: 1,
-
-            isDiscounted: 1,
-
-            /**
-             * Inventory
-             */
+            unit: "$priceMetric",
             availableQuantity: 1,
-
-            quantityMetric: 1,
-
-            availability: 1,
-
-            /**
-             * Rating
-             */
-            averageRating: {
-              $round: [
-                "$averageRating",
-                1,
-              ],
-            },
-
+            minimumOrder: { $ifNull: ["$minimumOrder", 1] },
+            maximumOrder: { $ifNull: ["$maximumOrder", null] },
+            stockStatus: 1,
+            isAvailable: 1,
+            isFeatured: { $ifNull: ["$isFeatured", false] },
+            totalUnitsSold: { $ifNull: ["$totalUnitsSold", 0] },
+            averageRating: { $round: ["$averageRating", 1] },
             reviewCount: 1,
-
-            hasReviews: 1,
-
-            /**
-             * Delivery
-             */
-            deliveryLocations: 1,
-
-            deliveryTime: 1,
-
-            /**
-             * Misc
-             */
-            hasDiscount: 1,
-
-            status: 1,
-
-            datePosted: 1,
-
             createdAt: 1,
-
             updatedAt: 1,
+            isLiked: false,
+            ...(userId ? { isLiked: 1 } : {}),
+            merchant: {
+              id: "$seller._id",
+              businessName: { $ifNull: ["$seller.businessName", "$merchantName"] },
+              displayName: "$sellerName",
+              logo: "$sellerImage",
+              rating: { $round: ["$averageRating", 1] },
+              totalReviews: "$reviewCount",
+              verified: "$sellerVerified",
+              phone: "$sellerPhone",
+              email: "$sellerEmail",
+            },
+            delivery: {
+              state: { $arrayElemAt: ["$deliveryLocations.state", 0] },
+              city: { $arrayElemAt: ["$deliveryLocations.lga", 0] },
+              area: { $arrayElemAt: ["$deliveryLocations.area", 0] },
+            },
+            deliveryTime: 1,
           },
         },
       ],
-
-      pagination: [
-        {
-          $count: "total",
-        },
-      ],
+      pagination: [{ $count: "total" }],
     },
   });
 
-  // Only add isLiked to the final projection if userId is present
-  if (userId) {
-    pipeline[pipeline.length - 1] = {
-      $facet: {
-        products: [
-          {
-            $skip: skip,
-          },
-          {
-            $limit: limit,
-          },
-          {
-            $project: {
-              _id: 0,
-              id: "$_id",
-              name: 1,
-              slug: 1,
-              description: 1,
-              brand: 1,
-              merchantName: 1,
-              storeName: 1,
-              category: {
-                id: "$category._id",
-                name: { $ifNull: ["$category.name", "$category.title"] },
-              },
-              image: "$primaryImage",
-              images: "$images",
-              imageCount: 1,
-              seller: {
-                id: "$seller._id",
-                name: "$sellerName",
-                image: "$sellerImage",
-                verified: "$sellerVerified",
-                isPrimeMember: "$sellerPrimeMember",
-                level: "$sellerLevel",
-                city: "$seller.city",
-                state: "$seller.state",
-                country: "$seller.country",
-              },
-              price: 1,
-              priceMetric: 1,
-              discountedPrice: 1,
-              finalPrice: 1,
-              discountPercentage: 1,
-              currency: 1,
-              isDiscounted: 1,
-              availableQuantity: 1,
-              quantityMetric: 1,
-              availability: 1,
-              averageRating: { $round: ["$averageRating", 1] },
-              reviewCount: 1,
-              hasReviews: 1,
-              deliveryLocations: 1,
-              deliveryTime: 1,
-              hasDiscount: 1,
-              status: 1,
-              datePosted: 1,
-              createdAt: 1,
-              updatedAt: 1,
-              isLiked: 1,
-            },
-          },
-        ],
-        pagination: [{ $count: "total" }],
-      },
-    };
-  }
-
-    try {
+  try {
     const [result] = await Product.aggregate(pipeline);
 
     const products = result?.products ?? [];
-
-    const total =
-      result?.pagination?.[0]?.total ?? 0;
-
-    const totalPages =
-      Math.ceil(total / limit) || 1;
+    const total = result?.pagination?.[0]?.total ?? 0;
+    const totalPages = Math.ceil(total / limit) || 1;
 
     return {
       success: true,
-
       data: products,
-
       meta: {
         total,
-
-        page,
-
-        limit,
-
+        currentPage: page,
         totalPages,
-
-        hasNextPage:
-          page < totalPages,
-
-        hasPreviousPage:
-          page > 1,
-
-        nextPage:
-          page < totalPages
-            ? page + 1
-            : null,
-
-        previousPage:
-          page > 1
-            ? page - 1
-            : null,
+        hasNext: page < totalPages,
+        hasPrevious: page > 1,
+        nextPage: page < totalPages ? page + 1 : null,
+        previousPage: page > 1 ? page - 1 : null,
       },
     };
   } catch (error) {
-    console.error(
-      "Fetch Products Error",
-      error
-    );
-
+    console.error("Fetch Products Error", error);
     throw error;
   }
 };
-
-
 
 export const deleteProduct = async(productId: string)=>{
     return await Product.findByIdAndDelete(productId)
@@ -1178,7 +692,6 @@ export const fetchSimilarProducts = async (
   const similarProducts = await Product.aggregate([
     { $match: matchStage },
 
-    // Score relevance: same subCategory and/or brand ranks higher
     {
       $addFields: {
         relevanceScore: {
@@ -1425,30 +938,72 @@ export const unflagProduct = async (productId: string, userId: string) => {
 };
 
 
-export const toggleReviewHelpful = async (reviewId: string, userId: string) => {
+export const toggleReviewHelpful = async (
+  reviewId: string,
+  userId: string,
+  isHelpful: string
+) => {
   const review = await Review.findById(reviewId);
   if (!review) {
     throw new NotFoundError("Review not found");
   }
 
   const userObjectId = new mongoose.Types.ObjectId(userId);
-  const alreadyMarked = review.helpfulUsers?.some(
-    (entry: any) => entry.toString() === userId.toString()
+
+  const isInHelpful = review.helpfulUsers.some((id: any) =>
+    id.equals(userObjectId)
   );
 
-  if (alreadyMarked) {
-    review.helpfulUsers = review.helpfulUsers?.filter(
-      (entry: any) => entry.toString() !== userId.toString()
+  const isInNotHelpful = review.notHelpfulUsers.some((id: any) =>
+    id.equals(userObjectId)
+  );
 
-    );
+  if (isHelpful === 'true') {
+    // Remove from not helpful
+    if (isInNotHelpful) {
+      review.notHelpfulUsers = review.notHelpfulUsers.filter(
+        (id: any) => !id.equals(userObjectId)
+      );
+    }
 
+    // Toggle helpful
+    if (isInHelpful) {
+      review.helpfulUsers = review.helpfulUsers.filter(
+        (id: any) => !id.equals(userObjectId)
+      );
+    } else {
+      review.helpfulUsers.push(userObjectId);
+    }
+  } else if(isHelpful == 'false') {
+    // Remove from helpful
+    if (isInHelpful) {
+      review.helpfulUsers = review.helpfulUsers.filter(
+        (id: any) => !id.equals(userObjectId)
+      );
+    }
 
-    review.helpfulCount = Math.max(0, (review.helpfulCount || 0) - 1);
-  } else {
-    review.helpfulUsers?.push(userObjectId);
-    review.helpfulCount = (review.helpfulCount || 0) + 1;
+    // Toggle not helpful
+    if (isInNotHelpful) {
+      review.notHelpfulUsers = review.notHelpfulUsers.filter(
+        (id: any) => !id.equals(userObjectId)
+      );
+    } else {
+      review.notHelpfulUsers.push(userObjectId);
+    }
   }
 
+  // Always derive counts from arrays
+  review.helpfulCount = review.helpfulUsers.length;
+  review.notHelpfulCount = review.notHelpfulUsers.length;
+
   await review.save();
-  return { helpfulCount: review.helpfulCount, isHelpful: !alreadyMarked };
+
+  return {
+    helpfulCount: review.helpfulCount,
+    notHelpfulCount: review.notHelpfulCount,
+    isHelpful: review.helpfulUsers.some((id: any) => id.equals(userObjectId)),
+    isNotHelpful: review.notHelpfulUsers.some((id: any) =>
+      id.equals(userObjectId)
+    ),
+  };
 };

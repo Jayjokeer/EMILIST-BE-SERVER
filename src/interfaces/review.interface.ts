@@ -10,5 +10,7 @@ export interface IReview extends Document {
     createdAt?: any;
     isRecommendVendor?:boolean;
     rateCommunication?: number;
+    notHelpfulUsers?: any;
+    notHelpfulCount?: number;
   }
   

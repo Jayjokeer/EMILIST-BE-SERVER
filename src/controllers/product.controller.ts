@@ -428,8 +428,9 @@ export const unflagProductController = catchAsync(async (req: JwtPayload, res: R
 export const toggleReviewHelpfulController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user._id;
   const { reviewId } = req.params;
+  const {isHelpful} = req.query;
 
-  const result = await productService.toggleReviewHelpful(reviewId, userId);
+  const result = await productService.toggleReviewHelpful(reviewId, userId, isHelpful);
 
   return successResponse(res, StatusCodes.OK, result);
 });

@@ -91,7 +91,6 @@ const ProductSchema = new Schema<IProduct>(
       type: Number,
       required: true,
       min: 0,
-      index: true,
     },
 
     currency: {
@@ -123,12 +122,37 @@ const ProductSchema = new Schema<IProduct>(
       index: true,
     },
 
+    deliveryTime: {
+      type: String,
+      enum: ["immediately", "1_day", "2_3_days", "1_week", "1_2_weeks", "2_3_weeks", "1_month", "3_months"],
+    },
+
+    minimumOrder: {
+      type: Number,
+      min: 1,
+    },
+
+    maximumOrder: {
+      type: Number,
+      min: 1,
+    },
+
     isDiscounted: {
       type: Boolean,
       default: false,
     },
 
     discountedPrice: Number,
+
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
+
+    totalUnitsSold: {
+      type: Number,
+      default: 0,
+    },
 
     status: {
       type: String,

@@ -13,7 +13,9 @@ import { IReview } from '../interfaces/review.interface';
       rateCommunication: { type: Number,  min: 1, max: 5 },
       isRecommendVendor: {type: Boolean},
       helpfulUsers: { type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: [] },
+      notHelpfulUsers: { type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: [] },
       helpfulCount: { type: Number, default: 0 },
+      notHelpfulCount: { type: Number, default: 0 },
     },
     { timestamps: true }
   );

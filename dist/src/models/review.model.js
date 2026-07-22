@@ -44,6 +44,8 @@ const reviewSchema = new mongoose_1.default.Schema({
     rateCommunication: { type: Number, min: 1, max: 5 },
     isRecommendVendor: { type: Boolean },
     helpfulUsers: { type: [mongoose_1.default.Schema.Types.ObjectId], ref: 'User', default: [] },
+    notHelpfulUsers: { type: [mongoose_1.default.Schema.Types.ObjectId], ref: 'User', default: [] },
     helpfulCount: { type: Number, default: 0 },
+    notHelpfulCount: { type: Number, default: 0 },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("Review", reviewSchema);

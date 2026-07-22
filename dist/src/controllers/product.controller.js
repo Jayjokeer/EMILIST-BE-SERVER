@@ -368,6 +368,7 @@ exports.unflagProductController = (0, error_handler_1.catchAsync)(async (req, re
 exports.toggleReviewHelpfulController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
     const { reviewId } = req.params;
-    const result = await productService.toggleReviewHelpful(reviewId, userId);
+    const { isHelpful } = req.query;
+    const result = await productService.toggleReviewHelpful(reviewId, userId, isHelpful);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, result);
 });

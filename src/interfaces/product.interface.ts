@@ -4,11 +4,15 @@ export interface IProductImage {
   _id?: Types.ObjectId;
   imageUrl: string;
   isPrimary: boolean;
+  order?: number;
 }
 
 export interface IDeliveryLocation {
   state: string;
   lga: string;
+  area?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface IProductClicks {
@@ -43,9 +47,16 @@ export interface IProduct {
   storeName?: string;
 
   deliveryLocations: IDeliveryLocation[];
+  deliveryTime?: "immediately" | "1_day" | "2_3_days" | "1_week" | "1_2_weeks" | "2_3_weeks" | "1_month" | "3_months";
+
+  minimumOrder?: number;
+  maximumOrder?: number;
 
   isDiscounted: boolean;
   discountedPrice?: number;
+
+  isFeatured?: boolean;
+  totalUnitsSold?: number;
 
   status: "draft" | "pending" | "active" | "rejected" | "inactive" | "sold_out";
 
