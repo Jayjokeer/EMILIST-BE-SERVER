@@ -360,6 +360,31 @@ export const fetchAllProducts = async (query: any) => {
           } as PipelineStage,
         ]
       : []),
+
+    // Flagged status lookup (if authenticated)
+    ...(userId
+      ? [
+          {
+            $lookup: {
+              from: "productflags",
+              let: { productId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $eq: ["$productId", "$$productId"] },
+                        { $eq: ["$userId", new mongoose.Types.ObjectId(userId)] },
+                      ],
+                    },
+                  },
+                },
+              ],
+              as: "flagData",
+            },
+          } as PipelineStage,
+        ]
+      : []),
  
     // ---- ADD FIELDS ----
     {
@@ -386,6 +411,9 @@ export const fetchAllProducts = async (query: any) => {
           ? {
               isLiked: {
                 $gt: [{ $size: { $ifNull: ["$likeData", []] } }, 0],
+              },
+              isFlagged: {
+                $gt: [{ $size: { $ifNull: ["$flagData", []] } }, 0],
               },
             }
           : {}),
@@ -510,7 +538,7 @@ export const fetchAllProducts = async (query: any) => {
             reviewCount: 1,
             createdAt: 1,
             updatedAt: 1,
-            ...(userId ? { isLiked: 1 } : {}),
+            ...(userId ? { isLiked: 1, isFlagged: 1 } : {}),
             merchant: {
               id: "$seller._id",
               businessName: { $ifNull: ["$seller.businessName", "$merchantName"] },

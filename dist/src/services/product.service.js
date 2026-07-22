@@ -357,6 +357,30 @@ const fetchAllProducts = async (query) => {
                 },
             ]
             : []),
+        // Flagged status lookup (if authenticated)
+        ...(userId
+            ? [
+                {
+                    $lookup: {
+                        from: "productflags",
+                        let: { productId: "$_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $and: [
+                                            { $eq: ["$productId", "$$productId"] },
+                                            { $eq: ["$userId", new mongoose_1.default.Types.ObjectId(userId)] },
+                                        ],
+                                    },
+                                },
+                            },
+                        ],
+                        as: "flagData",
+                    },
+                },
+            ]
+            : []),
         // ---- ADD FIELDS ----
         {
             $addFields: {
@@ -382,6 +406,9 @@ const fetchAllProducts = async (query) => {
                     ? {
                         isLiked: {
                             $gt: [{ $size: { $ifNull: ["$likeData", []] } }, 0],
+                        },
+                        isFlagged: {
+                            $gt: [{ $size: { $ifNull: ["$flagData", []] } }, 0],
                         },
                     }
                     : {}),
@@ -502,7 +529,7 @@ const fetchAllProducts = async (query) => {
                         reviewCount: 1,
                         createdAt: 1,
                         updatedAt: 1,
-                        ...(userId ? { isLiked: 1 } : {}),
+                        ...(userId ? { isLiked: 1, isFlagged: 1 } : {}),
                         merchant: {
                             id: "$seller._id",
                             businessName: { $ifNull: ["$seller.businessName", "$merchantName"] },
