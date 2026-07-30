@@ -153,7 +153,7 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
       mappedBody.type = JobType.direct;
       mappedBody.allowBidding = false;
       mappedBody.isDirectHire = true;
-
+ 
       const data = await jobService.createJob(mappedBody);
 
       const artisanUser = await authService.findUserById(String(business.userId));
