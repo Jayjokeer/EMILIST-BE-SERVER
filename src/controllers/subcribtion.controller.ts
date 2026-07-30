@@ -14,7 +14,7 @@ import { OrderPaymentStatus } from '../enums/order.enum';
 import * as transactionService from '../services/transaction.service';
 import { generatePaystackPaymentLink } from '../utils/paystack';
 import { PlanEnum } from '../enums/plan.enum';
-import { SubscriptionPeriodEnum, SubscriptionStatusEnum } from '../enums/suscribtion.enum';
+import { SubscriptionPeriodEnum, SubscriptionStatusEnum, PROMOTION_PLAN_DURATIONS, PromotionPlanDuration } from '../enums/suscribtion.enum';
 import * as userService from '../services/auth.service';
 import * as jobService from '../services/job.service';
 import * as businessService from '../services/business.service';
@@ -134,50 +134,100 @@ export const getUserSubscription = catchAsync( async (req: JwtPayload, res: Resp
 return successResponse(res, StatusCodes.OK, data);
 });
 
-export const promoteJobAndBusinessController = catchAsync( async(req:JwtPayload, res: Response)=>{
-    const {target, startDate, endDate, type, expectedClicks} = req.body;
-    const {id }= req.params;
+export const promoteJobAndBusinessController = catchAsync(
+  async (req: JwtPayload, res: Response) => {
+    const { target, type, durationDays, expectedClicks } = req.body;
+    const { id } = req.params;
     const userId = req.user._id;
 
-    let payload: any;
-    payload = {
-        userId: userId,
-        target,
-        startDate,
-        endDate,
-        clicks: expectedClicks,
-        isActive: true,
-      };
-    if(type === "job"){
-        const job = await jobService.fetchJobById(id);
-        if (!job) {
-            throw new NotFoundError( 'Job not found.');
-          }
-          payload.jobId = job._id;
-
-    }else if(type === "service"){
-        const business = await businessService.fetchSingleBusiness(id);
-        if(!business){
-            throw new NotFoundError('Service not found');
-        }
-        payload.businessId = business._id;
-    }else if(type === "product"){
-        const product = await productService.fetchProductById(id);
-        if(!product){
-            throw new NotFoundError('Product not found');
-        }
-        payload.productId = product._id;
+    if (!['job', 'service', 'product'].includes(type)) {
+      throw new BadRequestError('type must be one of: job, service, product.');
     }
-    
-    const costPerClick = await  subscriptionService.fetchCostPerClick();
-    const cost = costPerClick *  expectedClicks;     
-    payload.cost = cost;
-    payload.costPerClick = costPerClick;
+
+    const payload: any = {
+      userId,
+      target,
+      type,
+      isActive: false, // stays inactive until payment is confirmed
+    };
+
+    // ---- RESOLVE TARGET ENTITY + OWNERSHIP CHECK ----
+    // Previously nothing verified the caller owns the thing being promoted —
+    // any authenticated user could pass someone else's id here.
+    if (type === 'job') {
+      const job = await jobService.fetchJobById(id);
+      if (!job) throw new NotFoundError('Job not found.');
+      if (job.userId.toString() !== userId.toString()) {
+        throw new ForbiddenError('You can only promote your own job listings.');
+      }
+      payload.jobId = job._id;
+    } else if (type === 'service') {
+      const business = await businessService.fetchSingleBusiness(id);
+      if (!business) throw new NotFoundError('Service not found');
+      if (business.userId?.toString() !== userId.toString()) {
+        throw new ForbiddenError('You can only promote your own business listings.');
+      }
+      payload.businessId = business._id;
+    } else {
+      const product = await productService.fetchProductById(id);
+      if (!product) throw new NotFoundError('Product not found');
+      if (product.userId.toString() !== userId.toString()) {
+        throw new ForbiddenError('You can only promote your own product listings.');
+      }
+      payload.productId = product._id;
+    }
+
+
+    if (type === 'product') {
+      if (!PROMOTION_PLAN_DURATIONS.includes(durationDays)) {
+        throw new BadRequestError(
+          `durationDays must be one of: ${PROMOTION_PLAN_DURATIONS.join(', ')}`
+        );
+      }
+
+      const startDate = new Date();
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + (durationDays as PromotionPlanDuration));
+
+      const costPerDay = await subscriptionService.fetchCostPerDay();
+      const cost = costPerDay * durationDays;
+
+      payload.startDate = startDate;
+      payload.endDate = endDate;
+      payload.durationDays = durationDays;
+      payload.costPerDay = costPerDay;
+      payload.cost = cost;
+      payload.clicks = 0; // actual clicks — always starts at zero
+    } else {
+      const { startDate, endDate } = req.body;
+      if (!startDate || !endDate) {
+        throw new BadRequestError('startDate and endDate are required for this promotion type.');
+      }
+      if (!expectedClicks || expectedClicks <= 0) {
+        throw new BadRequestError('expectedClicks must be a positive number.');
+      }
+
+      const costPerClick = await subscriptionService.fetchCostPerClick();
+      const cost = costPerClick * expectedClicks;
+
+      payload.startDate = startDate;
+      payload.endDate = endDate;
+      payload.expectedClicks = expectedClicks; // the click budget being bid for
+      payload.costPerClick = costPerClick;
+      payload.cost = cost;
+      payload.clicks = 0; // actual clicks received — separate from the budget above
+    }
 
     const promotion = await subscriptionService.createPromotion(payload);
-    return successResponse(res,StatusCodes.OK, promotion);
-  
-  });
+
+    // Promotion is created inactive/pending — the frontend's "Create Campaign"
+    // button should hand off to your payment flow here (the layer tree shows
+    // "Payment Successful"/"Payment Failed" screens, implying a payment step
+    // happens after this call). Whatever confirms payment should be the thing
+    // that sets isActive: true and paymentStatus: success — not this endpoint.
+    return successResponse(res, StatusCodes.OK, promotion);
+  }
+);
 
 export const getAllUsersSubscription = catchAsync( async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;

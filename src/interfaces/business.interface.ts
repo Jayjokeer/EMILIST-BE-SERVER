@@ -6,31 +6,6 @@ interface IServicesRendered {
   status?: string;
 }
 
-// interface IMembership {
-//   organisation?: string;
-//   positionHeld?: string;
-//   startDate?: Date;
-//   endDate?: Date;
-//   isMembershipExpire?: boolean;
-// }
-
-// interface ICertification {
-//   id?: string;
-//   certificate?: string;
-//   issuingOrganisation?: string;
-//   verificationNumber?: string;
-//   issuingDate?: Date;
-//   expiringDate?: Date;
-//   isCertificateExpire?: boolean;
-//   isVerified?: boolean;
-// }
-
-// interface IInsurance {
-//   issuingOrganisation?: string;
-//   coverage?: string;
-//   description?: Date;
-// }
-
 export interface IBusiness extends Document {
   services?: string[];
   firstName?: string;
@@ -65,6 +40,7 @@ export interface IBusiness extends Document {
   reviews?: any;
   clicks?: any;
   isVerified?: boolean;
+  uniqueId?: string;
 }
 
 export default IBusiness;
@@ -90,7 +66,6 @@ export interface UserProfileDto {
   displayImage?: string; 
 } 
  
-
 export interface BusinessProfileDto extends UserProfileDto {}
  
 export interface CertificateDto {

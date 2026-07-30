@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.FrequencyEnum = exports.RatingEnum = exports.QuoteStatusEnum = exports.JobStatusEnum = exports.MilestonePaymentStatus = exports.MilestoneEnum = exports.JobPeriod = exports.JobExpertLevel = exports.JobType = void 0;
+exports.ExperienceLevelEnum = exports.DurationUnitEnum = exports.JobFrequencyEnum = exports.JobUrgencyEnum = exports.FrequencyEnum = exports.RatingEnum = exports.QuoteStatusEnum = exports.JobStatusEnum = exports.MilestonePaymentStatus = exports.MilestoneEnum = exports.JobPeriod = exports.JobExpertLevel = exports.JobType = void 0;
 var JobType;
 (function (JobType) {
     JobType["biddable"] = "biddable";
@@ -65,3 +65,30 @@ var FrequencyEnum;
     FrequencyEnum["monthly"] = "Monthly";
     FrequencyEnum["quarterly"] = "Quarterly ";
 })(FrequencyEnum || (exports.FrequencyEnum = FrequencyEnum = {}));
+// ===================== NEW ENUMS FOR REWORK =====================
+var JobUrgencyEnum;
+(function (JobUrgencyEnum) {
+    JobUrgencyEnum["right_now"] = "right_now";
+    JobUrgencyEnum["in_future"] = "in_future";
+    JobUrgencyEnum["regularly"] = "regularly";
+})(JobUrgencyEnum || (exports.JobUrgencyEnum = JobUrgencyEnum = {}));
+var JobFrequencyEnum;
+(function (JobFrequencyEnum) {
+    JobFrequencyEnum["weekly"] = "weekly";
+    JobFrequencyEnum["biweekly"] = "biweekly";
+    JobFrequencyEnum["monthly"] = "monthly";
+})(JobFrequencyEnum || (exports.JobFrequencyEnum = JobFrequencyEnum = {}));
+var DurationUnitEnum;
+(function (DurationUnitEnum) {
+    DurationUnitEnum["hours"] = "hours";
+    DurationUnitEnum["days"] = "days";
+    DurationUnitEnum["weeks"] = "weeks";
+    DurationUnitEnum["months"] = "months";
+})(DurationUnitEnum || (exports.DurationUnitEnum = DurationUnitEnum = {}));
+var ExperienceLevelEnum;
+(function (ExperienceLevelEnum) {
+    ExperienceLevelEnum["apprentice"] = "apprentice";
+    ExperienceLevelEnum["junior"] = "junior";
+    ExperienceLevelEnum["intermediate"] = "intermediate";
+    ExperienceLevelEnum["senior"] = "senior";
+})(ExperienceLevelEnum || (exports.ExperienceLevelEnum = ExperienceLevelEnum = {}));

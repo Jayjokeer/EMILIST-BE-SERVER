@@ -1,107 +1,218 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
-import { FrequencyEnum, JobExpertLevel, JobPeriod, JobType, MilestoneEnum } from '../enums/jobs.enum';
+import { FrequencyEnum, JobExpertLevel, JobPeriod, JobType, MilestoneEnum, JobUrgencyEnum, JobFrequencyEnum, DurationUnitEnum, ExperienceLevelEnum } from '../enums/jobs.enum';
 
-export const validateJob = (req: Request, res: Response, next: NextFunction) => {
- const jobValidation = Joi.object({
-  category: Joi.string().required().messages({
-    'string.empty': 'Category is required',
+// ===================== SHARED REUSABLE SCHEMAS =====================
+
+const locationSchema = Joi.object({
+  address: Joi.string().required().messages({
+    'string.empty': 'Location address is required',
+    'any.required': 'Location address is required',
   }),
-  service: Joi.string().required().messages({
-    'string.empty': 'Service is required',
+  lat: Joi.number().optional(),
+  lng: Joi.number().optional(),
+});
+
+const budgetSchema = Joi.object({
+  currency: Joi.string().required().messages({
+    'string.empty': 'Currency is required',
+    'any.required': 'Currency is required',
   }),
-  title: Joi.string().required().messages({
-    'string.empty': 'Title is required',
-  }),
-  description: Joi.string().required().messages({
-    'string.empty': 'Description is required',
-  }),
-  jobFiles: Joi.array().items(Joi.string()).messages({
-    'string.base': 'Each job file must be a string (URL or file path)',
-  }),
-  duration: Joi.object({
-    number: Joi.number().required().messages({
-      'number.base': 'Duration number must be a number',
-      'any.required': 'Duration number is required',
-    }),
-    period: Joi.string()
-      .valid(...Object.values(JobPeriod)) 
-      .required()
-      .messages({
-        'any.only': 'Invalid period, must be one of: ' + Object.values(JobPeriod).join(', '),
-        'any.required': 'Duration period is required',
-      }),
-  }).required(),
-  type: Joi.string()
-    .valid(...Object.values(JobType)) 
-    .required()
-    .messages({
-      'any.only': 'Invalid job type, must be one of: ' + Object.values(JobType).join(', '),
-      'any.required': 'Job type is required',
-    }),
-  location: Joi.string().required().messages({
-    'string.empty': 'Location is required',
-  }),
-  expertLevel: Joi.string()
-    .valid(...Object.values(JobExpertLevel)) 
-    .required()
-    .messages({
-      'any.only': 'Invalid expert level, must be one of: ' + Object.values(JobExpertLevel).join(', '),
-      'any.required': 'Expert level is required',
-    }),
-  milestones: Joi.array().items(Joi.object({
-    timeFrame: Joi.object({
-          number: Joi.number().required(),
-          period: Joi.string().valid(...Object.values(JobPeriod)).required(),
-        }).required(),
-    achievement: Joi.string().required(),
-    amount: Joi.number().required(),
-      })).max(5).required(),
-  maximumPrice: Joi.when('type', {
-    is: 'biddable',
-    then: Joi.number().required().messages({
-      'number.base': 'Maximum price must be a number',
-      'any.required': 'Maximum price is required for biddable jobs',
-    }),
-    otherwise: Joi.forbidden(),
-  }),
-  bidRange: Joi.when('type', {
-    is: 'biddable',
-    then: Joi.number().required().messages({
-      'number.base': 'Bid range must be a number',
-      'any.required': 'Bid range is required for biddable jobs',
-    }),
-    otherwise: Joi.forbidden(),
-  }),
-  budget: Joi.when('type', {
-    is: Joi.string().valid('regular', 'direct'),
-    then: Joi.number().required().messages({
-      'number.base': 'Budget must be a number',
-      'any.required': 'Budget is required for regular or direct jobs',
-    }),
-    otherwise: Joi.forbidden(),
-  }),
-  achievementDetails: Joi.string().messages({
-    'string.empty': 'Achievement details must be a string',
-  }),
-  currency: Joi.string().messages({
-    'string.empty': 'Currency must be a string',
-  }),
-  userName: Joi.string().optional().messages({
-    'string.empty': 'UserName must be a string',
-  }),
-  email: Joi.string().optional().messages({
-    'string.empty': 'Email must be a string',
-  }),
-  identifier: Joi.string().optional().messages({
-    'string.empty': 'Identifier must be a string',
-  }),
-  artisan: Joi.string().optional().messages({
-    'string.base': 'Artisan must be a string',
+  amount: Joi.number().positive().required().messages({
+    'number.base': 'Amount must be a number',
+    'number.positive': 'Amount must be a positive number',
+    'any.required': 'Amount is required',
   }),
 });
 
-const { error } = jobValidation.validate(req.body, { abortEarly: false });
+const recurringBudgetSchema = budgetSchema.keys({
+  period: Joi.string()
+    .valid(...Object.values(JobFrequencyEnum))
+    .required()
+    .messages({
+      'any.only': 'Invalid recurring period, must be one of: ' + Object.values(JobFrequencyEnum).join(', '),
+      'any.required': 'Recurring period is required',
+    }),
+});
+
+const jobScheduleSchema = Joi.object({
+  startDate: Joi.date().required().messages({
+    'date.base': 'Schedule start date must be a valid date',
+    'any.required': 'Schedule start date is required',
+  }),
+  endDate: Joi.date().optional().min(Joi.ref('startDate')).messages({
+    'date.base': 'Schedule end date must be a valid date',
+    'date.min': 'Schedule end date must be after start date',
+  }),
+});
+
+const jobDurationSchema = Joi.object({
+  value: Joi.number().positive().required().messages({
+    'number.base': 'Duration value must be a number',
+    'number.positive': 'Duration value must be a positive number',
+    'any.required': 'Duration value is required',
+  }),
+  unit: Joi.string()
+    .valid(...Object.values(DurationUnitEnum))
+    .required()
+    .messages({
+      'any.only': 'Invalid duration unit, must be one of: ' + Object.values(DurationUnitEnum).join(', '),
+      'any.required': 'Duration unit is required',
+    }),
+});
+
+// Forbidden schemas (used when a block should NOT be present)
+const forbiddenString = Joi.any().forbidden().messages({ 'any.unknown': 'This field is not allowed for the selected job urgency' });
+const forbiddenObject = Joi.any().forbidden().messages({ 'any.unknown': 'This field is not allowed for the selected job urgency' });
+const forbiddenArray = Joi.array().forbidden().messages({ 'any.unknown': 'This field is not allowed for the selected job urgency' });
+
+// ===================== CREATE JOB VALIDATION =====================
+
+export const validateJob = (req: Request, res: Response, next: NextFunction) => {
+ const jobValidation = Joi.object({
+  // ===== Shared fields (required for all) =====
+  jobCategory: Joi.string().required().messages({
+    'string.empty': 'Job category is required',
+    'any.required': 'Job category is required',
+  }),
+  service: Joi.string().required().messages({
+    'string.empty': 'Service is required',
+    'any.required': 'Service is required',
+  }),
+  title: Joi.string().required().messages({
+    'string.empty': 'Title is required',
+    'any.required': 'Title is required',
+  }),
+  description: Joi.string().required().messages({
+    'string.empty': 'Description is required',
+    'any.required': 'Description is required',
+  }),
+  images: Joi.array().items(Joi.string()).optional().messages({
+    'string.base': 'Each image must be a string (URL)',
+  }),
+  jobUrgency: Joi.string()
+    .valid(...Object.values(JobUrgencyEnum))
+    .required()
+    .messages({
+      'any.only': 'Invalid job urgency, must be one of: ' + Object.values(JobUrgencyEnum).join(', '),
+      'any.required': 'Job urgency is required',
+    }),
+  location: locationSchema.required().messages({
+    'any.required': 'Location is required',
+  }),
+  allowBidding: Joi.boolean().required().messages({
+    'boolean.base': 'Allow bidding must be true or false',
+    'any.required': 'Allow bidding is required',
+  }),
+  experienceLevel: Joi.string()
+    .valid(...Object.values(ExperienceLevelEnum))
+    .required()
+    .messages({
+      'any.only': 'Invalid experience level, must be one of: ' + Object.values(ExperienceLevelEnum).join(', '),
+      'any.required': 'Experience level is required',
+    }),
+  expertId: Joi.string().optional().allow('').messages({
+    'string.base': 'Expert ID must be a string',
+  }),
+
+  // ===== Conditional fields based on jobUrgency =====
+  // right_now block
+  jobDuration: Joi.when('jobUrgency', {
+    is: JobUrgencyEnum.right_now,
+    then: jobDurationSchema.required().messages({
+      'any.required': 'Job duration is required for immediate jobs',
+    }),
+    otherwise: forbiddenObject,
+  }),
+  totalBudget: Joi.when('jobUrgency', {
+    is: JobUrgencyEnum.right_now,
+    then: budgetSchema.required().messages({
+      'any.required': 'Total budget is required for immediate jobs',
+    }),
+    otherwise: forbiddenObject,
+  }),
+
+  // in_future block
+  jobSchedule: Joi.when('jobUrgency', {
+    is: JobUrgencyEnum.in_future,
+    then: jobScheduleSchema.required().messages({
+      'any.required': 'Job schedule is required for future jobs',
+    }),
+    otherwise: forbiddenObject,
+  }),
+  estimatedBudget: Joi.when('jobUrgency', {
+    is: JobUrgencyEnum.in_future,
+    then: budgetSchema.required().messages({
+      'any.required': 'Estimated budget is required for future jobs',
+    }),
+    otherwise: forbiddenObject,
+  }),
+
+  // regularly block
+  jobFrequency: Joi.when('jobUrgency', {
+    is: JobUrgencyEnum.regularly,
+    then: Joi.string()
+      .valid(...Object.values(JobFrequencyEnum))
+      .required()
+      .messages({
+        'any.only': 'Invalid job frequency, must be one of: ' + Object.values(JobFrequencyEnum).join(', '),
+        'any.required': 'Job frequency is required for recurring jobs',
+      }),
+    otherwise: forbiddenString,
+  }),
+  startDate: Joi.when('jobUrgency', {
+    is: JobUrgencyEnum.regularly,
+    then: Joi.date().required().messages({
+      'date.base': 'Start date must be a valid date',
+      'any.required': 'Start date is required for recurring jobs',
+    }),
+    otherwise: Joi.any().forbidden().messages({ 'any.unknown': 'Start date is only allowed for recurring jobs' }),
+  }),
+  endDate: Joi.when('jobUrgency', {
+    is: JobUrgencyEnum.regularly,
+    then: Joi.date().optional().min(Joi.ref('startDate')).messages({
+      'date.base': 'End date must be a valid date',
+      'date.min': 'End date must be after start date',
+    }),
+    otherwise: Joi.any().forbidden().messages({ 'any.unknown': 'End date is only allowed for recurring jobs' }),
+  }),
+  recurringBudget: Joi.when('jobUrgency', {
+    is: JobUrgencyEnum.regularly,
+    then: recurringBudgetSchema.required().messages({
+      'any.required': 'Recurring budget is required for recurring jobs',
+    }),
+    otherwise: forbiddenObject,
+  }),
+
+  // ===== Old fields kept for backward compatibility (all optional) =====
+  category: Joi.string().optional(),
+  type: Joi.string().valid(...Object.values(JobType)).optional(),
+  budget: Joi.number().optional(),
+  duration: Joi.object({
+    number: Joi.number().optional(),
+    period: Joi.string().valid(...Object.values(JobPeriod)).optional(),
+  }).optional(),
+  expertLevel: Joi.string().valid(...Object.values(JobExpertLevel)).optional(),
+  jobFiles: Joi.array().items(Joi.string()).optional(),
+  maximumPrice: Joi.number().optional(),
+  bidRange: Joi.number().optional(),
+  achievementDetails: Joi.string().optional(),
+  currency: Joi.string().optional(),
+  milestones: Joi.array().items(Joi.object({
+    timeFrame: Joi.object({
+      number: Joi.number().optional(),
+      period: Joi.string().valid(...Object.values(JobPeriod)).optional(),
+    }).optional(),
+    achievement: Joi.string().optional(),
+    amount: Joi.number().optional(),
+  })).optional(),
+  userName: Joi.string().optional(),
+  email: Joi.string().optional(),
+  identifier: Joi.string().optional(),
+  artisan: Joi.string().optional(),
+ });
+
+ const { error } = jobValidation.validate(req.body, { abortEarly: false, allowUnknown: true });
 
   if (error) {
     const errorMessages = error.details.map((detail) => detail.message);
@@ -113,39 +224,125 @@ const { error } = jobValidation.validate(req.body, { abortEarly: false });
 }
 
 
+// ===================== UPDATE JOB VALIDATION =====================
+
 export const validateUpdateJob = (req: Request, res: Response, next: NextFunction) => {
   const updateJobValidation = Joi.object({
-    category: Joi.string().optional(),
+    // Shared fields (all optional for update)
+    jobCategory: Joi.string().optional(),
     service: Joi.string().optional(),
     title: Joi.string().optional(),
     description: Joi.string().optional(),
-    jobFiles: Joi.array().items(Joi.string()).optional().messages({
-      'string.base': 'Each job file must be a string (URL or file path)',
+    images: Joi.array().items(Joi.string()).optional(),
+    jobUrgency: Joi.string()
+      .valid(...Object.values(JobUrgencyEnum))
+      .optional()
+      .messages({
+        'any.only': 'Invalid job urgency, must be one of: ' + Object.values(JobUrgencyEnum).join(', '),
+      }),
+    location: locationSchema.optional(),
+    allowBidding: Joi.boolean().optional(),
+    experienceLevel: Joi.string()
+      .valid(...Object.values(ExperienceLevelEnum))
+      .optional()
+      .messages({
+        'any.only': 'Invalid experience level, must be one of: ' + Object.values(ExperienceLevelEnum).join(', '),
+      }),
+    expertId: Joi.string().optional().allow(''),
+
+    // Conditional fields - only allowed based on jobUrgency
+    // We use .when() on jobUrgency which may or may not be present in the update
+    // If jobUrgency is provided, enforce the block rules
+    // If not provided, allow the fields to be present (the pre-save hook will sanitize)
+    jobDuration: Joi.when('jobUrgency', {
+      is: Joi.exist(),
+      then: Joi.when('jobUrgency', {
+        is: JobUrgencyEnum.right_now,
+        then: jobDurationSchema.optional(),
+        otherwise: forbiddenObject,
+      }),
+      otherwise: jobDurationSchema.optional(),
     }),
-    duration: Joi.object({
-      number: Joi.number().optional().messages({
-        'number.base': 'Duration number must be a number',
+    totalBudget: Joi.when('jobUrgency', {
+      is: Joi.exist(),
+      then: Joi.when('jobUrgency', {
+        is: JobUrgencyEnum.right_now,
+        then: budgetSchema.optional(),
+        otherwise: forbiddenObject,
       }),
-      period: Joi.string()
-        .valid(...Object.values(JobPeriod))
-        .optional()
-        .messages({
-          'any.only': 'Invalid period, must be one of: ' + Object.values(JobPeriod).join(', '),
+      otherwise: budgetSchema.optional(),
+    }),
+    jobSchedule: Joi.when('jobUrgency', {
+      is: Joi.exist(),
+      then: Joi.when('jobUrgency', {
+        is: JobUrgencyEnum.in_future,
+        then: jobScheduleSchema.optional(),
+        otherwise: forbiddenObject,
+      }),
+      otherwise: jobScheduleSchema.optional(),
+    }),
+    estimatedBudget: Joi.when('jobUrgency', {
+      is: Joi.exist(),
+      then: Joi.when('jobUrgency', {
+        is: JobUrgencyEnum.in_future,
+        then: budgetSchema.optional(),
+        otherwise: forbiddenObject,
+      }),
+      otherwise: budgetSchema.optional(),
+    }),
+    jobFrequency: Joi.when('jobUrgency', {
+      is: Joi.exist(),
+      then: Joi.when('jobUrgency', {
+        is: JobUrgencyEnum.regularly,
+        then: Joi.string().valid(...Object.values(JobFrequencyEnum)).optional(),
+        otherwise: forbiddenString,
+      }),
+      otherwise: Joi.string().valid(...Object.values(JobFrequencyEnum)).optional(),
+    }),
+    startDate: Joi.when('jobUrgency', {
+      is: Joi.exist(),
+      then: Joi.when('jobUrgency', {
+        is: JobUrgencyEnum.regularly,
+        then: Joi.date().optional(),
+        otherwise: Joi.any().forbidden().messages({ 'any.unknown': 'Start date is only allowed for recurring jobs' }),
+      }),
+      otherwise: Joi.date().optional(),
+    }),
+    endDate: Joi.when('jobUrgency', {
+      is: Joi.exist(),
+      then: Joi.when('jobUrgency', {
+        is: JobUrgencyEnum.regularly,
+        then: Joi.date().optional().min(Joi.ref('startDate')).messages({
+          'date.min': 'End date must be after start date',
         }),
+        otherwise: Joi.any().forbidden().messages({ 'any.unknown': 'End date is only allowed for recurring jobs' }),
+      }),
+      otherwise: Joi.date().optional(),
+    }),
+    recurringBudget: Joi.when('jobUrgency', {
+      is: Joi.exist(),
+      then: Joi.when('jobUrgency', {
+        is: JobUrgencyEnum.regularly,
+        then: recurringBudgetSchema.optional(),
+        otherwise: forbiddenObject,
+      }),
+      otherwise: recurringBudgetSchema.optional(),
+    }),
+
+    // ===== Old fields kept for backward compatibility =====
+    category: Joi.string().optional(),
+    type: Joi.string().valid(...Object.values(JobType)).optional(),
+    budget: Joi.number().optional(),
+    duration: Joi.object({
+      number: Joi.number().optional(),
+      period: Joi.string().valid(...Object.values(JobPeriod)).optional(),
     }).optional(),
-    type: Joi.string()
-      .valid(...Object.values(JobType))
-      .optional()
-      .messages({
-        'any.only': 'Invalid job type, must be one of: ' + Object.values(JobType).join(', '),
-      }),
-    location: Joi.string().optional(),
-    expertLevel: Joi.string()
-      .valid(...Object.values(JobExpertLevel))
-      .optional()
-      .messages({
-        'any.only': 'Invalid expert level, must be one of: ' + Object.values(JobExpertLevel).join(', '),
-      }),
+    expertLevel: Joi.string().valid(...Object.values(JobExpertLevel)).optional(),
+    jobFiles: Joi.array().items(Joi.string()).optional(),
+    maximumPrice: Joi.number().optional(),
+    bidRange: Joi.number().optional(),
+    achievementDetails: Joi.string().optional(),
+    currency: Joi.string().optional(),
     milestones: Joi.array()
       .items(
         Joi.object({
@@ -157,16 +354,10 @@ export const validateUpdateJob = (req: Request, res: Response, next: NextFunctio
           amount: Joi.number().optional(),
         })
       )
-      .max(5)
       .optional(),
-    maximumPrice: Joi.number().optional(),
-    bidRange: Joi.number().optional(),
-    budget: Joi.number().optional(),
-    achievementDetails: Joi.string().optional(),
-    currency: Joi.string().optional(),
   });
 
-  const { error } = updateJobValidation.validate(req.body, { abortEarly: false });
+  const { error } = updateJobValidation.validate(req.body, { abortEarly: false, allowUnknown: true });
 
   if (error) {
     const errorMessages = error.details.map((detail) => detail.message);
@@ -176,6 +367,9 @@ export const validateUpdateJob = (req: Request, res: Response, next: NextFunctio
 
   next();
 };
+
+// ===================== OTHER VALIDATORS (KEPT AS-IS) =====================
+
 export const validateProjectApplication = (req: Request, res: Response, next: NextFunction) => {
   const projectValidation = Joi.object({
     jobId: Joi.string().required().messages({

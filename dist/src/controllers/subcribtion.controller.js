@@ -163,44 +163,87 @@ exports.getUserSubscription = (0, error_handler_1.catchAsync)(async (req, res) =
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
 exports.promoteJobAndBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { target, startDate, endDate, type, expectedClicks } = req.body;
+    const { target, type, durationDays, expectedClicks } = req.body;
     const { id } = req.params;
     const userId = req.user._id;
-    let payload;
-    payload = {
-        userId: userId,
+    if (!['job', 'service', 'product'].includes(type)) {
+        throw new error_1.BadRequestError('type must be one of: job, service, product.');
+    }
+    const payload = {
+        userId,
         target,
-        startDate,
-        endDate,
-        clicks: expectedClicks,
-        isActive: true,
+        type,
+        isActive: false, // stays inactive until payment is confirmed
     };
-    if (type === "job") {
+    // ---- RESOLVE TARGET ENTITY + OWNERSHIP CHECK ----
+    // Previously nothing verified the caller owns the thing being promoted —
+    // any authenticated user could pass someone else's id here.
+    if (type === 'job') {
         const job = await jobService.fetchJobById(id);
-        if (!job) {
+        if (!job)
             throw new error_1.NotFoundError('Job not found.');
+        if (job.userId.toString() !== userId.toString()) {
+            throw new error_1.ForbiddenError('You can only promote your own job listings.');
         }
         payload.jobId = job._id;
     }
-    else if (type === "service") {
+    else if (type === 'service') {
         const business = await businessService.fetchSingleBusiness(id);
-        if (!business) {
+        if (!business)
             throw new error_1.NotFoundError('Service not found');
+        if (business.userId?.toString() !== userId.toString()) {
+            throw new error_1.ForbiddenError('You can only promote your own business listings.');
         }
         payload.businessId = business._id;
     }
-    else if (type === "product") {
+    else {
         const product = await productService.fetchProductById(id);
-        if (!product) {
+        if (!product)
             throw new error_1.NotFoundError('Product not found');
+        if (product.userId.toString() !== userId.toString()) {
+            throw new error_1.ForbiddenError('You can only promote your own product listings.');
         }
         payload.productId = product._id;
     }
-    const costPerClick = await subscriptionService.fetchCostPerClick();
-    const cost = costPerClick * expectedClicks;
-    payload.cost = cost;
-    payload.costPerClick = costPerClick;
+    if (type === 'product') {
+        if (!suscribtion_enum_1.PROMOTION_PLAN_DURATIONS.includes(durationDays)) {
+            throw new error_1.BadRequestError(`durationDays must be one of: ${suscribtion_enum_1.PROMOTION_PLAN_DURATIONS.join(', ')}`);
+        }
+        const startDate = new Date();
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + durationDays);
+        const costPerDay = await subscriptionService.fetchCostPerDay();
+        const cost = costPerDay * durationDays;
+        payload.startDate = startDate;
+        payload.endDate = endDate;
+        payload.durationDays = durationDays;
+        payload.costPerDay = costPerDay;
+        payload.cost = cost;
+        payload.clicks = 0; // actual clicks — always starts at zero
+    }
+    else {
+        const { startDate, endDate } = req.body;
+        if (!startDate || !endDate) {
+            throw new error_1.BadRequestError('startDate and endDate are required for this promotion type.');
+        }
+        if (!expectedClicks || expectedClicks <= 0) {
+            throw new error_1.BadRequestError('expectedClicks must be a positive number.');
+        }
+        const costPerClick = await subscriptionService.fetchCostPerClick();
+        const cost = costPerClick * expectedClicks;
+        payload.startDate = startDate;
+        payload.endDate = endDate;
+        payload.expectedClicks = expectedClicks; // the click budget being bid for
+        payload.costPerClick = costPerClick;
+        payload.cost = cost;
+        payload.clicks = 0; // actual clicks received — separate from the budget above
+    }
     const promotion = await subscriptionService.createPromotion(payload);
+    // Promotion is created inactive/pending — the frontend's "Create Campaign"
+    // button should hand off to your payment flow here (the layer tree shows
+    // "Payment Successful"/"Payment Failed" screens, implying a payment step
+    // happens after this call). Whatever confirms payment should be the thing
+    // that sets isActive: true and paymentStatus: success — not this endpoint.
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, promotion);
 });
 exports.getAllUsersSubscription = (0, error_handler_1.catchAsync)(async (req, res) => {

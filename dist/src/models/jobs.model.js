@@ -73,7 +73,31 @@ const MilestoneSchema = new mongoose_1.Schema({
         invoiceRaised: { type: Boolean, default: false }
     }
 });
+// ===== NEW SUB-SCHEMAS FOR REWORK =====
+const LocationSchema = new mongoose_1.Schema({
+    address: { type: String },
+    lat: { type: Number },
+    lng: { type: Number },
+}, { _id: false });
+const JobScheduleSchema = new mongoose_1.Schema({
+    startDate: { type: Date },
+    endDate: { type: Date },
+}, { _id: false });
+const BudgetSchema = new mongoose_1.Schema({
+    currency: { type: String },
+    amount: { type: Number },
+}, { _id: false });
+const RecurringBudgetSchema = new mongoose_1.Schema({
+    currency: { type: String },
+    amount: { type: Number },
+    period: { type: String, enum: jobs_enum_1.JobFrequencyEnum },
+}, { _id: false });
+const JobDurationSchema = new mongoose_1.Schema({
+    value: { type: Number },
+    unit: { type: String, enum: jobs_enum_1.DurationUnitEnum },
+}, { _id: false });
 const jobSchema = new mongoose_1.default.Schema({
+    // ===== EXISTING FIELDS (RETAINED) =====
     category: { type: String },
     service: { type: String },
     title: { type: String },
@@ -90,7 +114,7 @@ const jobSchema = new mongoose_1.default.Schema({
     },
     type: { type: String, enum: jobs_enum_1.JobType },
     budget: { type: Number },
-    location: { type: String },
+    location: { type: mongoose_1.Schema.Types.Mixed }, // mixed: string (old) or object (new)
     expertLevel: { type: String, enum: jobs_enum_1.JobExpertLevel },
     milestones: {
         type: [MilestoneSchema],
@@ -113,6 +137,7 @@ const jobSchema = new mongoose_1.default.Schema({
     acceptedApplicationId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Project' },
     additionalAmount: { type: Number },
     startDate: { type: Date },
+    endDate: { type: Date },
     isRequestForQuote: { type: Boolean, default: false },
     pausedDate: { type: Date },
     isClosed: { type: Boolean, default: false },
@@ -126,5 +151,112 @@ const jobSchema = new mongoose_1.default.Schema({
         users: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Users' }],
         clickCount: { type: Number, default: 0 }
     },
+    // ===== NEW FIELDS FOR REWORK =====
+    jobUrgency: { type: String, enum: jobs_enum_1.JobUrgencyEnum },
+    jobCategory: { type: String },
+    images: [{ type: String }],
+    allowBidding: { type: Boolean },
+    experienceLevel: { type: String, enum: jobs_enum_1.ExperienceLevelEnum },
+    expertId: { type: String },
+    isDirectHire: { type: Boolean, default: false },
+    // Urgency-specific nested objects
+    jobFrequency: { type: String, enum: jobs_enum_1.JobFrequencyEnum },
+    recurringBudget: { type: RecurringBudgetSchema },
+    jobSchedule: { type: JobScheduleSchema },
+    estimatedBudget: { type: BudgetSchema },
+    jobDuration: { type: JobDurationSchema },
+    totalBudget: { type: BudgetSchema },
 }, { timestamps: true });
+// ===== BACKWARD-COMPATIBILITY MIDDLEWARE =====
+// On find, populate new fields from old data if missing
+jobSchema.pre('find', function () {
+    // This is a read-side transform; we handle it in toObject/toJSON instead
+});
+jobSchema.pre('save', function (next) {
+    const job = this;
+    // Map old category -> jobCategory if jobCategory not set
+    if (!job.jobCategory && job.category) {
+        job.jobCategory = job.category;
+    }
+    // Map old expertLevel (one/two/three/four) -> experienceLevel if not set
+    if (!job.experienceLevel && job.expertLevel) {
+        const levelMap = {
+            one: 'apprentice',
+            two: 'junior',
+            three: 'intermediate',
+            four: 'senior',
+        };
+        job.experienceLevel = levelMap[job.expertLevel] || job.expertLevel;
+    }
+    // Map old location (string) -> new location object if location is a string
+    if (typeof job.location === 'string' && !job.location?.address) {
+        job.location = { address: job.location };
+    }
+    // If jobUrgency is set, sanitize fields that don't belong
+    if (job.jobUrgency) {
+        if (job.jobUrgency === jobs_enum_1.JobUrgencyEnum.right_now) {
+            job.jobFrequency = undefined;
+            job.recurringBudget = undefined;
+            job.jobSchedule = undefined;
+            job.estimatedBudget = undefined;
+            job.startDate = undefined;
+            job.endDate = undefined;
+        }
+        else if (job.jobUrgency === jobs_enum_1.JobUrgencyEnum.in_future) {
+            job.jobFrequency = undefined;
+            job.recurringBudget = undefined;
+            job.jobDuration = undefined;
+            job.totalBudget = undefined;
+        }
+        else if (job.jobUrgency === jobs_enum_1.JobUrgencyEnum.regularly) {
+            job.jobSchedule = undefined;
+            job.estimatedBudget = undefined;
+            job.jobDuration = undefined;
+            job.totalBudget = undefined;
+        }
+    }
+    next();
+});
+/**
+ * Transform the document for serialization:
+ * - Hide raw conditional fields that don't match jobUrgency
+ * - Keep backward-compat fields for old records
+ */
+jobSchema.set('toJSON', {
+    transform: function (_doc, ret) {
+        // Backward-compat: ensure location is an object if it's a string
+        if (typeof ret.location === 'string') {
+            ret.location = { address: ret.location };
+        }
+        // Backward-compat: map expertLevel if experienceLevel is missing
+        if (!ret.experienceLevel && ret.expertLevel) {
+            const levelMap = {
+                one: 'apprentice',
+                two: 'junior',
+                three: 'intermediate',
+                four: 'senior',
+            };
+            ret.experienceLevel = levelMap[ret.expertLevel] || ret.expertLevel;
+        }
+        return ret;
+    }
+});
+jobSchema.set('toObject', {
+    transform: function (_doc, ret) {
+        // same transform as toJSON
+        if (typeof ret.location === 'string') {
+            ret.location = { address: ret.location };
+        }
+        if (!ret.experienceLevel && ret.expertLevel) {
+            const levelMap = {
+                one: 'apprentice',
+                two: 'junior',
+                three: 'intermediate',
+                four: 'senior',
+            };
+            ret.experienceLevel = levelMap[ret.expertLevel] || ret.expertLevel;
+        }
+        return ret;
+    }
+});
 exports.default = mongoose_1.default.model('Jobs', jobSchema);

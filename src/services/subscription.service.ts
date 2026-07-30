@@ -94,6 +94,12 @@ export const fetchCostPerClick = async ()=>{
     return config!.costPerClick;
 };
 
+export const fetchCostPerDay = async ()=>{
+    const config = await Appconfig.findOne();
+
+    return config?.costPerDay ?? 0;
+};
+
 export const createPromotion = async (data: any)=>{
     return await Promotion.create(data);
 };

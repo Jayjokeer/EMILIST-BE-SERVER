@@ -60,3 +60,31 @@ export enum FrequencyEnum {
   monthly = 'Monthly',
   quarterly = 'Quarterly ',
 }
+
+// ===================== NEW ENUMS FOR REWORK =====================
+
+export enum JobUrgencyEnum {
+  right_now = "right_now",
+  in_future = "in_future",
+  regularly = "regularly",
+}
+
+export enum JobFrequencyEnum {
+  weekly = "weekly",
+  biweekly = "biweekly",
+  monthly = "monthly",
+}
+
+export enum DurationUnitEnum {
+  hours = "hours",
+  days = "days",
+  weeks = "weeks",
+  months = "months",
+}
+
+export enum ExperienceLevelEnum {
+  apprentice = "apprentice",
+  junior = "junior",
+  intermediate = "intermediate",
+  senior = "senior",
+}

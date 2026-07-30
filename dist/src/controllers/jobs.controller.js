@@ -57,24 +57,150 @@ const reviewService = __importStar(require("../services/review.service"));
 const subscriptionService = __importStar(require("../services/subscription.service"));
 const plan_enum_1 = require("../enums/plan.enum");
 const utility_1 = require("../utils/utility");
+// ===================== HELPER: Map new fields to old for backward compat =====================
+function mapJobBodyToLegacy(body) {
+    const mapped = { ...body };
+    // Map jobCategory -> category
+    if (mapped.jobCategory && !mapped.category) {
+        mapped.category = mapped.jobCategory;
+    }
+    // Map images -> jobFiles
+    if (mapped.images && mapped.images.length > 0 && !mapped.jobFiles) {
+        mapped.jobFiles = mapped.images.map((url) => ({
+            id: new mongoose_1.default.Types.ObjectId(),
+            url,
+        }));
+    }
+    // Map location object -> legacy location string (for old code paths)
+    if (mapped.location && typeof mapped.location === 'object' && mapped.location.address && !mapped.location) {
+        // Keep as object; the model handles the mixed type
+    }
+    // Map experienceLevel -> expertLevel
+    if (mapped.experienceLevel && !mapped.expertLevel) {
+        const reverseLevelMap = {
+            apprentice: 'one',
+            junior: 'two',
+            intermediate: 'three',
+            senior: 'four',
+        };
+        mapped.expertLevel = reverseLevelMap[mapped.experienceLevel] || mapped.experienceLevel;
+    }
+    // Map urgency-based budget fields -> legacy budget
+    if (!mapped.budget) {
+        if (mapped.totalBudget?.amount) {
+            mapped.budget = mapped.totalBudget.amount;
+        }
+        else if (mapped.estimatedBudget?.amount) {
+            mapped.budget = mapped.estimatedBudget.amount;
+        }
+        else if (mapped.recurringBudget?.amount) {
+            mapped.budget = mapped.recurringBudget.amount;
+        }
+    }
+    // Map urgency-based duration -> legacy duration
+    if (!mapped.duration && mapped.jobDuration) {
+        mapped.duration = {
+            number: mapped.jobDuration.value,
+            period: mapped.jobDuration.unit === 'hours' ? 'days' : mapped.jobDuration.unit,
+        };
+    }
+    // Map jobSchedule.startDate -> startDate
+    if (mapped.jobSchedule?.startDate && !mapped.startDate) {
+        mapped.startDate = mapped.jobSchedule.startDate;
+    }
+    // Set type based on allowBidding
+    if (mapped.allowBidding !== undefined && !mapped.type) {
+        mapped.type = mapped.allowBidding ? jobs_enum_1.JobType.biddable : jobs_enum_1.JobType.regular;
+    }
+    // If expertId is set, force type to direct
+    if (mapped.expertId) {
+        mapped.type = jobs_enum_1.JobType.direct;
+    }
+    return mapped;
+}
+/**
+ * Sanitize body to strip fields not matching the jobUrgency
+ */
+function sanitizeByUrgency(body) {
+    if (!body.jobUrgency)
+        return;
+    if (body.jobUrgency === jobs_enum_1.JobUrgencyEnum.right_now) {
+        delete body.jobFrequency;
+        delete body.recurringBudget;
+        delete body.jobSchedule;
+        delete body.estimatedBudget;
+        delete body.startDate;
+        delete body.endDate;
+    }
+    else if (body.jobUrgency === jobs_enum_1.JobUrgencyEnum.in_future) {
+        delete body.jobFrequency;
+        delete body.recurringBudget;
+        delete body.jobDuration;
+        delete body.totalBudget;
+    }
+    else if (body.jobUrgency === jobs_enum_1.JobUrgencyEnum.regularly) {
+        delete body.jobSchedule;
+        delete body.estimatedBudget;
+        delete body.jobDuration;
+        delete body.totalBudget;
+    }
+}
+// ===================== CREATE JOB =====================
 exports.createJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const job = req.body;
     const { artisan } = req.body;
     const files = req.files;
+    // Map new fields to legacy fields for backward compatibility
+    const mappedBody = mapJobBodyToLegacy(job);
+    // Sanitize conditional fields based on jobUrgency
+    sanitizeByUrgency(mappedBody);
+    // Handle file uploads (legacy path)
     if (files && files.length > 0) {
         const fileObjects = files.map((file) => ({
             id: new mongoose_1.default.Types.ObjectId(),
             url: file.path,
         }));
-        job.jobFiles = fileObjects;
+        mappedBody.jobFiles = fileObjects;
+        // Also populate images from uploaded files
+        mappedBody.images = files.map((file) => file.path);
     }
-    if (job.type == jobs_enum_1.JobType.direct && artisan) {
+    // Handle expertId (direct hire to an expert/business by uniqueId)
+    if (mappedBody.expertId) {
+        const business = await businessService.findBusinessByUniqueId(mappedBody.expertId);
+        if (!business)
+            throw new error_1.NotFoundError("Business (expert) not found for the provided expert ID!");
+        const userId = req.user.id;
+        mappedBody.userId = userId;
+        mappedBody.type = jobs_enum_1.JobType.direct;
+        mappedBody.allowBidding = false;
+        mappedBody.isDirectHire = true;
+        const data = await jobService.createJob(mappedBody);
+        const artisanUser = await authService.findUserById(String(business.userId));
+        if (!artisanUser)
+            throw new error_1.NotFoundError("User associated with this business not found!");
+        const payload = {
+            job: data._id,
+            user: artisanUser._id,
+            creator: userId,
+            directJobStatus: project_enum_1.ProjectStatusEnum.pending,
+        };
+        const project = await projectService.createProject(payload);
+        data.applications = [];
+        data.applications.push(String(project._id));
+        data.acceptedApplicationId = String(project._id);
+        data.save();
+        const { html, subject } = (0, templates_1.directJobApplicationMessage)(artisanUser.userName, req.user.userName, String(data._id));
+        await (0, send_email_1.sendEmail)(artisanUser.email, subject, html);
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+    }
+    // Handle direct job via artisan field (legacy path)
+    if (mappedBody.type == jobs_enum_1.JobType.direct && artisan && !mappedBody.expertId) {
         const user = await authService.findUserByEmailOrUserNameDirectJob(artisan);
         if (!user)
             throw new error_1.NotFoundError("User not found!");
         const userId = req.user.id;
-        job.userId = userId;
-        const data = await jobService.createJob(job);
+        mappedBody.userId = userId;
+        const data = await jobService.createJob(mappedBody);
         const payload = {
             job: data._id,
             user: user._id,
@@ -90,12 +216,11 @@ exports.createJobController = (0, error_handler_1.catchAsync)(async (req, res) =
         await (0, send_email_1.sendEmail)(user.email, subject, html);
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
-    else {
-        const user = req.user._id;
-        job.userId = user;
-        const data = await jobService.createJob(job);
-        (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
-    }
+    // Standard job creation
+    const user = req.user._id;
+    mappedBody.userId = user;
+    const data = await jobService.createJob(mappedBody);
+    (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 });
 exports.allUserJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page = 1, limit = 10, search = null, title, location, category, service } = req.query;
@@ -245,15 +370,47 @@ exports.updateJobController = (0, error_handler_1.catchAsync)(async (req, res) =
     if (job.status !== jobs_enum_1.JobStatusEnum.pending) {
         throw new error_1.BadRequestError("You can only edit a pending job!");
     }
+    // Map new fields to legacy fields for backward compatibility
+    const mappedUpdates = mapJobBodyToLegacy(updates);
+    // If jobUrgency is being changed, clear old conditional fields
+    if (mappedUpdates.jobUrgency && mappedUpdates.jobUrgency !== job.jobUrgency) {
+        sanitizeByUrgency(job.toObject());
+        // Also reset on the document itself
+        if (mappedUpdates.jobUrgency === jobs_enum_1.JobUrgencyEnum.right_now) {
+            job.jobFrequency = undefined;
+            job.recurringBudget = undefined;
+            job.jobSchedule = undefined;
+            job.estimatedBudget = undefined;
+            job.startDate = undefined;
+            job.endDate = undefined;
+        }
+        else if (mappedUpdates.jobUrgency === jobs_enum_1.JobUrgencyEnum.in_future) {
+            job.jobFrequency = undefined;
+            job.recurringBudget = undefined;
+            job.jobDuration = undefined;
+            job.totalBudget = undefined;
+        }
+        else if (mappedUpdates.jobUrgency === jobs_enum_1.JobUrgencyEnum.regularly) {
+            job.jobSchedule = undefined;
+            job.estimatedBudget = undefined;
+            job.jobDuration = undefined;
+            job.totalBudget = undefined;
+        }
+    }
+    // Handle file uploads
     if (files && files.length > 0) {
         const fileObjects = files.map((file) => ({
             id: new mongoose_1.default.Types.ObjectId(),
             url: file.path,
         }));
-        updates.jobFiles = [...(job.jobFiles || []), ...fileObjects];
+        mappedUpdates.jobFiles = [...(job.jobFiles || []), ...fileObjects];
+        // Also add to images
+        const newImageUrls = files.map((file) => file.path);
+        mappedUpdates.images = [...(job.images || []), ...newImageUrls];
     }
-    Object.keys(updates).forEach((key) => {
-        job[key] = updates[key];
+    // Apply updates
+    Object.keys(mappedUpdates).forEach((key) => {
+        job[key] = mappedUpdates[key];
     });
     await job.save();
     const data = await jobService.fetchJobById(jobId);

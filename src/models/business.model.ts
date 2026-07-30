@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { IBusiness } from '../interfaces/business.interface';
 import { ExpertTypeEnum } from '../enums/business.enum';
+import { generateShortUUID } from '../utils/utility';
 const ServicesRenderedSchema = new Schema({
     name: {
       type: String,
@@ -73,10 +74,19 @@ const businessSchema: Schema = new mongoose.Schema(
       users: [{type: Schema.Types.ObjectId, ref: 'Users'}],
       clickCount: {type: Number, default: 0}
      },
-     isVerified: {type: Boolean, default: false},
+      isVerified: {type: Boolean, default: false},
+      uniqueId: { type: String, unique: true },
   },
   { timestamps: true }
 
 );
+
+// Auto-generate uniqueId before creation
+businessSchema.pre('save', function(next) {
+  if (this.isNew && !this.uniqueId) {
+    this.uniqueId = generateShortUUID();
+  }
+  next();
+});
 
 export default mongoose.model<IBusiness>('Business', businessSchema);

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllUsersSubscription = exports.fetchAllUserSubscriptionsAdmin = exports.createPromotion = exports.fetchCostPerClick = exports.fetchAllSubscriptionsAdmin = exports.findExpiredSubscriptions = exports.getSubscriptionById = exports.getActiveSubscriptionWithoutDetails = exports.getActiveSubscription = exports.createSubscription = void 0;
+exports.getAllUsersSubscription = exports.fetchAllUserSubscriptionsAdmin = exports.createPromotion = exports.fetchCostPerDay = exports.fetchCostPerClick = exports.fetchAllSubscriptionsAdmin = exports.findExpiredSubscriptions = exports.getSubscriptionById = exports.getActiveSubscriptionWithoutDetails = exports.getActiveSubscription = exports.createSubscription = void 0;
 const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const subscription_model_1 = __importDefault(require("../models/subscription.model"));
 const app_config_model_1 = __importDefault(require("../models/app-config.model"));
@@ -91,6 +91,11 @@ const fetchCostPerClick = async () => {
     return config.costPerClick;
 };
 exports.fetchCostPerClick = fetchCostPerClick;
+const fetchCostPerDay = async () => {
+    const config = await app_config_model_1.default.findOne();
+    return config?.costPerDay ?? 0;
+};
+exports.fetchCostPerDay = fetchCostPerDay;
 const createPromotion = async (data) => {
     return await promotion_model_1.default.create(data);
 };

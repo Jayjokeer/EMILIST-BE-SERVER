@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const business_enum_1 = require("../enums/business.enum");
+const utility_1 = require("../utils/utility");
 const ServicesRenderedSchema = new mongoose_1.Schema({
     name: {
         type: String,
@@ -105,5 +106,13 @@ const businessSchema = new mongoose_1.default.Schema({
         clickCount: { type: Number, default: 0 }
     },
     isVerified: { type: Boolean, default: false },
+    uniqueId: { type: String, unique: true },
 }, { timestamps: true });
+// Auto-generate uniqueId before creation
+businessSchema.pre('save', function (next) {
+    if (this.isNew && !this.uniqueId) {
+        this.uniqueId = (0, utility_1.generateShortUUID)();
+    }
+    next();
+});
 exports.default = mongoose_1.default.model('Business', businessSchema);

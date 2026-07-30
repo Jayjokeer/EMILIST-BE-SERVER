@@ -147,6 +147,11 @@ export const updateBusiness = async (businessId: string, businessData: any, file
   }
 };
 
+export const findBusinessByUniqueId = async (uniqueId: string)=>{
+    return await Business.findOne({ uniqueId })
+        .populate('userId', 'fullName email userName uniqueId profileImage level');
+};
+
 export const fetchUserBusiness = async (userId: string)=>{
     return await Business.findOne({userId});
 };

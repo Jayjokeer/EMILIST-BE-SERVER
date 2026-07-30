@@ -12,7 +12,7 @@ import { PipelineStage } from 'mongoose';
 import Business from "../models/business.model";
 import RecurringJob from "../models/recurring-job.model";
 
-export const createJob = async (data:  IJob) =>{
+export const createJob = async (data:  any) =>{
     return await Jobs.create(data);
 };
 

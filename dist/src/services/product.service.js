@@ -1239,13 +1239,22 @@ exports.fetchProductReviews = fetchProductReviews;
 const fetchAllComparedProducts = async (productIds) => {
     const products = await product_model_1.default.find({ _id: { $in: productIds } })
         .populate('userId', 'fullName email userName uniqueId profileImage level gender')
-        .populate('reviews', 'rating').lean();
+        .lean();
     const enhancedProducts = await Promise.all(products.map(async (product) => {
-        const reviews = product.reviews || [];
-        const totalReviews = reviews.length;
-        const averageRating = totalReviews > 0
-            ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
-            : 0;
+        // Aggregate reviews directly from the Review collection by productId
+        // This is more robust than relying on the product's `reviews` array being in sync
+        const reviewStats = await review_model_1.default.aggregate([
+            { $match: { productId: product._id } },
+            {
+                $group: {
+                    _id: null,
+                    totalReviews: { $sum: 1 },
+                    averageRating: { $avg: "$rating" },
+                },
+            },
+        ]);
+        const totalReviews = reviewStats.length > 0 ? reviewStats[0].totalReviews : 0;
+        const averageRating = reviewStats.length > 0 ? reviewStats[0].averageRating : 0;
         return {
             ...product,
             totalReviews,

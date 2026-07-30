@@ -30,3 +30,7 @@ export enum PromotionPaymentStatus {
     pending = "pending",
     paid = "paid"
 };
+
+export const PROMOTION_PLAN_DURATIONS = [7, 14, 30] as const;
+
+export type PromotionPlanDuration = typeof PROMOTION_PLAN_DURATIONS[number];
