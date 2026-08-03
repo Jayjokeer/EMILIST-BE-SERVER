@@ -51,7 +51,7 @@ const jobService = __importStar(require("../services/job.service"));
 const businessService = __importStar(require("../services/business.service"));
 const productService = __importStar(require("../services/product.service"));
 exports.subscribeToPlan = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { planId, paymentMethod, currency, isRenew, durationType } = req.body;
+    const { planId, paymentMethod, currency, isRenew, durationType, redirectUrl } = req.body;
     const userId = req.user._id;
     let plan;
     let currentPlan;
@@ -133,6 +133,9 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)(async (req, res) => {
     }
     else if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card) {
         if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card) {
+            if (!redirectUrl) {
+                throw new error_1.BadRequestError("redirectUrl is required for card payments");
+            }
             const transactionPayload = {
                 userId,
                 type: transaction_enum_1.TransactionType.DEBIT,
@@ -149,7 +152,7 @@ exports.subscribeToPlan = (0, error_handler_1.catchAsync)(async (req, res) => {
             const transaction = await transactionService.createTransaction(transactionPayload);
             transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
             await transaction.save();
-            const paymentLink = await (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, price, req.user.email);
+            const paymentLink = await (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, price, req.user.email, redirectUrl);
             data = { paymentLink, transaction };
         }
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);

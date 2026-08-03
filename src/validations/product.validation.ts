@@ -191,6 +191,11 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
           'any.only': 'Currency must be one of the allowed values',
           'string.empty': 'Currency is required',
         }),
+      redirectUrl: Joi.string().uri().required().messages({
+        'string.base': 'Redirect URL must be a string',
+        'string.uri': 'Redirect URL must be a valid URL',
+        'string.empty': 'Redirect URL is required',
+      }),
     });
   
     const { error } = paymentValidationSchema.validate(req.body, { abortEarly: false });
@@ -234,6 +239,11 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
         }),
         isAdditionalAmount: Joi.boolean().optional().messages({
           'boolean.base': 'isAdditionalAmount must be a boolean',
+        }),
+        redirectUrl: Joi.string().uri().required().messages({
+          'string.base': 'Redirect URL must be a string',
+          'string.uri': 'Redirect URL must be a valid URL',
+          'string.empty': 'Redirect URL is required',
         }),
     });
   

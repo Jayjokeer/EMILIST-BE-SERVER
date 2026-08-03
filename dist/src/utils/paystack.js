@@ -6,12 +6,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyPaystackPayment = exports.generatePaystackPaymentLink = void 0;
 const axios_1 = __importDefault(require("axios"));
 const config_1 = require("./config");
-const generatePaystackPaymentLink = async (reference, amount, email) => {
-    const response = await axios_1.default.post('https://api.paystack.co/transaction/initialize', {
+const generatePaystackPaymentLink = async (reference, amount, email, redirectUrl) => {
+    const payload = {
         reference,
         amount: amount * 100,
         email: email,
-    }, { headers: { Authorization: `Bearer ${config_1.config.paystackSecretKey}` } });
+    };
+    if (redirectUrl) {
+        payload.callback_url = redirectUrl;
+        payload.cancel_url = redirectUrl;
+    }
+    const response = await axios_1.default.post('https://api.paystack.co/transaction/initialize', payload, { headers: { Authorization: `Bearer ${config_1.config.paystackSecretKey}` } });
     return response.data.data.authorization_url;
 };
 exports.generatePaystackPaymentLink = generatePaystackPaymentLink;

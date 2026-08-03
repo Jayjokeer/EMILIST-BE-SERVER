@@ -1,14 +1,21 @@
 import axios from 'axios';
 import { config } from './config';
 
-export const generatePaystackPaymentLink = async (reference: string, amount: number, email: string) => {
+export const generatePaystackPaymentLink = async (reference: string, amount: number, email: string, redirectUrl?: string) => {
+  const payload: any = {
+    reference,
+    amount: amount * 100,
+    email: email,
+  };
+
+  if (redirectUrl) {
+    payload.callback_url = redirectUrl;
+    payload.cancel_url = redirectUrl;
+  }
+
   const response = await axios.post(
     'https://api.paystack.co/transaction/initialize',
-    {
-      reference,
-      amount: amount * 100,
-      email: email, 
-    },
+    payload,
     { headers: { Authorization: `Bearer ${config.paystackSecretKey}` } }
   );
 

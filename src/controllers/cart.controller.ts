@@ -161,17 +161,42 @@ export const checkoutCartController = catchAsync(async (req: JwtPayload, res: Re
     discount = await cartService.fetchDiscountCode(code);
     if (!discount) throw new NotFoundError("Invalid or expired discount code");
   }
+
+  // Build order products WITH snapshots captured at order-creation time.
+  // Product name/brand/category/price + merchant name/rating/review count are
+  // stored on the order itself so later changes never alter past orders.
+  const orderProducts: any[] = [];
   for (const item of cart.products) {
     const product = await productService.fetchProductById(item.productId);
     if (!product || Number(product.availableQuantity) < item.quantity) {
       throw new BadRequestError(`Product ${product?.name || item.productId} is out of stock`);
     }
+    const category: any = product.category
+      ? await productService.fetchSingleCategory(String(product.category))
+      : null;
+    const merchantRating = await productService.fetchMerchantRatingForSeller(String(product.userId));
+    const primaryImage = product.images?.find((img: any) => img.isPrimary);
+    orderProducts.push({
+      productId: product._id,
+      quantity: item.quantity,
+      price: item.price,
+      productName: product.name,
+      brand: product.brand,
+      categoryName: category?.name || "",
+      thumbnail: primaryImage?.imageUrl || product.images?.[0]?.imageUrl || "",
+      quantityMetric: product.quantityMetric,
+      merchantId: product.userId,
+      merchantName: product.merchantName,
+      merchantRating: merchantRating.merchantRating,
+      merchantReviewCount: merchantRating.merchantReviewCount,
+      totalUnitsSoldAtPurchase: product.totalUnitsSold || 0,
+    });
   }
   const discountAmount = discount ? Number((cart.totalAmount! * discount.discountPercentage / 100).toFixed(2)) : 0;
   const totals = await calculateOrderTotals(cart.totalAmount!, discountAmount);
   const order = await orderService.createOrder({
     userId,
-    products: cart.products.map((item) => ({ productId: item.productId, quantity: item.quantity, price: item.price })),
+    products: orderProducts,
     ...totals,
     discountApplied: Boolean(discount),
     originalTotalAmount: cart.totalAmount,

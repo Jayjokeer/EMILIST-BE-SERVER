@@ -38,6 +38,11 @@ export const validateSubscriptionPayment = (req: Request, res: Response, next: N
         "boolean.base": "isRenew must be a boolean",
         "boolean.empty": "isRenew is required",
     }),
+    redirectUrl: Joi.string().uri().required().messages({
+        'string.base': 'Redirect URL must be a string',
+        'string.uri': 'Redirect URL must be a valid URL',
+        'string.empty': 'Redirect URL is required',
+    }),
   });
 
   const { error } = subscriptionPaymentValidation.validate(req.body, { abortEarly: false });

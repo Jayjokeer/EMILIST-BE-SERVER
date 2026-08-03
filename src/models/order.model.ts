@@ -1,13 +1,33 @@
 import mongoose, { Schema, Document } from "mongoose";
 import { IOrder} from "../interfaces/order.interface";
-import { OrderPaymentStatus, OrderStatus } from "../enums/order.enum";
+import { OrderDeliveryStatus, OrderPaymentStatus, OrderStatus } from "../enums/order.enum";
 
 
 const OrderProductSchema: Schema = new Schema({
   productId: { type: Schema.Types.ObjectId, ref: "Product" },
   quantity: { type: Number, required: true, min: 1 },
   price: { type: Number, required: true },
+  // === Snapshot fields captured at order-creation time ===
+  productName: { type: String, trim: true },
+  brand: { type: String, trim: true },
+  categoryName: { type: String, trim: true },
+  thumbnail: { type: String, trim: true },
+  quantityMetric: { type: String, trim: true },
+  merchantId: { type: Schema.Types.ObjectId, ref: "Users" },
+  merchantName: { type: String, trim: true },
+  merchantRating: { type: Number },
+  merchantReviewCount: { type: Number },
+  totalUnitsSoldAtPurchase: { type: Number },
 });
+
+const DeliveryStepSchema: Schema = new Schema(
+  {
+    status: { type: String, enum: OrderDeliveryStatus, required: true },
+    timestamp: { type: Date, required: true },
+    note: { type: String, trim: true },
+  },
+  { _id: false }
+);
 
 const OrderSchema: Schema = new Schema(
   {
@@ -34,7 +54,20 @@ const OrderSchema: Schema = new Schema(
     discountAmount:{ type: Number },
     originalTotalAmount: { type: Number },
     discountCode:{type: String},
-    cartId: { type: Schema.Types.ObjectId, ref: "Cart", required: true, unique: true }
+    cartId: { type: Schema.Types.ObjectId, ref: "Cart", required: true, unique: true },
+    // === Delivery / tracking ===
+    deliveryStatus: {
+      type: String,
+      enum: OrderDeliveryStatus,
+      default: OrderDeliveryStatus.orderConfirmed,
+    },
+    deliveryDate: { type: Date },
+    deliveredAt: { type: Date },
+    deliverySteps: { type: [DeliveryStepSchema], default: [] },
+    cancelReason: { type: String, trim: true },
+    cancelledAt: { type: Date },
+    returnReason: { type: String, trim: true },
+    returnedAt: { type: Date },
   },
   { timestamps: true }
 );

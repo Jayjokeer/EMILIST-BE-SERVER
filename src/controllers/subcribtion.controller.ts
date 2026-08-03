@@ -21,7 +21,7 @@ import * as businessService from '../services/business.service';
 import * as productService from '../services/product.service';
 
 export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response) => {
-    const { planId, paymentMethod, currency, isRenew, durationType } = req.body;
+    const { planId, paymentMethod, currency, isRenew, durationType, redirectUrl } = req.body;
     const userId = req.user._id;
     let plan;
     let currentPlan;
@@ -99,6 +99,9 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
 
     }else if (paymentMethod === PaymentMethodEnum.card) {
         if (paymentMethod === PaymentMethodEnum.card) {
+            if(!redirectUrl){
+              throw new BadRequestError("redirectUrl is required for card payments");
+            }
             const transactionPayload = {
                 userId,
                 type: TransactionType.DEBIT,
@@ -115,7 +118,7 @@ export const subscribeToPlan = catchAsync( async (req:JwtPayload, res: Response)
             const transaction = await transactionService.createTransaction(transactionPayload);
             transaction.paymentService = PaymentServiceEnum.paystack;
             await transaction.save();
-            const paymentLink = await generatePaystackPaymentLink(transaction.reference, price!, req.user.email);
+            const paymentLink = await generatePaystackPaymentLink(transaction.reference, price!, req.user.email, redirectUrl);
             data = { paymentLink, transaction };
       }
      

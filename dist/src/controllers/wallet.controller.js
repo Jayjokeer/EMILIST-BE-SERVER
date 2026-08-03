@@ -54,7 +54,7 @@ exports.createWalletController = (0, error_handler_1.catchAsync)(async (req, res
 });
 exports.initiateWalletFunding = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
-    const { currency, amount, paymentMethod, walletId } = req.body;
+    const { currency, amount, paymentMethod, walletId, redirectUrl } = req.body;
     const wallet = await walletService.findWallet(userId, currency, walletId);
     if (!wallet)
         throw new error_1.NotFoundError('Wallet not found');
@@ -73,8 +73,11 @@ exports.initiateWalletFunding = (0, error_handler_1.catchAsync)(async (req, res)
     };
     const transaction = await transactionService.createTransaction(transactionPayload);
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency === transaction_enum_1.WalletEnum.NGN) {
+        if (!redirectUrl) {
+            throw new error_1.BadRequestError("redirectUrl is required for card payments");
+        }
         transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
-        const paymentLink = await (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, amount, req.user.email);
+        const paymentLink = await (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, amount, req.user.email, redirectUrl);
         const data = { paymentLink, transaction };
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }

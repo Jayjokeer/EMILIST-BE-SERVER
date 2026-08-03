@@ -180,6 +180,11 @@ const validatePaymentForVerification = (req, res, next) => {
             'any.only': 'Currency must be one of the allowed values',
             'string.empty': 'Currency is required',
         }),
+        redirectUrl: joi_1.default.string().uri().required().messages({
+            'string.base': 'Redirect URL must be a string',
+            'string.uri': 'Redirect URL must be a valid URL',
+            'string.empty': 'Redirect URL is required',
+        }),
     });
     const { error } = schema.validate(req.body, { abortEarly: false });
     if (error) {

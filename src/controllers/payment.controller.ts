@@ -31,13 +31,14 @@ const consumeCartStock = async (cart: any) => {
       throw new BadRequestError(`Insufficient stock for ${product?.name || "a cart item"}`);
     }
     product.availableQuantity -= item.quantity;
+    product.totalUnitsSold = (product.totalUnitsSold || 0) + item.quantity;
     await product.save();
   }
 };
 
 export const payforProductController = catchAsync(async (req: JwtPayload, res: Response) => {
     const userId = req.user._id;
-    const {cartId, paymentMethod, currency} = req.body;
+    const {cartId, paymentMethod, currency, redirectUrl} = req.body;
     let data;
 
     const cart = await cartService.fetchCartByIdPayment(cartId, userId);
@@ -100,6 +101,9 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
          data = "Payment successful"
       } else if (paymentMethod === PaymentMethodEnum.card) {
         if (paymentMethod === PaymentMethodEnum.card && currency === WalletEnum.NGN ) {
+            if(!redirectUrl){
+              throw new BadRequestError("redirectUrl is required for card payments");
+            }
             const transactionPayload = {
                 userId,
                 type: TransactionType.DEBIT,
@@ -117,7 +121,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
             const transaction = await transactionService.createTransaction(transactionPayload);
             transaction.paymentService = PaymentServiceEnum.paystack;
             await transaction.save();
-            const paymentLink = await generatePaystackPaymentLink(transaction.reference, totalAmount, req.user.email);
+            const paymentLink = await generatePaystackPaymentLink(transaction.reference, totalAmount, req.user.email, redirectUrl);
             data = { paymentLink, transaction };
       }
     }
@@ -127,7 +131,7 @@ export const payforProductController = catchAsync(async (req: JwtPayload, res: R
 
 export const payforJobController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user._id;
-  const {paymentMethod, currency, milestoneId, jobId, note, isAdditionalAmount} = req.body;
+  const {paymentMethod, currency, milestoneId, jobId, note, isAdditionalAmount, redirectUrl} = req.body;
   let data;
 const job = await jobService.fetchJobById(jobId);
 if(!job){
@@ -201,6 +205,9 @@ if(!project){
        data = "Payment successful";
     } else if (paymentMethod === PaymentMethodEnum.card) {
       if (paymentMethod === PaymentMethodEnum.card && currency === WalletEnum.NGN ) {
+          if(!redirectUrl){
+            throw new BadRequestError("redirectUrl is required for card payments");
+          }
           const transactionPayload = {
               userId,
               amount: Math.ceil(jobAmount),
@@ -219,7 +226,7 @@ if(!project){
           const transaction = await transactionService.createTransaction(transactionPayload);
           transaction.paymentService = PaymentServiceEnum.paystack;
           await transaction.save();
-          const paymentLink = await generatePaystackPaymentLink(transaction.reference, jobAmount, req.user.email);
+          const paymentLink = await generatePaystackPaymentLink(transaction.reference, jobAmount, req.user.email, redirectUrl);
           data = { paymentLink, transaction };
     }
   }
@@ -230,7 +237,7 @@ if(!project){
 export const payforVerificationController = catchAsync(async (req: JwtPayload, res: Response) => {
  try{
   const userId = req.user._id;
-  const {paymentMethod, currency, verificationId} = req.body;
+  const {paymentMethod, currency, verificationId, redirectUrl} = req.body;
   const verification = await verificationService.findById(verificationId);
   if(!verification){
     throw new NotFoundError('verification not found')
@@ -280,6 +287,9 @@ export const payforVerificationController = catchAsync(async (req: JwtPayload, r
        data = "Payment successful";
     } else if (paymentMethod === PaymentMethodEnum.card) {
       if (paymentMethod === PaymentMethodEnum.card && currency === WalletEnum.NGN ) {
+          if(!redirectUrl){
+            throw new BadRequestError("redirectUrl is required for card payments");
+          }
           const transactionPayload = {
               userId,
               amount: Math.ceil(Number(amount)),
@@ -295,7 +305,7 @@ export const payforVerificationController = catchAsync(async (req: JwtPayload, r
           const transaction = await transactionService.createTransaction(transactionPayload);
           transaction.paymentService = PaymentServiceEnum.paystack;
           await transaction.save();
-          const paymentLink = await generatePaystackPaymentLink(transaction.reference, Number(amount), req.user.email);
+          const paymentLink = await generatePaystackPaymentLink(transaction.reference, Number(amount), req.user.email, redirectUrl);
           data = { paymentLink, transaction };
     }
   }
@@ -460,4 +470,3 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
 
   return successResponse(res, StatusCodes.OK, message);
 });
-

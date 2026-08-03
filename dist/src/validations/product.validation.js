@@ -168,6 +168,11 @@ const validatePayForProduct = (req, res, next) => {
             'any.only': 'Currency must be one of the allowed values',
             'string.empty': 'Currency is required',
         }),
+        redirectUrl: joi_1.default.string().uri().required().messages({
+            'string.base': 'Redirect URL must be a string',
+            'string.uri': 'Redirect URL must be a valid URL',
+            'string.empty': 'Redirect URL is required',
+        }),
     });
     const { error } = paymentValidationSchema.validate(req.body, { abortEarly: false });
     if (error) {
@@ -209,6 +214,11 @@ const validatePaymentForJob = (req, res, next) => {
         }),
         isAdditionalAmount: joi_1.default.boolean().optional().messages({
             'boolean.base': 'isAdditionalAmount must be a boolean',
+        }),
+        redirectUrl: joi_1.default.string().uri().required().messages({
+            'string.base': 'Redirect URL must be a string',
+            'string.uri': 'Redirect URL must be a valid URL',
+            'string.empty': 'Redirect URL is required',
         }),
     });
     const { error } = jobValidationSchema.validate(req.body, { abortEarly: false });

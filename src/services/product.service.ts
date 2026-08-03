@@ -1401,6 +1401,35 @@ export const unflagProduct = async (productId: string, userId: string) => {
 };
 
 
+export const fetchMerchantRatingForSeller = async (sellerUserId: string) => {
+  const sellerId = new mongoose.Types.ObjectId(sellerUserId);
+
+  const [ratingAgg] = await Review.aggregate([
+    {
+      $lookup: {
+        from: "products",
+        localField: "productId",
+        foreignField: "_id",
+        as: "product",
+      },
+    },
+    { $unwind: { path: "$product", preserveNullAndEmptyArrays: false } },
+    { $match: { "product.userId": sellerId, "product.isDeleted": false } },
+    {
+      $group: {
+        _id: null,
+        averageRating: { $avg: "$rating" },
+        reviewCount: { $sum: 1 },
+      },
+    },
+  ]);
+
+  return {
+    merchantRating: ratingAgg ? Number((ratingAgg.averageRating || 0).toFixed(1)) : 0,
+    merchantReviewCount: ratingAgg ? ratingAgg.reviewCount : 0,
+  };
+};
+
 export const toggleReviewHelpful = async (
   reviewId: string,
   userId: string,

@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.toggleReviewHelpful = exports.unflagProduct = exports.flagProduct = exports.ifFlaggedProduct = exports.fetchAllCategories = exports.fetchSingleCategory = exports.deleteCategory = exports.createCategory = exports.fetchAllLikedProducts = exports.fetchAllComparedProducts = exports.fetchProductReviews = exports.fetchSimilarProducts = exports.otherProductsByUser = exports.fetchAllProductsAdmin = exports.fetchAllUserProductsAdmin = exports.fetchAllProductsForAdmin = exports.fetchReviewForProduct = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
+exports.toggleReviewHelpful = exports.fetchMerchantRatingForSeller = exports.unflagProduct = exports.flagProduct = exports.ifFlaggedProduct = exports.fetchAllCategories = exports.fetchSingleCategory = exports.deleteCategory = exports.createCategory = exports.fetchAllLikedProducts = exports.fetchAllComparedProducts = exports.fetchProductReviews = exports.fetchSimilarProducts = exports.otherProductsByUser = exports.fetchAllProductsAdmin = exports.fetchAllUserProductsAdmin = exports.fetchAllProductsForAdmin = exports.fetchReviewForProduct = exports.unlikeProduct = exports.fetchLikedProducts = exports.createProductLike = exports.ifLikedProduct = exports.fetchUserProducts = exports.deleteProduct = exports.fetchAllProducts = exports.fetchProductByIdWithDetails = exports.fetchProductById = exports.createProduct = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const product_model_1 = __importDefault(require("../models/product.model"));
 const productLike_model_1 = __importDefault(require("../models/productLike.model"));
@@ -1302,6 +1302,33 @@ const unflagProduct = async (productId, userId) => {
     return await productFlag_model_1.default.findOneAndDelete({ productId, userId });
 };
 exports.unflagProduct = unflagProduct;
+const fetchMerchantRatingForSeller = async (sellerUserId) => {
+    const sellerId = new mongoose_1.default.Types.ObjectId(sellerUserId);
+    const [ratingAgg] = await review_model_1.default.aggregate([
+        {
+            $lookup: {
+                from: "products",
+                localField: "productId",
+                foreignField: "_id",
+                as: "product",
+            },
+        },
+        { $unwind: { path: "$product", preserveNullAndEmptyArrays: false } },
+        { $match: { "product.userId": sellerId, "product.isDeleted": false } },
+        {
+            $group: {
+                _id: null,
+                averageRating: { $avg: "$rating" },
+                reviewCount: { $sum: 1 },
+            },
+        },
+    ]);
+    return {
+        merchantRating: ratingAgg ? Number((ratingAgg.averageRating || 0).toFixed(1)) : 0,
+        merchantReviewCount: ratingAgg ? ratingAgg.reviewCount : 0,
+    };
+};
+exports.fetchMerchantRatingForSeller = fetchMerchantRatingForSeller;
 const toggleReviewHelpful = async (reviewId, userId, isHelpful) => {
     const review = await review_model_1.default.findById(reviewId);
     if (!review) {

@@ -39,7 +39,23 @@ const OrderProductSchema = new mongoose_1.Schema({
     productId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Product" },
     quantity: { type: Number, required: true, min: 1 },
     price: { type: Number, required: true },
+    // === Snapshot fields captured at order-creation time ===
+    productName: { type: String, trim: true },
+    brand: { type: String, trim: true },
+    categoryName: { type: String, trim: true },
+    thumbnail: { type: String, trim: true },
+    quantityMetric: { type: String, trim: true },
+    merchantId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users" },
+    merchantName: { type: String, trim: true },
+    merchantRating: { type: Number },
+    merchantReviewCount: { type: Number },
+    totalUnitsSoldAtPurchase: { type: Number },
 });
+const DeliveryStepSchema = new mongoose_1.Schema({
+    status: { type: String, enum: order_enum_1.OrderDeliveryStatus, required: true },
+    timestamp: { type: Date, required: true },
+    note: { type: String, trim: true },
+}, { _id: false });
 const OrderSchema = new mongoose_1.Schema({
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users", required: true },
     // These are a price snapshot. Product prices must never alter a placed order.
@@ -64,6 +80,19 @@ const OrderSchema = new mongoose_1.Schema({
     discountAmount: { type: Number },
     originalTotalAmount: { type: Number },
     discountCode: { type: String },
-    cartId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Cart", required: true, unique: true }
+    cartId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Cart", required: true, unique: true },
+    // === Delivery / tracking ===
+    deliveryStatus: {
+        type: String,
+        enum: order_enum_1.OrderDeliveryStatus,
+        default: order_enum_1.OrderDeliveryStatus.orderConfirmed,
+    },
+    deliveryDate: { type: Date },
+    deliveredAt: { type: Date },
+    deliverySteps: { type: [DeliveryStepSchema], default: [] },
+    cancelReason: { type: String, trim: true },
+    cancelledAt: { type: Date },
+    returnReason: { type: String, trim: true },
+    returnedAt: { type: Date },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("Order", OrderSchema);
