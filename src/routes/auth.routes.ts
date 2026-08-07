@@ -62,6 +62,6 @@ router.route("/update-account-details").patch(userAuth,validateUpdateAccountDeta
 router.route("/pay-for-verification").post(userAuth,validatePaymentForVerification , paymentController.payforVerificationController);
 router.route("/delete-user/:userId").delete(userAuth,  authController.deleteUserController);
 router.route("/get-profile-context").get(userAuth, authController.getProfileContext);
-router.route("/save-profile").post(userAuth, singleUpload, authController.saveUserProfile);
+router.route("/add-profile").post(userAuth, singleUpload, authController.saveUserProfile);
 
 export { router as AuthRoute };

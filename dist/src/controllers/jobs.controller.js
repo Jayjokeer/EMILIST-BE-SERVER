@@ -150,21 +150,16 @@ exports.createJobController = (0, error_handler_1.catchAsync)(async (req, res) =
     const job = req.body;
     const { artisan } = req.body;
     const files = req.files;
-    // Map new fields to legacy fields for backward compatibility
     const mappedBody = mapJobBodyToLegacy(job);
-    // Sanitize conditional fields based on jobUrgency
     sanitizeByUrgency(mappedBody);
-    // Handle file uploads (legacy path)
     if (files && files.length > 0) {
         const fileObjects = files.map((file) => ({
             id: new mongoose_1.default.Types.ObjectId(),
             url: file.path,
         }));
         mappedBody.jobFiles = fileObjects;
-        // Also populate images from uploaded files
         mappedBody.images = files.map((file) => file.path);
     }
-    // Handle expertId (direct hire to an expert/business by uniqueId)
     if (mappedBody.expertId) {
         const business = await businessService.findBusinessByUniqueId(mappedBody.expertId);
         if (!business)
