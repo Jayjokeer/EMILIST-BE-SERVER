@@ -33,14 +33,6 @@ function mapJobBodyToLegacy(body: any): any {
     mapped.category = mapped.jobCategory;
   }
 
-  // Map images -> jobFiles
-  if (mapped.images && mapped.images.length > 0 && !mapped.jobFiles) {
-    mapped.jobFiles = mapped.images.map((url: string) => ({
-      id: new mongoose.Types.ObjectId(),
-      url,
-    }));
-  }
-
   // Map location object -> legacy location string (for old code paths)
   if (mapped.location && typeof mapped.location === 'object' && mapped.location.address && !mapped.location) {
     // Keep as object; the model handles the mixed type
@@ -136,7 +128,6 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
         url: file.path, 
       }));
       mappedBody.jobFiles = fileObjects;
-      mappedBody.images = files.map((file) => file.path);
     }
 
     if (mappedBody.expertId) {
@@ -223,27 +214,43 @@ export const allUserJobController = catchAsync(async (req: JwtPayload, res: Resp
   successResponse(res, StatusCodes.OK, data);
 });
 
+// Accepts either a repeated query param (?categories=A&categories=B) or a
+// comma-separated single value (?categories=A,B).
+function parseListParam(value: unknown): string[] | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const list = Array.isArray(value) ? value : String(value).split(',');
+  const cleaned = list.map((v) => String(v).trim()).filter(Boolean);
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
 export const allJobsController = catchAsync(async (req: JwtPayload, res: Response) => {
-    const { page = 1, limit = 10, title, location, category, service } = req.query; 
-    
-    const userId = req.query.userId ? req.query.userId : null; 
+    const { page = 1, limit = 10, title, location, category, service } = req.query;
+
+    const userId = req.query.userId ? req.query.userId : null;
     const search = req.query.search as string || null;
     const filters = {
-      title, 
-      location, 
-      category, 
-      service
-    };    
+      title,
+      location,
+      category,
+      service,
+      categories: parseListParam(req.query.categories ?? req.query.jobCategory),
+      locations: parseListParam(req.query.locations),
+      minBudget: req.query.minBudget !== undefined ? Number(req.query.minBudget) : undefined,
+      maxBudget: req.query.maxBudget !== undefined ? Number(req.query.maxBudget) : undefined,
+      jobUrgency: req.query.jobUrgency as string | undefined,
+      experienceLevel: parseListParam(req.query.experienceLevel),
+      minRating: req.query.minRating !== undefined ? Number(req.query.minRating) : undefined,
+    };
     const data = await jobService.fetchAllJobs(Number(page), Number(limit), userId, search, filters );
     successResponse(res, StatusCodes.OK, data);
   });
 
 export const fetchSingleJobController = catchAsync( async (req: Request, res: Response) => {
-    const { id } = req.query;
+    const { id, reviewsPage = 1, reviewsLimit = 5 } = req.query;
     if(!id){
         throw new NotFoundError("Id required!");
     };
-    const data = await jobService.fetchJobByIdWithDetails(String(id));
+    const data = await jobService.fetchJobByIdWithDetails(String(id), Number(reviewsPage), Number(reviewsLimit));
 
 
 
@@ -467,7 +474,9 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       job.acceptedApplicationId = projectId;
       project.acceptedAt = new Date();
       job.startDate = project.acceptedAt || new Date();
-      job.milestones[0].status = MilestoneEnum.active;
+      if (job.milestones && job.milestones.length > 0) {
+        job.milestones[0].status = MilestoneEnum.active;
+      }
       project.status = status;
 
       if (job.type === JobType.biddable && project.biddableDetails) {
@@ -702,7 +711,9 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
     }
     if(status == ProjectStatusEnum.accepted){
       job.status = JobStatusEnum.active;
-      job.milestones[0].status = MilestoneEnum.active;
+      if (job.milestones && job.milestones.length > 0) {
+        job.milestones[0].status = MilestoneEnum.active;
+      }
       project.status= ProjectStatusEnum.accepted;
       project.businessId= businessId; 
       project.directJobStatus= ProjectStatusEnum.accepted;

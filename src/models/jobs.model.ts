@@ -14,6 +14,9 @@ const MilestoneSchema = new Schema<IMilestone>({
     amount: {
       type: Number,
     },
+    currency: {
+      type: String,
+    },
     status:{
       type: String,
       enum: MilestoneEnum,

@@ -40,4 +40,5 @@ const current_user_1 = require("../middlewares/current-user");
 const router = (0, express_1.Router)();
 exports.NotificationRoute = router;
 router.route("/fetch-user-notification").get(current_user_1.userAuth, notificationController.getAllUserNotificationsController);
+router.route("/mark-as-read/:notificationId").patch(current_user_1.userAuth, notificationController.markNotificationAsReadController);
 router.route("/clear-notification/:notificationId").delete(current_user_1.userAuth, notificationController.clearNotificationController);

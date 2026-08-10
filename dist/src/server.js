@@ -20,6 +20,8 @@ const socket_io_1 = require("socket.io");
 const http_1 = __importDefault(require("http"));
 const morgan_1 = __importDefault(require("morgan"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
+const swagger_1 = require("./docs/swagger");
 require("../src/utils/passport");
 const socket_1 = __importDefault(require("./socket"));
 require("./jobs/subscription.job");
@@ -53,6 +55,8 @@ exports.io = new socket_io_1.Server(server, {
 });
 app.use(passport_1.default.initialize());
 app.use(passport_1.default.session());
+// Swagger / OpenAPI documentation for the JOBS endpoints
+app.use("/api-docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_1.swaggerSpec));
 // Routes
 app.use("/api/v1/", routes_1.default);
 (0, socket_1.default)(exports.io);

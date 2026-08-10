@@ -33,24 +33,10 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.clearNotificationController = exports.markNotificationAsReadController = exports.getAllUserNotificationsController = void 0;
-const http_status_codes_1 = require("http-status-codes");
-const error_handler_1 = require("../errors/error-handler");
-const success_response_1 = require("../helpers/success-response");
-const notificationService = __importStar(require("../services/notification.service"));
-exports.getAllUserNotificationsController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { page = 1, limit = 10 } = req.query;
-    const userId = req.user._id;
-    const data = await notificationService.fetchUserNotifications(userId, Number(page), Number(limit));
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-});
-exports.markNotificationAsReadController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { notificationId } = req.params;
-    const data = await notificationService.markNotificationAsRead(notificationId);
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-});
-exports.clearNotificationController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { notificationId } = req.params;
-    const data = await notificationService.deleteNotification(notificationId);
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-});
+exports.DashboardRoute = void 0;
+const express_1 = require("express");
+const dashboardController = __importStar(require("../controllers/dashboard.controller"));
+const current_user_1 = require("../middlewares/current-user");
+const router = (0, express_1.Router)();
+exports.DashboardRoute = router;
+router.route("/overview").get(current_user_1.userAuth, dashboardController.dashboardOverviewController);

@@ -13,7 +13,8 @@ import { TargetRoute } from "./target.routes";
 import { SubscribeRoute } from "./subscription.routes";
 import { AdminRoute } from "./admin.routes";
 import { OrderRoute } from "./order.routes";
-const router = Router(); 
+import { DashboardRoute } from "./dashboard.routes";
+const router = Router();
 
 router.use("/auth", AuthRoute);
 router.use("/jobs", JobsRoute);
@@ -29,4 +30,5 @@ router.use("/target", TargetRoute);
 router.use("/subscription", SubscribeRoute);
 router.use("/admin", AdminRoute);
 router.use("/orders", OrderRoute);
+router.use("/dashboard", DashboardRoute);
 export default router;

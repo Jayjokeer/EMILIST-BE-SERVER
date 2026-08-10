@@ -11,9 +11,35 @@ import * as userService from './auth.service';
 import { PipelineStage } from 'mongoose';
 import Business from "../models/business.model";
 import RecurringJob from "../models/recurring-job.model";
+import * as reviewService from './review.service';
 
 export const createJob = async (data:  any) =>{
     return await Jobs.create(data);
+};
+
+// Builds userId -> { averageRating, totalReviews } from each poster's Business profile
+// (a job poster may also run a Business; posters without one simply get 0/0).
+const buildPosterRatingMap = async (userIds: string[]) => {
+  const uniqueIds = [...new Set(userIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return {};
+
+  const businesses = await Business.find({ userId: { $in: uniqueIds } })
+    .select('userId reviews')
+    .populate('reviews', 'rating');
+
+  const map: Record<string, { averageRating: number; totalReviews: number }> = {};
+  for (const business of businesses) {
+    const reviews = (business.reviews as any[]) || [];
+    const totalReviews = reviews.length;
+    const averageRating = totalReviews > 0
+      ? reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
+      : 0;
+    map[String(business.userId)] = {
+      averageRating: parseFloat(averageRating.toFixed(2)),
+      totalReviews,
+    };
+  }
+  return map;
 };
 
 export const fetchAllUserJobs = async (
@@ -58,7 +84,20 @@ export const fetchAllJobs = async (
   limit: number,
   userId: string | null,
   search: string | null,
-  filters: { title?: string, location?: string, category?: string, service?: string , description?: string } = {}
+  filters: {
+    title?: string,
+    location?: string,
+    category?: string,
+    service?: string,
+    description?: string,
+    categories?: string[],
+    locations?: string[],
+    minBudget?: number,
+    maxBudget?: number,
+    jobUrgency?: string,
+    experienceLevel?: string[],
+    minRating?: number,
+  } = {}
 ) => {
   const skip = (page - 1) * limit;
 
@@ -73,6 +112,50 @@ export const fetchAllJobs = async (
     if (filters.category) searchCriteria.category = { $regex: new RegExp(filters.category, 'i') };
     if (filters.service) searchCriteria.service = { $regex: new RegExp(filters.service, 'i') };
     if (filters.description) searchCriteria.description = { $regex: new RegExp(filters.description, 'i') };
+  }
+
+  // JOB CATEGORY filter (multi-select)
+  if (filters.categories && filters.categories.length > 0) {
+    const categoryRegexes = filters.categories.map((c) => new RegExp(`^${c}$`, 'i'));
+    searchCriteria.$and = (searchCriteria.$and || []).concat([
+      { $or: [{ jobCategory: { $in: categoryRegexes } }, { category: { $in: categoryRegexes } }] },
+    ]);
+  }
+
+  // JOB LOCATION filter (multi-select) - location is Mixed: legacy string or {address,lat,lng}
+  if (filters.locations && filters.locations.length > 0) {
+    const locationRegexes = filters.locations.map((l) => new RegExp(l, 'i'));
+    searchCriteria.$and = (searchCriteria.$and || []).concat([
+      { $or: [{ location: { $in: locationRegexes } }, { 'location.address': { $in: locationRegexes } }] },
+    ]);
+  }
+
+  // PAYMENT (budget) min/max filter - amount lives on different fields depending on jobUrgency
+  if (filters.minBudget !== undefined || filters.maxBudget !== undefined) {
+    const range: any = {};
+    if (filters.minBudget !== undefined) range.$gte = filters.minBudget;
+    if (filters.maxBudget !== undefined) range.$lte = filters.maxBudget;
+
+    searchCriteria.$and = (searchCriteria.$and || []).concat([
+      {
+        $or: [
+          { budget: range },
+          { 'totalBudget.amount': range },
+          { 'estimatedBudget.amount': range },
+          { 'recurringBudget.amount': range },
+        ],
+      },
+    ]);
+  }
+
+  // NOTICE PERIOD filter (maps to jobUrgency: right_now/in_future/regularly)
+  if (filters.jobUrgency) {
+    searchCriteria.jobUrgency = filters.jobUrgency;
+  }
+
+  // EXPERIENCE LEVEL filter (multi-select)
+  if (filters.experienceLevel && filters.experienceLevel.length > 0) {
+    searchCriteria.experienceLevel = { $in: filters.experienceLevel };
   }
 
   if (userId) {
@@ -107,17 +190,17 @@ export const fetchAllJobs = async (
     })
       .populate({
         path: 'userId',
-        select: 'userName fullName',
+        select: 'userName fullName profileImage level uniqueId',
       })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-      totalJobs = await Jobs.countDocuments({...searchCriteria,      
+      totalJobs = await Jobs.countDocuments({...searchCriteria,
      $or: orConditions,
 });
   } else {
     jobsQuery = await Jobs.find(searchCriteria)
-      .populate('userId', 'userName fullName')
+      .populate('userId', 'userName fullName profileImage level uniqueId')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -127,19 +210,32 @@ export const fetchAllJobs = async (
 
   const jobs =  jobsQuery;
 
-  let jobsWithLikeStatus;
+  let likedJobIds: string[] = [];
   if (userId) {
     const likedJobs = await JobLike.find({ user: userId }).select('job').lean();
-    const likedJobIds = likedJobs.map((like) => like.job.toString());
-    jobsWithLikeStatus = jobs.map((job) => ({
+    likedJobIds = likedJobs.map((like) => like.job.toString());
+  }
+
+  const posterRatingMap = await buildPosterRatingMap(
+    jobs.map((job) => String((job.userId as any)?._id ?? job.userId))
+  );
+
+  let jobsWithLikeStatus = jobs.map((job) => {
+    const posterId = String((job.userId as any)?._id ?? job.userId);
+    return {
       ...job.toObject(),
-      liked: likedJobIds.includes(job._id.toString()),
-    }));
-  } else {
-    jobsWithLikeStatus = jobs.map((job) => ({
-      ...job.toObject(),
-      liked: false,
-    }));
+      liked: userId ? likedJobIds.includes(job._id.toString()) : false,
+      applicantsCount: job.applications?.length ?? 0,
+      milestonesCount: job.milestones?.length ?? 0,
+      posterRating: posterRatingMap[posterId] ?? { averageRating: 0, totalReviews: 0 },
+    };
+  });
+
+  // EMPLOYER (poster) RATING filter - applied post-fetch since rating is computed from Business.reviews
+  if (filters.minRating !== undefined) {
+    jobsWithLikeStatus = jobsWithLikeStatus.filter(
+      (job) => job.posterRating.averageRating >= filters.minRating!
+    );
   }
 
   return {
@@ -169,13 +265,17 @@ export const fetchJobByIdWithUserId = async (jobId: string)=>{
 };
 
 
-export const fetchJobByIdWithDetails = async (jobId: string) => {
+export const fetchJobByIdWithDetails = async (
+  jobId: string,
+  reviewsPage = 1,
+  reviewsLimit = 5,
+) => {
   const job = await Jobs.findById(jobId)
-    .populate('userId', 'fullName userName email location level profileImage')
+    .populate('userId', 'fullName userName email location level profileImage uniqueId')
     .populate({
       path: 'applications',
       populate: { path: 'user', select: 'fullName userName email location level profileImage' },
-    });   
+    });
 
   if (!job) throw new NotFoundError("Job not found!");
 
@@ -185,6 +285,13 @@ export const fetchJobByIdWithDetails = async (jobId: string) => {
     creator: creatorId,
     status: 'accepted',
   });
+  const applicantsCount = job.applications?.length ?? 0;
+
+  // Poster's Business profile (if any) drives the rating/reviews shown on the job detail page.
+  const posterBusiness = await Business.findOne({ userId: (creatorId as any)?._id ?? creatorId }).select('_id');
+  const reviewsSummary = posterBusiness
+    ? await reviewService.fetchReviewsForBusiness(String(posterBusiness._id), reviewsPage, reviewsLimit)
+    : { averageRating: 0, numberOfRatings: 0, ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }, reviews: [] };
 
   let milestones = [];
   let jobDueDate = null;
@@ -201,7 +308,7 @@ export const fetchJobByIdWithDetails = async (jobId: string) => {
     jobDueDate = add(job.startDate, { days: cumulativeDays });
     milestones = job.milestones.map((milestone: any) => ({
       ...milestone.toObject(),
-      dueDate: add(job.startDate!, { days: cumulativeDays }), 
+      dueDate: add(job.startDate!, { days: cumulativeDays }),
     }));
   } else {
     milestones = job.milestones;
@@ -212,9 +319,12 @@ export const fetchJobByIdWithDetails = async (jobId: string) => {
       ...job.toObject(),
       dueDate: jobDueDate,
       milestones: milestones,
+      applicantsCount,
+      milestonesCount: milestones.length,
     },
     totalJobsPosted,
     totalArtisansHired,
+    reviews: reviewsSummary,
   };
 };
 

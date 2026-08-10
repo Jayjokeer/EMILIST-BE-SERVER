@@ -43,7 +43,7 @@ const paymentController = __importStar(require("../controllers/payment.controlle
 const product_validation_1 = require("../validations/product.validation");
 const router = (0, express_1.Router)();
 exports.JobsRoute = router;
-router.route("/create-job").post(current_user_1.userAuth, image_upload_1.multipleUpload, job_validation_1.validateJob, jobController.createJobController);
+router.route("/create-job").post(current_user_1.userAuth, image_upload_1.multipleUpload, image_upload_1.parseJobBody, job_validation_1.validateJob, jobController.createJobController);
 router.route("/fetch-all-jobs").get(jobController.allJobsController);
 router.route("/fetch-listed-jobs").get(current_user_1.userAuth, jobController.allUserJobController);
 router.route("/fetch-job-by-id").get(jobController.fetchSingleJobController);
@@ -53,7 +53,7 @@ router.route("/unlike-job/:jobId").post(current_user_1.userAuth, jobController.u
 router.route("/apply-job").post(current_user_1.userAuth, job_validation_1.validateProjectApplication, jobController.applyForJobController);
 router.route("/withdraw-job-application/:projectId").delete(current_user_1.userAuth, jobController.deleteJobApplicationController);
 router.route("/delete-job/:jobId").delete(current_user_1.userAuth, jobController.deleteJobController);
-router.route("/update-job/:jobId").put(current_user_1.userAuth, image_upload_1.multipleUpload, job_validation_1.validateUpdateJob, jobController.updateJobController);
+router.route("/update-job/:jobId").put(current_user_1.userAuth, image_upload_1.multipleUpload, image_upload_1.parseJobBody, job_validation_1.validateUpdateJob, jobController.updateJobController);
 router.route("/update-application-status/:projectId").patch(current_user_1.userAuth, jobController.jobStatusController);
 router.route("/fetch-jobs-by-status").get(current_user_1.userAuth, jobController.fetchJobByStatusController);
 router.route("/remove-job/:jobId/file/:fileId").delete(current_user_1.userAuth, jobController.deleteFileController);
@@ -73,5 +73,5 @@ router.route("/user-project-analytics").get(current_user_1.userAuth, jobControll
 router.route("/mute-job/:jobId").get(current_user_1.userAuth, jobController.muteJobController);
 router.route("/pay-for-job").post(current_user_1.userAuth, product_validation_1.validatePaymentForJob, paymentController.payforJobController);
 router.route("/leads").get(current_user_1.userAuth, jobController.jobLeadsController);
-router.route("/create-recurring-job").post(current_user_1.userAuth, image_upload_1.multipleUpload, job_validation_1.validateRecurringJob, jobController.createRecurringJobController);
+router.route("/create-recurring-job").post(current_user_1.userAuth, image_upload_1.multipleUpload, image_upload_1.parseJobBody, job_validation_1.validateRecurringJob, jobController.createRecurringJobController);
 router.route("/fetch-recurring-jobs").get(current_user_1.userAuth, jobController.fetchAllRecurringJobsController);

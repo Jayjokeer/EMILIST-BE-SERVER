@@ -48,10 +48,34 @@ const moment_1 = __importDefault(require("moment"));
 const userService = __importStar(require("./auth.service"));
 const business_model_1 = __importDefault(require("../models/business.model"));
 const recurring_job_model_1 = __importDefault(require("../models/recurring-job.model"));
+const reviewService = __importStar(require("./review.service"));
 const createJob = async (data) => {
     return await jobs_model_1.default.create(data);
 };
 exports.createJob = createJob;
+// Builds userId -> { averageRating, totalReviews } from each poster's Business profile
+// (a job poster may also run a Business; posters without one simply get 0/0).
+const buildPosterRatingMap = async (userIds) => {
+    const uniqueIds = [...new Set(userIds.filter(Boolean))];
+    if (uniqueIds.length === 0)
+        return {};
+    const businesses = await business_model_1.default.find({ userId: { $in: uniqueIds } })
+        .select('userId reviews')
+        .populate('reviews', 'rating');
+    const map = {};
+    for (const business of businesses) {
+        const reviews = business.reviews || [];
+        const totalReviews = reviews.length;
+        const averageRating = totalReviews > 0
+            ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+            : 0;
+        map[String(business.userId)] = {
+            averageRating: parseFloat(averageRating.toFixed(2)),
+            totalReviews,
+        };
+    }
+    return map;
+};
 const fetchAllUserJobs = async (userId, page, limit, search = null, filters = {}) => {
     const skip = (page - 1) * limit;
     const searchCriteria = { userId };
@@ -99,6 +123,46 @@ const fetchAllJobs = async (page, limit, userId, search, filters = {}) => {
         if (filters.description)
             searchCriteria.description = { $regex: new RegExp(filters.description, 'i') };
     }
+    // JOB CATEGORY filter (multi-select)
+    if (filters.categories && filters.categories.length > 0) {
+        const categoryRegexes = filters.categories.map((c) => new RegExp(`^${c}$`, 'i'));
+        searchCriteria.$and = (searchCriteria.$and || []).concat([
+            { $or: [{ jobCategory: { $in: categoryRegexes } }, { category: { $in: categoryRegexes } }] },
+        ]);
+    }
+    // JOB LOCATION filter (multi-select) - location is Mixed: legacy string or {address,lat,lng}
+    if (filters.locations && filters.locations.length > 0) {
+        const locationRegexes = filters.locations.map((l) => new RegExp(l, 'i'));
+        searchCriteria.$and = (searchCriteria.$and || []).concat([
+            { $or: [{ location: { $in: locationRegexes } }, { 'location.address': { $in: locationRegexes } }] },
+        ]);
+    }
+    // PAYMENT (budget) min/max filter - amount lives on different fields depending on jobUrgency
+    if (filters.minBudget !== undefined || filters.maxBudget !== undefined) {
+        const range = {};
+        if (filters.minBudget !== undefined)
+            range.$gte = filters.minBudget;
+        if (filters.maxBudget !== undefined)
+            range.$lte = filters.maxBudget;
+        searchCriteria.$and = (searchCriteria.$and || []).concat([
+            {
+                $or: [
+                    { budget: range },
+                    { 'totalBudget.amount': range },
+                    { 'estimatedBudget.amount': range },
+                    { 'recurringBudget.amount': range },
+                ],
+            },
+        ]);
+    }
+    // NOTICE PERIOD filter (maps to jobUrgency: right_now/in_future/regularly)
+    if (filters.jobUrgency) {
+        searchCriteria.jobUrgency = filters.jobUrgency;
+    }
+    // EXPERIENCE LEVEL filter (multi-select)
+    if (filters.experienceLevel && filters.experienceLevel.length > 0) {
+        searchCriteria.experienceLevel = { $in: filters.experienceLevel };
+    }
     if (userId) {
         const user = await userService.fetchUserMutedJobs(userId);
         if (user && user.mutedJobs && user.mutedJobs.length > 0) {
@@ -125,7 +189,7 @@ const fetchAllJobs = async (page, limit, userId, search, filters = {}) => {
         })
             .populate({
             path: 'userId',
-            select: 'userName fullName',
+            select: 'userName fullName profileImage level uniqueId',
         })
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -136,27 +200,32 @@ const fetchAllJobs = async (page, limit, userId, search, filters = {}) => {
     }
     else {
         jobsQuery = await jobs_model_1.default.find(searchCriteria)
-            .populate('userId', 'userName fullName')
+            .populate('userId', 'userName fullName profileImage level uniqueId')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
         totalJobs = await jobs_model_1.default.countDocuments(searchCriteria);
     }
     const jobs = jobsQuery;
-    let jobsWithLikeStatus;
+    let likedJobIds = [];
     if (userId) {
         const likedJobs = await joblike_model_1.default.find({ user: userId }).select('job').lean();
-        const likedJobIds = likedJobs.map((like) => like.job.toString());
-        jobsWithLikeStatus = jobs.map((job) => ({
-            ...job.toObject(),
-            liked: likedJobIds.includes(job._id.toString()),
-        }));
+        likedJobIds = likedJobs.map((like) => like.job.toString());
     }
-    else {
-        jobsWithLikeStatus = jobs.map((job) => ({
+    const posterRatingMap = await buildPosterRatingMap(jobs.map((job) => String(job.userId?._id ?? job.userId)));
+    let jobsWithLikeStatus = jobs.map((job) => {
+        const posterId = String(job.userId?._id ?? job.userId);
+        return {
             ...job.toObject(),
-            liked: false,
-        }));
+            liked: userId ? likedJobIds.includes(job._id.toString()) : false,
+            applicantsCount: job.applications?.length ?? 0,
+            milestonesCount: job.milestones?.length ?? 0,
+            posterRating: posterRatingMap[posterId] ?? { averageRating: 0, totalReviews: 0 },
+        };
+    });
+    // EMPLOYER (poster) RATING filter - applied post-fetch since rating is computed from Business.reviews
+    if (filters.minRating !== undefined) {
+        jobsWithLikeStatus = jobsWithLikeStatus.filter((job) => job.posterRating.averageRating >= filters.minRating);
     }
     return {
         jobs: jobsWithLikeStatus,
@@ -178,9 +247,9 @@ const fetchJobByIdWithUserId = async (jobId) => {
     });
 };
 exports.fetchJobByIdWithUserId = fetchJobByIdWithUserId;
-const fetchJobByIdWithDetails = async (jobId) => {
+const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5) => {
     const job = await jobs_model_1.default.findById(jobId)
-        .populate('userId', 'fullName userName email location level profileImage')
+        .populate('userId', 'fullName userName email location level profileImage uniqueId')
         .populate({
         path: 'applications',
         populate: { path: 'user', select: 'fullName userName email location level profileImage' },
@@ -193,6 +262,12 @@ const fetchJobByIdWithDetails = async (jobId) => {
         creator: creatorId,
         status: 'accepted',
     });
+    const applicantsCount = job.applications?.length ?? 0;
+    // Poster's Business profile (if any) drives the rating/reviews shown on the job detail page.
+    const posterBusiness = await business_model_1.default.findOne({ userId: creatorId?._id ?? creatorId }).select('_id');
+    const reviewsSummary = posterBusiness
+        ? await reviewService.fetchReviewsForBusiness(String(posterBusiness._id), reviewsPage, reviewsLimit)
+        : { averageRating: 0, numberOfRatings: 0, ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }, reviews: [] };
     let milestones = [];
     let jobDueDate = null;
     if (job.startDate && (job.status === 'active' || job.status === 'paused')) {
@@ -216,9 +291,12 @@ const fetchJobByIdWithDetails = async (jobId) => {
             ...job.toObject(),
             dueDate: jobDueDate,
             milestones: milestones,
+            applicantsCount,
+            milestonesCount: milestones.length,
         },
         totalJobsPosted,
         totalArtisansHired,
+        reviews: reviewsSummary,
     };
 };
 exports.fetchJobByIdWithDetails = fetchJobByIdWithDetails;

@@ -83,9 +83,6 @@ const validateJob = (req, res, next) => {
             'string.empty': 'Description is required',
             'any.required': 'Description is required',
         }),
-        images: joi_1.default.array().items(joi_1.default.string()).optional().messages({
-            'string.base': 'Each image must be a string (URL)',
-        }),
         jobUrgency: joi_1.default.string()
             .valid(...Object.values(jobs_enum_1.JobUrgencyEnum))
             .required()
@@ -96,16 +93,26 @@ const validateJob = (req, res, next) => {
         location: locationSchema.required().messages({
             'any.required': 'Location is required',
         }),
-        allowBidding: joi_1.default.boolean().required().messages({
-            'boolean.base': 'Allow bidding must be true or false',
-            'any.required': 'Allow bidding is required',
+        // Not collected for direct hire (jobs assigned via expertId) - the server
+        // forces allowBidding=false and leaves experienceLevel unset in that flow.
+        allowBidding: joi_1.default.when('expertId', {
+            is: joi_1.default.string().trim().min(1).required(),
+            then: joi_1.default.boolean().optional(),
+            otherwise: joi_1.default.boolean().required().messages({
+                'boolean.base': 'Allow bidding must be true or false',
+                'any.required': 'Allow bidding is required',
+            }),
         }),
-        experienceLevel: joi_1.default.string()
-            .valid(...Object.values(jobs_enum_1.ExperienceLevelEnum))
-            .required()
-            .messages({
-            'any.only': 'Invalid experience level, must be one of: ' + Object.values(jobs_enum_1.ExperienceLevelEnum).join(', '),
-            'any.required': 'Experience level is required',
+        experienceLevel: joi_1.default.when('expertId', {
+            is: joi_1.default.string().trim().min(1).required(),
+            then: joi_1.default.string().valid(...Object.values(jobs_enum_1.ExperienceLevelEnum)).optional(),
+            otherwise: joi_1.default.string()
+                .valid(...Object.values(jobs_enum_1.ExperienceLevelEnum))
+                .required()
+                .messages({
+                'any.only': 'Invalid experience level, must be one of: ' + Object.values(jobs_enum_1.ExperienceLevelEnum).join(', '),
+                'any.required': 'Experience level is required',
+            }),
         }),
         expertId: joi_1.default.string().optional().allow('').messages({
             'string.base': 'Expert ID must be a string',
@@ -192,12 +199,31 @@ const validateJob = (req, res, next) => {
         currency: joi_1.default.string().optional(),
         milestones: joi_1.default.array().items(joi_1.default.object({
             timeFrame: joi_1.default.object({
-                number: joi_1.default.number().optional(),
-                period: joi_1.default.string().valid(...Object.values(jobs_enum_1.JobPeriod)).optional(),
-            }).optional(),
-            achievement: joi_1.default.string().optional(),
-            amount: joi_1.default.number().optional(),
-        })).optional(),
+                number: joi_1.default.number().positive().required().messages({
+                    'number.base': 'Milestone duration must be a number',
+                    'number.positive': 'Milestone duration must be a positive number',
+                    'any.required': 'Milestone duration is required',
+                }),
+                period: joi_1.default.string().valid(...Object.values(jobs_enum_1.JobPeriod)).required().messages({
+                    'any.only': 'Invalid milestone duration unit, must be one of: ' + Object.values(jobs_enum_1.JobPeriod).join(', '),
+                    'any.required': 'Milestone duration unit is required',
+                }),
+            }).required().messages({
+                'any.required': 'Milestone duration is required',
+            }),
+            achievement: joi_1.default.string().required().messages({
+                'string.empty': 'Milestone achievement details are required',
+                'any.required': 'Milestone achievement details are required',
+            }),
+            amount: joi_1.default.number().positive().required().messages({
+                'number.base': 'Milestone payment amount must be a number',
+                'number.positive': 'Milestone payment amount must be a positive number',
+                'any.required': 'Milestone payment amount is required',
+            }),
+            currency: joi_1.default.string().optional(),
+        })).max(5).optional().messages({
+            'array.max': 'Cannot have more than 5 milestones',
+        }),
         userName: joi_1.default.string().optional(),
         email: joi_1.default.string().optional(),
         identifier: joi_1.default.string().optional(),
@@ -331,12 +357,17 @@ const validateUpdateJob = (req, res, next) => {
         milestones: joi_1.default.array()
             .items(joi_1.default.object({
             timeFrame: joi_1.default.object({
-                number: joi_1.default.number().optional(),
+                number: joi_1.default.number().positive().optional(),
                 period: joi_1.default.string().valid(...Object.values(jobs_enum_1.JobPeriod)).optional(),
             }).optional(),
             achievement: joi_1.default.string().optional(),
-            amount: joi_1.default.number().optional(),
+            amount: joi_1.default.number().positive().optional(),
+            currency: joi_1.default.string().optional(),
         }))
+            .max(5)
+            .messages({
+            'array.max': 'Cannot have more than 5 milestones',
+        })
             .optional(),
     });
     const { error } = updateJobValidation.validate(req.body, { abortEarly: false, allowUnknown: true });

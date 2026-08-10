@@ -2,13 +2,13 @@ import { Router, Request, Response } from "express";
 import * as jobController from "../controllers/jobs.controller";
 import { validateJob, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateRecurringJob, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
 import { userAuth } from "../middlewares/current-user";
-import { multipleUpload, singleUpload } from "../utils/image-upload";
+import { multipleUpload, singleUpload, parseJobBody } from "../utils/image-upload";
 import * as paymentController from "../controllers/payment.controller";
 import { validatePaymentForJob } from "../validations/product.validation";
 
 const router = Router();
 
-router.route("/create-job").post(userAuth,multipleUpload,validateJob,jobController.createJobController);
+router.route("/create-job").post(userAuth,multipleUpload,parseJobBody,validateJob,jobController.createJobController);
 router.route("/fetch-all-jobs").get(jobController.allJobsController);
 router.route("/fetch-listed-jobs").get(userAuth,jobController.allUserJobController);
 router.route("/fetch-job-by-id").get(jobController.fetchSingleJobController);
@@ -18,7 +18,7 @@ router.route("/unlike-job/:jobId").post(userAuth, jobController.unlikeJobControl
 router.route("/apply-job").post(userAuth,validateProjectApplication, jobController.applyForJobController);
 router.route("/withdraw-job-application/:projectId").delete(userAuth, jobController.deleteJobApplicationController);
 router.route("/delete-job/:jobId").delete(userAuth, jobController.deleteJobController);
-router.route("/update-job/:jobId").put(userAuth, multipleUpload, validateUpdateJob, jobController.updateJobController);
+router.route("/update-job/:jobId").put(userAuth, multipleUpload, parseJobBody, validateUpdateJob, jobController.updateJobController);
 router.route("/update-application-status/:projectId").patch(userAuth, jobController.jobStatusController);
 router.route("/fetch-jobs-by-status").get(userAuth, jobController.fetchJobByStatusController);
 router.route("/remove-job/:jobId/file/:fileId").delete(userAuth, jobController.deleteFileController);
@@ -38,7 +38,7 @@ router.route("/user-project-analytics").get(userAuth, jobController.projectAnaly
 router.route("/mute-job/:jobId").get(userAuth, jobController.muteJobController);
 router.route("/pay-for-job").post(userAuth, validatePaymentForJob, paymentController.payforJobController);
 router.route("/leads").get(userAuth, jobController.jobLeadsController);
-router.route("/create-recurring-job").post(userAuth,multipleUpload,validateRecurringJob,jobController.createRecurringJobController);
+router.route("/create-recurring-job").post(userAuth,multipleUpload,parseJobBody,validateRecurringJob,jobController.createRecurringJobController);
 router.route("/fetch-recurring-jobs").get(userAuth, jobController.fetchAllRecurringJobsController);
 
 export { router as JobsRoute };

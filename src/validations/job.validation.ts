@@ -87,9 +87,6 @@ export const validateJob = (req: Request, res: Response, next: NextFunction) => 
     'string.empty': 'Description is required',
     'any.required': 'Description is required',
   }),
-  images: Joi.array().items(Joi.string()).optional().messages({
-    'string.base': 'Each image must be a string (URL)',
-  }),
   jobUrgency: Joi.string()
     .valid(...Object.values(JobUrgencyEnum))
     .required()
@@ -100,17 +97,27 @@ export const validateJob = (req: Request, res: Response, next: NextFunction) => 
   location: locationSchema.required().messages({
     'any.required': 'Location is required',
   }),
-  allowBidding: Joi.boolean().required().messages({
-    'boolean.base': 'Allow bidding must be true or false',
-    'any.required': 'Allow bidding is required',
-  }),
-  experienceLevel: Joi.string()
-    .valid(...Object.values(ExperienceLevelEnum))
-    .required()
-    .messages({
-      'any.only': 'Invalid experience level, must be one of: ' + Object.values(ExperienceLevelEnum).join(', '),
-      'any.required': 'Experience level is required',
+  // Not collected for direct hire (jobs assigned via expertId) - the server
+  // forces allowBidding=false and leaves experienceLevel unset in that flow.
+  allowBidding: Joi.when('expertId', {
+    is: Joi.string().trim().min(1).required(),
+    then: Joi.boolean().optional(),
+    otherwise: Joi.boolean().required().messages({
+      'boolean.base': 'Allow bidding must be true or false',
+      'any.required': 'Allow bidding is required',
     }),
+  }),
+  experienceLevel: Joi.when('expertId', {
+    is: Joi.string().trim().min(1).required(),
+    then: Joi.string().valid(...Object.values(ExperienceLevelEnum)).optional(),
+    otherwise: Joi.string()
+      .valid(...Object.values(ExperienceLevelEnum))
+      .required()
+      .messages({
+        'any.only': 'Invalid experience level, must be one of: ' + Object.values(ExperienceLevelEnum).join(', '),
+        'any.required': 'Experience level is required',
+      }),
+  }),
   expertId: Joi.string().optional().allow('').messages({
     'string.base': 'Expert ID must be a string',
   }),
@@ -200,12 +207,31 @@ export const validateJob = (req: Request, res: Response, next: NextFunction) => 
   currency: Joi.string().optional(),
   milestones: Joi.array().items(Joi.object({
     timeFrame: Joi.object({
-      number: Joi.number().optional(),
-      period: Joi.string().valid(...Object.values(JobPeriod)).optional(),
-    }).optional(),
-    achievement: Joi.string().optional(),
-    amount: Joi.number().optional(),
-  })).optional(),
+      number: Joi.number().positive().required().messages({
+        'number.base': 'Milestone duration must be a number',
+        'number.positive': 'Milestone duration must be a positive number',
+        'any.required': 'Milestone duration is required',
+      }),
+      period: Joi.string().valid(...Object.values(JobPeriod)).required().messages({
+        'any.only': 'Invalid milestone duration unit, must be one of: ' + Object.values(JobPeriod).join(', '),
+        'any.required': 'Milestone duration unit is required',
+      }),
+    }).required().messages({
+      'any.required': 'Milestone duration is required',
+    }),
+    achievement: Joi.string().required().messages({
+      'string.empty': 'Milestone achievement details are required',
+      'any.required': 'Milestone achievement details are required',
+    }),
+    amount: Joi.number().positive().required().messages({
+      'number.base': 'Milestone payment amount must be a number',
+      'number.positive': 'Milestone payment amount must be a positive number',
+      'any.required': 'Milestone payment amount is required',
+    }),
+    currency: Joi.string().optional(),
+  })).max(5).optional().messages({
+    'array.max': 'Cannot have more than 5 milestones',
+  }),
   userName: Joi.string().optional(),
   email: Joi.string().optional(),
   identifier: Joi.string().optional(),
@@ -347,13 +373,18 @@ export const validateUpdateJob = (req: Request, res: Response, next: NextFunctio
       .items(
         Joi.object({
           timeFrame: Joi.object({
-            number: Joi.number().optional(),
+            number: Joi.number().positive().optional(),
             period: Joi.string().valid(...Object.values(JobPeriod)).optional(),
           }).optional(),
           achievement: Joi.string().optional(),
-          amount: Joi.number().optional(),
+          amount: Joi.number().positive().optional(),
+          currency: Joi.string().optional(),
         })
       )
+      .max(5)
+      .messages({
+        'array.max': 'Cannot have more than 5 milestones',
+      })
       .optional(),
   });
 

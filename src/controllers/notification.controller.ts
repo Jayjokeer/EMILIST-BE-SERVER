@@ -9,8 +9,14 @@ export const getAllUserNotificationsController = catchAsync(async (req: JwtPaylo
     const {page = 1, limit = 10} = req.query;
     const userId = req.user._id;
 
+    const data = await notificationService.fetchUserNotifications(userId, Number(page), Number(limit));
+    return successResponse(res, StatusCodes.OK, data);
+});
 
-    const data = await notificationService.fetchUserNotifications(userId);
+export const markNotificationAsReadController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const {notificationId} = req.params;
+
+    const data = await notificationService.markNotificationAsRead(notificationId);
     return successResponse(res, StatusCodes.OK, data);
 });
 

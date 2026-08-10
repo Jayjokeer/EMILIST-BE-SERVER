@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadBusinessImages = exports.multipleUpload = exports.singleUpload = exports.cloudinary = exports.parseBusinessOnboarding = void 0;
+exports.uploadBusinessImages = exports.multipleUpload = exports.singleUpload = exports.cloudinary = exports.parseJobBody = exports.parseBusinessOnboarding = void 0;
 const cloudinary_1 = require("cloudinary");
 Object.defineProperty(exports, "cloudinary", { enumerable: true, get: function () { return cloudinary_1.v2; } });
 const multer_storage_cloudinary_1 = require("multer-storage-cloudinary");
@@ -60,3 +60,56 @@ const parseBusinessOnboarding = (req, res, next) => {
     }
 };
 exports.parseBusinessOnboarding = parseBusinessOnboarding;
+/**
+ * Parses JSON-stringified fields sent via multipart/form-data for the JOB endpoints.
+ *
+ * curl / HTML forms / Swagger UI send every multipart field as a string, so nested
+ * objects and arrays (e.g. `location`, `jobDuration`, `totalBudget`, `milestones`)
+ * arrive as JSON strings. This middleware:
+ *   - parses those JSON strings back into real objects/arrays, and
+ *   - removes empty-string fields so optional / urgency-forbidden fields don't
+ *     trigger validation errors.
+ */
+const parseJobBody = (req, res, next) => {
+    try {
+        // 1. Remove all empty-string fields (form builders often send blank fields)
+        for (const key of Object.keys(req.body)) {
+            if (req.body[key] === "") {
+                delete req.body[key];
+            }
+        }
+        // 2. Parse JSON-stringified object/array values into real ones
+        const jsonFields = [
+            "location",
+            "jobDuration",
+            "totalBudget",
+            "estimatedBudget",
+            "recurringBudget",
+            "jobSchedule",
+            "duration",
+            "milestones",
+            "reminderDates",
+            "jobFiles",
+            "images",
+        ];
+        for (const key of jsonFields) {
+            if (req.body[key] === undefined)
+                continue;
+            if (typeof req.body[key] === "string") {
+                try {
+                    req.body[key] = JSON.parse(req.body[key]);
+                }
+                catch {
+                    // Leave as-is; the Joi validation will report a clear error
+                }
+            }
+        }
+        next();
+    }
+    catch (err) {
+        return res.status(400).json({
+            message: "Invalid JSON in one of the job fields",
+        });
+    }
+};
+exports.parseJobBody = parseJobBody;

@@ -14,6 +14,8 @@ import { Server } from "socket.io";
 import http from "http";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./docs/swagger";
 import "../src/utils/passport";
 import chatSocket from "./socket";
 import "./jobs/subscription.job";
@@ -50,6 +52,9 @@ export const io = new Server(server, {
 app.use(passport.initialize());
 app.use(passport.session());
 
+
+// Swagger / OpenAPI documentation for the JOBS endpoints
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use("/api/v1/", router); 

@@ -64,7 +64,6 @@ export interface IJob {
     // ===== NEW FIELDS FOR REWORK =====
     jobUrgency?: JobUrgencyEnum;
     jobCategory?: string;        // alias for category
-    images?: string[];           // new alias for jobFiles (array of URLs)
     allowBidding?: boolean;
     experienceLevel?: ExperienceLevelEnum;
     expertId?: string;           // Business uniqueId for direct hire to an expert
@@ -82,9 +81,10 @@ export interface IJob {
 }
 
 export interface IMilestone {
-    timeFrame: any; 
-    achievement: string; 
-    amount: number; 
+    timeFrame: any;
+    achievement: string;
+    amount: number;
+    currency?: string;
     status: MilestoneEnum;
     paymentStatus: MilestonePaymentStatus;
     paymentReciept: string;

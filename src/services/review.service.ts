@@ -11,6 +11,92 @@ export const isUserReviewed = async(productId: string, userId: string)=>{
 export const isReviewedbyUser = async(businessId: string, userId: string)=>{
     return await Review.findOne({userId: userId, businessId: businessId});
   };
+export const fetchReviewsForBusiness = async (
+  businessId: string,
+  page = 1,
+  limit = 4,
+) => {
+  const skip = (page - 1) * limit;
+
+  const matchStage = { businessId: new mongoose.Types.ObjectId(businessId) };
+
+  const [result] = await Review.aggregate([
+    { $match: matchStage },
+    {
+      $facet: {
+        stats: [
+          {
+            $group: {
+              _id: null,
+              averageRating: { $avg: "$rating" },
+              numberOfRatings: { $sum: 1 },
+              fiveStar: { $sum: { $cond: [{ $eq: ["$rating", 5] }, 1, 0] } },
+              fourStar: { $sum: { $cond: [{ $eq: ["$rating", 4] }, 1, 0] } },
+              threeStar: { $sum: { $cond: [{ $eq: ["$rating", 3] }, 1, 0] } },
+              twoStar: { $sum: { $cond: [{ $eq: ["$rating", 2] }, 1, 0] } },
+              oneStar: { $sum: { $cond: [{ $eq: ["$rating", 1] }, 1, 0] } },
+            },
+          },
+        ],
+        reviews: [
+          { $sort: { createdAt: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+          {
+            $lookup: {
+              from: "users",
+              localField: "userId",
+              foreignField: "_id",
+              as: "user",
+            },
+          },
+          { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+          {
+            $project: {
+              _id: 1,
+              rating: 1,
+              comment: 1,
+              rateCommunication: 1,
+              isRecommendVendor: 1,
+              helpfulCount: 1,
+              notHelpfulCount: 1,
+              createdAt: 1,
+              "user._id": 1,
+              "user.firstName": 1,
+              "user.lastName": 1,
+              "user.userName": 1,
+              "user.displayImage": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        averageRating: { $round: [{ $ifNull: [{ $arrayElemAt: ["$stats.averageRating", 0] }, 0] }, 1] },
+        numberOfRatings: { $ifNull: [{ $arrayElemAt: ["$stats.numberOfRatings", 0] }, 0] },
+        ratingDistribution: {
+          5: { $ifNull: [{ $arrayElemAt: ["$stats.fiveStar", 0] }, 0] },
+          4: { $ifNull: [{ $arrayElemAt: ["$stats.fourStar", 0] }, 0] },
+          3: { $ifNull: [{ $arrayElemAt: ["$stats.threeStar", 0] }, 0] },
+          2: { $ifNull: [{ $arrayElemAt: ["$stats.twoStar", 0] }, 0] },
+          1: { $ifNull: [{ $arrayElemAt: ["$stats.oneStar", 0] }, 0] },
+        },
+        reviews: 1,
+      },
+    },
+  ]);
+
+  return (
+    result || {
+      averageRating: 0,
+      numberOfRatings: 0,
+      ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      reviews: [],
+    }
+  );
+};
+
 export const fetchReviewForProduct = async (
   productId: string,
   page = 1,

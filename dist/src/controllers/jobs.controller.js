@@ -64,13 +64,6 @@ function mapJobBodyToLegacy(body) {
     if (mapped.jobCategory && !mapped.category) {
         mapped.category = mapped.jobCategory;
     }
-    // Map images -> jobFiles
-    if (mapped.images && mapped.images.length > 0 && !mapped.jobFiles) {
-        mapped.jobFiles = mapped.images.map((url) => ({
-            id: new mongoose_1.default.Types.ObjectId(),
-            url,
-        }));
-    }
     // Map location object -> legacy location string (for old code paths)
     if (mapped.location && typeof mapped.location === 'object' && mapped.location.address && !mapped.location) {
         // Keep as object; the model handles the mixed type
@@ -158,7 +151,6 @@ exports.createJobController = (0, error_handler_1.catchAsync)(async (req, res) =
             url: file.path,
         }));
         mappedBody.jobFiles = fileObjects;
-        mappedBody.images = files.map((file) => file.path);
     }
     if (mappedBody.expertId) {
         const business = await businessService.findBusinessByUniqueId(mappedBody.expertId);
@@ -228,6 +220,15 @@ exports.allUserJobController = (0, error_handler_1.catchAsync)(async (req, res) 
     const data = await jobService.fetchAllUserJobs(req.user.id, Number(page), Number(limit), search, filters);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
+// Accepts either a repeated query param (?categories=A&categories=B) or a
+// comma-separated single value (?categories=A,B).
+function parseListParam(value) {
+    if (value === undefined || value === null || value === '')
+        return undefined;
+    const list = Array.isArray(value) ? value : String(value).split(',');
+    const cleaned = list.map((v) => String(v).trim()).filter(Boolean);
+    return cleaned.length > 0 ? cleaned : undefined;
+}
 exports.allJobsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page = 1, limit = 10, title, location, category, service } = req.query;
     const userId = req.query.userId ? req.query.userId : null;
@@ -236,18 +237,25 @@ exports.allJobsController = (0, error_handler_1.catchAsync)(async (req, res) => 
         title,
         location,
         category,
-        service
+        service,
+        categories: parseListParam(req.query.categories ?? req.query.jobCategory),
+        locations: parseListParam(req.query.locations),
+        minBudget: req.query.minBudget !== undefined ? Number(req.query.minBudget) : undefined,
+        maxBudget: req.query.maxBudget !== undefined ? Number(req.query.maxBudget) : undefined,
+        jobUrgency: req.query.jobUrgency,
+        experienceLevel: parseListParam(req.query.experienceLevel),
+        minRating: req.query.minRating !== undefined ? Number(req.query.minRating) : undefined,
     };
     const data = await jobService.fetchAllJobs(Number(page), Number(limit), userId, search, filters);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
 exports.fetchSingleJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { id } = req.query;
+    const { id, reviewsPage = 1, reviewsLimit = 5 } = req.query;
     if (!id) {
         throw new error_1.NotFoundError("Id required!");
     }
     ;
-    const data = await jobService.fetchJobByIdWithDetails(String(id));
+    const data = await jobService.fetchJobByIdWithDetails(String(id), Number(reviewsPage), Number(reviewsLimit));
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
 exports.likeJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
@@ -435,7 +443,9 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
         job.acceptedApplicationId = projectId;
         project.acceptedAt = new Date();
         job.startDate = project.acceptedAt || new Date();
-        job.milestones[0].status = jobs_enum_1.MilestoneEnum.active;
+        if (job.milestones && job.milestones.length > 0) {
+            job.milestones[0].status = jobs_enum_1.MilestoneEnum.active;
+        }
         project.status = status;
         if (job.type === jobs_enum_1.JobType.biddable && project.biddableDetails) {
             job.maximumPrice = project.biddableDetails.maximumPrice;
@@ -624,7 +634,9 @@ exports.acceptDirectJobController = (0, error_handler_1.catchAsync)(async (req, 
     }
     if (status == project_enum_1.ProjectStatusEnum.accepted) {
         job.status = jobs_enum_1.JobStatusEnum.active;
-        job.milestones[0].status = jobs_enum_1.MilestoneEnum.active;
+        if (job.milestones && job.milestones.length > 0) {
+            job.milestones[0].status = jobs_enum_1.MilestoneEnum.active;
+        }
         project.status = project_enum_1.ProjectStatusEnum.accepted;
         project.businessId = businessId;
         project.directJobStatus = project_enum_1.ProjectStatusEnum.accepted;

@@ -47,6 +47,9 @@ const MilestoneSchema = new mongoose_1.Schema({
     amount: {
         type: Number,
     },
+    currency: {
+        type: String,
+    },
     status: {
         type: String,
         enum: jobs_enum_1.MilestoneEnum,
