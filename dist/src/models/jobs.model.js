@@ -162,6 +162,7 @@ const jobSchema = new mongoose_1.default.Schema({
     experienceLevel: { type: String, enum: jobs_enum_1.ExperienceLevelEnum },
     expertId: { type: String },
     isDirectHire: { type: Boolean, default: false },
+    isListed: { type: Boolean, default: true },
     // Urgency-specific nested objects
     jobFrequency: { type: String, enum: jobs_enum_1.JobFrequencyEnum },
     recurringBudget: { type: RecurringBudgetSchema },

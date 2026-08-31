@@ -32,9 +32,19 @@ const transactionSchema = new Schema(
     vat: {type: Number},
     durationType: {type: String, enum: SubscriptionPeriodEnum}, 
     verificationId: { type: Schema.Types.ObjectId, ref: 'Verification'},
+    // === Wallet / payout fields ===
+    counterparty: { type: String, trim: true },
+    bankAccountId: { type: Schema.Types.ObjectId, ref: 'BankAccount'},
+    transferCode: { type: String },
+    isRefunded: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+// Idempotency guard for Paystack webhook deliveries (sparse: docs without a
+// reference are not indexed)
+transactionSchema.index({ reference: 1 }, { unique: true, sparse: true });
+transactionSchema.index({ userId: 1, createdAt: -1 });
 
 
 export default mongoose.model<ITransaction>('Transaction', transactionSchema);

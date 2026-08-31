@@ -75,6 +75,12 @@ export const validateProduct = (req: Request, res: Response, next: NextFunction)
 
     discountedPrice: Joi.number().optional(),
 
+    taxPercentage: Joi.number().min(0).max(100).optional().messages({
+      "number.base": "Tax percentage must be a number",
+      "number.min": "Tax percentage must be between 0 and 100",
+      "number.max": "Tax percentage must be between 0 and 100",
+    }),
+
     status: Joi.string()
       .valid("draft", "pending", "active", "rejected", "inactive", "sold_out")
       .optional(),
@@ -127,6 +133,11 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
       }),
       currency: Joi.string().optional().messages({
         "string.base": "Currency must be a string",
+      }),
+      taxPercentage: Joi.number().min(0).max(100).optional().messages({
+        "number.base": "Tax percentage must be a number",
+        "number.min": "Tax percentage must be between 0 and 100",
+        "number.max": "Tax percentage must be between 0 and 100",
       }),
     });
   

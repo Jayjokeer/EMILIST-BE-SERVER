@@ -58,6 +58,8 @@ router.route("/fetch-all-transactions").get(current_user_1.adminAuth, adminContr
 router.route("/fetch-transaction/:transactionId").get(current_user_1.adminAuth, adminController.fetchSingleTransactionAdminController);
 router.route("/fetch-all-subscriptions").get(current_user_1.adminAuth, adminController.fetchSubscriptionsController);
 router.route("/update-vat").patch(current_user_1.adminAuth, adminController.updateVatController);
+router.route("/approve-withdrawal/:transactionId").patch(current_user_1.adminAuth, adminController.approveWithdrawalController);
+router.route("/decline-withdrawal/:transactionId").patch(current_user_1.adminAuth, adminController.declineWithdrawalController);
 router.route("/verify-bank-transfer").post(current_user_1.adminAuth, walletController.verifyBankTransferWalletFunding);
 router.route("/fetch-private-experts").get(current_user_1.adminAuth, adminController.fetchAllPrivateExpertsController);
 router.route("/fetch-private-expert/:id").get(current_user_1.adminAuth, adminController.fetchPrivateExpertByIdController);

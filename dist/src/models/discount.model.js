@@ -34,12 +34,19 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
+// Promo codes are seller-owned and product-scoped: a code belongs to exactly one
+// seller (sellerId) and only ever discounts the products listed in productIds.
+// It must never apply to the whole cart.
 const discountSchema = new mongoose_1.Schema({
-    code: { type: String, required: true, unique: true },
-    discountPercentage: { type: Number, required: true },
+    code: { type: String, required: true, unique: true, uppercase: true, trim: true },
+    discountPercentage: { type: Number, required: true, min: 1, max: 100 },
     expiryDate: { type: Date, required: true },
     isActive: { type: Boolean, default: true },
     isSingleUse: { type: Boolean, default: false },
     useCount: { type: Number, default: 0 },
+    // === Scope ===
+    sellerId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users", required: true, index: true },
+    productIds: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Product", required: true }],
 }, { timestamps: true });
+discountSchema.index({ sellerId: 1, isActive: 1 });
 exports.default = mongoose_1.default.model('Discount', discountSchema);

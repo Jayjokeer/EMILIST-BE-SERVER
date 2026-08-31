@@ -40,6 +40,7 @@ export enum ServiceEnum {
     job= 'Job',
     material = 'Material',
     walletFunding = 'Walletfunding',
+    withdrawal = 'Withdrawal',
     subscription = 'Subscription',
     verification = 'verification',
 };

@@ -5,4 +5,6 @@ export interface IWallet extends Document {
   balance: number;
   currency: string;
   isDefault: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

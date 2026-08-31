@@ -40,9 +40,16 @@ const CartProductSchema = new mongoose_1.Schema({
     quantity: { type: Number, required: true, min: 1 },
     price: { type: Number, required: true },
 });
+// Promo codes applied by the buyer. Product/seller scoped and resolved
+// against the Discount collection at apply/checkout time.
+const AppliedPromoCodeSchema = new mongoose_1.Schema({
+    discountId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Discount", required: true },
+    code: { type: String, required: true, uppercase: true, trim: true },
+}, { _id: false });
 const CartSchema = new mongoose_1.Schema({
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users" },
     products: [CartProductSchema],
+    appliedPromoCodes: { type: [AppliedPromoCodeSchema], default: [] },
     totalAmount: { type: Number, required: true, default: 0 },
     status: {
         type: String,

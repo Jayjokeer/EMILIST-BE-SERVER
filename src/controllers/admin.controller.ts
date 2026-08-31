@@ -403,6 +403,32 @@ export const updateVatController = catchAsync(async(req: JwtPayload, res: Respon
    return successResponse(res,StatusCodes.OK, data);
 });
 
+// Withdrawals require manual admin approval before the Paystack transfer goes out
+export const approveWithdrawalController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const transaction = await walletService.approveWithdrawal(req.params.transactionId);
+  return successResponse(res, StatusCodes.OK, {
+    transactionId: transaction._id,
+    reference: transaction.reference,
+    status: transaction.status,
+    transferCode: transaction.transferCode || null,
+    amount: transaction.amount,
+    currency: transaction.currency,
+  });
+});
+
+export const declineWithdrawalController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const transaction = await walletService.declineWithdrawal(req.params.transactionId);
+  const wallet = await walletService.findWalletById(String(transaction.walletId));
+  return successResponse(res, StatusCodes.OK, {
+    transactionId: transaction._id,
+    reference: transaction.reference,
+    status: transaction.status,
+    amount: transaction.amount,
+    currency: transaction.currency,
+    balance: wallet?.balance ?? null,
+  });
+});
+
 export const fetchAllPrivateExpertsController = catchAsync(async(req: JwtPayload, res: Response)=>{
     const {page =1, limit= 10} = req.query;
 

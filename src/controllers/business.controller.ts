@@ -116,6 +116,42 @@ export const fetchAllBusinessController = catchAsync( async (req: JwtPayload, re
     return  successResponse(res,StatusCodes.OK, data);
 });
 
+// Accepts either a repeated query param (?serviceCategory=A&serviceCategory=B)
+// or a comma-separated single value (?serviceCategory=A,B).
+function parseListParam(value: unknown): string[] | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    const list = Array.isArray(value) ? value : String(value).split(',');
+    const cleaned = list.map((v) => String(v).trim()).filter(Boolean);
+    return cleaned.length > 0 ? cleaned : undefined;
+}
+
+export const fetchAllExpertsController = catchAsync( async (req: JwtPayload, res: Response) => {
+    const { page = 1, limit = 10, search, expertType, currency } = req.query;
+    const userId = req.query.userId ? String(req.query.userId) : null;
+
+    const filters = {
+        serviceCategory: parseListParam(req.query.serviceCategory),
+        minPayment: req.query.minPayment !== undefined ? Number(req.query.minPayment) : undefined,
+        maxPayment: req.query.maxPayment !== undefined ? Number(req.query.maxPayment) : undefined,
+        expertType: expertType as ExpertTypeEnum | undefined,
+        currency: currency as string | undefined,
+        location: parseListParam(req.query.location ?? req.query.serviceLocation),
+        noticePeriod: parseListParam(req.query.noticePeriod),
+        experienceLevel: parseListParam(req.query.experienceLevel),
+        minRating: req.query.minRating !== undefined ? Number(req.query.minRating) : undefined,
+        minReviews: req.query.minReviews !== undefined ? Number(req.query.minReviews) : undefined,
+    };
+
+    const data = await businessService.fetchAllExperts(
+        userId,
+        Number(page),
+        Number(limit),
+        filters,
+        search as string | undefined,
+    );
+    return successResponse(res, StatusCodes.OK, data);
+});
+
 export const deleteBusinessController =  catchAsync( async (req: JwtPayload, res: Response) => {
     const { businessId} = req.params;
      await businessService.deleteBusiness( businessId );

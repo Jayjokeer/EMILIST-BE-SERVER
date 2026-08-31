@@ -38,3 +38,21 @@ export const validateCheckout = (req: Request, res: Response, next: NextFunction
   }
   next();
 };
+
+export const validateApplyPromo = (req: Request, res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    code: Joi.string().trim().min(3).max(20).required().messages({
+      "string.base": "Promo code must be a string",
+      "string.empty": "Promo code is required",
+      "string.min": "Promo code must be at least 3 characters",
+      "string.max": "Promo code must be at most 20 characters",
+      "any.required": "Promo code is required",
+    }),
+  });
+  const { error } = schema.validate(req.body, { abortEarly: false });
+  if (error) {
+    res.status(400).json({ errors: error.details.map((detail) => detail.message) });
+    return;
+  }
+  next();
+};

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateCheckout = exports.validateAddToCart = void 0;
+exports.validateApplyPromo = exports.validateCheckout = exports.validateAddToCart = void 0;
 const joi_1 = __importDefault(require("joi"));
 const validateAddToCart = (req, res, next) => {
     const productValidation = joi_1.default.object({
@@ -39,3 +39,21 @@ const validateCheckout = (req, res, next) => {
     next();
 };
 exports.validateCheckout = validateCheckout;
+const validateApplyPromo = (req, res, next) => {
+    const schema = joi_1.default.object({
+        code: joi_1.default.string().trim().min(3).max(20).required().messages({
+            "string.base": "Promo code must be a string",
+            "string.empty": "Promo code is required",
+            "string.min": "Promo code must be at least 3 characters",
+            "string.max": "Promo code must be at most 20 characters",
+            "any.required": "Promo code is required",
+        }),
+    });
+    const { error } = schema.validate(req.body, { abortEarly: false });
+    if (error) {
+        res.status(400).json({ errors: error.details.map((detail) => detail.message) });
+        return;
+    }
+    next();
+};
+exports.validateApplyPromo = validateApplyPromo;

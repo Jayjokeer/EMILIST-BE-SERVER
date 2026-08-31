@@ -30,5 +30,9 @@ export interface ITransaction extends Document {
     durationType?: SubscriptionPeriodEnum;
     isSettled: boolean;
     verificationId?: any;
+    counterparty?: string;
+    bankAccountId?: any;
+    transferCode?: string;
+    isRefunded: boolean;
   };
   

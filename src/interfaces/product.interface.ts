@@ -55,6 +55,9 @@ export interface IProduct {
   isDiscounted: boolean;
   discountedPrice?: number;
 
+  // Per-product tax rate in percent; 0 (or unset) = tax free
+  taxPercentage?: number;
+
   isFeatured?: boolean;
   totalUnitsSold?: number;
 

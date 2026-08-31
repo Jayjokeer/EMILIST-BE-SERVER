@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchPriceForVerification = exports.fetchSingleTransactionByMilestoneId = exports.getVat = exports.changeVatServiceAdmin = exports.fetchTransactionAdmin = exports.fetchAllTransactionsAdmin = exports.fetchUserEarnings = exports.fetchTransactionsByService = exports.fetchAllUserEarningsAdmin = exports.fetchTransactionChartAdminDashboard = exports.totalAmountByTransaction = exports.totalCompletedJobsByTransaction = exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
+exports.markTransactionFailedByReference = exports.markTransactionCompletedByReference = exports.fetchTransactionsForStatement = exports.fetchUserTransactionById = exports.fetchTransactionSummary = exports.fetchUserTransactionsFiltered = exports.fetchPriceForVerification = exports.fetchSingleTransactionByMilestoneId = exports.getVat = exports.changeVatServiceAdmin = exports.fetchTransactionAdmin = exports.fetchAllTransactionsAdmin = exports.fetchUserEarnings = exports.fetchTransactionsByService = exports.fetchAllUserEarningsAdmin = exports.fetchTransactionChartAdminDashboard = exports.totalAmountByTransaction = exports.totalCompletedJobsByTransaction = exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const transaction_model_1 = __importDefault(require("../models/transaction.model"));
@@ -31,10 +31,13 @@ const fetchTransactionByReference = async (reference) => {
     return await transaction_model_1.default.findOne({ reference });
 };
 exports.fetchTransactionByReference = fetchTransactionByReference;
-const adminFetchAllTransactionsByStatus = async (status, page, limit) => {
+const adminFetchAllTransactionsByStatus = async (status, page, limit, serviceType) => {
     const skip = (page - 1) * limit;
-    const totalTransactions = await transaction_model_1.default.countDocuments({ status });
-    const transactions = await transaction_model_1.default.find({ status })
+    const query = { status };
+    if (serviceType)
+        query.serviceType = serviceType;
+    const totalTransactions = await transaction_model_1.default.countDocuments(query);
+    const transactions = await transaction_model_1.default.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -284,3 +287,153 @@ const fetchPriceForVerification = async () => {
     return await app_config_model_1.default.findOne();
 };
 exports.fetchPriceForVerification = fetchPriceForVerification;
+// Maps the API's status vocabulary (all|pending|failed|successful) onto the
+// model's TransactionEnum values (pending/processing/completed/declined/failed)
+const statusCondition = (status) => {
+    if (!status || status === "all")
+        return null;
+    if (status === "successful")
+        return { status: transaction_enum_1.TransactionEnum.completed };
+    if (status === "failed")
+        return { status: { $in: [transaction_enum_1.TransactionEnum.failed, transaction_enum_1.TransactionEnum.declined] } };
+    if (status === "pending")
+        return { status: { $in: [transaction_enum_1.TransactionEnum.pending, transaction_enum_1.TransactionEnum.processing] } };
+    return null;
+};
+const fetchUserTransactionsFiltered = async (userId, filters) => {
+    const page = Math.max(1, Number(filters.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(filters.limit) || 10));
+    const skip = (page - 1) * limit;
+    const andConditions = [{ $or: [{ userId: userId }, { recieverId: userId }] }];
+    const statusCond = statusCondition(filters.status);
+    if (statusCond)
+        andConditions.push(statusCond);
+    if (filters.type === "inflow")
+        andConditions.push({ type: transaction_enum_1.TransactionType.CREDIT });
+    if (filters.type === "outflow")
+        andConditions.push({ type: transaction_enum_1.TransactionType.DEBIT });
+    if (filters.paymentMethod)
+        andConditions.push({ paymentMethod: filters.paymentMethod });
+    // Search by transaction reference/id or counterparty (falls back to description)
+    if (filters.search?.trim()) {
+        const search = filters.search.trim();
+        const regex = { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
+        const searchConditions = [{ reference: regex }, { description: regex }, { counterparty: regex }];
+        if (/^[a-f\d]{24}$/i.test(search))
+            searchConditions.push({ _id: new mongoose_1.default.Types.ObjectId(search) });
+        andConditions.push({ $or: searchConditions });
+    }
+    const query = { $and: andConditions };
+    const [transactions, totalTransactions] = await Promise.all([
+        transaction_model_1.default.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        transaction_model_1.default.countDocuments(query),
+    ]);
+    return { transactions, totalTransactions, page, totalPages: Math.ceil(totalTransactions / limit) };
+};
+exports.fetchUserTransactionsFiltered = fetchUserTransactionsFiltered;
+// Chart summary for a rolling window: monthly inflow/outflow totals, total
+// transaction count and % change vs the previous equal-length period.
+const RANGE_MONTHS = { "1M": 1, "3M": 3, "6M": 6, "1Y": 12 };
+const fetchTransactionSummary = async (userId, range) => {
+    const months = RANGE_MONTHS[range] || 3;
+    const now = new Date();
+    const currentStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+    const previousStart = new Date(now.getFullYear(), now.getMonth() - (2 * months - 1), 1);
+    const previousEnd = new Date(currentStart.getFullYear(), currentStart.getMonth(), 0, 23, 59, 59, 999);
+    const buildWindowTotals = async (start, end) => {
+        const rows = await transaction_model_1.default.aggregate([
+            { $match: { userId: new mongoose_1.default.Types.ObjectId(userId), createdAt: { $gte: start, $lte: end } } },
+            { $group: { _id: "$type", total: { $sum: "$amount" }, count: { $sum: 1 } } },
+        ]);
+        const inflow = rows.find((row) => row._id === transaction_enum_1.TransactionType.CREDIT)?.total || 0;
+        const outflow = rows.find((row) => row._id === transaction_enum_1.TransactionType.DEBIT)?.total || 0;
+        const count = rows.reduce((sum, row) => sum + row.count, 0);
+        return { inflow, outflow, count };
+    };
+    const monthlyRows = await transaction_model_1.default.aggregate([
+        { $match: { userId: new mongoose_1.default.Types.ObjectId(userId), createdAt: { $gte: currentStart, $lte: now } } },
+        {
+            $group: {
+                _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" }, type: "$type" },
+                total: { $sum: "$amount" },
+            },
+        },
+    ]);
+    const monthly = [];
+    for (let i = 0; i < months; i++) {
+        const bucket = new Date(now.getFullYear(), now.getMonth() - (months - 1) + i, 1);
+        const inflow = monthlyRows.find((row) => row._id.year === bucket.getFullYear() && row._id.month === bucket.getMonth() + 1 && row._id.type === transaction_enum_1.TransactionType.CREDIT)?.total || 0;
+        const outflow = monthlyRows.find((row) => row._id.year === bucket.getFullYear() && row._id.month === bucket.getMonth() + 1 && row._id.type === transaction_enum_1.TransactionType.DEBIT)?.total || 0;
+        monthly.push({
+            month: `${bucket.toLocaleString("en-US", { month: "short" })} ${bucket.getFullYear()}`,
+            inflow,
+            outflow,
+        });
+    }
+    const current = await buildWindowTotals(currentStart, now);
+    const previous = await buildWindowTotals(previousStart, previousEnd);
+    const currentVolume = current.inflow + current.outflow;
+    const previousVolume = previous.inflow + previous.outflow;
+    const percentageChange = previousVolume === 0
+        ? (currentVolume > 0 ? 100 : 0)
+        : Number((((currentVolume - previousVolume) / previousVolume) * 100).toFixed(2));
+    return {
+        range,
+        totalTransactions: current.count,
+        inflowTotal: current.inflow,
+        outflowTotal: current.outflow,
+        percentageChange,
+        monthly,
+    };
+};
+exports.fetchTransactionSummary = fetchTransactionSummary;
+const fetchUserTransactionById = async (userId, transactionId) => {
+    return await transaction_model_1.default.findOne({
+        _id: transactionId,
+        $or: [{ userId: userId }, { recieverId: userId }],
+    }).populate("walletId", "currency balance");
+};
+exports.fetchUserTransactionById = fetchUserTransactionById;
+const fetchTransactionsForStatement = async (userId, startDate, endDate, status) => {
+    const andConditions = [{ $or: [{ userId: userId }, { recieverId: userId }] }];
+    const createdAt = {};
+    if (startDate)
+        createdAt.$gte = startDate;
+    if (endDate)
+        createdAt.$lte = endDate;
+    if (Object.keys(createdAt).length)
+        andConditions.push({ createdAt });
+    const statusCond = statusCondition(status);
+    if (statusCond)
+        andConditions.push(statusCond);
+    return await transaction_model_1.default.find({ $and: andConditions }).sort({ createdAt: 1 }).lean();
+};
+exports.fetchTransactionsForStatement = fetchTransactionsForStatement;
+// Webhook idempotency helpers: mark by reference without saving so the caller
+// decides (and can guard) before persisting.
+const markTransactionCompletedByReference = async (reference) => {
+    if (!reference)
+        return null;
+    const transaction = await transaction_model_1.default.findOne({ reference });
+    if (!transaction)
+        return null;
+    if (transaction.status === transaction_enum_1.TransactionEnum.completed)
+        return { transaction, alreadyProcessed: true };
+    transaction.status = transaction_enum_1.TransactionEnum.completed;
+    transaction.dateCompleted = new Date();
+    return { transaction, alreadyProcessed: false };
+};
+exports.markTransactionCompletedByReference = markTransactionCompletedByReference;
+const markTransactionFailedByReference = async (reference) => {
+    if (!reference)
+        return null;
+    const transaction = await transaction_model_1.default.findOne({ reference });
+    if (!transaction)
+        return null;
+    if (transaction.status === transaction_enum_1.TransactionEnum.failed)
+        return { transaction, alreadyProcessed: true };
+    transaction.status = transaction_enum_1.TransactionEnum.failed;
+    transaction.dateCompleted = new Date();
+    return { transaction, alreadyProcessed: false };
+};
+exports.markTransactionFailedByReference = markTransactionFailedByReference;

@@ -19,6 +19,9 @@ router.route("/apply-job").post(userAuth,validateProjectApplication, jobControll
 router.route("/withdraw-job-application/:projectId").delete(userAuth, jobController.deleteJobApplicationController);
 router.route("/delete-job/:jobId").delete(userAuth, jobController.deleteJobController);
 router.route("/update-job/:jobId").put(userAuth, multipleUpload, parseJobBody, validateUpdateJob, jobController.updateJobController);
+router.route("/fetch-applicants").get(userAuth, jobController.fetchJobApplicantsController);
+router.route("/list-job/:jobId").patch(userAuth, jobController.listJobController);
+router.route("/delist-job/:jobId").patch(userAuth, jobController.delistJobController);
 router.route("/update-application-status/:projectId").patch(userAuth, jobController.jobStatusController);
 router.route("/fetch-jobs-by-status").get(userAuth, jobController.fetchJobByStatusController);
 router.route("/remove-job/:jobId/file/:fileId").delete(userAuth, jobController.deleteFileController);

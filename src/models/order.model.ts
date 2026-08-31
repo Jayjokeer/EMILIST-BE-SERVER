@@ -18,6 +18,12 @@ const OrderProductSchema: Schema = new Schema({
   merchantRating: { type: Number },
   merchantReviewCount: { type: Number },
   totalUnitsSoldAtPurchase: { type: Number },
+  // === Promo snapshot: which code hit this line and how much it saved ===
+  discountAmount: { type: Number, default: 0 },
+  promoCode: { type: String, trim: true, uppercase: true },
+  // === Tax snapshot: the product's own rate and what this line was charged ===
+  taxPercentage: { type: Number, default: 0 },
+  taxAmount: { type: Number, default: 0 },
 });
 
 const DeliveryStepSchema: Schema = new Schema(
@@ -54,6 +60,7 @@ const OrderSchema: Schema = new Schema(
     discountAmount:{ type: Number },
     originalTotalAmount: { type: Number },
     discountCode:{type: String},
+    promoCodes: { type: [String], default: [] },
     cartId: { type: Schema.Types.ObjectId, ref: "Cart", required: true, unique: true },
     // === Delivery / tracking ===
     deliveryStatus: {

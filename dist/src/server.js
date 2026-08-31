@@ -11,6 +11,7 @@ const cors_1 = __importDefault(require("cors"));
 const database_1 = require("../db/database");
 const config_1 = require("./utils/config");
 const routes_1 = __importDefault(require("./routes"));
+const webhook_routes_1 = require("./routes/webhook.routes");
 const error_handler_1 = __importDefault(require("./errors/error-handler"));
 const error_1 = __importDefault(require("./errors/error"));
 const passport_1 = __importDefault(require("passport"));
@@ -31,6 +32,9 @@ const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 // Middleware
 app.use((0, cookie_parser_1.default)());
+// Paystack webhook must receive the exact raw request body for HMAC-SHA512
+// signature verification, so it is mounted BEFORE express.json.
+app.use("/api/v1/webhooks", webhook_routes_1.webhookRouter);
 app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
 app.use((0, helmet_1.default)());

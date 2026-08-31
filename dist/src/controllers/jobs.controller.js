@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
+exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.delistJobController = exports.listJobController = exports.fetchJobApplicantsController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -356,11 +356,43 @@ exports.deleteJobController = (0, error_handler_1.catchAsync)(async (req, res) =
     const job = await jobService.fetchJobById(jobId);
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
-    if (job.status !== jobs_enum_1.JobStatusEnum.pending) {
-        throw new error_1.BadRequestError("You can only delete a pending job!");
+    if (String(job.userId) !== String(userId))
+        throw new error_1.UnauthorizedError("Unauthorized!");
+    if (job.acceptedApplicationId) {
+        throw new error_1.BadRequestError("You can only delete a job with no accepted applicant!");
     }
     await jobService.deleteJobById(jobId, userId);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job deleted successfully");
+});
+exports.fetchJobApplicantsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = req.user.id;
+    const { jobId, status } = req.query;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const data = await jobService.fetchJobApplicants(String(userId), jobId ? String(jobId) : undefined, status ? String(status) : undefined, page, limit);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+exports.listJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = req.user.id;
+    const { jobId } = req.params;
+    const job = await jobService.fetchJobById(jobId);
+    if (!job)
+        throw new error_1.NotFoundError("Job not found!");
+    if (String(job.userId) !== String(userId))
+        throw new error_1.UnauthorizedError("Unauthorized!");
+    const data = await jobService.setJobListing(jobId, String(userId), true);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job listed successfully");
+});
+exports.delistJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = req.user.id;
+    const { jobId } = req.params;
+    const job = await jobService.fetchJobById(jobId);
+    if (!job)
+        throw new error_1.NotFoundError("Job not found!");
+    if (String(job.userId) !== String(userId))
+        throw new error_1.UnauthorizedError("Unauthorized!");
+    const data = await jobService.setJobListing(jobId, String(userId), false);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job delisted successfully");
 });
 exports.updateJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
@@ -370,8 +402,10 @@ exports.updateJobController = (0, error_handler_1.catchAsync)(async (req, res) =
     const job = await jobService.fetchJobById(jobId);
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
-    if (job.status !== jobs_enum_1.JobStatusEnum.pending) {
-        throw new error_1.BadRequestError("You can only edit a pending job!");
+    if (String(job.userId) !== String(userId))
+        throw new error_1.UnauthorizedError("Unauthorized!");
+    if (job.acceptedApplicationId) {
+        throw new error_1.BadRequestError("You can only edit a job with no accepted applicant!");
     }
     // Map new fields to legacy fields for backward compatibility
     const mappedUpdates = mapJobBodyToLegacy(updates);

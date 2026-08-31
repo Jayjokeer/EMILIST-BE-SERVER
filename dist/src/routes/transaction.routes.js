@@ -40,9 +40,13 @@ const transactionController = __importStar(require("../controllers/transaction.c
 const router = (0, express_1.Router)();
 exports.TransactionRoute = router;
 const paymentController = __importStar(require("../controllers/payment.controller"));
+const wallet_validation_1 = require("../validations/wallet.validation");
 router.route("/fetch-single-transaction/:transactionId").get(current_user_1.adminAuth, transactionController.fetchSingleTransactionController);
 router.route("/fetch-all-transactions-by-status").get(current_user_1.adminAuth, transactionController.fetchAllTransactionsByStatusController);
-router.route("/fetch-all-user-transactions").get(current_user_1.userAuth, transactionController.fetchAllTransactionsByUsersController);
+router.route("/fetch-all-user-transactions").get(current_user_1.userAuth, wallet_validation_1.validateTransactionFilters, transactionController.fetchAllTransactionsByUsersController);
 router.route("/verify-paystack-payment/:reference").get(paymentController.verifyPaystackPaymentController);
 router.route("/fetch-user-earning").get(current_user_1.userAuth, transactionController.fetchUserEarningsController);
 router.route("/fetch-vat").get(transactionController.fetchVatController);
+router.route("/fetch-transaction-summary").get(current_user_1.userAuth, wallet_validation_1.validateTransactionSummary, transactionController.fetchTransactionSummaryController);
+router.route("/fetch-my-transaction/:transactionId").get(current_user_1.userAuth, transactionController.fetchMyTransactionController);
+router.route("/download-statement").get(current_user_1.userAuth, wallet_validation_1.validateStatementRequest, transactionController.downloadStatementController);

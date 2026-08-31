@@ -16,6 +16,12 @@ export interface IOrderProduct {
     merchantRating?: number;
     merchantReviewCount?: number;
     totalUnitsSoldAtPurchase?: number;
+    // === Promo snapshot: which code hit this line and how much it saved ===
+    discountAmount?: number;
+    promoCode?: string;
+    // === Tax snapshot: the product's own rate and what this line was charged ===
+    taxPercentage?: number;
+    taxAmount?: number;
 }
 
 export interface IDeliveryStep {
@@ -39,6 +45,7 @@ export interface IOrder extends Document {
     discountAmount?: number;
     originalTotalAmount?: number;
     discountCode?:string;
+    promoCodes?: string[];
     cartId: any;
     // === Delivery / tracking ===
     deliveryStatus?: OrderDeliveryStatus;

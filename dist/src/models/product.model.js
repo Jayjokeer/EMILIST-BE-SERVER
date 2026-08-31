@@ -147,6 +147,13 @@ const ProductSchema = new mongoose_1.Schema({
         default: false,
     },
     discountedPrice: Number,
+    // Per-product tax rate in percent. 0 (or unset) means the product is tax free.
+    taxPercentage: {
+        type: Number,
+        min: 0,
+        max: 100,
+        default: 0,
+    },
     isFeatured: {
         type: Boolean,
         default: false,

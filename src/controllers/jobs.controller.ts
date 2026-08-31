@@ -379,11 +379,50 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const {jobId} = req.params;
     const job = await jobService.fetchJobById(jobId);
     if(!job) throw new NotFoundError("Job not found!");
-    if(job.status !== JobStatusEnum.pending){
-      throw new BadRequestError("You can only delete a pending job!");
+    if(String(job.userId) !== String(userId)) throw new UnauthorizedError("Unauthorized!");
+    if(job.acceptedApplicationId){
+      throw new BadRequestError("You can only delete a job with no accepted applicant!");
     }
     await jobService.deleteJobById(jobId, userId);
     successResponse(res, StatusCodes.OK, "Job deleted successfully");
+  });
+
+  export const fetchJobApplicantsController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id;
+    const { jobId, status } = req.query;
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 10;
+
+    const data = await jobService.fetchJobApplicants(
+      String(userId),
+      jobId ? String(jobId) : undefined,
+      status ? String(status) : undefined,
+      page,
+      limit
+    );
+    return successResponse(res, StatusCodes.OK, data);
+  });
+
+  export const listJobController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id;
+    const { jobId } = req.params;
+    const job = await jobService.fetchJobById(jobId);
+    if (!job) throw new NotFoundError("Job not found!");
+    if (String(job.userId) !== String(userId)) throw new UnauthorizedError("Unauthorized!");
+
+    const data = await jobService.setJobListing(jobId, String(userId), true);
+    return successResponse(res, StatusCodes.OK, "Job listed successfully");
+  });
+
+  export const delistJobController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = req.user.id;
+    const { jobId } = req.params;
+    const job = await jobService.fetchJobById(jobId);
+    if (!job) throw new NotFoundError("Job not found!");
+    if (String(job.userId) !== String(userId)) throw new UnauthorizedError("Unauthorized!");
+
+    const data = await jobService.setJobListing(jobId, String(userId), false);
+    return successResponse(res, StatusCodes.OK, "Job delisted successfully");
   });
 
   export const updateJobController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -394,8 +433,9 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
 
     const job = await jobService.fetchJobById(jobId);
     if(!job) throw new NotFoundError("Job not found!");
-    if(job.status !== JobStatusEnum.pending){
-      throw new BadRequestError("You can only edit a pending job!");
+    if(String(job.userId) !== String(userId)) throw new UnauthorizedError("Unauthorized!");
+    if(job.acceptedApplicationId){
+      throw new BadRequestError("You can only edit a job with no accepted applicant!");
     }
 
     // Map new fields to legacy fields for backward compatibility

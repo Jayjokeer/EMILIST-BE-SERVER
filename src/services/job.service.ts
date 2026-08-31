@@ -104,6 +104,7 @@ export const fetchAllJobs = async (
   const searchCriteria: any = {
     type: { $ne: JobType.direct },
     status: JobStatusEnum.pending,
+    isListed: true,
   };
 
   if (!search) {
@@ -373,8 +374,60 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
    };
   
    export const deleteJobById = async (jobId: string, userId: string ) =>{
-    return await Jobs.findOneAndDelete({userId: userId, _id: jobId});
+    const deletedJob = await Jobs.findOneAndDelete({userId: userId, _id: jobId});
+    if (deletedJob) {
+      // Remove any applications/projects linked to this job so they don't become orphans
+      await Project.deleteMany({ job: jobId });
+    }
+    return deletedJob;
    };
+   
+/**
+ * Fetch the applicants (Projects) received on the logged-in user's jobs.
+ * `creator` is the job poster; `user` is the applicant.
+ */
+export const fetchJobApplicants = async (
+  userId: string,
+  jobId?: string,
+  status?: string,
+  page: number = 1,
+  limit: number = 10
+) => {
+  const skip = (page - 1) * limit;
+
+  const query: any = { creator: userId };
+
+  if (jobId) query.job = jobId;
+  if (status) query.status = status;
+
+  const applicants = await Project.find(query)
+    .populate('user', 'fullName userName email profileImage level uniqueId')
+    .populate('job', 'title status jobCategory service')
+    .sort({ appliedAt: -1 })
+    .skip(skip)
+    .limit(Number(limit));
+
+  const total = await Project.countDocuments(query);
+
+  return {
+    total,
+    page: Number(page),
+    limit: Number(limit),
+    applicants,
+  };
+};
+
+/**
+ * List (true) or delist (false) a job owned by the given user.
+ * Returns null if no such job exists.
+ */
+export const setJobListing = async (jobId: string, userId: string, isListed: boolean) => {
+  const job = await Jobs.findOne({ _id: jobId, userId });
+  if (!job) return null;
+  job.isListed = isListed;
+  await job.save();
+  return job;
+};
 export const fetchJobByUserIdAndStatus = async (
   userId: string,
   status: JobStatusEnum | JobStatusEnum[]

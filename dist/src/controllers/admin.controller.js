@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAdminsController = exports.resetPasswordController = exports.forgetPasswordController = exports.changeStatusAdmin = exports.loginAdminController = exports.createAdminController = exports.fetchAllVerificationsController = exports.fetchUserSubscriptionsController = exports.fetchUserAccountDetailsController = exports.fetchAllCategoriesController = exports.fetchSingleCategoryController = exports.deleteCategoryController = exports.addCategoriesController = exports.updateJobPaymentStatusController = exports.fetchPrivateExpertByIdController = exports.fetchAllPrivateExpertsController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
+exports.fetchAdminsController = exports.resetPasswordController = exports.forgetPasswordController = exports.changeStatusAdmin = exports.loginAdminController = exports.createAdminController = exports.fetchAllVerificationsController = exports.fetchUserSubscriptionsController = exports.fetchUserAccountDetailsController = exports.fetchAllCategoriesController = exports.fetchSingleCategoryController = exports.deleteCategoryController = exports.addCategoriesController = exports.updateJobPaymentStatusController = exports.fetchPrivateExpertByIdController = exports.fetchAllPrivateExpertsController = exports.declineWithdrawalController = exports.approveWithdrawalController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -381,6 +381,30 @@ exports.updateVatController = (0, error_handler_1.catchAsync)(async (req, res) =
     const { vat } = req.body;
     const data = await transactionService.changeVatServiceAdmin(vat);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+// Withdrawals require manual admin approval before the Paystack transfer goes out
+exports.approveWithdrawalController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const transaction = await walletService.approveWithdrawal(req.params.transactionId);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        transactionId: transaction._id,
+        reference: transaction.reference,
+        status: transaction.status,
+        transferCode: transaction.transferCode || null,
+        amount: transaction.amount,
+        currency: transaction.currency,
+    });
+});
+exports.declineWithdrawalController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const transaction = await walletService.declineWithdrawal(req.params.transactionId);
+    const wallet = await walletService.findWalletById(String(transaction.walletId));
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        transactionId: transaction._id,
+        reference: transaction.reference,
+        status: transaction.status,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        balance: wallet?.balance ?? null,
+    });
 });
 exports.fetchAllPrivateExpertsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;

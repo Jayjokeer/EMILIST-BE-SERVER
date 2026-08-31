@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getCartController = exports.generateDiscountCode = exports.checkoutCartController = exports.applyDiscountCode = exports.decreaseCartProductQuantityController = exports.increaseCartProductQuantityController = exports.clearCartController = exports.removeFromCartController = exports.addToCartController = void 0;
+exports.getCartController = exports.checkoutCartController = exports.removePromoCodeController = exports.applyPromoCodeController = exports.decreaseCartProductQuantityController = exports.increaseCartProductQuantityController = exports.clearCartController = exports.removeFromCartController = exports.addToCartController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -43,10 +43,78 @@ const order_enum_1 = require("../enums/order.enum");
 const cartService = __importStar(require("../services/cart.service"));
 const orderService = __importStar(require("../services/order.service"));
 const productService = __importStar(require("../services/product.service"));
-const transactionService = __importStar(require("../services/transaction.service"));
-const SHIPPING_FEE = 9000;
+const promoService = __importStar(require("../services/promo.service"));
+// Delivery fee is defaulted to 0 for now
+const SHIPPING_FEE = 0;
 const cartItemCount = (cart) => (cart.products || []).reduce((total, item) => total + item.quantity, 0);
 const cartProductId = (item) => String(item.productId?._id || item.productId);
+// Per-line financials for the cart:
+// 1. Promos - resolves every applied code into a per-code/per-product breakdown.
+//    A promo only counts while it is active/unexpired and at least one of its
+//    scoped products is still in the cart.
+// 2. Tax - each product's own taxPercentage (0 = tax free) applied to the
+//    post-promo line amount.
+const computeCartFinancials = async (cart) => {
+    const applied = cart.appliedPromoCodes || [];
+    const cartItems = cart.products || [];
+    const promoDiscountPerProduct = new Map();
+    const taxPerProduct = new Map();
+    const appliedPromos = [];
+    let totalDiscount = 0;
+    let totalTax = 0;
+    if (applied.length) {
+        const promos = await promoService.fetchPromosByIds(applied.map((entry) => String(entry.discountId)));
+        for (const entry of applied) {
+            const promo = promos.find((p) => String(p._id) === String(entry.discountId));
+            if (!promo || !promoService.isPromoUsable(promo))
+                continue;
+            const scopeIds = (promo.productIds || []).map((id) => String(id));
+            const products = cartItems
+                .filter((item) => scopeIds.includes(cartProductId(item)))
+                .map((item) => {
+                const lineTotal = item.quantity * item.price;
+                const lineDiscount = Number((lineTotal * promo.discountPercentage / 100).toFixed(2));
+                totalDiscount += lineDiscount;
+                const productId = cartProductId(item);
+                promoDiscountPerProduct.set(productId, (promoDiscountPerProduct.get(productId) || 0) + lineDiscount);
+                const productDoc = item.productId;
+                return {
+                    productId,
+                    productName: productDoc?.name,
+                    quantity: item.quantity,
+                    unitPrice: item.price,
+                    lineTotal,
+                    discountAmount: lineDiscount,
+                };
+            });
+            appliedPromos.push({
+                code: promo.code,
+                discountPercentage: promo.discountPercentage,
+                expiryDate: promo.expiryDate,
+                sellerId: promo.sellerId,
+                discountAmount: Number(products.reduce((sum, p) => sum + p.discountAmount, 0).toFixed(2)),
+                products,
+            });
+        }
+    }
+    // Tax is charged per product line on the post-promo amount; products default
+    // to tax free (rate 0 / unset).
+    for (const item of cartItems) {
+        const productId = cartProductId(item);
+        const lineNet = Math.max(0, item.quantity * item.price - (promoDiscountPerProduct.get(productId) || 0));
+        const taxRate = Number(item.productId?.taxPercentage ?? 0) || 0;
+        const lineTax = Number((lineNet * taxRate / 100).toFixed(2));
+        totalTax += lineTax;
+        taxPerProduct.set(productId, lineTax);
+    }
+    return {
+        appliedPromos,
+        promoDiscountAmount: Number(totalDiscount.toFixed(2)),
+        promoDiscountPerProduct,
+        taxAmount: Number(totalTax.toFixed(2)),
+        taxPerProduct,
+    };
+};
 const cartResponse = async (cart) => {
     const populatedCart = await cart.populate({
         path: "products.productId",
@@ -56,6 +124,7 @@ const cartResponse = async (cart) => {
         },
     });
     const data = populatedCart.toObject();
+    const { appliedPromos, promoDiscountAmount, promoDiscountPerProduct, taxAmount, taxPerProduct } = await computeCartFinancials(populatedCart);
     return {
         ...data,
         products: (data.products || []).map((item) => {
@@ -68,17 +137,23 @@ const cartResponse = async (cart) => {
                     slug: product.category.slug || '',
                 };
             }
-            return { ...item, lineTotal: item.quantity * item.price };
+            return {
+                ...item,
+                lineTotal: item.quantity * item.price,
+                promoDiscountAmount: promoDiscountPerProduct.get(cartProductId(item)) || 0,
+                taxAmount: taxPerProduct.get(cartProductId(item)) || 0,
+            };
         }),
+        appliedPromos,
+        promoDiscountAmount,
         cartQuantity: cartItemCount(populatedCart),
-        orderSummary: await calculateOrderTotals(data.totalAmount || 0, 0),
+        orderSummary: calculateOrderTotals(data.totalAmount || 0, promoDiscountAmount, taxAmount),
     };
 };
-const calculateOrderTotals = async (subtotal, discountAmount) => {
-    const config = await transactionService.getVat();
-    const taxRate = Number(config?.vat ?? 0) / 100;
+// Tax is computed per product line (each product's own taxPercentage, 0 = tax
+// free) and passed in already summed; delivery fee is currently 0.
+const calculateOrderTotals = (subtotal, discountAmount, taxAmount) => {
     const discountedSubtotal = Math.max(0, subtotal - discountAmount);
-    const taxAmount = Number((discountedSubtotal * taxRate).toFixed(2));
     const totalAmount = Number((discountedSubtotal + taxAmount + SHIPPING_FEE).toFixed(2));
     return { subtotalAmount: subtotal, discountAmount, taxAmount, shippingAmount: SHIPPING_FEE, totalAmount };
 };
@@ -126,13 +201,15 @@ exports.removeFromCartController = (0, error_handler_1.catchAsync)(async (req, r
         throw new error_1.NotFoundError("Product not found in cart");
     cart.totalAmount = cart.products.reduce((total, item) => total + item.quantity * item.price, 0);
     await cart.save();
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await cartResponse(cart));
+    const prunedCart = await cartService.pruneAppliedPromos(cart);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await cartResponse(prunedCart));
 });
 exports.clearCartController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const cart = await cartService.fetchCartByUser(req.user._id);
     if (!cart)
         throw new error_1.NotFoundError("Cart not found");
     cart.products = [];
+    cart.appliedPromoCodes = [];
     cart.totalAmount = 0;
     await cart.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await cartResponse(cart));
@@ -168,17 +245,55 @@ exports.decreaseCartProductQuantityController = (0, error_handler_1.catchAsync)(
     const cart = await changeQuantity(req.user._id, req.params.productId, -1);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await cartResponse(cart));
 });
-exports.applyDiscountCode = (0, error_handler_1.catchAsync)(async (req, res) => {
+exports.applyPromoCodeController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const code = String(req.body.code || "").trim();
     if (!code)
-        throw new error_1.BadRequestError("Discount code is required");
-    const [discount, cart] = await Promise.all([cartService.fetchDiscountCode(code), cartService.fetchCartByUser(req.user._id)]);
-    if (!discount)
-        throw new error_1.NotFoundError("Invalid or expired discount code");
+        throw new error_1.BadRequestError("Promo code is required");
+    const cart = await cartService.fetchCartByUser(req.user._id);
     if (!cart || !cart.products?.length)
         throw new error_1.BadRequestError("Your cart is empty");
-    const discountAmount = Number((cart.totalAmount * discount.discountPercentage / 100).toFixed(2));
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { code: discount.code, discountPercentage: discount.discountPercentage, ...await calculateOrderTotals(cart.totalAmount, discountAmount) });
+    const promo = await promoService.fetchPromoByCode(code);
+    if (!promo)
+        throw new error_1.NotFoundError("Invalid or expired promo code");
+    if ((cart.appliedPromoCodes || []).some((entry) => String(entry.discountId) === String(promo._id))) {
+        throw new error_1.BadRequestError("This promo code is already applied to your cart");
+    }
+    // Product-scoped: the code is useless unless one of its products is in the cart
+    const scopeIds = (promo.productIds || []).map((id) => String(id));
+    const cartProductIds = new Set(cart.products.map((item) => cartProductId(item)));
+    if (!scopeIds.some((id) => cartProductIds.has(id))) {
+        throw new error_1.BadRequestError("This promo code does not apply to any product in your cart");
+    }
+    // One code per seller and no product overlap between applied codes
+    const existingIds = (cart.appliedPromoCodes || []).map((entry) => String(entry.discountId));
+    const existingPromos = existingIds.length ? await promoService.fetchPromosByIds(existingIds) : [];
+    const sameSeller = existingPromos.find((p) => String(p.sellerId) === String(promo.sellerId));
+    if (sameSeller)
+        throw new error_1.BadRequestError(`Promo code ${sameSeller.code} from this seller is already applied - only one code per seller`);
+    const overlapping = existingPromos.find((p) => (p.productIds || []).some((id) => scopeIds.includes(String(id))));
+    if (overlapping)
+        throw new error_1.BadRequestError(`Promo code ${overlapping.code} already covers one or more of these products`);
+    await cartService.addAppliedPromo(cart, promo);
+    const freshCart = await cartService.fetchCartByUser(req.user._id);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        message: `Promo code ${promo.code} applied`,
+        ...(await cartResponse(freshCart)),
+    });
+});
+exports.removePromoCodeController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const code = String(req.params.code || "").trim().toUpperCase();
+    const cart = await cartService.fetchCartByUser(req.user._id);
+    if (!cart)
+        throw new error_1.NotFoundError("Cart not found");
+    if (!(cart.appliedPromoCodes || []).some((entry) => entry.code === code)) {
+        throw new error_1.NotFoundError("This promo code is not applied to your cart");
+    }
+    await cartService.removeAppliedPromo(cart, code);
+    const freshCart = await cartService.fetchCartByUser(req.user._id);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        message: `Promo code ${code} removed`,
+        ...(await cartResponse(freshCart)),
+    });
 });
 exports.checkoutCartController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
@@ -189,12 +304,50 @@ exports.checkoutCartController = (0, error_handler_1.catchAsync)(async (req, res
     const existingOrder = await orderService.fetchOrderByCartIdForUser(String(cart._id), String(userId));
     if (existingOrder)
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, existingOrder);
-    let discount;
+    // === Resolve promos for this checkout ===
+    // Codes already applied on the cart are the source of truth. An optional
+    // inline `code` in the body is still honoured for backward compatibility.
+    const appliedEntries = [...(cart.appliedPromoCodes || [])];
+    let inlinePromo = null;
     if (code?.trim()) {
-        discount = await cartService.fetchDiscountCode(code);
-        if (!discount)
-            throw new error_1.NotFoundError("Invalid or expired discount code");
+        inlinePromo = await promoService.fetchPromoByCode(code);
+        if (!inlinePromo)
+            throw new error_1.NotFoundError("Invalid or expired promo code");
+        if (!appliedEntries.some((entry) => String(entry.discountId) === String(inlinePromo._id))) {
+            appliedEntries.push({ discountId: inlinePromo._id, code: inlinePromo.code });
+        }
     }
+    const appliedPromos = appliedEntries.length
+        ? await promoService.fetchPromosByIds(appliedEntries.map((entry) => String(entry.discountId)))
+        : [];
+    const cartProductIds = new Set(cart.products.map((item) => cartProductId(item)));
+    // Stale applied codes (expired/revoked/no longer in cart) are skipped silently...
+    let effectivePromos = appliedPromos.filter((promo) => promoService.isPromoUsable(promo) && (promo.productIds || []).some((id) => cartProductIds.has(String(id))));
+    // ...but an explicitly typed inline code that conflicts is a hard error
+    if (inlinePromo) {
+        const sameSeller = effectivePromos.find((p) => String(p._id) !== String(inlinePromo._id) && String(p.sellerId) === String(inlinePromo.sellerId));
+        if (sameSeller)
+            throw new error_1.BadRequestError(`Promo code ${sameSeller.code} from this seller is already applied - only one code per seller`);
+        const overlapping = effectivePromos.find((p) => String(p._id) !== String(inlinePromo._id) &&
+            (p.productIds || []).some((id) => (inlinePromo.productIds || []).some((pid) => String(pid) === String(id))));
+        if (overlapping)
+            throw new error_1.BadRequestError(`Promo code ${overlapping.code} already covers one or more of these products`);
+        if (!effectivePromos.some((p) => String(p._id) === String(inlinePromo._id))) {
+            effectivePromos = [...effectivePromos, inlinePromo];
+        }
+    }
+    // Each cart line is covered by at most one promo (one code per seller and no
+    // product overlap between codes are enforced at apply time)
+    const promoByProduct = new Map();
+    for (const promo of effectivePromos) {
+        for (const id of promo.productIds || []) {
+            const productId = String(id);
+            if (cartProductIds.has(productId))
+                promoByProduct.set(productId, promo);
+        }
+    }
+    let promoDiscountTotal = 0;
+    let taxTotal = 0;
     // Build order products WITH snapshots captured at order-creation time.
     // Product name/brand/category/price + merchant name/rating/review count are
     // stored on the order itself so later changes never alter past orders.
@@ -209,6 +362,13 @@ exports.checkoutCartController = (0, error_handler_1.catchAsync)(async (req, res
             : null;
         const merchantRating = await productService.fetchMerchantRatingForSeller(String(product.userId));
         const primaryImage = product.images?.find((img) => img.isPrimary);
+        const linePromo = promoByProduct.get(String(product._id));
+        const lineDiscount = linePromo ? Number((item.quantity * item.price * linePromo.discountPercentage / 100).toFixed(2)) : 0;
+        promoDiscountTotal += lineDiscount;
+        // Tax is charged per product (taxPercentage, 0 = tax free) on the post-promo line amount
+        const lineTaxRate = Number(product.taxPercentage ?? 0) || 0;
+        const lineTax = Number((Math.max(0, item.quantity * item.price - lineDiscount) * lineTaxRate / 100).toFixed(2));
+        taxTotal += lineTax;
         orderProducts.push({
             productId: product._id,
             quantity: item.quantity,
@@ -223,36 +383,39 @@ exports.checkoutCartController = (0, error_handler_1.catchAsync)(async (req, res
             merchantRating: merchantRating.merchantRating,
             merchantReviewCount: merchantRating.merchantReviewCount,
             totalUnitsSoldAtPurchase: product.totalUnitsSold || 0,
+            // Promo snapshot: which code hit this line and how much it saved
+            discountAmount: lineDiscount,
+            promoCode: linePromo?.code,
+            // Tax snapshot: the product's own rate and what this line was charged
+            taxPercentage: lineTaxRate,
+            taxAmount: lineTax,
         });
     }
-    const discountAmount = discount ? Number((cart.totalAmount * discount.discountPercentage / 100).toFixed(2)) : 0;
-    const totals = await calculateOrderTotals(cart.totalAmount, discountAmount);
+    const discountAmount = Number(promoDiscountTotal.toFixed(2));
+    const totals = calculateOrderTotals(cart.totalAmount, discountAmount, Number(taxTotal.toFixed(2)));
     const order = await orderService.createOrder({
         userId,
         products: orderProducts,
         ...totals,
-        discountApplied: Boolean(discount),
+        discountApplied: discountAmount > 0,
         originalTotalAmount: cart.totalAmount,
-        discountCode: discount?.code,
+        promoCodes: [...new Set(effectivePromos.map((promo) => promo.code))],
+        discountCode: effectivePromos[0]?.code,
         shippingAddress: shippingAddress || undefined,
         orderNote: orderNote || undefined,
         status: order_enum_1.OrderStatus.pending,
         paymentStatus: order_enum_1.OrderPaymentStatus.unpaid,
         cartId: cart._id,
     });
-    if (discount)
-        await cartService.incrementDiscountUsage(String(discount._id));
+    for (const promo of effectivePromos) {
+        await promoService.incrementPromoUsage(String(promo._id));
+    }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, order);
-});
-exports.generateDiscountCode = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { discountPercentage, expiryDate, isSingleUse } = req.body;
-    const code = Math.random().toString(36).slice(2, 9).toUpperCase();
-    const discountCode = await cartService.createDiscount({ code, discountPercentage, expiryDate, isSingleUse, createdBy: req.user._id });
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, discountCode);
 });
 exports.getCartController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const cart = await cartService.fetchCartByUser(req.user._id);
     if (!cart)
-        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { products: [], totalAmount: 0, cartQuantity: 0, status: cart_enum_1.CartStatus.active });
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await cartResponse(cart));
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { products: [], appliedPromos: [], promoDiscountAmount: 0, totalAmount: 0, cartQuantity: 0, status: cart_enum_1.CartStatus.active });
+    const prunedCart = await cartService.pruneAppliedPromos(cart);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await cartResponse(prunedCart));
 });

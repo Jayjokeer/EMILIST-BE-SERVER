@@ -46,6 +46,6 @@ router.route("/reduce-quantity/:productId").patch(current_user_1.userAuth, cartC
 router.route("/increase-quantity/:productId").patch(current_user_1.userAuth, cartController.increaseCartProductQuantityController);
 router.route("/remove-from-cart/:productId").patch(current_user_1.userAuth, cartController.removeFromCartController);
 router.route("/clear").delete(current_user_1.userAuth, cartController.clearCartController);
-router.route("/apply-discount-code").post(current_user_1.userAuth, cartController.applyDiscountCode);
-router.route("/generate-discount-code").post(current_user_1.adminAuth, cartController.generateDiscountCode); //this should be for admin
+router.route("/apply-discount-code").post(current_user_1.userAuth, cart_validation_1.validateApplyPromo, cartController.applyPromoCodeController);
+router.route("/remove-promo-code/:code").delete(current_user_1.userAuth, cartController.removePromoCodeController);
 router.route("/get-cart-items").get(current_user_1.userAuth, cartController.getCartController);

@@ -49,6 +49,7 @@ var ServiceEnum;
     ServiceEnum["job"] = "Job";
     ServiceEnum["material"] = "Material";
     ServiceEnum["walletFunding"] = "Walletfunding";
+    ServiceEnum["withdrawal"] = "Withdrawal";
     ServiceEnum["subscription"] = "Subscription";
     ServiceEnum["verification"] = "verification";
 })(ServiceEnum || (exports.ServiceEnum = ServiceEnum = {}));

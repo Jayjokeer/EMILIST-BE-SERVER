@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createBusinessProfileController = exports.deleteBusinessItemController = exports.muteBusinessController = exports.markReviewController = exports.fetchBusinessReviewsController = exports.fetchSimilarBusinessByUserController = exports.fetchOtherBusinessByUserController = exports.unlikeBusinessController = exports.likeBusinessController = exports.fetchAllComparedBusinessesController = exports.compareBusinessController = exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = void 0;
+exports.createBusinessProfileController = exports.deleteBusinessItemController = exports.muteBusinessController = exports.markReviewController = exports.fetchBusinessReviewsController = exports.fetchSimilarBusinessByUserController = exports.fetchOtherBusinessByUserController = exports.unlikeBusinessController = exports.likeBusinessController = exports.fetchAllComparedBusinessesController = exports.compareBusinessController = exports.reviewBusinessController = exports.deleteBusinessController = exports.fetchAllExpertsController = exports.fetchAllBusinessController = exports.deleteBusinessImageController = exports.fetchSingleBusinessController = exports.fetchUserBusinessController = exports.updateBusinessController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -108,6 +108,33 @@ exports.fetchAllBusinessController = (0, error_handler_1.catchAsync)(async (req,
         currency,
     };
     const data = await businessService.fetchAllBusiness(userId, Number(page), Number(limit), filters, search);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+// Accepts either a repeated query param (?serviceCategory=A&serviceCategory=B)
+// or a comma-separated single value (?serviceCategory=A,B).
+function parseListParam(value) {
+    if (value === undefined || value === null || value === '')
+        return undefined;
+    const list = Array.isArray(value) ? value : String(value).split(',');
+    const cleaned = list.map((v) => String(v).trim()).filter(Boolean);
+    return cleaned.length > 0 ? cleaned : undefined;
+}
+exports.fetchAllExpertsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const { page = 1, limit = 10, search, expertType, currency } = req.query;
+    const userId = req.query.userId ? String(req.query.userId) : null;
+    const filters = {
+        serviceCategory: parseListParam(req.query.serviceCategory),
+        minPayment: req.query.minPayment !== undefined ? Number(req.query.minPayment) : undefined,
+        maxPayment: req.query.maxPayment !== undefined ? Number(req.query.maxPayment) : undefined,
+        expertType: expertType,
+        currency: currency,
+        location: parseListParam(req.query.location ?? req.query.serviceLocation),
+        noticePeriod: parseListParam(req.query.noticePeriod),
+        experienceLevel: parseListParam(req.query.experienceLevel),
+        minRating: req.query.minRating !== undefined ? Number(req.query.minRating) : undefined,
+        minReviews: req.query.minReviews !== undefined ? Number(req.query.minReviews) : undefined,
+    };
+    const data = await businessService.fetchAllExperts(userId, Number(page), Number(limit), filters, search);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
 exports.deleteBusinessController = (0, error_handler_1.catchAsync)(async (req, res) => {

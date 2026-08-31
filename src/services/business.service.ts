@@ -1,4 +1,5 @@
 import { ExpertTypeEnum } from "../enums/business.enum";
+import { ExperienceLevelEnum } from "../enums/jobs.enum";
 import { BadRequestError, NotFoundError } from "../errors/error";
 import IBusiness, { BusinessProfileDto, CreateBusinessWithProfileDto, SetupServiceDto, VerifyExpertiseDto } from "../interfaces/business.interface";
 import Business from "../models/business.model";
@@ -326,6 +327,214 @@ console.log(enhancedBusinesses)
 
 
 
+// Maps the job-side experience level labels (used on the filter UI) to the
+// legacy `Users.level` enum (one/two/three/four) so a business's expert can
+// be filtered/labelled the same way regardless of which enum was stored.
+const EXPERIENCE_LEVEL_TO_USER_LEVEL: Record<string, string> = {
+  [ExperienceLevelEnum.apprentice]: 'one',
+  [ExperienceLevelEnum.junior]: 'two',
+  [ExperienceLevelEnum.intermediate]: 'three',
+  [ExperienceLevelEnum.senior]: 'four',
+};
+
+const USER_LEVEL_TO_EXPERIENCE_LEVEL: Record<string, string> = {
+  one: ExperienceLevelEnum.apprentice,
+  two: ExperienceLevelEnum.junior,
+  three: ExperienceLevelEnum.intermediate,
+  four: ExperienceLevelEnum.senior,
+};
+
+// Human-readable label for the "Experience" row on the Compare Experts screen.
+const EXPERIENCE_LEVEL_LABEL: Record<string, string> = {
+  [ExperienceLevelEnum.apprentice]: 'Apprentice (<1 yr)',
+  [ExperienceLevelEnum.junior]: 'Junior (1-2 yrs)',
+  [ExperienceLevelEnum.intermediate]: 'Intermediate (3-4 yrs)',
+  [ExperienceLevelEnum.senior]: 'Senior (5 yrs+)',
+};
+
+// Flattens certification/membership sub-docs into the bullet list shown on the
+// Compare Experts screen, e.g. "Painters Association of Nigeria Certified".
+function buildCredentialsList(business: any): string[] {
+  const credentials: string[] = [];
+
+  (business.certification || []).forEach((cert: any) => {
+    if (cert?.issuingOrganisation) {
+      credentials.push(`${cert.issuingOrganisation} Certified`);
+    }
+  });
+
+  (business.membership || []).forEach((membership: any) => {
+    if (membership?.organisation) {
+      const role = membership.positionHeld || 'Member';
+      credentials.push(`${membership.organisation} ${role}`);
+    }
+  });
+
+  return credentials;
+}
+
+// Powers the "Hire experts" marketplace screen: cards (business name, verified
+// badge, rating, price, category, jobs completed, location, experience level,
+// image) plus every filter in the sidebar (service category, payment range,
+// service location, notice period, experience level, expert rating).
+export const fetchAllExperts = async (
+  userId: string | null,
+  page: number,
+  limit: number,
+  filters: {
+    serviceCategory?: string[];
+    minPayment?: number;
+    maxPayment?: number;
+    expertType?: ExpertTypeEnum;
+    currency?: string;
+    location?: string[];
+    noticePeriod?: string[];
+    experienceLevel?: string[];
+    minRating?: number;
+    minReviews?: number;
+  },
+  search?: string,
+) => {
+  const skip = (page - 1) * limit;
+  const query: Record<string, any> = {};
+
+  // PAYMENT filter (min/max)
+  if (filters.minPayment !== undefined || filters.maxPayment !== undefined) {
+    query.startingPrice = {};
+    if (filters.minPayment !== undefined) query.startingPrice.$gte = filters.minPayment;
+    if (filters.maxPayment !== undefined) query.startingPrice.$lte = filters.maxPayment;
+  }
+
+  if (filters.expertType) {
+    query.expertType = filters.expertType;
+  }
+  if (filters.currency) {
+    query.currency = filters.currency;
+  }
+
+  // SERVICE CATEGORY filter (multi-select)
+  if (filters.serviceCategory && filters.serviceCategory.length > 0) {
+    const categoryRegexes = filters.serviceCategory.map((c) => new RegExp(`^${c}$`, 'i'));
+    query.$and = (query.$and || []).concat([
+      { $or: [{ services: { $in: categoryRegexes } }, { 'renderedServices.name': { $in: categoryRegexes } }] },
+    ]);
+  }
+
+  // SERVICE LOCATION filter (multi-select)
+  if (filters.location && filters.location.length > 0) {
+    const locationRegexes = filters.location.map((l) => new RegExp(l, 'i'));
+    query.$and = (query.$and || []).concat([
+      {
+        $or: [
+          { city: { $in: locationRegexes } },
+          { state: { $in: locationRegexes } },
+          { country: { $in: locationRegexes } },
+          { businessCity: { $in: locationRegexes } },
+          { businessState: { $in: locationRegexes } },
+          { businessCountry: { $in: locationRegexes } },
+        ],
+      },
+    ]);
+  }
+
+  // NOTICE PERIOD filter (multi-select)
+  if (filters.noticePeriod && filters.noticePeriod.length > 0) {
+    query.noticePeriod = { $in: filters.noticePeriod };
+  }
+
+  if (search) {
+    const words = search.split(/\s+/).filter(Boolean);
+    const businessFields = ['services', 'businessName', 'bio', 'city', 'state', 'country', 'businessCity', 'businessState', 'businessCountry'];
+    query.$and = (query.$and || []).concat(
+      words.map((word) => {
+        const regex = new RegExp(word, 'i');
+        return { $or: businessFields.map((field) => ({ [field]: { $regex: regex } })) };
+      })
+    );
+  }
+
+  if (userId) {
+    const user = await userService.fetchUserMutedBusinesses(userId);
+    if (user && user.mutedBusinesses && user.mutedBusinesses.length > 0) {
+      query._id = { $nin: user.mutedBusinesses };
+    }
+  }
+
+  // EXPERIENCE LEVEL filter (multi-select) - lives on the populated Users.level,
+  // so it's translated to the legacy enum and applied after populate below.
+  const wantedUserLevels = filters.experienceLevel && filters.experienceLevel.length > 0
+    ? filters.experienceLevel.map((lvl) => EXPERIENCE_LEVEL_TO_USER_LEVEL[lvl] || lvl)
+    : undefined;
+
+  const businesses = await Business.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .populate('reviews', 'rating')
+    .populate('userId', 'userName fullName profileImage level');
+
+  const totalBusinesses = await Business.countDocuments(query);
+
+  let likedBusinessIds: string[] = [];
+  let user: any;
+
+  if (userId) {
+    const likedBusinesses = await BusinessLike.find({ user: userId }).select('business').lean();
+    likedBusinessIds = likedBusinesses.map((like) => like.business.toString());
+    user = await userService.findUserWithoutDetailsById(userId);
+  }
+
+  const enhancedExperts = await Promise.all(
+    businesses.map(async (business: any) => {
+      const reviews = business.reviews || [];
+      const totalReviews = reviews.length;
+      const averageRating =
+        totalReviews > 0
+          ? reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
+          : 0;
+
+      const completedJobs = await projectService.completedJobsCount(String(business._id));
+      const rawUserLevel = business.userId?.level;
+      const experienceLevel = rawUserLevel ? USER_LEVEL_TO_EXPERIENCE_LEVEL[rawUserLevel] || rawUserLevel : undefined;
+
+      return {
+        ...business.toObject(),
+        category: business.services?.[0] || business.renderedServices?.[0]?.name || null,
+        location: [business.businessCity || business.city, business.businessCountry || business.country]
+          .filter(Boolean)
+          .join(', '),
+        experienceLevel,
+        experienceLevelLabel: experienceLevel ? EXPERIENCE_LEVEL_LABEL[experienceLevel] : null,
+        totalReviews,
+        averageRating: parseFloat(averageRating.toFixed(2)),
+        isCompared: userId ? user.comparedBusinesses.includes(String(business._id)) : false,
+        completedJobs,
+        liked: likedBusinessIds.includes(String(business._id)),
+      };
+    })
+  );
+
+  const filteredExperts = enhancedExperts.filter((expert) => {
+    if (filters.minRating && expert.averageRating < filters.minRating) {
+      return false;
+    }
+    if (filters.minReviews && expert.totalReviews < filters.minReviews) {
+      return false;
+    }
+    if (wantedUserLevels && !wantedUserLevels.includes(expert.userId?.level)) {
+      return false;
+    }
+    return true;
+  });
+
+  return {
+    experts: filteredExperts,
+    totalPages: Math.ceil(totalBusinesses / limit),
+    currentPage: page,
+    totalBusinesses,
+  };
+};
+
 export const deleteBusiness = async (businessId: string)=>{
     return await Business.findByIdAndDelete(businessId);
 };
@@ -337,6 +546,10 @@ export const fetchAllUserBusinessesAdmin = async (userId: string)=>{
     .lean();
 };
 
+// Powers the "Compare Experts" screen: for each expert being compared, returns
+// the profile header (name/avatar/price/rating), the credentials bullet list,
+// and every row of the comparison table (experience, ratings, reviews, service
+// category, jobs completed, notice period, location, language, insurance).
 export const fetchAllComparedBusinesses = async (businessId: string[])=>{
   const businesses = await Business.find({ _id: { $in: businessId } })
   .populate('userId', 'fullName email userName uniqueId profileImage level gender')
@@ -352,9 +565,18 @@ export const fetchAllComparedBusinesses = async (businessId: string[])=>{
           : 0;
 
       const completedJobs = await projectService.completedJobsCount(String(business._id));
+      const rawUserLevel = business.userId?.level;
+      const experienceLevel = rawUserLevel ? USER_LEVEL_TO_EXPERIENCE_LEVEL[rawUserLevel] || rawUserLevel : undefined;
 
       return {
         ...business,
+        category: business.services?.[0] || business.renderedServices?.[0]?.name || null,
+        location: [business.businessCity || business.city, business.businessCountry || business.country]
+          .filter(Boolean)
+          .join(', '),
+        experienceLevel,
+        experienceLevelLabel: experienceLevel ? EXPERIENCE_LEVEL_LABEL[experienceLevel] : null,
+        credentials: buildCredentialsList(business),
         completedJobs,
         totalReviews,
         averageRating: parseFloat(averageRating.toFixed(2)),

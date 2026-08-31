@@ -5,6 +5,7 @@ import cors from 'cors';
 import { connectDB } from '../db/database';
 import { config } from "./utils/config";
 import  router  from "./routes";
+import { webhookRouter } from "./routes/webhook.routes";
 import  globalErrorHandler  from "./errors/error-handler";
 import AppError from "./errors/error";
 import passport from "passport";
@@ -27,6 +28,9 @@ const server = http.createServer(app);
 
 // Middleware
 app.use(cookieParser());
+// Paystack webhook must receive the exact raw request body for HMAC-SHA512
+// signature verification, so it is mounted BEFORE express.json.
+app.use("/api/v1/webhooks", webhookRouter);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(helmet());

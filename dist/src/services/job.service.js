@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsByUserId = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
+exports.fetchJobsByUserId = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -110,6 +110,7 @@ const fetchAllJobs = async (page, limit, userId, search, filters = {}) => {
     const searchCriteria = {
         type: { $ne: jobs_enum_1.JobType.direct },
         status: jobs_enum_1.JobStatusEnum.pending,
+        isListed: true,
     };
     if (!search) {
         if (filters.title)
@@ -334,9 +335,53 @@ const deleteJobApplication = async (jobId, projectId) => {
 };
 exports.deleteJobApplication = deleteJobApplication;
 const deleteJobById = async (jobId, userId) => {
-    return await jobs_model_1.default.findOneAndDelete({ userId: userId, _id: jobId });
+    const deletedJob = await jobs_model_1.default.findOneAndDelete({ userId: userId, _id: jobId });
+    if (deletedJob) {
+        // Remove any applications/projects linked to this job so they don't become orphans
+        await project_model_1.default.deleteMany({ job: jobId });
+    }
+    return deletedJob;
 };
 exports.deleteJobById = deleteJobById;
+/**
+ * Fetch the applicants (Projects) received on the logged-in user's jobs.
+ * `creator` is the job poster; `user` is the applicant.
+ */
+const fetchJobApplicants = async (userId, jobId, status, page = 1, limit = 10) => {
+    const skip = (page - 1) * limit;
+    const query = { creator: userId };
+    if (jobId)
+        query.job = jobId;
+    if (status)
+        query.status = status;
+    const applicants = await project_model_1.default.find(query)
+        .populate('user', 'fullName userName email profileImage level uniqueId')
+        .populate('job', 'title status jobCategory service')
+        .sort({ appliedAt: -1 })
+        .skip(skip)
+        .limit(Number(limit));
+    const total = await project_model_1.default.countDocuments(query);
+    return {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        applicants,
+    };
+};
+exports.fetchJobApplicants = fetchJobApplicants;
+/**
+ * List (true) or delist (false) a job owned by the given user.
+ * Returns null if no such job exists.
+ */
+const setJobListing = async (jobId, userId, isListed) => {
+    const job = await jobs_model_1.default.findOne({ _id: jobId, userId });
+    if (!job)
+        return null;
+    job.isListed = isListed;
+    await job.save();
+    return job;
+};
+exports.setJobListing = setJobListing;
 const fetchJobByUserIdAndStatus = async (userId, status) => {
     const query = { userId };
     if (Array.isArray(status)) {

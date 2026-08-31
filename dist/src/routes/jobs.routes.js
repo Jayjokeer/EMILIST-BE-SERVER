@@ -54,6 +54,9 @@ router.route("/apply-job").post(current_user_1.userAuth, job_validation_1.valida
 router.route("/withdraw-job-application/:projectId").delete(current_user_1.userAuth, jobController.deleteJobApplicationController);
 router.route("/delete-job/:jobId").delete(current_user_1.userAuth, jobController.deleteJobController);
 router.route("/update-job/:jobId").put(current_user_1.userAuth, image_upload_1.multipleUpload, image_upload_1.parseJobBody, job_validation_1.validateUpdateJob, jobController.updateJobController);
+router.route("/fetch-applicants").get(current_user_1.userAuth, jobController.fetchJobApplicantsController);
+router.route("/list-job/:jobId").patch(current_user_1.userAuth, jobController.listJobController);
+router.route("/delist-job/:jobId").patch(current_user_1.userAuth, jobController.delistJobController);
 router.route("/update-application-status/:projectId").patch(current_user_1.userAuth, jobController.jobStatusController);
 router.route("/fetch-jobs-by-status").get(current_user_1.userAuth, jobController.fetchJobByStatusController);
 router.route("/remove-job/:jobId/file/:fileId").delete(current_user_1.userAuth, jobController.deleteFileController);

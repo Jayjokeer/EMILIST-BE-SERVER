@@ -1327,6 +1327,34 @@ export const fetchProductReviews = async (
   return data;
 };
 
+// Average rating across every product listed by this merchant - the
+// "Merchant Ratings" row on the Compare Materials screen, distinct from a
+// single product's own "Product Reviews" rating/count.
+const computeMerchantRating = async (userId: any) => {
+  const sellerProducts = await Product.find({ userId, isDeleted: false }).select('_id').lean();
+  const sellerProductIds = sellerProducts.map((p) => p._id);
+  if (sellerProductIds.length === 0) {
+    return { averageRating: 0, totalReviews: 0 };
+  }
+
+  const result = await Review.aggregate([
+    { $match: { productId: { $in: sellerProductIds } } },
+    { $group: { _id: null, averageRating: { $avg: "$rating" }, reviewCount: { $sum: 1 } } },
+  ]);
+
+  return {
+    averageRating: result.length > 0 ? parseFloat((result[0].averageRating || 0).toFixed(2)) : 0,
+    totalReviews: result.length > 0 ? result[0].reviewCount || 0 : 0,
+  };
+};
+
+const COMPARE_PRODUCT_DISCLAIMER =
+  "Prices, availability and delivery times are set by the merchant and may change without notice. Emilist does not guarantee product quality - please review the merchant's ratings and reviews before purchasing.";
+
+// Powers the "Compare Materials" screen: for each product being compared,
+// returns the listing header (name/price/sold count/rating/image) and every
+// row of the comparison table (delivery time, location, merchant ratings,
+// product reviews).
 export const fetchAllComparedProducts = async (productIds: string[])=>{
   const products = await Product.find({ _id: { $in: productIds } })
   .populate('userId', 'fullName email userName uniqueId profileImage level gender')
@@ -1350,10 +1378,20 @@ export const fetchAllComparedProducts = async (productIds: string[])=>{
       const totalReviews = reviewStats.length > 0 ? reviewStats[0].totalReviews : 0;
       const averageRating = reviewStats.length > 0 ? reviewStats[0].averageRating : 0;
 
+      const merchantRating = await computeMerchantRating(product.userId?._id || product.userId);
+      const location = (product.deliveryLocations || [])
+        .map((loc: any) => [loc.lga, loc.state].filter(Boolean).join(', '))
+        .filter(Boolean)
+        .join(' | ');
+
       return {
         ...product,
+        location: location || null,
+        merchantRating: merchantRating.averageRating,
+        merchantTotalReviews: merchantRating.totalReviews,
         totalReviews,
         averageRating: parseFloat(averageRating.toFixed(2)),
+        disclaimer: COMPARE_PRODUCT_DISCLAIMER,
       };
     })
   );
