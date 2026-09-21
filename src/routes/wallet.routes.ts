@@ -6,12 +6,14 @@ import {
   validateAddBankAccount,
   validateCreateWallet,
   validateInitiateWalletFunding,
+  validateWalletOverview,
   validateWithdrawFunds,
 } from "../validations/wallet.validation";
 const router = Router();
 
 router.route("/create-wallet").post(userAuth, validateCreateWallet, walletController.createWalletController);
 router.route("/fetch-wallets").get(userAuth, walletController.fetchWalletsController);
+router.route("/fetch-wallet-overview").get(userAuth, validateWalletOverview, walletController.fetchWalletOverviewController);
 router.route("/fetch-wallet/:walletId").get(userAuth, walletController.fetchWalletDetailController);
 router.route("/set-default-wallet/:walletId").patch(userAuth, walletController.setDefaultWalletController);
 router.route("/fetch-payment-methods").get(userAuth, walletController.fetchPaymentMethodsController);

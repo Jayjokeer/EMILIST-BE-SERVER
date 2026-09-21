@@ -78,6 +78,10 @@ export const validateWithdrawFunds = (req: Request, res: Response, next: NextFun
       "any.required": "Amount is required",
     }),
     currency: currencyField,
+    walletId: Joi.string().hex().length(24).optional().messages({
+      "string.hex": "walletId must be a valid id",
+      "string.length": "walletId must be a valid id",
+    }),
     bankAccountId: Joi.string().hex().length(24).required().messages({
       "string.hex": "bankAccountId must be a valid id",
       "string.length": "bankAccountId must be a valid id",
@@ -85,6 +89,24 @@ export const validateWithdrawFunds = (req: Request, res: Response, next: NextFun
     }),
   });
   const { error } = schema.validate(req.body, { abortEarly: false });
+  if (error) return respondValidationError(res, error);
+  next();
+};
+
+export const validateWalletOverview = (req: Request, res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    walletId: Joi.string().hex().length(24).optional().messages({
+      "string.hex": "walletId must be a valid id",
+      "string.length": "walletId must be a valid id",
+    }),
+    currency: Joi.string()
+      .valid(...Object.values(WalletEnum))
+      .optional()
+      .messages({
+        "any.only": "Currency must be one of NGN, USD, GBP, EUR",
+      }),
+  });
+  const { error } = schema.validate(req.query, { abortEarly: false });
   if (error) return respondValidationError(res, error);
   next();
 };
@@ -97,6 +119,22 @@ export const validateTransactionFilters = (req: Request, res: Response, next: Ne
     paymentMethod: Joi.string()
       .valid(...Object.values(PaymentMethodEnum))
       .optional(),
+    walletId: Joi.string().hex().length(24).optional().messages({
+      "string.hex": "walletId must be a valid id",
+      "string.length": "walletId must be a valid id",
+    }),
+    currency: Joi.string()
+      .valid(...Object.values(WalletEnum))
+      .optional()
+      .messages({
+        "any.only": "Currency must be one of NGN, USD, GBP, EUR",
+      }),
+    sortBy: Joi.string().valid("date", "amount").optional().messages({
+      "any.only": "sortBy must be date or amount",
+    }),
+    sortOrder: Joi.string().valid("asc", "desc").optional().messages({
+      "any.only": "sortOrder must be asc or desc",
+    }),
     page: Joi.number().integer().min(1).optional(),
     limit: Joi.number().integer().min(1).max(100).optional(),
   });
@@ -136,6 +174,31 @@ export const validateStatementRequest = (req: Request, res: Response, next: Next
       "date.format": "endDate must be an ISO date (e.g. 2026-01-31)",
     }),
     status: Joi.string().valid("all", "pending", "failed", "successful").optional(),
+    currency: Joi.string()
+      .valid(...Object.values(WalletEnum))
+      .optional()
+      .messages({
+        "any.only": "Currency must be one of NGN, USD, GBP, EUR",
+      }),
+    walletId: Joi.string().hex().length(24).optional().messages({
+      "string.hex": "walletId must be a valid id",
+      "string.length": "walletId must be a valid id",
+    }),
+  });
+  const { error } = schema.validate(req.query, { abortEarly: false });
+  if (error) return respondValidationError(res, error);
+  next();
+};
+
+export const validateReceiptRequest = (req: Request, res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    format: Joi.string()
+      .valid("pdf", "csv")
+      .required()
+      .messages({
+        "any.only": "Format must be pdf or csv",
+        "any.required": "Format is required",
+      }),
   });
   const { error } = schema.validate(req.query, { abortEarly: false });
   if (error) return respondValidationError(res, error);

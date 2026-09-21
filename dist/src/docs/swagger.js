@@ -494,6 +494,37 @@ Association of Nigeria President").`,
                 },
             },
         },
+        "/wallet/fetch-wallet-overview": {
+            get: {
+                tags: ["Wallet"],
+                summary: "Wallet dashboard card (selected wallet, wallet dropdown, payout bank account)",
+                description: `One call for the wallet card: the selected wallet balance, all wallets for the dropdown, and the default payout bank account (Bank + A/C No row). Defaults to the user's default wallet; pass \`walletId\` or \`currency\` to switch the selected wallet.`,
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    { name: "walletId", in: "query", schema: { type: "string" }, description: "Select a specific wallet by id" },
+                    { name: "currency", in: "query", schema: { type: "string", enum: ["NGN", "USD", "GBP", "EUR"] }, description: "Select the wallet for this currency" },
+                ],
+                responses: {
+                    "200": {
+                        description: "Wallet overview",
+                        content: {
+                            "application/json": {
+                                example: {
+                                    message: "success",
+                                    data: {
+                                        wallet: { walletId: "64f1a2b3c4d5e6f7a8b9c0ab", balance: 150000, currency: "NGN", isDefault: true, createdAt: "2026-08-31T10:00:00.000Z" },
+                                        wallets: [{ walletId: "64f1a2b3c4d5e6f7a8b9c0ab", balance: 150000, currency: "NGN", isDefault: true, createdAt: "2026-08-31T10:00:00.000Z" }],
+                                        bankAccount: { bankAccountId: "64f1a2b3c4d5e6f7a8b9c0ac", bankName: "GTBank", accountNumber: "0123456789", accountName: "JOHN DOE", currency: "NGN", isDefault: true },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    "404": { description: "No wallet found" },
+                    "401": { description: "Unauthorized - missing or invalid token" },
+                },
+            },
+        },
         "/wallet/fetch-wallet/{walletId}": {
             get: {
                 tags: ["Wallet"],
@@ -731,7 +762,7 @@ the "Product Reviews" row), and a static \`disclaimer\` string.`,
                 security: [{ bearerAuth: [] }],
                 requestBody: {
                     required: true,
-                    content: { "application/json": { example: { amount: 5000, currency: "NGN", bankAccountId: "64f1a2b3c4d5e6f7a8b9c0ac" } } },
+                    content: { "application/json": { example: { amount: 5000, currency: "NGN", walletId: "64f1a2b3c4d5e6f7a8b9c0ab", bankAccountId: "64f1a2b3c4d5e6f7a8b9c0ac" } } },
                 },
                 responses: {
                     "201": {
@@ -832,11 +863,15 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
             get: {
                 tags: ["Transactions"],
                 summary: "List the user's transactions with filters and pagination",
-                description: `Filter by \`status\`, \`type\` and free-text \`search\` (transaction reference/id or counterparty). Item shape: transactionId, walletId, currency, amount, transactionType, status, counterparty, date, balance, reference, description, paymentMethod. Mapping: CREDIT->inflow, DEBIT->outflow; completed->successful, declined->failed, processing->pending.`,
+                description: `Filter by \`status\`, \`type\`, \`walletId\`, \`currency\` and free-text \`search\` (transaction reference/id or counterparty). Sort with \`sortBy=date|amount\` + \`sortOrder=asc|desc\` (Transaction Type column control). Item shape: transactionId, shortTransactionId (#3066 style), walletId, currency, amount, formattedAmount (₦150,000 style), transactionType, status, counterparty, date, balance, reference, description, paymentMethod. Mapping: CREDIT->inflow, DEBIT->outflow; completed->successful, declined->failed, processing->pending.`,
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     { name: "status", in: "query", schema: { type: "string", enum: ["all", "pending", "failed", "successful"] }, description: "Defaults to all" },
                     { name: "type", in: "query", schema: { type: "string", enum: ["inflow", "outflow"] } },
+                    { name: "walletId", in: "query", schema: { type: "string" }, description: "Only transactions for this wallet" },
+                    { name: "currency", in: "query", schema: { type: "string", enum: ["NGN", "USD", "GBP", "EUR"] } },
+                    { name: "sortBy", in: "query", schema: { type: "string", enum: ["date", "amount"] }, description: "Column to sort by (default date)" },
+                    { name: "sortOrder", in: "query", schema: { type: "string", enum: ["asc", "desc"] }, description: "Sort direction (default desc)" },
                     { name: "search", in: "query", schema: { type: "string" }, description: "Matches reference, transaction id, counterparty or description" },
                     { name: "page", in: "query", schema: { type: "integer", default: 1 } },
                     { name: "limit", in: "query", schema: { type: "integer", default: 10, maximum: 100 } },
@@ -911,10 +946,12 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
             get: {
                 tags: ["Transactions"],
                 summary: "Download a transaction statement (pdf or csv)",
-                description: `Only \`pdf\` and \`csv\` are supported - any other format returns 400. Streams the file with \`Content-Disposition: attachment\` and the correct \`Content-Type\`.`,
+                description: `Only \`pdf\` and \`csv\` are supported - any other format returns 400. Filter by the Download Account Statement modal fields: \`currency\`/\`walletId\` (Select currency), \`startDate\`/\`endDate\` and \`status\`. Streams the file with \`Content-Disposition: attachment\` and the correct \`Content-Type\`.`,
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     { name: "format", in: "query", required: true, schema: { type: "string", enum: ["pdf", "csv"] } },
+                    { name: "currency", in: "query", schema: { type: "string", enum: ["NGN", "USD", "GBP", "EUR"] }, description: "Select currency from the statement modal" },
+                    { name: "walletId", in: "query", schema: { type: "string" }, description: "Optional wallet id matching the selected currency" },
                     { name: "startDate", in: "query", schema: { type: "string", format: "date" } },
                     { name: "endDate", in: "query", schema: { type: "string", format: "date" } },
                     { name: "status", in: "query", schema: { type: "string", enum: ["all", "pending", "failed", "successful"] } },
@@ -929,6 +966,30 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
                     },
                     "400": { description: "Unsupported format or invalid filters" },
                     "401": { description: "Unauthorized - missing or invalid token" },
+                },
+            },
+        },
+        "/transaction/download-receipt/{transactionId}": {
+            get: {
+                tags: ["Transactions"],
+                summary: "Download a single transaction receipt (pdf or csv)",
+                description: `Row-level download behind the per-row printer icon on the Transaction History table. Only the owning user can download it.`,
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    { name: "transactionId", in: "path", required: true, schema: { type: "string" } },
+                    { name: "format", in: "query", required: true, schema: { type: "string", enum: ["pdf", "csv"] } },
+                ],
+                responses: {
+                    "200": {
+                        description: "Receipt file (application/pdf or text/csv attachment)",
+                        content: {
+                            "application/pdf": { schema: { type: "string", format: "binary" } },
+                            "text/csv": { schema: { type: "string" } },
+                        },
+                    },
+                    "400": { description: "Unsupported format" },
+                    "401": { description: "Unauthorized - missing or invalid token" },
+                    "404": { description: "Transaction not found" },
                 },
             },
         },

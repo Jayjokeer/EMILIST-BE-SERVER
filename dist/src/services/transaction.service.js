@@ -314,6 +314,10 @@ const fetchUserTransactionsFiltered = async (userId, filters) => {
         andConditions.push({ type: transaction_enum_1.TransactionType.DEBIT });
     if (filters.paymentMethod)
         andConditions.push({ paymentMethod: filters.paymentMethod });
+    if (filters.walletId)
+        andConditions.push({ walletId: new mongoose_1.default.Types.ObjectId(filters.walletId) });
+    if (filters.currency)
+        andConditions.push({ currency: String(filters.currency).toUpperCase() });
     // Search by transaction reference/id or counterparty (falls back to description)
     if (filters.search?.trim()) {
         const search = filters.search.trim();
@@ -323,9 +327,13 @@ const fetchUserTransactionsFiltered = async (userId, filters) => {
             searchConditions.push({ _id: new mongoose_1.default.Types.ObjectId(search) });
         andConditions.push({ $or: searchConditions });
     }
+    // Supports the Transaction Type column sort control on the history table.
+    const sortField = filters.sortBy === "amount" || filters.sortBy === "date" ? filters.sortBy : "date";
+    const sortDirection = String(filters.sortOrder || "desc").toLowerCase() === "asc" ? 1 : -1;
+    const sort = sortField === "amount" ? { amount: sortDirection } : { createdAt: sortDirection };
     const query = { $and: andConditions };
     const [transactions, totalTransactions] = await Promise.all([
-        transaction_model_1.default.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        transaction_model_1.default.find(query).sort(sort).skip(skip).limit(limit).lean(),
         transaction_model_1.default.countDocuments(query),
     ]);
     return { transactions, totalTransactions, page, totalPages: Math.ceil(totalTransactions / limit) };
@@ -394,18 +402,22 @@ const fetchUserTransactionById = async (userId, transactionId) => {
     }).populate("walletId", "currency balance");
 };
 exports.fetchUserTransactionById = fetchUserTransactionById;
-const fetchTransactionsForStatement = async (userId, startDate, endDate, status) => {
+const fetchTransactionsForStatement = async (userId, options = {}) => {
     const andConditions = [{ $or: [{ userId: userId }, { recieverId: userId }] }];
     const createdAt = {};
-    if (startDate)
-        createdAt.$gte = startDate;
-    if (endDate)
-        createdAt.$lte = endDate;
+    if (options.startDate)
+        createdAt.$gte = options.startDate;
+    if (options.endDate)
+        createdAt.$lte = options.endDate;
     if (Object.keys(createdAt).length)
         andConditions.push({ createdAt });
-    const statusCond = statusCondition(status);
+    const statusCond = statusCondition(options.status);
     if (statusCond)
         andConditions.push(statusCond);
+    if (options.currency)
+        andConditions.push({ currency: String(options.currency).toUpperCase() });
+    if (options.walletId)
+        andConditions.push({ walletId: new mongoose_1.default.Types.ObjectId(options.walletId) });
     return await transaction_model_1.default.find({ $and: andConditions }).sort({ createdAt: 1 }).lean();
 };
 exports.fetchTransactionsForStatement = fetchTransactionsForStatement;

@@ -115,6 +115,36 @@ export const fetchWalletsController = catchAsync(async (req: JwtPayload, res: Re
   return successResponse(res, StatusCodes.OK, data);
 });
 
+// Powers the wallet dashboard card: selected wallet (dropdown), balance,
+// "+ Add wallet" options, "Withdraw Funds" / "Fund Wallet" actions, and the
+// Bank / A/C No payout row. Defaults to the user's default wallet.
+export const fetchWalletOverviewController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const { walletId, currency } = req.query;
+  const { wallet, wallets, bankAccount } = await walletService.fetchWalletOverview(
+    req.user._id,
+    walletId ? String(walletId) : undefined,
+    currency ? (String(currency).toUpperCase() as WalletEnum) : undefined
+  );
+
+  return successResponse(res, StatusCodes.OK, {
+    wallet: {
+      walletId: wallet._id,
+      balance: wallet.balance,
+      currency: wallet.currency,
+      isDefault: wallet.isDefault,
+      createdAt: wallet.createdAt,
+    },
+    wallets: wallets.map((entry: any) => ({
+      walletId: entry._id,
+      balance: entry.balance,
+      currency: entry.currency,
+      isDefault: entry.isDefault,
+      createdAt: entry.createdAt,
+    })),
+    bankAccount: bankAccount ? bankAccountService.serializeBankAccount(bankAccount) : null,
+  });
+});
+
 export const fetchWalletDetailController = catchAsync(async (req: JwtPayload, res: Response) => {
   const { wallet, bankAccount } = await walletService.fetchWalletDetail(req.user._id, req.params.walletId);
   const data = {
@@ -177,10 +207,10 @@ export const addBankAccountController = catchAsync(async (req: JwtPayload, res: 
 
 export const withdrawFundsController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user._id;
-  const { amount, currency, bankAccountId } = req.body;
+  const { amount, currency, bankAccountId, walletId } = req.body;
 
   const bankAccount = await bankAccountService.fetchBankAccountById(userId, bankAccountId);
-  const { wallet, balanceBefore } = await walletService.debitWalletForWithdrawal(userId, currency, amount);
+  const { wallet, balanceBefore } = await walletService.debitWalletForWithdrawal(userId, currency, amount, walletId);
 
   try {
     const transaction = await transactionService.createTransaction({

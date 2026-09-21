@@ -317,7 +317,18 @@ const statusCondition = (status?: string) => {
 
 export const fetchUserTransactionsFiltered = async (
   userId: string,
-  filters: { status?: string; type?: string; search?: string; paymentMethod?: string; page?: number; limit?: number }
+  filters: {
+    status?: string;
+    type?: string;
+    search?: string;
+    paymentMethod?: string;
+    walletId?: string;
+    currency?: string;
+    sortBy?: string;
+    sortOrder?: string;
+    page?: number;
+    limit?: number;
+  }
 ) => {
   const page = Math.max(1, Number(filters.page) || 1);
   const limit = Math.min(100, Math.max(1, Number(filters.limit) || 10));
@@ -330,6 +341,8 @@ export const fetchUserTransactionsFiltered = async (
   if (filters.type === "inflow") andConditions.push({ type: TransactionType.CREDIT });
   if (filters.type === "outflow") andConditions.push({ type: TransactionType.DEBIT });
   if (filters.paymentMethod) andConditions.push({ paymentMethod: filters.paymentMethod });
+  if (filters.walletId) andConditions.push({ walletId: new mongoose.Types.ObjectId(filters.walletId) });
+  if (filters.currency) andConditions.push({ currency: String(filters.currency).toUpperCase() });
 
   // Search by transaction reference/id or counterparty (falls back to description)
   if (filters.search?.trim()) {
@@ -340,9 +353,14 @@ export const fetchUserTransactionsFiltered = async (
     andConditions.push({ $or: searchConditions });
   }
 
+  // Supports the Transaction Type column sort control on the history table.
+  const sortField = filters.sortBy === "amount" || filters.sortBy === "date" ? filters.sortBy : "date";
+  const sortDirection = String(filters.sortOrder || "desc").toLowerCase() === "asc" ? 1 : -1;
+  const sort: Record<string, 1 | -1> = sortField === "amount" ? { amount: sortDirection } : { createdAt: sortDirection };
+
   const query = { $and: andConditions };
   const [transactions, totalTransactions] = await Promise.all([
-    Transaction.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    Transaction.find(query).sort(sort).skip(skip).limit(limit).lean(),
     Transaction.countDocuments(query),
   ]);
 
@@ -419,14 +437,19 @@ export const fetchUserTransactionById = async (userId: string, transactionId: st
   }).populate("walletId", "currency balance");
 };
 
-export const fetchTransactionsForStatement = async (userId: string, startDate?: Date, endDate?: Date, status?: string) => {
+export const fetchTransactionsForStatement = async (
+  userId: string,
+  options: { startDate?: Date; endDate?: Date; status?: string; currency?: string; walletId?: string } = {}
+) => {
   const andConditions: any[] = [{ $or: [{ userId: userId }, { recieverId: userId }] }];
   const createdAt: any = {};
-  if (startDate) createdAt.$gte = startDate;
-  if (endDate) createdAt.$lte = endDate;
+  if (options.startDate) createdAt.$gte = options.startDate;
+  if (options.endDate) createdAt.$lte = options.endDate;
   if (Object.keys(createdAt).length) andConditions.push({ createdAt });
-  const statusCond = statusCondition(status);
+  const statusCond = statusCondition(options.status);
   if (statusCond) andConditions.push(statusCond);
+  if (options.currency) andConditions.push({ currency: String(options.currency).toUpperCase() });
+  if (options.walletId) andConditions.push({ walletId: new mongoose.Types.ObjectId(options.walletId) });
   return await Transaction.find({ $and: andConditions }).sort({ createdAt: 1 }).lean();
 };
 

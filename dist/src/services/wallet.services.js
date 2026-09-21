@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.declineWithdrawal = exports.approveWithdrawal = exports.refundFailedWithdrawalByReference = exports.debitWalletForWithdrawal = exports.fetchWalletDetail = exports.fetchUserWallets = exports.payWithWallet = exports.setDefaultWallet = exports.createNewWallet = exports.fundWallet = exports.findWallet = exports.findUserWalletByCurrency = exports.findUserWallet = exports.findWalletById = exports.createWallet = void 0;
+exports.declineWithdrawal = exports.approveWithdrawal = exports.refundFailedWithdrawalByReference = exports.debitWalletForWithdrawal = exports.fetchWalletOverview = exports.fetchWalletDetail = exports.fetchUserWallets = exports.payWithWallet = exports.setDefaultWallet = exports.createNewWallet = exports.fundWallet = exports.findWallet = exports.findUserWalletByCurrency = exports.findUserWallet = exports.findWalletById = exports.createWallet = void 0;
 const transaction_enum_1 = require("../enums/transaction.enum");
 const error_1 = require("../errors/error");
 const wallet_model_1 = __importDefault(require("../models/wallet.model"));
@@ -135,12 +135,42 @@ const fetchWalletDetail = async (userId, walletId) => {
     return { wallet, bankAccount };
 };
 exports.fetchWalletDetail = fetchWalletDetail;
+// Powers the wallet dashboard card: selected wallet balance, wallet choices
+// for the dropdown, and the default payout bank account (Bank + A/C No row).
+const fetchWalletOverview = async (userId, walletId, currency) => {
+    const wallets = await wallet_model_1.default.find({ userId }).sort({ isDefault: -1, createdAt: 1 });
+    if (wallets.length === 0)
+        throw new error_1.NotFoundError("No wallet found for this user");
+    let wallet = null;
+    if (walletId) {
+        wallet = wallets.find((entry) => String(entry._id) === String(walletId));
+        if (!wallet)
+            throw new error_1.NotFoundError("Wallet not found");
+    }
+    else if (currency) {
+        wallet = wallets.find((entry) => String(entry.currency) === String(currency));
+        if (!wallet)
+            throw new error_1.NotFoundError(`No wallet found for currency: ${currency}`);
+    }
+    else {
+        wallet = wallets.find((entry) => entry.isDefault) || wallets[0];
+    }
+    const bankAccount = (await bank_account_model_1.default.findOne({ userId, isDefault: true })) ||
+        (await bank_account_model_1.default.findOne({ userId }).sort({ createdAt: -1 }));
+    return { wallet, wallets, bankAccount };
+};
+exports.fetchWalletOverview = fetchWalletOverview;
 // Withdrawals hold (debit) the funds immediately so they cannot be spent while
 // the withdrawal awaits admin approval; declined/failed transfers refund it.
-const debitWalletForWithdrawal = async (userId, currency, amount) => {
-    const wallet = await wallet_model_1.default.findOne({ userId, currency });
+const debitWalletForWithdrawal = async (userId, currency, amount, walletId) => {
+    const wallet = walletId
+        ? await wallet_model_1.default.findOne({ _id: walletId, userId })
+        : await wallet_model_1.default.findOne({ userId, currency });
     if (!wallet)
-        throw new error_1.NotFoundError(`No wallet found for currency: ${currency}`);
+        throw new error_1.NotFoundError(walletId ? "Wallet not found" : `No wallet found for currency: ${currency}`);
+    if (String(wallet.currency) !== String(currency)) {
+        throw new error_1.BadRequestError("Selected wallet does not match the withdrawal currency");
+    }
     if (wallet.balance < amount)
         throw new error_1.BadRequestError("Insufficient wallet balance");
     const balanceBefore = wallet.balance;

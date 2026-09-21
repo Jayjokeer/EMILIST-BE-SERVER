@@ -32,11 +32,34 @@ const mapTransactionStatus = (status?: string) => {
   return status;
 };
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  NGN: "₦",
+  USD: "$",
+  GBP: "£",
+  EUR: "€",
+};
+
+const formatMoney = (amount: any, currency?: string | null) => {
+  const code = currency ? String(currency).toUpperCase() : "";
+  const symbol = CURRENCY_SYMBOLS[code] || (code ? `${code} ` : "");
+  const value = Number(amount);
+  const formatted = Number.isFinite(value) ? value.toLocaleString("en-NG") : String(amount ?? "");
+  return `${symbol}${formatted}`;
+};
+
+const formatTransactionId = (transactionId: any) => {
+  const raw = String(transactionId || "");
+  // History table shows short ids like #3066; keep the full id available too.
+  return raw ? `#${raw.slice(-4).toUpperCase()}` : null;
+};
+
 const serializeTransaction = (transaction: any) => ({
   transactionId: transaction._id,
+  shortTransactionId: formatTransactionId(transaction._id),
   walletId: transaction.walletId?._id || transaction.walletId || null,
   currency: transaction.currency || null,
   amount: transaction.amount,
+  formattedAmount: formatMoney(transaction.amount, transaction.currency),
   transactionType: transaction.type === TransactionType.CREDIT ? "inflow" : "outflow",
   status: mapTransactionStatus(transaction.status),
   counterparty: transaction.counterparty || transaction.description || null,
@@ -48,7 +71,7 @@ const serializeTransaction = (transaction: any) => ({
 });
 
 export const fetchAllTransactionsByUsersController =  catchAsync(async (req: JwtPayload, res: Response) => {
-    const { page, limit, paymentMethod, status, type, search } = req.query;
+    const { page, limit, paymentMethod, status, type, search, walletId, currency, sortBy, sortOrder } = req.query;
     const userId = req.user._id;
 
     const data = await transactionService.fetchUserTransactionsFiltered(userId, {
@@ -56,6 +79,10 @@ export const fetchAllTransactionsByUsersController =  catchAsync(async (req: Jwt
       type: type as string | undefined,
       search: search as string | undefined,
       paymentMethod: paymentMethod as string | undefined,
+      walletId: walletId as string | undefined,
+      currency: currency as string | undefined,
+      sortBy: sortBy as string | undefined,
+      sortOrder: sortOrder as string | undefined,
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
     });
@@ -245,17 +272,18 @@ const buildStatementPdf = (transactions: any[], user: any, periodLabel: string):
   });
 };
 
-// GET /transaction/download-statement?format=pdf|csv&startDate&endDate&status
+// GET /transaction/download-statement?format=pdf|csv&startDate&endDate&status&currency&walletId
 // Streams the file with proper Content-Disposition / Content-Type headers.
 export const downloadStatementController = catchAsync(async (req: JwtPayload, res: Response) => {
-  const { format, startDate, endDate, status } = req.query;
+  const { format, startDate, endDate, status, currency, walletId } = req.query;
 
-  const transactions = await transactionService.fetchTransactionsForStatement(
-    req.user._id,
-    startDate ? new Date(String(startDate)) : undefined,
-    endDate ? new Date(String(endDate)) : undefined,
-    status ? String(status) : undefined
-  );
+  const transactions = await transactionService.fetchTransactionsForStatement(req.user._id, {
+    startDate: startDate ? new Date(String(startDate)) : undefined,
+    endDate: endDate ? new Date(String(endDate)) : undefined,
+    status: status ? String(status) : undefined,
+    currency: currency ? String(currency) : undefined,
+    walletId: walletId ? String(walletId) : undefined,
+  });
 
   const safeName = `${req.user.uniqueId || req.user._id}-${String(startDate || "all")}_${String(endDate || "all")}`.replace(/[^a-zA-Z0-9_-]/g, "-");
   const filename = `statement-${safeName}.${format}`;
@@ -268,6 +296,28 @@ export const downloadStatementController = catchAsync(async (req: JwtPayload, re
 
   const periodLabel = `${startDate || "all"} to ${endDate || "all"}`;
   const pdfBuffer = await buildStatementPdf(transactions, req.user, periodLabel);
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  return res.status(StatusCodes.OK).send(pdfBuffer);
+});
+
+// GET /transaction/download-receipt/:transactionId?format=pdf|csv
+// Row-level download behind the per-row printer icon on the history table.
+export const downloadTransactionReceiptController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const { format } = req.query;
+  const transaction = await transactionService.fetchUserTransactionById(req.user._id, req.params.transactionId);
+  if (!transaction) throw new NotFoundError("Transaction not found");
+
+  const receipt = serializeTransaction(transaction);
+  const filename = `receipt-${receipt.shortTransactionId || receipt.transactionId}.${format}`;
+
+  if (String(format) === "csv") {
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    return res.status(StatusCodes.OK).send(buildStatementCsv([transaction]));
+  }
+
+  const pdfBuffer = await buildStatementPdf([transaction], req.user, `Receipt ${receipt.shortTransactionId || receipt.transactionId}`);
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   return res.status(StatusCodes.OK).send(pdfBuffer);

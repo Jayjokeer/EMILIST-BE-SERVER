@@ -103,11 +103,45 @@ export const fetchWalletDetail = async (userId: string, walletId: string) => {
   return { wallet, bankAccount };
 };
 
+// Powers the wallet dashboard card: selected wallet balance, wallet choices
+// for the dropdown, and the default payout bank account (Bank + A/C No row).
+export const fetchWalletOverview = async (userId: string, walletId?: string, currency?: WalletEnum) => {
+  const wallets = await Wallet.find({ userId }).sort({ isDefault: -1, createdAt: 1 });
+  if (wallets.length === 0) throw new NotFoundError("No wallet found for this user");
+
+  let wallet = null;
+  if (walletId) {
+    wallet = wallets.find((entry) => String(entry._id) === String(walletId));
+    if (!wallet) throw new NotFoundError("Wallet not found");
+  } else if (currency) {
+    wallet = wallets.find((entry) => String(entry.currency) === String(currency));
+    if (!wallet) throw new NotFoundError(`No wallet found for currency: ${currency}`);
+  } else {
+    wallet = wallets.find((entry) => entry.isDefault) || wallets[0];
+  }
+
+  const bankAccount =
+    (await BankAccount.findOne({ userId, isDefault: true })) ||
+    (await BankAccount.findOne({ userId }).sort({ createdAt: -1 }));
+
+  return { wallet, wallets, bankAccount };
+};
+
 // Withdrawals hold (debit) the funds immediately so they cannot be spent while
 // the withdrawal awaits admin approval; declined/failed transfers refund it.
-export const debitWalletForWithdrawal = async (userId: string, currency: WalletEnum, amount: number) => {
-  const wallet = await Wallet.findOne({ userId, currency });
-  if (!wallet) throw new NotFoundError(`No wallet found for currency: ${currency}`);
+export const debitWalletForWithdrawal = async (
+  userId: string,
+  currency: WalletEnum,
+  amount: number,
+  walletId?: string
+) => {
+  const wallet = walletId
+    ? await Wallet.findOne({ _id: walletId, userId })
+    : await Wallet.findOne({ userId, currency });
+  if (!wallet) throw new NotFoundError(walletId ? "Wallet not found" : `No wallet found for currency: ${currency}`);
+  if (String(wallet.currency) !== String(currency)) {
+    throw new BadRequestError("Selected wallet does not match the withdrawal currency");
+  }
   if (wallet.balance < amount) throw new BadRequestError("Insufficient wallet balance");
   const balanceBefore = wallet.balance;
   wallet.balance -= amount;

@@ -4,6 +4,7 @@ import * as transactionController from "../controllers/transaction.controller";
 const router = Router();
 import * as paymentController from "../controllers/payment.controller";
 import {
+  validateReceiptRequest,
   validateStatementRequest,
   validateTransactionFilters,
   validateTransactionSummary,
@@ -19,4 +20,5 @@ router.route("/fetch-vat").get(transactionController.fetchVatController);
 router.route("/fetch-transaction-summary").get(userAuth, validateTransactionSummary, transactionController.fetchTransactionSummaryController);
 router.route("/fetch-my-transaction/:transactionId").get(userAuth, transactionController.fetchMyTransactionController);
 router.route("/download-statement").get(userAuth, validateStatementRequest, transactionController.downloadStatementController);
+router.route("/download-receipt/:transactionId").get(userAuth, validateReceiptRequest, transactionController.downloadTransactionReceiptController);
 export { router as TransactionRoute };

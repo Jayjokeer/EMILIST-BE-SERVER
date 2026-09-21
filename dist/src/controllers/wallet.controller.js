@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.withdrawFundsController = exports.addBankAccountController = exports.fetchBankAccountsController = exports.fetchBanksController = exports.fetchPaymentMethodsController = exports.setDefaultWalletController = exports.fetchWalletDetailController = exports.fetchWalletsController = exports.verifyBankTransferWalletFunding = exports.initiateWalletFunding = exports.createWalletController = void 0;
+exports.withdrawFundsController = exports.addBankAccountController = exports.fetchBankAccountsController = exports.fetchBanksController = exports.fetchPaymentMethodsController = exports.setDefaultWalletController = exports.fetchWalletDetailController = exports.fetchWalletOverviewController = exports.fetchWalletsController = exports.verifyBankTransferWalletFunding = exports.initiateWalletFunding = exports.createWalletController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -142,6 +142,30 @@ exports.fetchWalletsController = (0, error_handler_1.catchAsync)(async (req, res
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
+// Powers the wallet dashboard card: selected wallet (dropdown), balance,
+// "+ Add wallet" options, "Withdraw Funds" / "Fund Wallet" actions, and the
+// Bank / A/C No payout row. Defaults to the user's default wallet.
+exports.fetchWalletOverviewController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const { walletId, currency } = req.query;
+    const { wallet, wallets, bankAccount } = await walletService.fetchWalletOverview(req.user._id, walletId ? String(walletId) : undefined, currency ? String(currency).toUpperCase() : undefined);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        wallet: {
+            walletId: wallet._id,
+            balance: wallet.balance,
+            currency: wallet.currency,
+            isDefault: wallet.isDefault,
+            createdAt: wallet.createdAt,
+        },
+        wallets: wallets.map((entry) => ({
+            walletId: entry._id,
+            balance: entry.balance,
+            currency: entry.currency,
+            isDefault: entry.isDefault,
+            createdAt: entry.createdAt,
+        })),
+        bankAccount: bankAccount ? bankAccountService.serializeBankAccount(bankAccount) : null,
+    });
+});
 exports.fetchWalletDetailController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { wallet, bankAccount } = await walletService.fetchWalletDetail(req.user._id, req.params.walletId);
     const data = {
@@ -195,9 +219,9 @@ exports.addBankAccountController = (0, error_handler_1.catchAsync)(async (req, r
 // === Withdrawals (admin approval required before payout) ===
 exports.withdrawFundsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
-    const { amount, currency, bankAccountId } = req.body;
+    const { amount, currency, bankAccountId, walletId } = req.body;
     const bankAccount = await bankAccountService.fetchBankAccountById(userId, bankAccountId);
-    const { wallet, balanceBefore } = await walletService.debitWalletForWithdrawal(userId, currency, amount);
+    const { wallet, balanceBefore } = await walletService.debitWalletForWithdrawal(userId, currency, amount, walletId);
     try {
         const transaction = await transactionService.createTransaction({
             userId,

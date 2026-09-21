@@ -43,6 +43,7 @@ const router = (0, express_1.Router)();
 exports.WalletRoute = router;
 router.route("/create-wallet").post(current_user_1.userAuth, wallet_validation_1.validateCreateWallet, walletController.createWalletController);
 router.route("/fetch-wallets").get(current_user_1.userAuth, walletController.fetchWalletsController);
+router.route("/fetch-wallet-overview").get(current_user_1.userAuth, wallet_validation_1.validateWalletOverview, walletController.fetchWalletOverviewController);
 router.route("/fetch-wallet/:walletId").get(current_user_1.userAuth, walletController.fetchWalletDetailController);
 router.route("/set-default-wallet/:walletId").patch(current_user_1.userAuth, walletController.setDefaultWalletController);
 router.route("/fetch-payment-methods").get(current_user_1.userAuth, walletController.fetchPaymentMethodsController);

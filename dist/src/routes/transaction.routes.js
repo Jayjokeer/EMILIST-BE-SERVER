@@ -50,3 +50,4 @@ router.route("/fetch-vat").get(transactionController.fetchVatController);
 router.route("/fetch-transaction-summary").get(current_user_1.userAuth, wallet_validation_1.validateTransactionSummary, transactionController.fetchTransactionSummaryController);
 router.route("/fetch-my-transaction/:transactionId").get(current_user_1.userAuth, transactionController.fetchMyTransactionController);
 router.route("/download-statement").get(current_user_1.userAuth, wallet_validation_1.validateStatementRequest, transactionController.downloadStatementController);
+router.route("/download-receipt/:transactionId").get(current_user_1.userAuth, wallet_validation_1.validateReceiptRequest, transactionController.downloadTransactionReceiptController);
