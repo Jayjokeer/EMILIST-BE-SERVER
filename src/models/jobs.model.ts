@@ -107,7 +107,7 @@ const jobSchema: Schema = new mongoose.Schema(
     status: {
       type: String,
       enum: JobStatusEnum,
-      default: JobStatusEnum.pending, 
+      default: JobStatusEnum.listed, 
     },
     userId: {type: Schema.Types.ObjectId, ref: 'Users'},
     applications: [ {type: Schema.Types.ObjectId, ref: 'Project'}  ],

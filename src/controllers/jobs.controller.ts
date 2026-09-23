@@ -14,6 +14,7 @@ import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
 import { acceptDirectJobApplicationMessage, acceptJobApplicationMessage, directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage, sendJobApplicationMessage } from "../utils/templates";
 import mongoose from "mongoose";
+import Project from "../models/project.model";
 import * as  businessService from "../services/business.service";
 import * as notificationService from "../services/notification.service";
 import { NotificationTypeEnum } from "../enums/notification.enum";
@@ -307,8 +308,8 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     if (userId === job.userId) {
       throw new BadRequestError("You cannot apply to your own job!");
     }
-    if(job.status !== JobStatusEnum.pending){
-      throw new BadRequestError("You can only apply to a pending job!")
+    if(job.status !== JobStatusEnum.listed && job.status !== JobStatusEnum.pending){
+      throw new BadRequestError("You can only apply to a listed job!")
     }
     const business = await businessService.fetchSingleBusiness(String(businessId));
     if(!business){
@@ -338,10 +339,11 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     }
   
    
-    const projectData = await projectService.createProject(payload);
+    const projectData = await projectService.createProject({ ...payload, status: ProjectStatusEnum.applied });
   
     
     job.applications!.push(String(projectData._id));
+    job.status = JobStatusEnum.in_review;
     job.milestones
     await job.save();
   
@@ -367,11 +369,23 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     if(!project){
       throw new NotFoundError("Application not found!");
     }
-    if(project.status !== ProjectStatusEnum.pending){
-      throw new BadRequestError("You can only withdraw a pending application!");
+    if(project.status !== ProjectStatusEnum.applied && project.status !== ProjectStatusEnum.in_review && (project.status as any) !== "pending"){
+      throw new BadRequestError("You can only withdraw an applied application!");
     }
+    const _withdrawJobId = String(project.job);
     await jobService.deleteJobApplication(project.job, projectId);
     await projectService.deleteProject(projectId, userId);
+    try {
+      const _wJob = await jobService.fetchJobById(_withdrawJobId);
+      if (_wJob) {
+        const ProjectModelW = Project;
+        const _remainingW = await ProjectModelW.countDocuments({ job: _wJob._id, status: { $nin: [ProjectStatusEnum.rejected, "rejected", "cancelled"] } });
+        if (_remainingW === 0 && (String(_wJob.status) === String(JobStatusEnum.in_review) || String(_wJob.status) === "pending")) {
+          _wJob.status = JobStatusEnum.listed;
+          await _wJob.save();
+        }
+      }
+    } catch (e) {}
     successResponse(res, StatusCodes.OK, "Application withdrawn");
   });
   export const deleteJobController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -505,9 +519,9 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     if(!job) throw new NotFoundError("Job not found!");
 
 
-    if (status == ProjectStatusEnum.pending){
-    job.status = JobStatusEnum.pending;
-    project.status = status;
+    if (status == ProjectStatusEnum.pending || (status as any) == "applied" || status == ProjectStatusEnum.applied){
+    job.status = JobStatusEnum.listed;
+    project.status = ProjectStatusEnum.applied;
 
     }else if (status == ProjectStatusEnum.accepted){
       job.status = JobStatusEnum.active;
@@ -605,6 +619,18 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     }
 
     await project.save();
+    // If every application is now rejected/cancelled and none accepted, revert job to listed.
+    try {
+      if (status == ProjectStatusEnum.rejected) {
+        const ProjectModel = Project;
+        const remaining = await ProjectModel.countDocuments({ job: job._id, status: { $nin: [ProjectStatusEnum.rejected, "rejected", "cancelled"] } });
+        if (remaining === 0 && !job.acceptedApplicationId) {
+          job.status = JobStatusEnum.listed;
+        } else if (remaining > 0 && String(job.status) === String(JobStatusEnum.listed)) {
+          job.status = JobStatusEnum.in_review;
+        }
+      }
+    } catch (e) {}
     await job.save()
     const data = await jobService.fetchJobById(String(job._id));
     successResponse(res, StatusCodes.OK, data);
@@ -678,8 +704,19 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
     };
   });
 
-  if (status === JobStatusEnum.pending) {
-    data = processedJobs.filter((job: any) => job.status === JobStatusEnum.pending);
+  if (status === JobStatusEnum.pending || (status as any) === JobStatusEnum.listed || (status as any) === "listed") {
+    const sLower = String(status).toLowerCase().trim();
+    if (sLower === "listed") {
+      data = processedJobs.filter((job: any) => job.status === JobStatusEnum.pending || (job.status as any) === JobStatusEnum.listed || (job.status as any) === "listed");
+    } else if (sLower === "in review" || sLower === "in_review") {
+      data = processedJobs.filter((job: any) => (job.status as any) === JobStatusEnum.in_review || (job.status as any) === "in review");
+    } else {
+      data = processedJobs.filter((job: any) => job.status === JobStatusEnum.pending || (job.status as any) === JobStatusEnum.listed || (job.status as any) === "listed" || (job.status as any) === JobStatusEnum.in_review || (job.status as any) === "in review");
+    }
+  }
+
+  if ((status as any) === JobStatusEnum.in_review || (status as any) === "in review" || (status as any) === "in_review") {
+    data = processedJobs.filter((job: any) => (job.status as any) === JobStatusEnum.in_review || (job.status as any) === "in review");
   }
 
   if (status === JobStatusEnum.complete) {
@@ -762,10 +799,22 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
       project.status= ProjectStatusEnum.rejected;
       project.directJobStatus= ProjectStatusEnum.rejected;
       job.acceptedApplicationId = undefined;
-      job.status = JobStatusEnum.pending;
+      job.status = JobStatusEnum.listed;
       job.type = JobType.regular;
     };
     await project.save();
+    // If every application is now rejected/cancelled and none accepted, revert job to listed.
+    try {
+      if (status == ProjectStatusEnum.rejected) {
+        const ProjectModel = Project;
+        const remaining = await ProjectModel.countDocuments({ job: job._id, status: { $nin: [ProjectStatusEnum.rejected, "rejected", "cancelled"] } });
+        if (remaining === 0 && !job.acceptedApplicationId) {
+          job.status = JobStatusEnum.listed;
+        } else if (remaining > 0 && String(job.status) === String(JobStatusEnum.listed)) {
+          job.status = JobStatusEnum.in_review;
+        }
+      }
+    } catch (e) {}
     await job.save();
     const jobOwner = await userService.findUserById(job.userId);
 
@@ -819,8 +868,8 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
     if(!job)  {
       throw new NotFoundError("Job not found!")
     }
-    if(job.status == JobStatusEnum.pending){
-      throw new BadRequestError("You cannot update a pending job milestone");
+    if(job.status == JobStatusEnum.pending || (job.status as any) == JobStatusEnum.listed){
+      throw new BadRequestError("You cannot update a listed job milestone");
     }
     const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
     if(!project){
@@ -980,6 +1029,18 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
     }
 
     await project.save();
+    // If every application is now rejected/cancelled and none accepted, revert job to listed.
+    try {
+      if (status == ProjectStatusEnum.rejected) {
+        const ProjectModel = Project;
+        const remaining = await ProjectModel.countDocuments({ job: job._id, status: { $nin: [ProjectStatusEnum.rejected, "rejected", "cancelled"] } });
+        if (remaining === 0 && !job.acceptedApplicationId) {
+          job.status = JobStatusEnum.listed;
+        } else if (remaining > 0 && String(job.status) === String(JobStatusEnum.listed)) {
+          job.status = JobStatusEnum.in_review;
+        }
+      }
+    } catch (e) {}
     await job.save()
     const data = await jobService.fetchJobById(String(job._id));
     return successResponse(res, StatusCodes.OK, data);

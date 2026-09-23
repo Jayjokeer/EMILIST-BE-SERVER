@@ -1440,7 +1440,7 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
                 summary: "Update a job application status",
                 description: `Allows the job creator to accept, reject, pause or unpause an application.
 
-Allowed \`status\` values: \`pending\`, \`accepted\`, \`rejected\`, \`pause\`, \`unpause\`.`,
+Allowed \`status\` values: \`applied\`, \`accepted\`, \`rejected\`, \`pause\`, \`unpause\` (legacy \`pending\` is accepted as \`applied\`).`,
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     { name: "projectId", in: "path", required: true, schema: { type: "string" }, description: "MongoDB ObjectId of the application/project", example: "64fc0a1b2c3d4e5f6a7b8c9a" },
@@ -1449,7 +1449,7 @@ Allowed \`status\` values: \`pending\`, \`accepted\`, \`rejected\`, \`pause\`, \
                     required: true,
                     content: {
                         "application/json": {
-                            schema: { type: "object", required: ["status"], properties: { status: { type: "string", enum: ["pending", "accepted", "rejected", "pause", "unpause", "cancelled"] } } },
+                            schema: { type: "object", required: ["status"], properties: { status: { type: "string", enum: ["applied", "pending", "accepted", "rejected", "pause", "unpause", "cancelled"] } } },
                             example: { status: "accepted" },
                         },
                     },
@@ -1468,7 +1468,7 @@ Allowed \`status\` values: \`pending\`, \`accepted\`, \`rejected\`, \`pause\`, \
                 description: "Returns the current user's jobs filtered by `status`, enriched with milestone progress, due dates and overdue flags.",
                 security: [{ bearerAuth: [] }],
                 parameters: [
-                    { name: "status", in: "query", required: true, schema: { type: "string", enum: ["pending", "completed", "active", "paused", "overdue"] }, description: "Job status to filter by", example: "active" },
+                    { name: "status", in: "query", required: true, schema: { type: "string", enum: ["listed", "pending", "in review", "completed", "active", "paused", "overdue"] }, description: "Job status to filter by (creator lens: listed = newly posted, in review = has applications; legacy pending maps to listed)", example: "listed" },
                 ],
                 responses: {
                     "200": {
@@ -1520,7 +1520,7 @@ Allowed \`status\` values: \`pending\`, \`accepted\`, \`rejected\`, \`pause\`, \
                 description: `The invited expert accepts or rejects a direct job.
 
 - \`accepted\` → job becomes \`active\`, first milestone becomes \`active\`.
-- \`rejected\` → job returns to \`pending\` and type becomes \`regular\`.`,
+- \`rejected\` → job returns to \`listed\` and type becomes \`regular\`.`,
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     { name: "projectId", in: "path", required: true, schema: { type: "string" }, description: "MongoDB ObjectId of the direct application/project", example: "64fc0a1b2c3d4e5f6a7b8c9a" },
@@ -1549,7 +1549,7 @@ Allowed \`status\` values: \`pending\`, \`accepted\`, \`rejected\`, \`pause\`, \
                 description: "Returns a paginated list of jobs the current user applied to, optionally filtered by application `status`.",
                 security: [{ bearerAuth: [] }],
                 parameters: [
-                    { name: "status", in: "query", required: false, schema: { type: "string", enum: ["pending", "accepted", "rejected", "completed", "pause", "unpause", "cancelled"] }, description: "Application status filter", example: "pending" },
+                    { name: "status", in: "query", required: false, schema: { type: "string", enum: ["applied", "pending", "accepted", "rejected", "completed", "pause", "unpause", "cancelled"] }, description: "Application status filter (applicant lens: applied = you applied; rejected = your application was rejected)", example: "applied" },
                     { name: "page", in: "query", required: false, schema: { type: "integer", default: 1 } },
                     { name: "limit", in: "query", required: false, schema: { type: "integer", default: 10 } },
                     { name: "search", in: "query", required: false, schema: { type: "string" } },

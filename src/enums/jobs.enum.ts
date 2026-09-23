@@ -35,11 +35,13 @@ export enum JobExpertLevel {
 }
 
 export enum JobStatusEnum {
-  pending= "pending",
-  complete= "completed",
-  active= "active",
-  paused= "paused",
-  overdue= "overdue",
+  listed = "listed",
+  in_review = "in review",
+  pending = "pending",
+  complete = "completed",
+  active = "active",
+  paused = "paused",
+  overdue = "overdue",
 }
 
 export enum QuoteStatusEnum {

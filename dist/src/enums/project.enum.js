@@ -4,6 +4,8 @@ exports.QuoteStatusEnum = exports.ProjectStatusEnum = void 0;
 var ProjectStatusEnum;
 (function (ProjectStatusEnum) {
     ProjectStatusEnum["pending"] = "pending";
+    ProjectStatusEnum["applied"] = "applied";
+    ProjectStatusEnum["in_review"] = "in review";
     ProjectStatusEnum["accepted"] = "accepted";
     ProjectStatusEnum["rejected"] = "rejected";
     ProjectStatusEnum["completed"] = "completed";

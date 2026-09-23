@@ -39,6 +39,8 @@ var MilestonePaymentStatus;
 })(MilestonePaymentStatus || (exports.MilestonePaymentStatus = MilestonePaymentStatus = {}));
 var JobStatusEnum;
 (function (JobStatusEnum) {
+    JobStatusEnum["listed"] = "listed";
+    JobStatusEnum["in_review"] = "in review";
     JobStatusEnum["pending"] = "pending";
     JobStatusEnum["complete"] = "completed";
     JobStatusEnum["active"] = "active";

@@ -42,7 +42,7 @@ const projectSchema: Schema = new mongoose.Schema(
     status: {
       type: String,
       enum: ProjectStatusEnum,
-      default: ProjectStatusEnum.pending, 
+      default: ProjectStatusEnum.applied, 
     },
     appliedAt: {
       type: Date,

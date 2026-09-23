@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsByUserId = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = void 0;
+exports.fetchJobsByUserId = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -49,7 +49,76 @@ const userService = __importStar(require("./auth.service"));
 const business_model_1 = __importDefault(require("../models/business.model"));
 const recurring_job_model_1 = __importDefault(require("../models/recurring-job.model"));
 const reviewService = __importStar(require("./review.service"));
+const normalizeJobStatus = (status) => {
+    if (!status)
+        return null;
+    const value = String(status).toLowerCase().trim();
+    if (value === 'pending')
+        return jobs_enum_1.JobStatusEnum.listed;
+    return status;
+};
+exports.normalizeJobStatus = normalizeJobStatus;
+const normalizeProjectStatus = (status) => {
+    if (!status)
+        return null;
+    const value = String(status).toLowerCase().trim();
+    if (value === 'pending')
+        return project_enum_1.ProjectStatusEnum.applied;
+    return status;
+};
+exports.normalizeProjectStatus = normalizeProjectStatus;
+// Display status depends on who is viewing the job:
+// - applicant (non-owner) sees their own application's lens: applied / rejected / accepted...
+// - creator (owner) sees the job lens: listed (no active applications) or in review.
+const resolveJobDisplayStatus = (job, viewerUserId) => {
+    const status = job?.status;
+    const applications = Array.isArray(job?.applications) ? job.applications : [];
+    const hasActiveApplication = applications.some((app) => {
+        const appStatus = typeof app === 'string' ? null : String(app?.status || '').toLowerCase();
+        return appStatus !== null && appStatus !== project_enum_1.ProjectStatusEnum.rejected && appStatus !== 'cancelled';
+    });
+    if (!viewerUserId || String(job?.userId) === String(viewerUserId)) {
+        if (status === jobs_enum_1.JobStatusEnum.pending)
+            return jobs_enum_1.JobStatusEnum.listed;
+        if ((status === jobs_enum_1.JobStatusEnum.listed || status === jobs_enum_1.JobStatusEnum.pending) && hasActiveApplication) {
+            return jobs_enum_1.JobStatusEnum.in_review;
+        }
+        return status;
+    }
+    const mine = applications.find((app) => typeof app !== 'string' && String(app?.user) === String(viewerUserId));
+    const myStatus = mine ? String(mine?.status || '').toLowerCase() : null;
+    if (myStatus === project_enum_1.ProjectStatusEnum.rejected || myStatus === 'rejected')
+        return project_enum_1.ProjectStatusEnum.rejected;
+    if (myStatus === project_enum_1.ProjectStatusEnum.accepted || myStatus === 'accepted')
+        return project_enum_1.ProjectStatusEnum.accepted;
+    if (myStatus === project_enum_1.ProjectStatusEnum.applied || myStatus === 'pending')
+        return project_enum_1.ProjectStatusEnum.applied;
+    if (myStatus)
+        return myStatus;
+    if (status === jobs_enum_1.JobStatusEnum.pending)
+        return jobs_enum_1.JobStatusEnum.listed;
+    return status;
+};
+exports.resolveJobDisplayStatus = resolveJobDisplayStatus;
+const withJobDisplayStatus = (job, viewerUserId) => {
+    if (!job || typeof job !== 'object')
+        return job;
+    const plain = typeof job.toObject === 'function' ? job.toObject() : { ...job };
+    plain.status = (0, exports.resolveJobDisplayStatus)(plain, viewerUserId);
+    // Keep legacy `pending` readable for old clients while exposing the canonical value.
+    if (plain.status === jobs_enum_1.JobStatusEnum.listed) {
+        plain.legacyStatus = 'pending';
+    }
+    return plain;
+};
+exports.withJobDisplayStatus = withJobDisplayStatus;
+const withJobsDisplayStatus = (jobs, viewerUserId) => jobs.map((job) => (0, exports.withJobDisplayStatus)(job, viewerUserId));
+exports.withJobsDisplayStatus = withJobsDisplayStatus;
 const createJob = async (data) => {
+    if (!data.status)
+        data.status = jobs_enum_1.JobStatusEnum.listed;
+    else if (String(data.status).toLowerCase() === 'pending')
+        data.status = jobs_enum_1.JobStatusEnum.listed;
     return await jobs_model_1.default.create(data);
 };
 exports.createJob = createJob;
@@ -109,7 +178,7 @@ const fetchAllJobs = async (page, limit, userId, search, filters = {}) => {
     const skip = (page - 1) * limit;
     const searchCriteria = {
         type: { $ne: jobs_enum_1.JobType.direct },
-        status: jobs_enum_1.JobStatusEnum.pending,
+        status: { $in: [jobs_enum_1.JobStatusEnum.listed, jobs_enum_1.JobStatusEnum.pending, "pending"] },
         isListed: true,
     };
     if (!search) {
@@ -352,8 +421,17 @@ const fetchJobApplicants = async (userId, jobId, status, page = 1, limit = 10) =
     const query = { creator: userId };
     if (jobId)
         query.job = jobId;
-    if (status)
-        query.status = status;
+    if (status) {
+        const sn = String(status).toLowerCase().trim();
+        if (sn === "pending")
+            query.status = project_enum_1.ProjectStatusEnum.applied;
+        else if (sn === "applied")
+            query.status = { $in: [project_enum_1.ProjectStatusEnum.applied, "pending"] };
+        else if (sn === "in review" || sn === "in_review")
+            query.status = { $in: [project_enum_1.ProjectStatusEnum.applied, project_enum_1.ProjectStatusEnum.in_review, "pending"] };
+        else
+            query.status = status;
+    }
     const applicants = await project_model_1.default.find(query)
         .populate('user', 'fullName userName email profileImage level uniqueId')
         .populate('job', 'title status jobCategory service')
@@ -394,11 +472,25 @@ const fetchJobByUserIdAndStatus = async (userId, status) => {
 };
 exports.fetchJobByUserIdAndStatus = fetchJobByUserIdAndStatus;
 const fetchUserJobApplications = async (userId, skip, limit, status, page, search = null, filters = {}) => {
-    const userProjects = await project_model_1.default.find({ user: userId }).select('_id');
-    const projectIds = userProjects.map((project) => project._id);
+    const myProjects = await project_model_1.default.find({ user: userId }).select('_id status');
+    const projectIds = myProjects.map((project) => project._id);
     let query = { applications: { $in: projectIds } };
     if (status) {
-        query.status = status;
+        const sl = String(status).toLowerCase().trim();
+        if (sl === "applied" || sl === "pending") {
+            const myIds = myProjects.filter((pr) => String(pr.status).toLowerCase() === "applied" || String(pr.status).toLowerCase() === "pending").map((pr) => pr._id);
+            query = { applications: { $in: myIds } };
+        }
+        else if (sl === "rejected") {
+            const myIds = myProjects.filter((pr) => String(pr.status).toLowerCase() === "rejected").map((pr) => pr._id);
+            query = { applications: { $in: myIds } };
+        }
+        else if (sl === "accepted") {
+            const myIds = myProjects.filter((pr) => String(pr.status).toLowerCase() === "accepted").map((pr) => pr._id);
+            query = { applications: { $in: myIds } };
+        }
+        else
+            query.status = status;
         if (status === jobs_enum_1.JobStatusEnum.active || status === 'overdue') {
             query = { acceptedApplicationId: { $in: projectIds }, status: jobs_enum_1.JobStatusEnum.active };
         }
@@ -420,7 +512,7 @@ const fetchUserJobApplications = async (userId, skip, limit, status, page, searc
             query.service = { $regex: new RegExp(filters.service, 'i') };
     }
     const userApplications = await jobs_model_1.default.find(query)
-        .populate('applications', 'title description status')
+        .populate('applications', 'title description status user')
         .sort({ createdAt: -1 });
     const applicationsWithDueDates = await Promise.all(userApplications.map(async (job) => {
         if (job.status !== jobs_enum_1.JobStatusEnum.active && job.status !== jobs_enum_1.JobStatusEnum.paused) {
@@ -462,8 +554,30 @@ const fetchUserJobApplications = async (userId, skip, limit, status, page, searc
         }
         return true;
     });
-    const totalApplications = filteredApplications.length;
-    const paginatedApplications = filteredApplications.slice(skip, skip + limit);
+    const withDisplay = applicationsWithDueDates.map((job) => {
+        const plain = typeof job.toObject === "function" ? job.toObject() : { ...job };
+        const apps = Array.isArray(plain.applications) ? plain.applications : [];
+        const mine = apps.find((a) => a && a.user && String(a.user._id || a.user) === String(userId));
+        const myStatus = mine ? String(mine.status || "").toLowerCase() : null;
+        if (myStatus === "rejected")
+            plain.status = project_enum_1.ProjectStatusEnum.rejected;
+        else if (myStatus === "accepted")
+            plain.status = project_enum_1.ProjectStatusEnum.accepted;
+        else if (myStatus === "applied" || myStatus === "pending")
+            plain.status = project_enum_1.ProjectStatusEnum.applied;
+        else if (plain.status === jobs_enum_1.JobStatusEnum.pending)
+            plain.status = jobs_enum_1.JobStatusEnum.listed;
+        return plain;
+    });
+    const filteredWithDisplay = withDisplay.filter((job) => {
+        if (status === jobs_enum_1.JobStatusEnum.active)
+            return job.overallDueDate > new Date();
+        if (status === "overdue")
+            return job.overallDueDate <= new Date();
+        return true;
+    });
+    const totalApplications = filteredWithDisplay.length;
+    const paginatedApplications = filteredWithDisplay.slice(skip, skip + limit);
     return {
         total: totalApplications,
         page,
@@ -474,24 +588,40 @@ const fetchUserJobApplications = async (userId, skip, limit, status, page, searc
 exports.fetchUserJobApplications = fetchUserJobApplications;
 const fetchUserApplications = async (userId, skip, limit, status, page) => {
     const userProjects = await project_model_1.default.find({ user: userId,
-        status: status,
+        status: ((0, exports.normalizeProjectStatus)(status) || status),
     }).select('_id');
     const projectIds = userProjects.map((project) => project._id);
     const userApplications = await jobs_model_1.default.find({
         applications: { $in: projectIds },
     })
-        .populate('applications', 'title description status')
+        .populate('applications', 'title description status user')
         .skip(skip)
         .limit(Number(limit))
         .sort({ createdAt: -1 });
     const totalApplications = await jobs_model_1.default.countDocuments({
         applications: { $in: projectIds },
     });
+    const _mapStatus = (job) => {
+        const plain = typeof job.toObject === "function" ? job.toObject() : { ...job };
+        const apps = Array.isArray(plain.applications) ? plain.applications : [];
+        const mine = apps.find((a) => a && a.user && String(a.user._id || a.user) === String(userId));
+        const myStatus = mine ? String(mine.status || "").toLowerCase() : String(status || "").toLowerCase();
+        if (myStatus === "rejected")
+            plain.status = project_enum_1.ProjectStatusEnum.rejected;
+        else if (myStatus === "accepted")
+            plain.status = project_enum_1.ProjectStatusEnum.accepted;
+        else if (myStatus === "applied" || myStatus === "pending")
+            plain.status = project_enum_1.ProjectStatusEnum.applied;
+        else if (plain.status === jobs_enum_1.JobStatusEnum.pending)
+            plain.status = jobs_enum_1.JobStatusEnum.listed;
+        return plain;
+    };
+    const _mapped = userApplications.map(_mapStatus);
     return {
         total: totalApplications,
         page: Number(page),
         limit: Number(limit),
-        applications: userApplications,
+        applications: typeof _mapped !== "undefined" ? _mapped : userApplications,
     };
 };
 exports.fetchUserApplications = fetchUserApplications;
@@ -590,7 +720,7 @@ const fetchJobCount = async (userId) => {
     let totalOverdueJobs = 0;
     jobs.forEach(job => {
         const { status, startDate, milestones } = job;
-        if (status === jobs_enum_1.JobStatusEnum.pending)
+        if (status === jobs_enum_1.JobStatusEnum.pending || status === jobs_enum_1.JobStatusEnum.listed || status === "listed")
             totalPendingJobs++;
         if (status === jobs_enum_1.JobStatusEnum.paused)
             totalPausedJobs++;
@@ -646,7 +776,7 @@ const fetchProjectCounts = async (userId) => {
         status: jobs_enum_1.JobStatusEnum.complete,
     });
     userProjects.forEach((project) => {
-        if (project.status == project_enum_1.ProjectStatusEnum.pending) {
+        if (project.status == project_enum_1.ProjectStatusEnum.pending || project.status == project_enum_1.ProjectStatusEnum.applied || project.status == "applied") {
             totalPendingProjects++;
         }
     });
@@ -775,7 +905,7 @@ exports.fetchAllJobsForAdminDashboard = fetchAllJobsForAdminDashboard;
 const fetchAllUserJobsAdmin = async (userId) => {
     return await jobs_model_1.default.find({ userId })
         .sort({ createdAt: -1 })
-        .populate('applications', 'title description status')
+        .populate('applications', 'title description status user')
         .lean();
 };
 exports.fetchAllUserJobsAdmin = fetchAllUserJobsAdmin;
@@ -785,7 +915,7 @@ const fetchAllJobsAdmin = async (status, page, limit, search) => {
     const skip = (pageNum - 1) * limitNum;
     let matchQuery = {};
     if (status === 'notStarted') {
-        matchQuery.status = jobs_enum_1.JobStatusEnum.pending;
+        matchQuery.status = { $in: [jobs_enum_1.JobStatusEnum.listed, jobs_enum_1.JobStatusEnum.pending] };
     }
     else if (status === 'inProgress') {
         matchQuery.status = jobs_enum_1.JobStatusEnum.active;

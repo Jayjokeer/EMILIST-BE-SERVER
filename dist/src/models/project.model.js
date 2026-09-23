@@ -73,7 +73,7 @@ const projectSchema = new mongoose_1.default.Schema({
     status: {
         type: String,
         enum: project_enum_1.ProjectStatusEnum,
-        default: project_enum_1.ProjectStatusEnum.pending,
+        default: project_enum_1.ProjectStatusEnum.applied,
     },
     appliedAt: {
         type: Date,

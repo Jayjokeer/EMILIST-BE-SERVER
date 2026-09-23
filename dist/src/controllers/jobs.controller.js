@@ -49,6 +49,7 @@ const authService = __importStar(require("../services/auth.service"));
 const send_email_1 = require("../utils/send_email");
 const templates_1 = require("../utils/templates");
 const mongoose_1 = __importDefault(require("mongoose"));
+const project_model_1 = __importDefault(require("../models/project.model"));
 const businessService = __importStar(require("../services/business.service"));
 const notificationService = __importStar(require("../services/notification.service"));
 const notification_enum_1 = require("../enums/notification.enum");
@@ -294,8 +295,8 @@ exports.applyForJobController = (0, error_handler_1.catchAsync)(async (req, res)
     if (userId === job.userId) {
         throw new error_1.BadRequestError("You cannot apply to your own job!");
     }
-    if (job.status !== jobs_enum_1.JobStatusEnum.pending) {
-        throw new error_1.BadRequestError("You can only apply to a pending job!");
+    if (job.status !== jobs_enum_1.JobStatusEnum.listed && job.status !== jobs_enum_1.JobStatusEnum.pending) {
+        throw new error_1.BadRequestError("You can only apply to a listed job!");
     }
     const business = await businessService.fetchSingleBusiness(String(businessId));
     if (!business) {
@@ -320,8 +321,9 @@ exports.applyForJobController = (0, error_handler_1.catchAsync)(async (req, res)
             })),
         };
     }
-    const projectData = await projectService.createProject(payload);
+    const projectData = await projectService.createProject({ ...payload, status: project_enum_1.ProjectStatusEnum.applied });
     job.applications.push(String(projectData._id));
+    job.status = jobs_enum_1.JobStatusEnum.in_review;
     job.milestones;
     await job.save();
     const notificationPayload = {
@@ -343,11 +345,24 @@ exports.deleteJobApplicationController = (0, error_handler_1.catchAsync)(async (
     if (!project) {
         throw new error_1.NotFoundError("Application not found!");
     }
-    if (project.status !== project_enum_1.ProjectStatusEnum.pending) {
-        throw new error_1.BadRequestError("You can only withdraw a pending application!");
+    if (project.status !== project_enum_1.ProjectStatusEnum.applied && project.status !== project_enum_1.ProjectStatusEnum.in_review && project.status !== "pending") {
+        throw new error_1.BadRequestError("You can only withdraw an applied application!");
     }
+    const _withdrawJobId = String(project.job);
     await jobService.deleteJobApplication(project.job, projectId);
     await projectService.deleteProject(projectId, userId);
+    try {
+        const _wJob = await jobService.fetchJobById(_withdrawJobId);
+        if (_wJob) {
+            const ProjectModelW = project_model_1.default;
+            const _remainingW = await ProjectModelW.countDocuments({ job: _wJob._id, status: { $nin: [project_enum_1.ProjectStatusEnum.rejected, "rejected", "cancelled"] } });
+            if (_remainingW === 0 && (String(_wJob.status) === String(jobs_enum_1.JobStatusEnum.in_review) || String(_wJob.status) === "pending")) {
+                _wJob.status = jobs_enum_1.JobStatusEnum.listed;
+                await _wJob.save();
+            }
+        }
+    }
+    catch (e) { }
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Application withdrawn");
 });
 exports.deleteJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
@@ -468,9 +483,9 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
     const job = await jobService.fetchJobById(String(project.job));
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
-    if (status == project_enum_1.ProjectStatusEnum.pending) {
-        job.status = jobs_enum_1.JobStatusEnum.pending;
-        project.status = status;
+    if (status == project_enum_1.ProjectStatusEnum.pending || status == "applied" || status == project_enum_1.ProjectStatusEnum.applied) {
+        job.status = jobs_enum_1.JobStatusEnum.listed;
+        project.status = project_enum_1.ProjectStatusEnum.applied;
     }
     else if (status == project_enum_1.ProjectStatusEnum.accepted) {
         job.status = jobs_enum_1.JobStatusEnum.active;
@@ -555,6 +570,20 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
         await notificationService.createNotification(notificationPayload);
     }
     await project.save();
+    // If every application is now rejected/cancelled and none accepted, revert job to listed.
+    try {
+        if (status == project_enum_1.ProjectStatusEnum.rejected) {
+            const ProjectModel = project_model_1.default;
+            const remaining = await ProjectModel.countDocuments({ job: job._id, status: { $nin: [project_enum_1.ProjectStatusEnum.rejected, "rejected", "cancelled"] } });
+            if (remaining === 0 && !job.acceptedApplicationId) {
+                job.status = jobs_enum_1.JobStatusEnum.listed;
+            }
+            else if (remaining > 0 && String(job.status) === String(jobs_enum_1.JobStatusEnum.listed)) {
+                job.status = jobs_enum_1.JobStatusEnum.in_review;
+            }
+        }
+    }
+    catch (e) { }
     await job.save();
     const data = await jobService.fetchJobById(String(job._id));
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
@@ -605,8 +634,20 @@ exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)(async (req,
             isOverdue,
         };
     });
-    if (status === jobs_enum_1.JobStatusEnum.pending) {
-        data = processedJobs.filter((job) => job.status === jobs_enum_1.JobStatusEnum.pending);
+    if (status === jobs_enum_1.JobStatusEnum.pending || status === jobs_enum_1.JobStatusEnum.listed || status === "listed") {
+        const sLower = String(status).toLowerCase().trim();
+        if (sLower === "listed") {
+            data = processedJobs.filter((job) => job.status === jobs_enum_1.JobStatusEnum.pending || job.status === jobs_enum_1.JobStatusEnum.listed || job.status === "listed");
+        }
+        else if (sLower === "in review" || sLower === "in_review") {
+            data = processedJobs.filter((job) => job.status === jobs_enum_1.JobStatusEnum.in_review || job.status === "in review");
+        }
+        else {
+            data = processedJobs.filter((job) => job.status === jobs_enum_1.JobStatusEnum.pending || job.status === jobs_enum_1.JobStatusEnum.listed || job.status === "listed" || job.status === jobs_enum_1.JobStatusEnum.in_review || job.status === "in review");
+        }
+    }
+    if (status === jobs_enum_1.JobStatusEnum.in_review || status === "in review" || status === "in_review") {
+        data = processedJobs.filter((job) => job.status === jobs_enum_1.JobStatusEnum.in_review || job.status === "in review");
     }
     if (status === jobs_enum_1.JobStatusEnum.complete) {
         data = processedJobs.filter((job) => job.status === jobs_enum_1.JobStatusEnum.complete);
@@ -679,11 +720,25 @@ exports.acceptDirectJobController = (0, error_handler_1.catchAsync)(async (req, 
         project.status = project_enum_1.ProjectStatusEnum.rejected;
         project.directJobStatus = project_enum_1.ProjectStatusEnum.rejected;
         job.acceptedApplicationId = undefined;
-        job.status = jobs_enum_1.JobStatusEnum.pending;
+        job.status = jobs_enum_1.JobStatusEnum.listed;
         job.type = jobs_enum_1.JobType.regular;
     }
     ;
     await project.save();
+    // If every application is now rejected/cancelled and none accepted, revert job to listed.
+    try {
+        if (status == project_enum_1.ProjectStatusEnum.rejected) {
+            const ProjectModel = project_model_1.default;
+            const remaining = await ProjectModel.countDocuments({ job: job._id, status: { $nin: [project_enum_1.ProjectStatusEnum.rejected, "rejected", "cancelled"] } });
+            if (remaining === 0 && !job.acceptedApplicationId) {
+                job.status = jobs_enum_1.JobStatusEnum.listed;
+            }
+            else if (remaining > 0 && String(job.status) === String(jobs_enum_1.JobStatusEnum.listed)) {
+                job.status = jobs_enum_1.JobStatusEnum.in_review;
+            }
+        }
+    }
+    catch (e) { }
     await job.save();
     const jobOwner = await userService.findUserById(job.userId);
     const applicationStatus = status;
@@ -731,8 +786,8 @@ exports.updateMilestoneStatusController = (0, error_handler_1.catchAsync)(async 
     if (!job) {
         throw new error_1.NotFoundError("Job not found!");
     }
-    if (job.status == jobs_enum_1.JobStatusEnum.pending) {
-        throw new error_1.BadRequestError("You cannot update a pending job milestone");
+    if (job.status == jobs_enum_1.JobStatusEnum.pending || job.status == jobs_enum_1.JobStatusEnum.listed) {
+        throw new error_1.BadRequestError("You cannot update a listed job milestone");
     }
     const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
     if (!project) {
@@ -871,6 +926,20 @@ exports.acceptQuoteController = (0, error_handler_1.catchAsync)(async (req, res)
         project.quote.rejectedAt = new Date();
     }
     await project.save();
+    // If every application is now rejected/cancelled and none accepted, revert job to listed.
+    try {
+        if (status == project_enum_1.ProjectStatusEnum.rejected) {
+            const ProjectModel = project_model_1.default;
+            const remaining = await ProjectModel.countDocuments({ job: job._id, status: { $nin: [project_enum_1.ProjectStatusEnum.rejected, "rejected", "cancelled"] } });
+            if (remaining === 0 && !job.acceptedApplicationId) {
+                job.status = jobs_enum_1.JobStatusEnum.listed;
+            }
+            else if (remaining > 0 && String(job.status) === String(jobs_enum_1.JobStatusEnum.listed)) {
+                job.status = jobs_enum_1.JobStatusEnum.in_review;
+            }
+        }
+    }
+    catch (e) { }
     await job.save();
     const data = await jobService.fetchJobById(String(job._id));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
