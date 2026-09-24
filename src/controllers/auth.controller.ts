@@ -48,7 +48,7 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     
     const data = await authService.createUser(newUser);
     const userId = String(data._id);
-    const {otp, otpCreatedAt, otpExpiryTime} = await generateOTPData(userId);
+    const {otp, otpCreatedAt, otpExpiryTime} = generateOTPData(userId);
     data.otpExpiresAt = otpExpiryTime;
     data.registrationOtp = otp;
     await data.save();
@@ -65,7 +65,11 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     data.subscription = subscription._id;
     await data.save();
     const {html, subject} = otpMessage( otp);
-    sendEmail(email, subject,html); 
+    try {
+      await sendEmail(email, subject, html);
+    } catch (mailError) {
+      console.error("registerUserController: failed to send verification OTP email:", mailError);
+    }
 
   const token = await generateJWTwithExpiryDate({
     email: data.email,
@@ -99,7 +103,25 @@ export const loginController = catchAsync(async (req: Request, res: Response) =>
     throw new UnauthorizedError("Account Suspended kindly Contact Admin!!")
   }
   if(foundUser.isEmailVerified == false){
-    throw new BadRequestError("Kindly verify your email!");
+    // Resend a fresh OTP so the user can verify.
+    // Previous code threw immediately without generating/sending a new OTP,
+    // which is why "resend on login" never delivered anything.
+    const { otp, otpExpiryTime } = generateOTPData(String(foundUser._id));
+    foundUser.otpExpiresAt = otpExpiryTime;
+    foundUser.registrationOtp = otp;
+    await foundUser.save();
+    const { html, subject } = otpMessage(otp);
+    // Await so SMTP/auth failures surface in logs instead of being silently dropped.
+    // sendEmail now returns its Promise (previously `new Promise(...)` was never returned,
+    // so `await sendEmail(...)` resolved immediately and failures were invisible).
+    // Don't let an SMTP outage mask the real "verify your email" message:
+    // log the mail failure but still tell the client to verify (they can hit /resend-otp).
+    try {
+      await sendEmail(foundUser.email, subject, html);
+    } catch (mailError) {
+      console.error("loginController: failed to resend verification OTP email:", mailError);
+    }
+    throw new BadRequestError("Kindly verify your email! A new OTP has been sent to your email.");
   }
   const token = await generateJWTwithExpiryDate({
     email: foundUser.email,
@@ -153,13 +175,13 @@ export const forgetPasswordController = catchAsync(async (req: Request, res: Res
 
   if (!foundUser) throw new NotFoundError("User not found!");
 
-  const { otp, otpExpiryTime } = await generateOTPData(String(foundUser._id));
+  const { otp, otpExpiryTime } = generateOTPData(String(foundUser._id));
   foundUser.otpExpiresAt = otpExpiryTime;
   foundUser.passwordResetOtp = otp;
   await foundUser.save();
 
   const { html, subject } = passwordResetMessage('user', otp);
-   sendEmail(email, subject, html); 
+   await sendEmail(email, subject, html); 
 
   return successResponse(res, StatusCodes.OK, "Password reset OTP sent to your email.");
 });
@@ -340,13 +362,15 @@ export const resendVerificationOtpController = catchAsync(async (req: Request, r
     }
 
     const userId = String(user._id);
-    const {otp, otpCreatedAt, otpExpiryTime} = await generateOTPData(userId);
+    const {otp, otpCreatedAt, otpExpiryTime} = generateOTPData(userId);
     user.otpExpiresAt = otpExpiryTime;
     user.registrationOtp = otp;
-    user.passwordResetOtp = otp;
+    // NOTE: do NOT overwrite passwordResetOtp here — that field belongs to the
+    // forgot-password flow (verifyPasswordOtpController checks it). Overwriting it
+    // with the registration OTP breaks password-reset verification.
 
     await user.save();
-    const {html, subject} =await otpMessage( otp);
+    const {html, subject} = otpMessage( otp);
     await sendEmail(email, subject,html); 
     return successResponse(res, StatusCodes.OK, "Otp sent successfully");
 });

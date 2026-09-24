@@ -3,19 +3,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendEmail = void 0;
 const config_1 = require("./config");
 const nodemailer = require("nodemailer");
-config_1.config;
 /**
  * @description - This function is used to send the emails
  * @param {string} to - email to which the email is to be sent
- * @param {string} from - email from which the email is to be sent
  * @param {string} subject - subject of the email
  * @param {string} html - html fo the email
  * @returns {promise} -- Returns the promise of send email
  */
 const sendEmail = (to, subject, html) => {
-    new Promise(async (resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         try {
             const from = config_1.config.senderEmail;
+            if (!config_1.config.senderEmail || !config_1.config.senderEmailPassword) {
+                throw new Error("Email credentials (SENDER_EMAIL / SENDER_EMAIL_PASSWORD) are not configured!");
+            }
             const transporter = nodemailer.createTransport({
                 host: "smtp.zoho.com",
                 port: 465,
@@ -29,13 +30,13 @@ const sendEmail = (to, subject, html) => {
                 from,
                 to,
                 subject,
-                html
+                html,
             };
             const data = await transporter.sendMail(mailOptions);
             resolve(data);
         }
         catch (error) {
-            console.error("error", error);
+            console.error("sendEmail error:", error);
             reject(error);
         }
     });

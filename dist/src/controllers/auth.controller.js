@@ -75,7 +75,7 @@ exports.registerUserController = (0, error_handler_1.catchAsync)(async (req, res
     };
     const data = await authService.createUser(newUser);
     const userId = String(data._id);
-    const { otp, otpCreatedAt, otpExpiryTime } = await (0, utility_1.generateOTPData)(userId);
+    const { otp, otpCreatedAt, otpExpiryTime } = (0, utility_1.generateOTPData)(userId);
     data.otpExpiresAt = otpExpiryTime;
     data.registrationOtp = otp;
     await data.save();
@@ -93,7 +93,12 @@ exports.registerUserController = (0, error_handler_1.catchAsync)(async (req, res
     data.subscription = subscription._id;
     await data.save();
     const { html, subject } = (0, templates_1.otpMessage)(otp);
-    (0, send_email_1.sendEmail)(email, subject, html);
+    try {
+        await (0, send_email_1.sendEmail)(email, subject, html);
+    }
+    catch (mailError) {
+        console.error("registerUserController: failed to send verification OTP email:", mailError);
+    }
     const token = await (0, jwt_1.generateJWTwithExpiryDate)({
         email: data.email,
         id: data._id,
@@ -122,7 +127,26 @@ exports.loginController = (0, error_handler_1.catchAsync)(async (req, res) => {
         throw new error_1.UnauthorizedError("Account Suspended kindly Contact Admin!!");
     }
     if (foundUser.isEmailVerified == false) {
-        throw new error_1.BadRequestError("Kindly verify your email!");
+        // Resend a fresh OTP so the user can verify.
+        // Previous code threw immediately without generating/sending a new OTP,
+        // which is why "resend on login" never delivered anything.
+        const { otp, otpExpiryTime } = (0, utility_1.generateOTPData)(String(foundUser._id));
+        foundUser.otpExpiresAt = otpExpiryTime;
+        foundUser.registrationOtp = otp;
+        await foundUser.save();
+        const { html, subject } = (0, templates_1.otpMessage)(otp);
+        // Await so SMTP/auth failures surface in logs instead of being silently dropped.
+        // sendEmail now returns its Promise (previously `new Promise(...)` was never returned,
+        // so `await sendEmail(...)` resolved immediately and failures were invisible).
+        // Don't let an SMTP outage mask the real "verify your email" message:
+        // log the mail failure but still tell the client to verify (they can hit /resend-otp).
+        try {
+            await (0, send_email_1.sendEmail)(foundUser.email, subject, html);
+        }
+        catch (mailError) {
+            console.error("loginController: failed to resend verification OTP email:", mailError);
+        }
+        throw new error_1.BadRequestError("Kindly verify your email! A new OTP has been sent to your email.");
     }
     const token = await (0, jwt_1.generateJWTwithExpiryDate)({
         email: foundUser.email,
@@ -171,12 +195,12 @@ exports.forgetPasswordController = (0, error_handler_1.catchAsync)(async (req, r
     const foundUser = await authService.findUserByEmail(email);
     if (!foundUser)
         throw new error_1.NotFoundError("User not found!");
-    const { otp, otpExpiryTime } = await (0, utility_1.generateOTPData)(String(foundUser._id));
+    const { otp, otpExpiryTime } = (0, utility_1.generateOTPData)(String(foundUser._id));
     foundUser.otpExpiresAt = otpExpiryTime;
     foundUser.passwordResetOtp = otp;
     await foundUser.save();
     const { html, subject } = (0, templates_1.passwordResetMessage)('user', otp);
-    (0, send_email_1.sendEmail)(email, subject, html);
+    await (0, send_email_1.sendEmail)(email, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Password reset OTP sent to your email.");
 });
 exports.resetPasswordController = (0, error_handler_1.catchAsync)(async (req, res) => {
@@ -310,12 +334,14 @@ exports.resendVerificationOtpController = (0, error_handler_1.catchAsync)(async 
         throw new error_1.NotFoundError("User not found");
     }
     const userId = String(user._id);
-    const { otp, otpCreatedAt, otpExpiryTime } = await (0, utility_1.generateOTPData)(userId);
+    const { otp, otpCreatedAt, otpExpiryTime } = (0, utility_1.generateOTPData)(userId);
     user.otpExpiresAt = otpExpiryTime;
     user.registrationOtp = otp;
-    user.passwordResetOtp = otp;
+    // NOTE: do NOT overwrite passwordResetOtp here — that field belongs to the
+    // forgot-password flow (verifyPasswordOtpController checks it). Overwriting it
+    // with the registration OTP breaks password-reset verification.
     await user.save();
-    const { html, subject } = await (0, templates_1.otpMessage)(otp);
+    const { html, subject } = (0, templates_1.otpMessage)(otp);
     await (0, send_email_1.sendEmail)(email, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Otp sent successfully");
 });
