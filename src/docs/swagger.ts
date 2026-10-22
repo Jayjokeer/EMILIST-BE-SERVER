@@ -1,7 +1,9 @@
+import { additionalSwaggerPaths } from './additional-swagger-paths';
+
 /**
  * Emilist API - Swagger / OpenAPI 3.0 specification
  * -------------------------------------------------
- * This document describes all endpoints under the JOBS section.
+ * This document describes the Emilist HTTP API.
  * The interactive UI is served at:  GET /api-docs
  *
  * Auth: protected endpoints require an `Authorization: Bearer <token>` header.
@@ -14,8 +16,8 @@ export const swaggerSpec = {
     version: "1.0.0",
     description: `Backend API for the Emilist platform.
 
-## Jobs section
-Interactive documentation & examples for every endpoint under \`/api/v1/jobs\`.
+## API reference
+Interactive documentation for every HTTP endpoint under \`/api/v1\`.
 
 ### Authentication
 1. Call \`POST /api/v1/auth/login\` with \`{ "email": "...", "password": "..." }\`.
@@ -63,9 +65,19 @@ Endpoints marked as \`multipart/form-data\` expect the file(s) under the field
       name: "Webhooks",
       description: "Paystack webhook receiver (signature-verified, no bearer auth).",
     },
+    { name: "Auth", description: "Authentication, accounts, and user profiles." },
+    { name: "Admin", description: "Administrative and super-administrator operations." },
+    { name: "Cart", description: "Shopping cart and checkout operations." },
+    { name: "Chat", description: "Direct messages and conversation lists." },
+    { name: "Notifications", description: "User notification management." },
+    { name: "Orders", description: "Order history, cancellation, returns, ratings, and tracking." },
+    { name: "Subscriptions", description: "Plans, subscriptions, and promoted listings." },
+    { name: "Targets", description: "User targets and performance metrics." },
+    { name: "Private Experts", description: "Private expert registration." },
   ],
   security: [{ bearerAuth: [] }],
   paths: {
+    ...additionalSwaggerPaths,
     "/promo": {
       post: {
         tags: ["Promo Codes"],

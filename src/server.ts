@@ -57,7 +57,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 
-// Swagger / OpenAPI documentation for the JOBS endpoints
+// Swagger / OpenAPI documentation for the HTTP API
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes

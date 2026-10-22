@@ -59,7 +59,7 @@ exports.io = new socket_io_1.Server(server, {
 });
 app.use(passport_1.default.initialize());
 app.use(passport_1.default.session());
-// Swagger / OpenAPI documentation for the JOBS endpoints
+// Swagger / OpenAPI documentation for the HTTP API
 app.use("/api-docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_1.swaggerSpec));
 // Routes
 app.use("/api/v1/", routes_1.default);
