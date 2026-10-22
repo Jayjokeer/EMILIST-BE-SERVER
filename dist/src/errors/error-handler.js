@@ -19,6 +19,9 @@ const catchAsync = (fn) => {
 };
 exports.catchAsync = catchAsync;
 const globalErrorHandler = (err, req, res, next) => {
+    if (err.name === 'MulterError') {
+        err = new error_1.default(err.message, 400);
+    }
     if (err.name === 'MongoError' || err.statusCode === 11000) {
         err = handleMongoDBErrors(err);
     }

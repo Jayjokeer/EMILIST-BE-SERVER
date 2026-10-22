@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadBusinessImages = exports.multipleUpload = exports.singleUpload = exports.cloudinary = exports.parseJobBody = exports.parseBusinessOnboarding = void 0;
+exports.uploadBusinessImages = exports.multipleUpload = exports.singleUpload = exports.cloudinary = exports.parseJobBody = exports.parseBusinessOnboarding = exports.normalizeBusinessFileField = void 0;
 const cloudinary_1 = require("cloudinary");
 Object.defineProperty(exports, "cloudinary", { enumerable: true, get: function () { return cloudinary_1.v2; } });
 const multer_storage_cloudinary_1 = require("multer-storage-cloudinary");
@@ -34,14 +34,54 @@ const singleUpload = (0, multer_1.default)({ storage }).single('image');
 exports.singleUpload = singleUpload;
 const multipleUpload = (0, multer_1.default)({ storage }).array('files', 10);
 exports.multipleUpload = multipleUpload;
-const uploadBusinessImages = (0, multer_1.default)({ storage }).fields([
-    { name: 'displayImage', maxCount: 1 },
-    { name: 'businessImages', maxCount: 10 },
-    ...Array.from({ length: 20 }, (_, i) => ({
-        name: `certificate_${i}`,
-        maxCount: 1,
-    })),
-]);
+const normalizeBusinessFileField = (fieldName) => {
+    const trimmedFieldName = fieldName.trim();
+    if (trimmedFieldName === 'displayImage' || trimmedFieldName === 'businessImages') {
+        return trimmedFieldName;
+    }
+    // Accept certificate_0 (documented), certificate_[0], and certificate[0].
+    const certificateMatch = trimmedFieldName.match(/^certificate_?(?:\[(\d+)\]|(\d+))$/);
+    if (!certificateMatch)
+        return undefined;
+    const index = Number(certificateMatch[1] ?? certificateMatch[2]);
+    if (!Number.isInteger(index) || index < 0 || index >= 20)
+        return undefined;
+    return `certificate_${index}`;
+};
+exports.normalizeBusinessFileField = normalizeBusinessFileField;
+const businessFileUpload = (0, multer_1.default)({
+    storage,
+    limits: { files: 31 },
+    fileFilter: (req, file, callback) => {
+        const normalizedFieldName = (0, exports.normalizeBusinessFileField)(file.fieldname);
+        if (!normalizedFieldName) {
+            return callback(new multer_1.default.MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname));
+        }
+        const uploadCounts = (req.businessUploadCounts ??= {});
+        const maxCount = normalizedFieldName === 'businessImages' ? 10 : 1;
+        uploadCounts[normalizedFieldName] = (uploadCounts[normalizedFieldName] ?? 0) + 1;
+        if (uploadCounts[normalizedFieldName] > maxCount) {
+            return callback(new multer_1.default.MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname));
+        }
+        // Normalize before storage so certificate files use the certificate folder
+        // and downstream services can consistently read certificate_<index>.
+        file.fieldname = normalizedFieldName;
+        callback(null, true);
+    },
+}).any();
+const uploadBusinessImages = (req, res, next) => {
+    businessFileUpload(req, res, (error) => {
+        delete req.businessUploadCounts;
+        if (error)
+            return next(error);
+        const groupedFiles = {};
+        for (const file of req.files ?? []) {
+            (groupedFiles[file.fieldname] ??= []).push(file);
+        }
+        req.files = groupedFiles;
+        next();
+    });
+};
 exports.uploadBusinessImages = uploadBusinessImages;
 const parseBusinessOnboarding = (req, res, next) => {
     try {
@@ -50,6 +90,20 @@ const parseBusinessOnboarding = (req, res, next) => {
         }
         if (req.body.business) {
             req.body.business = JSON.parse(req.body.business);
+            // Browsers often serialize empty optional date inputs as empty strings.
+            // Remove them so Joi/Mongoose treat them as omitted optional values.
+            for (const certification of req.body.business.certifications ?? []) {
+                if (certification.issuingDate === '')
+                    delete certification.issuingDate;
+                if (certification.expiringDate === '')
+                    delete certification.expiringDate;
+            }
+            for (const membership of req.body.business.memberships ?? []) {
+                if (membership.startDate === '')
+                    delete membership.startDate;
+                if (membership.endDate === '')
+                    delete membership.endDate;
+            }
         }
         next();
     }

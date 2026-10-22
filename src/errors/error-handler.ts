@@ -20,6 +20,9 @@ const globalErrorHandler = (
   res: Response, 
   next: NextFunction 
 ) => {
+      if (err.name === 'MulterError') {
+        err = new AppError(err.message, 400);
+      }
       if (err.name === 'MongoError' || err.statusCode === 11000) {
         err = handleMongoDBErrors(err);
       }
