@@ -296,7 +296,7 @@ exports.changePasswordController = (0, error_handler_1.catchAsync)(async (req, r
 });
 exports.currentUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
-    const foundUser = await authService.findCurrentUserById(userId);
+    const foundUser = await authService.findCurrentUserProfileById(userId);
     if (!foundUser)
         throw new error_1.NotFoundError("User not found!");
     const token = await (0, jwt_1.generateJWTwithExpiryDate)({

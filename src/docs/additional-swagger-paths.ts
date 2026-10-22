@@ -42,7 +42,7 @@ const routes: RouteDoc[] = [
   { path: '/auth/log-out', method: 'get', tag: 'Auth', summary: 'Log out' },
   { path: '/auth/update-profile', method: 'patch', tag: 'Auth', summary: 'Update the authenticated user profile', multipart: true, bodyExample: { firstName: 'Jane', lastName: 'Doe', gender: 'female', countryCode: '+234', languages: ['English'], houseAddress: '12 Admiralty Way', mobile: '8012345678', city: 'Lagos', state: 'Lagos', country: 'Nigeria', bio: 'Experienced professional' } },
   { path: '/auth/change-password', method: 'patch', tag: 'Auth', summary: 'Change password', bodyExample: { oldPassword: 'Password123!', newPassword: 'NewPassword123!', confirmPassword: 'NewPassword123!' } },
-  { path: '/auth/current-user', method: 'get', tag: 'Auth', summary: 'Fetch the authenticated user' },
+  { path: '/auth/current-user', method: 'get', tag: 'Auth', summary: 'Fetch the authenticated user with completed profile and expert summaries' },
   { path: '/auth/deactivate-user', method: 'patch', tag: 'Auth', summary: 'Deactivate the authenticated user' },
   { path: '/auth/get-specific-user', method: 'get', tag: 'Auth', summary: 'Find a user', queryParams: ['identifier'] },
   { path: '/auth/invite-user', method: 'get', tag: 'Auth', summary: 'Invite a user', queryParams: ['email'] },

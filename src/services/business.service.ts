@@ -935,7 +935,7 @@ export const createBusinessProfileService = async (
   const userObjectId = new Types.ObjectId(userId);
 
   const user = await Users.findById(userObjectId).select(
-    'isProfileComplete firstName lastName mobile countryCode language houseAddress city state country bio displayImage'
+    'isProfileComplete firstName lastName mobile countryCode languages houseAddress city state country bio displayImage'
   );
 
   if (!user) throw new NotFoundError('User not found');

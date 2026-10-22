@@ -25,11 +25,21 @@ export const createUser = async (data:  ICreateUser) =>{
     return await Users.create(data);
 };
 export const findCurrentUserById = async (id: string)=>{
-    return await Users.findById(id).select("firstName lastName uniqueId email language isProfileComplete isVerified isEmailVerified");
+    return await Users.findById(id).select("firstName lastName uniqueId email languages isProfileComplete isVerified isEmailVerified");
+};
+export const findCurrentUserProfileById = async (id: string) => {
+  return await Users.findById(id)
+    .select(
+      'firstName lastName userName uniqueId email gender countryCode mobile languages houseAddress city state country bio displayImage businesses isProfileComplete isVerified isEmailVerified role status level isPrimeMember requestedVerification createdAt updatedAt'
+    )
+    .populate(
+      'businesses',
+      'businessName uniqueId services displayImage expertType isVerified'
+    );
 };
 export const findUserByIdForBusiness = async (id: string)=>{
 return await Users.findById(id).select(
-    'isProfileComplete firstName lastName mobile countryCode language houseAddress city state country bio displayImage'
+    'isProfileComplete firstName lastName mobile countryCode languages houseAddress city state country bio displayImage'
   );
 };
 export const findTokenService = async (
@@ -195,7 +205,7 @@ export const getProfileContextService = async (
  
   if (context === 'NEW_BUSINESS') {
     const user = await Users.findById(userObjectId).select(
-      'firstName lastName mobile countryCode language houseAddress city state country bio displayImage'
+      'firstName lastName mobile countryCode languages houseAddress city state country bio displayImage'
     );
     if (user) {
       prefill = {

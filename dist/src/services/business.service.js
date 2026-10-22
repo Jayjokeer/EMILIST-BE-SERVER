@@ -773,7 +773,7 @@ const setupService = async (userId, businessId, dto, files) => {
 exports.setupService = setupService;
 const createBusinessProfileService = async (userId, dto, files) => {
     const userObjectId = new mongoose_1.Types.ObjectId(userId);
-    const user = await users_model_1.default.findById(userObjectId).select('isProfileComplete firstName lastName mobile countryCode language houseAddress city state country bio displayImage');
+    const user = await users_model_1.default.findById(userObjectId).select('isProfileComplete firstName lastName mobile countryCode languages houseAddress city state country bio displayImage');
     if (!user)
         throw new error_1.NotFoundError('User not found');
     let businessSet;

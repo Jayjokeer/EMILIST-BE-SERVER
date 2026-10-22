@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.saveUserProfile = exports.buildProfilePayload = exports.getProfileContextService = exports.resolveExpertContext = exports.deleteUser = exports.findUserWithoutPhoneNumberDetailsById = exports.findUserWithoutDetailsById = exports.findUserUsingUniqueIdEmailUserId = exports.verifyUser = exports.fetchAllUsersAdmin = exports.fetchAllUsersAdminDashboard = exports.fetchUserMutedBusinesses = exports.fetchUserMutedJobs = exports.findSpecificUser = exports.findUserByEmailOrUserNameDirectJob = exports.findUserByEmailOrUserName = exports.findUserByUniqueId = exports.findUserByIdWithPassword = exports.findUserByUserName = exports.updateUserById = exports.findTokenService = exports.findUserByIdForBusiness = exports.findCurrentUserById = exports.createUser = exports.findUserByIdAlone = exports.findUserById = exports.findUserByEmail = void 0;
+exports.saveUserProfile = exports.buildProfilePayload = exports.getProfileContextService = exports.resolveExpertContext = exports.deleteUser = exports.findUserWithoutPhoneNumberDetailsById = exports.findUserWithoutDetailsById = exports.findUserUsingUniqueIdEmailUserId = exports.verifyUser = exports.fetchAllUsersAdmin = exports.fetchAllUsersAdminDashboard = exports.fetchUserMutedBusinesses = exports.fetchUserMutedJobs = exports.findSpecificUser = exports.findUserByEmailOrUserNameDirectJob = exports.findUserByEmailOrUserName = exports.findUserByUniqueId = exports.findUserByIdWithPassword = exports.findUserByUserName = exports.updateUserById = exports.findTokenService = exports.findUserByIdForBusiness = exports.findCurrentUserProfileById = exports.findCurrentUserById = exports.createUser = exports.findUserByIdAlone = exports.findUserById = exports.findUserByEmail = void 0;
 const users_model_1 = __importDefault(require("../models/users.model"));
 const mongoose_1 = require("mongoose");
 const validation_helper_1 = require("../helpers/validation.helper");
@@ -27,11 +27,17 @@ const createUser = async (data) => {
 };
 exports.createUser = createUser;
 const findCurrentUserById = async (id) => {
-    return await users_model_1.default.findById(id).select("firstName lastName uniqueId email language isProfileComplete isVerified isEmailVerified");
+    return await users_model_1.default.findById(id).select("firstName lastName uniqueId email languages isProfileComplete isVerified isEmailVerified");
 };
 exports.findCurrentUserById = findCurrentUserById;
+const findCurrentUserProfileById = async (id) => {
+    return await users_model_1.default.findById(id)
+        .select('firstName lastName userName uniqueId email gender countryCode mobile languages houseAddress city state country bio displayImage businesses isProfileComplete isVerified isEmailVerified role status level isPrimeMember requestedVerification createdAt updatedAt')
+        .populate('businesses', 'businessName uniqueId services displayImage expertType isVerified');
+};
+exports.findCurrentUserProfileById = findCurrentUserProfileById;
 const findUserByIdForBusiness = async (id) => {
-    return await users_model_1.default.findById(id).select('isProfileComplete firstName lastName mobile countryCode language houseAddress city state country bio displayImage');
+    return await users_model_1.default.findById(id).select('isProfileComplete firstName lastName mobile countryCode languages houseAddress city state country bio displayImage');
 };
 exports.findUserByIdForBusiness = findUserByIdForBusiness;
 const findTokenService = async (registrationOtp) => {
@@ -185,7 +191,7 @@ const getProfileContextService = async (userId, forceNewBusiness = false) => {
     const context = await (0, exports.resolveExpertContext)(userObjectId, forceNewBusiness);
     let prefill = {};
     if (context === 'NEW_BUSINESS') {
-        const user = await users_model_1.default.findById(userObjectId).select('firstName lastName mobile countryCode language houseAddress city state country bio displayImage');
+        const user = await users_model_1.default.findById(userObjectId).select('firstName lastName mobile countryCode languages houseAddress city state country bio displayImage');
         if (user) {
             prefill = {
                 firstName: user.firstName,
