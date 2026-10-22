@@ -59,6 +59,31 @@ const resolveFileUrl = (req) => req.fileUrl ??
     req.file?.location ??
     req.file?.path ??
     req.body.displayImage;
+const normalizeLanguages = (value) => {
+    if (value === undefined || value === null)
+        return undefined;
+    if (Array.isArray(value)) {
+        return value
+            .filter((language) => typeof language === 'string')
+            .map((language) => language.trim())
+            .filter(Boolean);
+    }
+    if (typeof value !== 'string')
+        return undefined;
+    const trimmedValue = value.trim();
+    if (!trimmedValue)
+        return [];
+    // Arrays in multipart/form-data commonly arrive as JSON strings.
+    try {
+        const parsedValue = JSON.parse(trimmedValue);
+        if (Array.isArray(parsedValue))
+            return normalizeLanguages(parsedValue);
+    }
+    catch {
+        // A plain string is a valid single language.
+    }
+    return [trimmedValue];
+};
 const extractProfileDto = (req) => {
     const body = req.body || {};
     return {
@@ -66,7 +91,9 @@ const extractProfileDto = (req) => {
         lastName: body.lastName,
         countryCode: body.countryCode,
         mobile: body.mobile,
-        languages: body.language,
+        // `languages` is the current API field. Keep the singular name as a
+        // fallback for clients using the previous request format.
+        languages: normalizeLanguages(body.languages ?? body.language),
         houseAddress: body.houseAddress,
         city: body.city,
         state: body.state,
