@@ -811,7 +811,7 @@ Each job in the response includes \`applicantsCount\`, \`milestonesCount\`, \`li
 poster's Business reviews, 0/0 when they don't run a Business).
 
 Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = false\`) are excluded.`,
-        security: [],
+        security: [{}, { bearerAuth: [] }],
         parameters: [
           { name: "page", in: "query", required: false, schema: { type: "integer", default: 1 }, description: "Page number" },
           { name: "limit", in: "query", required: false, schema: { type: "integer", default: 10 }, description: "Items per page" },
@@ -1102,15 +1102,15 @@ active application, while an applicant sees their application status such as \`a
         description: `Returns full details of a single job, including populated user/application info,
 the milestones panel (each with computed \`dueDate\`), \`applicantsCount\`, and the job poster's
 review summary and comments (\`reviews\`: average rating, star distribution, and a paginated list
-of reviews/comments pulled from the poster's Business profile). Pass \`userId\` to receive the
-viewer-specific status: \`in review\` for the owner, \`applied\` for an applicant, and \`listed\`
-for other artisans.`,
-        security: [],
+of reviews/comments pulled from the poster's Business profile). Authentication is optional. When a
+bearer token is supplied, viewer-specific status is derived automatically: \`in review\` for the
+owner, \`applied\` for an applicant, and \`listed\` for other artisans.`,
+        security: [{}, { bearerAuth: [] }],
         parameters: [
           { name: "id", in: "query", required: true, schema: { type: "string" }, description: "MongoDB ObjectId of the job", example: "64f5c0a1b2c3d4e5f6a7b8c9" },
           { name: "reviewsPage", in: "query", required: false, schema: { type: "integer", default: 1 }, description: "Page number for the poster's reviews/comments list" },
           { name: "reviewsLimit", in: "query", required: false, schema: { type: "integer", default: 5 }, description: "Items per page for the poster's reviews/comments list" },
-          { name: "userId", in: "query", required: false, schema: { type: "string" }, description: "Current viewer's user ID, used to derive the role-specific job status" },
+          { name: "userId", in: "query", required: false, deprecated: true, schema: { type: "string" }, description: "Legacy fallback. Prefer a bearer token; authenticated viewer identity is derived automatically." },
         ],
         responses: {
           "200": {

@@ -232,7 +232,7 @@ function parseListParam(value) {
 }
 exports.allJobsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page = 1, limit = 10, title, location, category, service } = req.query;
-    const userId = req.query.userId ? req.query.userId : null;
+    const userId = req.user?.id ?? req.user?._id ?? (req.query.userId ? String(req.query.userId) : null);
     const search = req.query.search || null;
     const filters = {
         title,
@@ -256,7 +256,7 @@ exports.fetchSingleJobController = (0, error_handler_1.catchAsync)(async (req, r
         throw new error_1.NotFoundError("Id required!");
     }
     ;
-    const data = await jobService.fetchJobByIdWithDetails(String(id), Number(reviewsPage), Number(reviewsLimit), userId ? String(userId) : undefined);
+    const data = await jobService.fetchJobByIdWithDetails(String(id), Number(reviewsPage), Number(reviewsLimit), String(req.user?.id ?? req.user?._id ?? userId ?? '') || undefined);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
 exports.likeJobController = (0, error_handler_1.catchAsync)(async (req, res) => {

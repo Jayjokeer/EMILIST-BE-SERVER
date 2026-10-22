@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import * as jobController from "../controllers/jobs.controller";
 import { validateJob, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateRecurringJob, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
-import { userAuth } from "../middlewares/current-user";
+import { optionalUserAuth, userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload, parseJobBody } from "../utils/image-upload";
 import * as paymentController from "../controllers/payment.controller";
 import { validatePaymentForJob } from "../validations/product.validation";
@@ -9,9 +9,9 @@ import { validatePaymentForJob } from "../validations/product.validation";
 const router = Router();
 
 router.route("/create-job").post(userAuth,multipleUpload,parseJobBody,validateJob,jobController.createJobController);
-router.route("/fetch-all-jobs").get(jobController.allJobsController);
+router.route("/fetch-all-jobs").get(optionalUserAuth,jobController.allJobsController);
 router.route("/fetch-listed-jobs").get(userAuth,jobController.allUserJobController);
-router.route("/fetch-job-by-id").get(jobController.fetchSingleJobController);
+router.route("/fetch-job-by-id").get(optionalUserAuth,jobController.fetchSingleJobController);
 router.route("/like-job/:jobId").post(userAuth,jobController.likeJobController);
 router.route("/fetch-liked-jobs").get(userAuth, jobController.fetchLikedJobsController);
 router.route("/unlike-job/:jobId").post(userAuth, jobController.unlikeJobController);

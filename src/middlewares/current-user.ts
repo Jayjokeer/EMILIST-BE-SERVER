@@ -49,6 +49,41 @@ export const userAuth = async (req: JwtPayload, res: Response, next: NextFunctio
     return;
   }
 };
+
+// Adds req.user when a bearer token/cookie is present, while keeping public
+// endpoints accessible when no credentials are supplied.
+export const optionalUserAuth = async (req: JwtPayload, res: Response, next: NextFunction): Promise<void> => {
+  let token: string | undefined;
+
+  if (req.headers.authorization?.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies?.sessionId) {
+    token = req.cookies.sessionId;
+  }
+
+  if (!token) {
+    next();
+    return;
+  }
+
+  try {
+    const decode = verifyJWT(token);
+    if (!decode?.email) throw new UnauthorizedError('Authentication Failure');
+
+    const user = await authService.findUserByEmail(decode.email.toLowerCase());
+    if (!user) throw new UnauthorizedError('No user found');
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedError('Access Denied! Your account is disabled, please contact admin.');
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    res.status(StatusCodes.UNAUTHORIZED).json({
+      message: error instanceof UnauthorizedError ? error.message : 'Authentication Failure',
+    });
+  }
+};
 export const adminAuth = async (req: JwtPayload, res: Response, next: NextFunction): Promise<void> => {
   let token: string | undefined;
 

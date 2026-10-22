@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.superAdminAuth = exports.adminAuth = exports.userAuth = void 0;
+exports.superAdminAuth = exports.adminAuth = exports.optionalUserAuth = exports.userAuth = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const jwt_1 = require("../utils/jwt");
 const error_1 = require("../errors/error");
@@ -76,6 +76,40 @@ const userAuth = async (req, res, next) => {
     }
 };
 exports.userAuth = userAuth;
+// Adds req.user when a bearer token/cookie is present, while keeping public
+// endpoints accessible when no credentials are supplied.
+const optionalUserAuth = async (req, res, next) => {
+    let token;
+    if (req.headers.authorization?.startsWith('Bearer ')) {
+        token = req.headers.authorization.split(' ')[1];
+    }
+    else if (req.cookies?.sessionId) {
+        token = req.cookies.sessionId;
+    }
+    if (!token) {
+        next();
+        return;
+    }
+    try {
+        const decode = (0, jwt_1.verifyJWT)(token);
+        if (!decode?.email)
+            throw new error_1.UnauthorizedError('Authentication Failure');
+        const user = await authService.findUserByEmail(decode.email.toLowerCase());
+        if (!user)
+            throw new error_1.UnauthorizedError('No user found');
+        if (!user.isEmailVerified) {
+            throw new error_1.UnauthorizedError('Access Denied! Your account is disabled, please contact admin.');
+        }
+        req.user = user;
+        next();
+    }
+    catch (error) {
+        res.status(http_status_codes_1.StatusCodes.UNAUTHORIZED).json({
+            message: error instanceof error_1.UnauthorizedError ? error.message : 'Authentication Failure',
+        });
+    }
+};
+exports.optionalUserAuth = optionalUserAuth;
 const adminAuth = async (req, res, next) => {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {

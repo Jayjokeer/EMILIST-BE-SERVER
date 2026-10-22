@@ -227,7 +227,7 @@ function parseListParam(value: unknown): string[] | undefined {
 export const allJobsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const { page = 1, limit = 10, title, location, category, service } = req.query;
 
-    const userId = req.query.userId ? req.query.userId : null;
+    const userId = req.user?.id ?? req.user?._id ?? (req.query.userId ? String(req.query.userId) : null);
     const search = req.query.search as string || null;
     const filters = {
       title,
@@ -246,7 +246,7 @@ export const allJobsController = catchAsync(async (req: JwtPayload, res: Respons
     successResponse(res, StatusCodes.OK, data);
   });
 
-export const fetchSingleJobController = catchAsync( async (req: Request, res: Response) => {
+export const fetchSingleJobController = catchAsync( async (req: JwtPayload, res: Response) => {
     const { id, reviewsPage = 1, reviewsLimit = 5, userId } = req.query;
     if(!id){
         throw new NotFoundError("Id required!");
@@ -255,7 +255,7 @@ export const fetchSingleJobController = catchAsync( async (req: Request, res: Re
       String(id),
       Number(reviewsPage),
       Number(reviewsLimit),
-      userId ? String(userId) : undefined,
+      String(req.user?.id ?? req.user?._id ?? userId ?? '') || undefined,
     );
 
 
