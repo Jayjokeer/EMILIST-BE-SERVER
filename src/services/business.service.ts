@@ -154,7 +154,9 @@ export const findBusinessByUniqueId = async (uniqueId: string)=>{
 };
 
 export const fetchUserBusiness = async (userId: string)=>{
-    return await Business.findOne({userId});
+    return await Business.find({ userId })
+      .sort({ createdAt: -1 })
+      .populate('reviews', 'rating');
 };
 export const fetchSingleBusiness = async (businessId: string)=>{
     return  await Business.findById(businessId)

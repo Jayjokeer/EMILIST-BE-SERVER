@@ -170,7 +170,9 @@ const findBusinessByUniqueId = async (uniqueId) => {
 };
 exports.findBusinessByUniqueId = findBusinessByUniqueId;
 const fetchUserBusiness = async (userId) => {
-    return await business_model_1.default.findOne({ userId });
+    return await business_model_1.default.find({ userId })
+        .sort({ createdAt: -1 })
+        .populate('reviews', 'rating');
 };
 exports.fetchUserBusiness = fetchUserBusiness;
 const fetchSingleBusiness = async (businessId) => {

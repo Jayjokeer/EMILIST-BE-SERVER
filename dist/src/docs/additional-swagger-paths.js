@@ -45,7 +45,7 @@ const routes = [
     { path: '/business/register-business', method: 'post', tag: 'Business', summary: 'Register a business/expert profile', multipart: true },
     { path: '/business/update-business/{businessId}', method: 'patch', tag: 'Business', summary: 'Update a business profile', multipart: true },
     { path: '/business/fetch-single-business/{businessId}', method: 'get', tag: 'Business', summary: 'Fetch a business profile', auth: false, queryParams: ['userId'] },
-    { path: '/business/fetch-user-business', method: 'get', tag: 'Business', summary: "Fetch the authenticated user's business" },
+    { path: '/business/fetch-user-business', method: 'get', tag: 'Business', summary: "Fetch all businesses belonging to the authenticated user" },
     { path: '/business/delete-business/{businessId}/image/{imageId}', method: 'delete', tag: 'Business', summary: 'Delete a business image' },
     { path: '/business/fetch-all-business', method: 'get', tag: 'Business', summary: 'Fetch all businesses', auth: false, queryParams: ['page', 'limit', 'search', 'userId'] },
     { path: '/business/delete-business/{businessId}', method: 'delete', tag: 'Business', summary: 'Delete a business' },

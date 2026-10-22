@@ -117,8 +117,16 @@ export const fetchAllUserJobs = async (
   filters: { title?: string, location?: string, category?: string, service?: string } = {}
 ) => {
   const skip = (page - 1) * limit;
-  
-  const searchCriteria: any = { userId };
+
+  const userProjects = await Project.find({ user: userId }).select('job');
+  const appliedJobIds = userProjects.map((project) => project.job);
+  const relationshipScope = {
+    $or: [
+      { userId },
+      { _id: { $in: appliedJobIds } },
+    ],
+  };
+  const searchCriteria: any = { $and: [relationshipScope] };
 
   if (search) {
     const searchRegex = new RegExp(search, 'i');
@@ -127,7 +135,9 @@ export const fetchAllUserJobs = async (
       (field) => jobSchemaPaths[field].instance === 'String'
     );
 
-    searchCriteria.$or = stringFields.map((field) => ({ [field]: { $regex: searchRegex } }));
+    searchCriteria.$and.push({
+      $or: stringFields.map((field) => ({ [field]: { $regex: searchRegex } })),
+    });
   } else {
     if (filters.title) searchCriteria.title = { $regex: new RegExp(filters.title, 'i') };
     if (filters.location) searchCriteria.location = { $regex: new RegExp(filters.location, 'i') };
@@ -423,6 +433,7 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
   
 
     const jobs = await Jobs.find({ _id: { $in: likedJobIds } })
+      .populate('applications', 'status user')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -430,7 +441,7 @@ export const fetchLikedJobs = async (userId: string, page: number, limit: number
     const totalLikedJobs = likedJobIds.length;
   
     return {
-      jobs,
+      jobs: withJobsDisplayStatus(jobs, userId),
       totalPages: Math.ceil(totalLikedJobs / limit),
       currentPage: page,
       totalLikedJobs,
@@ -484,7 +495,11 @@ export const fetchJobApplicants = async (
 
   const applicants = await Project.find(query)
     .populate('user', 'fullName userName email profileImage level uniqueId')
-    .populate('job', 'title status jobCategory service')
+    .populate({
+      path: 'job',
+      select: 'title status jobCategory service userId applications',
+      populate: { path: 'applications', select: 'status user' },
+    })
     .sort({ appliedAt: -1 })
     .skip(skip)
     .limit(Number(limit));
@@ -495,7 +510,11 @@ export const fetchJobApplicants = async (
     total,
     page: Number(page),
     limit: Number(limit),
-    applicants,
+    applicants: applicants.map((application: any) => {
+      const plain = application.toObject();
+      if (plain.job) plain.job = withJobDisplayStatus(plain.job, userId);
+      return plain;
+    }),
   };
 };
 
@@ -1009,10 +1028,12 @@ export const fetchAllJobsForAdminDashboard = async () => {
 };
 
 export const fetchAllUserJobsAdmin = async (userId: string) => {
-  return await Jobs.find({ userId })
+  const jobs = await Jobs.find({ userId })
   .sort({ createdAt: -1 })
   .populate('applications', 'title description status user')
   .lean();
+
+  return withJobsDisplayStatus(jobs, userId);
 };
 
 

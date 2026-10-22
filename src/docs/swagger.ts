@@ -1005,8 +1005,10 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
     "/jobs/fetch-listed-jobs": {
       get: {
         tags: ["Jobs"],
-        summary: "Fetch jobs listed by the current user",
-        description: "Returns a paginated list of jobs created by the authenticated user.",
+        summary: "Fetch jobs posted by or applied to by the current user",
+        description: `Returns one paginated feed containing jobs created by the authenticated user and
+jobs the user applied to. Status is viewer-specific: an owner sees \`in review\` when their job has an
+active application, while an applicant sees their application status such as \`applied\`.`,
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "page", in: "query", required: false, schema: { type: "integer", default: 1 } },
@@ -1018,7 +1020,7 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
           { name: "service", in: "query", required: false, schema: { type: "string" } },
         ],
         responses: {
-          "200": { description: "Paginated list of the user's jobs (includes `isListed` state)", content: { "application/json": { example: { message: "success", data: { page: 1, limit: 10, totalJobs: 1, jobs: [{ _id: "64f5c0a1b2c3d4e5f6a7b8c9", title: "Fix leaking kitchen sink", status: "pending", isListed: true }] } } } } },
+          "200": { description: "Paginated list of jobs posted by or applied to by the user", content: { "application/json": { example: { message: "success", data: { currentPage: 1, totalPages: 1, totalJobs: 2, jobs: [{ _id: "64f5c0a1b2c3d4e5f6a7b8c9", title: "Fix leaking kitchen sink", status: "in review", isListed: true }, { _id: "64f5c0a1b2c3d4e5f6a7b8ca", title: "Paint an apartment", status: "applied", isListed: true }] } } } } },
           "401": { description: "Unauthorized", content: { "application/json": { example: { message: "Kindly login" } } } },
           "500": { description: "Server error" },
         },
