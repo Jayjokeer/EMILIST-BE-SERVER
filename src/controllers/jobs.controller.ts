@@ -247,11 +247,16 @@ export const allJobsController = catchAsync(async (req: JwtPayload, res: Respons
   });
 
 export const fetchSingleJobController = catchAsync( async (req: Request, res: Response) => {
-    const { id, reviewsPage = 1, reviewsLimit = 5 } = req.query;
+    const { id, reviewsPage = 1, reviewsLimit = 5, userId } = req.query;
     if(!id){
         throw new NotFoundError("Id required!");
     };
-    const data = await jobService.fetchJobByIdWithDetails(String(id), Number(reviewsPage), Number(reviewsLimit));
+    const data = await jobService.fetchJobByIdWithDetails(
+      String(id),
+      Number(reviewsPage),
+      Number(reviewsLimit),
+      userId ? String(userId) : undefined,
+    );
 
 
 
@@ -305,11 +310,16 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     if (!job) {
       throw new NotFoundError("Job not found!");
     }
-    if (userId === job.userId) {
+    if (String(userId) === String(job.userId)) {
       throw new BadRequestError("You cannot apply to your own job!");
     }
-    if(job.status !== JobStatusEnum.listed && job.status !== JobStatusEnum.pending){
+    if(job.status !== JobStatusEnum.listed && job.status !== JobStatusEnum.pending && job.status !== JobStatusEnum.in_review){
       throw new BadRequestError("You can only apply to a listed job!")
+    }
+
+    const existingApplication = await projectService.fetchApplicationByJobAndUser(String(jobId), String(userId));
+    if (existingApplication) {
+      throw new BadRequestError("You have already applied to this job!");
     }
     const business = await businessService.fetchSingleBusiness(String(businessId));
     if(!business){
@@ -343,8 +353,6 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
   
     
     job.applications!.push(String(projectData._id));
-    job.status = JobStatusEnum.in_review;
-    job.milestones
     await job.save();
   
     const notificationPayload = {
@@ -696,7 +704,7 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
       overallDueDate < now;
 
     return {
-      ...job.toObject(),
+      ...(typeof job.toObject === 'function' ? job.toObject() : job),
       milestoneProgress,
       overallDueDate,
       currentMilestoneDueDate,

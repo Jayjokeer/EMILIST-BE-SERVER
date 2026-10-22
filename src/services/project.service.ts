@@ -10,6 +10,13 @@ export const fetchProjectById = async (projectId: string) =>{
     return await Project.findById(projectId);
 };
 
+export const fetchApplicationByJobAndUser = async (jobId: string, userId: string) => {
+  return await Project.findOne({
+    job: jobId,
+    user: userId,
+  });
+};
+
 export const fetchAllUserProjects = async (userId: string) =>{
     return await Project.find({user: userId});
 };

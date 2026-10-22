@@ -251,12 +251,12 @@ exports.allJobsController = (0, error_handler_1.catchAsync)(async (req, res) => 
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
 exports.fetchSingleJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { id, reviewsPage = 1, reviewsLimit = 5 } = req.query;
+    const { id, reviewsPage = 1, reviewsLimit = 5, userId } = req.query;
     if (!id) {
         throw new error_1.NotFoundError("Id required!");
     }
     ;
-    const data = await jobService.fetchJobByIdWithDetails(String(id), Number(reviewsPage), Number(reviewsLimit));
+    const data = await jobService.fetchJobByIdWithDetails(String(id), Number(reviewsPage), Number(reviewsLimit), userId ? String(userId) : undefined);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
 exports.likeJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
@@ -292,11 +292,15 @@ exports.applyForJobController = (0, error_handler_1.catchAsync)(async (req, res)
     if (!job) {
         throw new error_1.NotFoundError("Job not found!");
     }
-    if (userId === job.userId) {
+    if (String(userId) === String(job.userId)) {
         throw new error_1.BadRequestError("You cannot apply to your own job!");
     }
-    if (job.status !== jobs_enum_1.JobStatusEnum.listed && job.status !== jobs_enum_1.JobStatusEnum.pending) {
+    if (job.status !== jobs_enum_1.JobStatusEnum.listed && job.status !== jobs_enum_1.JobStatusEnum.pending && job.status !== jobs_enum_1.JobStatusEnum.in_review) {
         throw new error_1.BadRequestError("You can only apply to a listed job!");
+    }
+    const existingApplication = await projectService.fetchApplicationByJobAndUser(String(jobId), String(userId));
+    if (existingApplication) {
+        throw new error_1.BadRequestError("You have already applied to this job!");
     }
     const business = await businessService.fetchSingleBusiness(String(businessId));
     if (!business) {
@@ -323,8 +327,6 @@ exports.applyForJobController = (0, error_handler_1.catchAsync)(async (req, res)
     }
     const projectData = await projectService.createProject({ ...payload, status: project_enum_1.ProjectStatusEnum.applied });
     job.applications.push(String(projectData._id));
-    job.status = jobs_enum_1.JobStatusEnum.in_review;
-    job.milestones;
     await job.save();
     const notificationPayload = {
         userId: job.userId,
@@ -627,7 +629,7 @@ exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)(async (req,
             overallDueDate &&
             overallDueDate < now;
         return {
-            ...job.toObject(),
+            ...(typeof job.toObject === 'function' ? job.toObject() : job),
             milestoneProgress,
             overallDueDate,
             currentMilestoneDueDate,

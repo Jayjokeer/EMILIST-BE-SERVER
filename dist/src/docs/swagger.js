@@ -1102,12 +1102,15 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
                 description: `Returns full details of a single job, including populated user/application info,
 the milestones panel (each with computed \`dueDate\`), \`applicantsCount\`, and the job poster's
 review summary and comments (\`reviews\`: average rating, star distribution, and a paginated list
-of reviews/comments pulled from the poster's Business profile).`,
+of reviews/comments pulled from the poster's Business profile). Pass \`userId\` to receive the
+viewer-specific status: \`in review\` for the owner, \`applied\` for an applicant, and \`listed\`
+for other artisans.`,
                 security: [],
                 parameters: [
                     { name: "id", in: "query", required: true, schema: { type: "string" }, description: "MongoDB ObjectId of the job", example: "64f5c0a1b2c3d4e5f6a7b8c9" },
                     { name: "reviewsPage", in: "query", required: false, schema: { type: "integer", default: 1 }, description: "Page number for the poster's reviews/comments list" },
                     { name: "reviewsLimit", in: "query", required: false, schema: { type: "integer", default: 5 }, description: "Items per page for the poster's reviews/comments list" },
+                    { name: "userId", in: "query", required: false, schema: { type: "string" }, description: "Current viewer's user ID, used to derive the role-specific job status" },
                 ],
                 responses: {
                     "200": {
@@ -1225,7 +1228,9 @@ of reviews/comments pulled from the poster's Business profile).`,
             post: {
                 tags: ["Jobs"],
                 summary: "Apply for a job",
-                description: `Submits an application (project) for a pending job.
+                description: `Submits an application for a listed job. The shared job remains listed so other
+artisans can apply; status is presented as \`in review\` to the owner and \`applied\` to the applicant.
+Duplicate applications from the same user are rejected.
 
 - \`type: biddable\`  → \`maximumPrice\` and \`milestones[]\` are required.
 - \`type: regular\`   → those fields are forbidden.`,

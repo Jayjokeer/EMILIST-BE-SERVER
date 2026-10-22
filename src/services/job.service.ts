@@ -33,12 +33,14 @@ export const normalizeProjectStatus = (status?: string | null): string | null =>
 export const resolveJobDisplayStatus = (job: any, viewerUserId?: string | null) => {
   const status = job?.status;
   const applications: any[] = Array.isArray(job?.applications) ? job.applications : [];
+  const valueId = (value: any) => String(value?._id ?? value ?? '');
   const hasActiveApplication = applications.some((app: any) => {
     const appStatus = typeof app === 'string' ? null : String((app as any)?.status || '').toLowerCase();
     return appStatus !== null && appStatus !== ProjectStatusEnum.rejected && appStatus !== 'cancelled';
   });
 
-  if (!viewerUserId || String(job?.userId) === String(viewerUserId)) {
+  const isOwner = !!viewerUserId && valueId(job?.userId) === String(viewerUserId);
+  if (isOwner) {
     if (status === JobStatusEnum.pending) return JobStatusEnum.listed;
     if ((status === JobStatusEnum.listed || status === JobStatusEnum.pending) && hasActiveApplication) {
       return JobStatusEnum.in_review;
@@ -46,13 +48,19 @@ export const resolveJobDisplayStatus = (job: any, viewerUserId?: string | null) 
     return status;
   }
 
-  const mine = applications.find((app: any) => typeof app !== 'string' && String((app as any)?.user) === String(viewerUserId));
+  const mine = viewerUserId
+    ? applications.find((app: any) => typeof app !== 'string' && valueId((app as any)?.user) === String(viewerUserId))
+    : undefined;
   const myStatus = mine ? String((mine as any)?.status || '').toLowerCase() : null;
   if (myStatus === ProjectStatusEnum.rejected || myStatus === 'rejected') return ProjectStatusEnum.rejected;
   if (myStatus === ProjectStatusEnum.accepted || myStatus === 'accepted') return ProjectStatusEnum.accepted;
   if (myStatus === ProjectStatusEnum.applied || myStatus === 'pending') return ProjectStatusEnum.applied;
   if (myStatus) return myStatus;
-  if (status === JobStatusEnum.pending) return JobStatusEnum.listed;
+  // Legacy records may have persisted `in review`. For everyone except the
+  // owner and an applicant viewing their own application, the job is listed.
+  if (status === JobStatusEnum.pending || status === JobStatusEnum.in_review) {
+    return JobStatusEnum.listed;
+  }
   return status;
 };
 
@@ -126,11 +134,15 @@ export const fetchAllUserJobs = async (
     if (filters.category) searchCriteria.category = { $regex: new RegExp(filters.category, 'i') };
     if (filters.service) searchCriteria.service = { $regex: new RegExp(filters.service, 'i') };
   }
-  const jobs = await Jobs.find(searchCriteria).sort({ createdAt: -1 }).skip(skip).limit(limit);
+  const jobs = await Jobs.find(searchCriteria)
+    .populate('applications', 'status user')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
   const totalJobs = await Jobs.countDocuments(searchCriteria);
 
   return {
-    jobs,
+    jobs: withJobsDisplayStatus(jobs, userId),
     totalPages: Math.ceil(totalJobs / limit),
     currentPage: page,
     totalJobs,
@@ -162,7 +174,7 @@ export const fetchAllJobs = async (
 
   const searchCriteria: any = {
     type: { $ne: JobType.direct },
-    status: { $in: [JobStatusEnum.listed, JobStatusEnum.pending as any, "pending"] },
+    status: { $in: [JobStatusEnum.listed, JobStatusEnum.in_review, JobStatusEnum.pending as any, "pending"] },
     isListed: true,
   };
 
@@ -252,6 +264,7 @@ export const fetchAllJobs = async (
         path: 'userId',
         select: 'userName fullName profileImage level uniqueId',
       })
+      .populate('applications', 'status user')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -261,6 +274,7 @@ export const fetchAllJobs = async (
   } else {
     jobsQuery = await Jobs.find(searchCriteria)
       .populate('userId', 'userName fullName profileImage level uniqueId')
+      .populate('applications', 'status user')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -282,13 +296,13 @@ export const fetchAllJobs = async (
 
   let jobsWithLikeStatus = jobs.map((job) => {
     const posterId = String((job.userId as any)?._id ?? job.userId);
-    return {
+    return withJobDisplayStatus({
       ...job.toObject(),
       liked: userId ? likedJobIds.includes(job._id.toString()) : false,
       applicantsCount: job.applications?.length ?? 0,
       milestonesCount: job.milestones?.length ?? 0,
       posterRating: posterRatingMap[posterId] ?? { averageRating: 0, totalReviews: 0 },
-    };
+    }, userId);
   });
 
   // EMPLOYER (poster) RATING filter - applied post-fetch since rating is computed from Business.reviews
@@ -329,6 +343,7 @@ export const fetchJobByIdWithDetails = async (
   jobId: string,
   reviewsPage = 1,
   reviewsLimit = 5,
+  viewerUserId?: string,
 ) => {
   const job = await Jobs.findById(jobId)
     .populate('userId', 'fullName userName email location level profileImage uniqueId')
@@ -374,9 +389,11 @@ export const fetchJobByIdWithDetails = async (
     milestones = job.milestones;
   }
 
+  const displayJob = withJobDisplayStatus(job, viewerUserId);
+
   return {
     job: {
-      ...job.toObject(),
+      ...displayJob,
       dueDate: jobDueDate,
       milestones: milestones,
       applicantsCount,
@@ -1181,5 +1198,6 @@ const totalJobs = await RecurringJob.countDocuments()
 };
 
 export const fetchJobsByUserId = async(userId: string)=>{
-  return await Jobs.find({userId: userId});
+  const jobs = await Jobs.find({userId: userId}).populate('applications', 'status user');
+  return withJobsDisplayStatus(jobs, userId);
 }

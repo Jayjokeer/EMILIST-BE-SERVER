@@ -73,11 +73,13 @@ exports.normalizeProjectStatus = normalizeProjectStatus;
 const resolveJobDisplayStatus = (job, viewerUserId) => {
     const status = job?.status;
     const applications = Array.isArray(job?.applications) ? job.applications : [];
+    const valueId = (value) => String(value?._id ?? value ?? '');
     const hasActiveApplication = applications.some((app) => {
         const appStatus = typeof app === 'string' ? null : String(app?.status || '').toLowerCase();
         return appStatus !== null && appStatus !== project_enum_1.ProjectStatusEnum.rejected && appStatus !== 'cancelled';
     });
-    if (!viewerUserId || String(job?.userId) === String(viewerUserId)) {
+    const isOwner = !!viewerUserId && valueId(job?.userId) === String(viewerUserId);
+    if (isOwner) {
         if (status === jobs_enum_1.JobStatusEnum.pending)
             return jobs_enum_1.JobStatusEnum.listed;
         if ((status === jobs_enum_1.JobStatusEnum.listed || status === jobs_enum_1.JobStatusEnum.pending) && hasActiveApplication) {
@@ -85,7 +87,9 @@ const resolveJobDisplayStatus = (job, viewerUserId) => {
         }
         return status;
     }
-    const mine = applications.find((app) => typeof app !== 'string' && String(app?.user) === String(viewerUserId));
+    const mine = viewerUserId
+        ? applications.find((app) => typeof app !== 'string' && valueId(app?.user) === String(viewerUserId))
+        : undefined;
     const myStatus = mine ? String(mine?.status || '').toLowerCase() : null;
     if (myStatus === project_enum_1.ProjectStatusEnum.rejected || myStatus === 'rejected')
         return project_enum_1.ProjectStatusEnum.rejected;
@@ -95,8 +99,11 @@ const resolveJobDisplayStatus = (job, viewerUserId) => {
         return project_enum_1.ProjectStatusEnum.applied;
     if (myStatus)
         return myStatus;
-    if (status === jobs_enum_1.JobStatusEnum.pending)
+    // Legacy records may have persisted `in review`. For everyone except the
+    // owner and an applicant viewing their own application, the job is listed.
+    if (status === jobs_enum_1.JobStatusEnum.pending || status === jobs_enum_1.JobStatusEnum.in_review) {
         return jobs_enum_1.JobStatusEnum.listed;
+    }
     return status;
 };
 exports.resolveJobDisplayStatus = resolveJobDisplayStatus;
@@ -164,10 +171,14 @@ const fetchAllUserJobs = async (userId, page, limit, search = null, filters = {}
         if (filters.service)
             searchCriteria.service = { $regex: new RegExp(filters.service, 'i') };
     }
-    const jobs = await jobs_model_1.default.find(searchCriteria).sort({ createdAt: -1 }).skip(skip).limit(limit);
+    const jobs = await jobs_model_1.default.find(searchCriteria)
+        .populate('applications', 'status user')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
     const totalJobs = await jobs_model_1.default.countDocuments(searchCriteria);
     return {
-        jobs,
+        jobs: (0, exports.withJobsDisplayStatus)(jobs, userId),
         totalPages: Math.ceil(totalJobs / limit),
         currentPage: page,
         totalJobs,
@@ -178,7 +189,7 @@ const fetchAllJobs = async (page, limit, userId, search, filters = {}) => {
     const skip = (page - 1) * limit;
     const searchCriteria = {
         type: { $ne: jobs_enum_1.JobType.direct },
-        status: { $in: [jobs_enum_1.JobStatusEnum.listed, jobs_enum_1.JobStatusEnum.pending, "pending"] },
+        status: { $in: [jobs_enum_1.JobStatusEnum.listed, jobs_enum_1.JobStatusEnum.in_review, jobs_enum_1.JobStatusEnum.pending, "pending"] },
         isListed: true,
     };
     if (!search) {
@@ -261,6 +272,7 @@ const fetchAllJobs = async (page, limit, userId, search, filters = {}) => {
             path: 'userId',
             select: 'userName fullName profileImage level uniqueId',
         })
+            .populate('applications', 'status user')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
@@ -271,6 +283,7 @@ const fetchAllJobs = async (page, limit, userId, search, filters = {}) => {
     else {
         jobsQuery = await jobs_model_1.default.find(searchCriteria)
             .populate('userId', 'userName fullName profileImage level uniqueId')
+            .populate('applications', 'status user')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
@@ -285,13 +298,13 @@ const fetchAllJobs = async (page, limit, userId, search, filters = {}) => {
     const posterRatingMap = await buildPosterRatingMap(jobs.map((job) => String(job.userId?._id ?? job.userId)));
     let jobsWithLikeStatus = jobs.map((job) => {
         const posterId = String(job.userId?._id ?? job.userId);
-        return {
+        return (0, exports.withJobDisplayStatus)({
             ...job.toObject(),
             liked: userId ? likedJobIds.includes(job._id.toString()) : false,
             applicantsCount: job.applications?.length ?? 0,
             milestonesCount: job.milestones?.length ?? 0,
             posterRating: posterRatingMap[posterId] ?? { averageRating: 0, totalReviews: 0 },
-        };
+        }, userId);
     });
     // EMPLOYER (poster) RATING filter - applied post-fetch since rating is computed from Business.reviews
     if (filters.minRating !== undefined) {
@@ -317,7 +330,7 @@ const fetchJobByIdWithUserId = async (jobId) => {
     });
 };
 exports.fetchJobByIdWithUserId = fetchJobByIdWithUserId;
-const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5) => {
+const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5, viewerUserId) => {
     const job = await jobs_model_1.default.findById(jobId)
         .populate('userId', 'fullName userName email location level profileImage uniqueId')
         .populate({
@@ -356,9 +369,10 @@ const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5)
     else {
         milestones = job.milestones;
     }
+    const displayJob = (0, exports.withJobDisplayStatus)(job, viewerUserId);
     return {
         job: {
-            ...job.toObject(),
+            ...displayJob,
             dueDate: jobDueDate,
             milestones: milestones,
             applicantsCount,
@@ -1066,6 +1080,7 @@ const fetchAllRecurringJobs = async (userId, limit, page) => {
 };
 exports.fetchAllRecurringJobs = fetchAllRecurringJobs;
 const fetchJobsByUserId = async (userId) => {
-    return await jobs_model_1.default.find({ userId: userId });
+    const jobs = await jobs_model_1.default.find({ userId: userId }).populate('applications', 'status user');
+    return (0, exports.withJobsDisplayStatus)(jobs, userId);
 };
 exports.fetchJobsByUserId = fetchJobsByUserId;
