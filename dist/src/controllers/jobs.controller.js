@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.delistJobController = exports.listJobController = exports.fetchJobApplicantsController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
+exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.delistJobController = exports.listJobController = exports.respondToCounterBidController = exports.counterBidController = exports.fetchJobApplicantsController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -324,6 +324,7 @@ exports.applyForJobController = (0, error_handler_1.catchAsync)(async (req, res)
                 achievement: milestone.achievement,
             })),
         };
+        payload.initialBiddableDetails = payload.biddableDetails;
     }
     const projectData = await projectService.createProject({ ...payload, status: project_enum_1.ProjectStatusEnum.applied });
     job.applications.push(String(projectData._id));
@@ -388,6 +389,169 @@ exports.fetchJobApplicantsController = (0, error_handler_1.catchAsync)(async (re
     const limit = parseInt(req.query.limit, 10) || 10;
     const data = await jobService.fetchJobApplicants(String(userId), jobId ? String(jobId) : undefined, status ? String(status) : undefined, page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+const counterOfferSummary = (project) => {
+    const offers = project.counterOffers || [];
+    const jobOwnerUsed = offers.filter((offer) => offer.madeByRole === project_enum_1.CounterOfferRoleEnum.job_owner).length;
+    const applicantUsed = offers.filter((offer) => offer.madeByRole === project_enum_1.CounterOfferRoleEnum.applicant).length;
+    return {
+        maxPerParty: 2,
+        jobOwnerUsed,
+        applicantUsed,
+        jobOwnerRemaining: Math.max(0, 2 - jobOwnerUsed),
+        applicantRemaining: Math.max(0, 2 - applicantUsed),
+    };
+};
+exports.counterBidController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = String(req.user.id);
+    const { projectId } = req.params;
+    const { maximumPrice, milestones, message } = req.body;
+    const project = await projectService.fetchProjectById(projectId);
+    if (!project)
+        throw new error_1.NotFoundError("Application not found!");
+    const isOwner = String(project.creator) === userId;
+    const isApplicant = String(project.user) === userId;
+    if (!isOwner && !isApplicant)
+        throw new error_1.UnauthorizedError("Only the job owner or applicant can counter this bid!");
+    const job = await jobService.fetchJobById(String(project.job));
+    if (!job)
+        throw new error_1.NotFoundError("Job not found!");
+    if (job.type !== jobs_enum_1.JobType.biddable)
+        throw new error_1.BadRequestError("Counteroffers are only allowed for biddable jobs!");
+    if (job.acceptedApplicationId || ![project_enum_1.ProjectStatusEnum.applied, project_enum_1.ProjectStatusEnum.in_review, project_enum_1.ProjectStatusEnum.pending].includes(project.status)) {
+        throw new error_1.BadRequestError("This application is no longer open for negotiation!");
+    }
+    const role = isOwner ? project_enum_1.CounterOfferRoleEnum.job_owner : project_enum_1.CounterOfferRoleEnum.applicant;
+    const offers = project.counterOffers || [];
+    const latest = offers[offers.length - 1];
+    const used = offers.filter((offer) => offer.madeByRole === role).length;
+    if (used >= 2)
+        throw new error_1.BadRequestError(`The ${isOwner ? 'job owner' : 'applicant'} has already used both counteroffers!`);
+    if (!latest && isApplicant)
+        throw new error_1.BadRequestError("The applicant's original bid is already the current offer. Wait for the job owner to counter it!");
+    if (latest?.status === project_enum_1.CounterOfferStatusEnum.accepted)
+        throw new error_1.BadRequestError("This negotiation has already been accepted!");
+    if (latest?.status === project_enum_1.CounterOfferStatusEnum.pending && latest.madeByRole === role) {
+        throw new error_1.BadRequestError("You cannot make two counteroffers in a row. Wait for the other party to respond!");
+    }
+    if (latest?.status === project_enum_1.CounterOfferStatusEnum.rejected && latest.madeByRole !== role) {
+        throw new error_1.BadRequestError("Only the party whose counteroffer was rejected can submit the next counteroffer!");
+    }
+    const milestoneIds = milestones.map((milestone) => String(milestone.milestoneId));
+    const validMilestoneIds = new Set((job.milestones || []).map((milestone) => String(milestone._id)));
+    if (new Set(milestoneIds).size !== milestoneIds.length || milestoneIds.some((id) => !validMilestoneIds.has(id))) {
+        throw new error_1.BadRequestError("Each milestoneId must be unique and belong to this job!");
+    }
+    if (milestoneIds.length !== validMilestoneIds.size) {
+        throw new error_1.BadRequestError("The counteroffer must include every job milestone!");
+    }
+    const milestoneTotal = milestones.reduce((sum, milestone) => sum + Number(milestone.amount), 0);
+    if (Math.abs(milestoneTotal - Number(maximumPrice)) > 0.01) {
+        throw new error_1.BadRequestError("maximumPrice must equal the total of all milestone amounts!");
+    }
+    if (!project.initialBiddableDetails)
+        project.initialBiddableDetails = project.biddableDetails;
+    if (latest?.status === project_enum_1.CounterOfferStatusEnum.pending) {
+        latest.status = project_enum_1.CounterOfferStatusEnum.countered;
+        latest.respondedAt = new Date();
+    }
+    const normalizedMilestones = milestones.map((milestone) => ({
+        milestoneId: milestone.milestoneId,
+        amount: milestone.amount,
+        achievement: milestone.achievement,
+    }));
+    project.counterOffers.push({
+        madeBy: userId,
+        madeByRole: role,
+        maximumPrice,
+        milestones: normalizedMilestones,
+        message,
+        status: project_enum_1.CounterOfferStatusEnum.pending,
+    });
+    project.biddableDetails = { maximumPrice, milestones: normalizedMilestones };
+    await project.save();
+    const recipientId = isOwner ? String(project.user) : String(project.creator);
+    await notificationService.createNotification({
+        userId: recipientId,
+        title: "New counteroffer",
+        message: `${req.user.userName} sent a counteroffer for ${job.title}`,
+        type: notification_enum_1.NotificationTypeEnum.info,
+    });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        application: project,
+        counterOfferSummary: counterOfferSummary(project),
+    });
+});
+exports.respondToCounterBidController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = String(req.user.id);
+    const { projectId } = req.params;
+    const { action } = req.body;
+    const project = await projectService.fetchProjectById(projectId);
+    if (!project)
+        throw new error_1.NotFoundError("Application not found!");
+    const isOwner = String(project.creator) === userId;
+    const isApplicant = String(project.user) === userId;
+    if (!isOwner && !isApplicant)
+        throw new error_1.UnauthorizedError("Only the job owner or applicant can respond to this counteroffer!");
+    const job = await jobService.fetchJobById(String(project.job));
+    if (!job)
+        throw new error_1.NotFoundError("Job not found!");
+    if (job.type !== jobs_enum_1.JobType.biddable)
+        throw new error_1.BadRequestError("Counteroffers are only allowed for biddable jobs!");
+    if (![project_enum_1.ProjectStatusEnum.applied, project_enum_1.ProjectStatusEnum.in_review, project_enum_1.ProjectStatusEnum.pending].includes(project.status)) {
+        throw new error_1.BadRequestError("This application is no longer open for negotiation!");
+    }
+    const offers = project.counterOffers || [];
+    const latest = offers[offers.length - 1];
+    if (!latest || latest.status !== project_enum_1.CounterOfferStatusEnum.pending)
+        throw new error_1.BadRequestError("There is no pending counteroffer to respond to!");
+    if (String(latest.madeBy) === userId)
+        throw new error_1.BadRequestError("You cannot respond to your own counteroffer!");
+    if (job.acceptedApplicationId)
+        throw new error_1.BadRequestError("This job already has an accepted applicant!");
+    latest.respondedAt = new Date();
+    if (action === 'reject') {
+        latest.status = project_enum_1.CounterOfferStatusEnum.rejected;
+        const previousOffer = offers.length > 1 ? offers[offers.length - 2] : project.initialBiddableDetails;
+        if (previousOffer) {
+            project.biddableDetails = {
+                maximumPrice: previousOffer.maximumPrice,
+                milestones: previousOffer.milestones,
+            };
+        }
+        await project.save();
+    }
+    else {
+        latest.status = project_enum_1.CounterOfferStatusEnum.accepted;
+        project.status = project_enum_1.ProjectStatusEnum.accepted;
+        project.acceptedAt = new Date();
+        job.status = jobs_enum_1.JobStatusEnum.active;
+        job.acceptedApplicationId = project._id;
+        job.startDate = project.acceptedAt;
+        job.maximumPrice = project.biddableDetails.maximumPrice;
+        (project.biddableDetails.milestones || []).forEach((offeredMilestone) => {
+            const milestone = (job.milestones || []).find((item) => String(item._id) === String(offeredMilestone.milestoneId));
+            if (milestone) {
+                milestone.amount = offeredMilestone.amount;
+                milestone.achievement = offeredMilestone.achievement;
+            }
+        });
+        if (job.milestones?.length)
+            job.milestones[0].status = jobs_enum_1.MilestoneEnum.active;
+        await projectService.updateRejectProject(projectId, String(job._id));
+        await project.save();
+        await job.save();
+    }
+    await notificationService.createNotification({
+        userId: String(latest.madeBy),
+        title: `Counteroffer ${action}ed`,
+        message: `${req.user.userName} ${action}ed your counteroffer for ${job.title}`,
+        type: notification_enum_1.NotificationTypeEnum.info,
+    });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        application: project,
+        counterOfferSummary: counterOfferSummary(project),
+    });
 });
 exports.listJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
@@ -490,6 +654,9 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
         project.status = project_enum_1.ProjectStatusEnum.applied;
     }
     else if (status == project_enum_1.ProjectStatusEnum.accepted) {
+        if (project.counterOffers?.length) {
+            throw new error_1.BadRequestError("Use the counteroffer response endpoint to accept the negotiated bid!");
+        }
         job.status = jobs_enum_1.JobStatusEnum.active;
         job.acceptedApplicationId = projectId;
         project.acceptedAt = new Date();

@@ -21,8 +21,10 @@ import { ProjectStatusEnum } from '../enums/project.enum';
     acceptedAt?: Date;
     rejectedAt?: Date;
     biddableDetails?: any;
+    initialBiddableDetails?: any;
+    counterOffers?: any[];
     directJobStatus?: ProjectStatusEnum;
     quote?: any 
     businessId?: string;
   }
-  
+

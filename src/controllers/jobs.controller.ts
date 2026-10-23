@@ -8,7 +8,7 @@ import { JwtPayload } from "jsonwebtoken";
 import { BadRequestError, NotFoundError, UnauthorizedError } from "../errors/error";
 import { IProject } from "../interfaces/project.interface";
 import * as projectService from "../services/project.service";
-import { ProjectStatusEnum } from "../enums/project.enum";
+import { CounterOfferRoleEnum, CounterOfferStatusEnum, ProjectStatusEnum } from "../enums/project.enum";
 import { JobStatusEnum, JobType, MilestoneEnum, MilestonePaymentStatus, QuoteStatusEnum, JobUrgencyEnum } from "../enums/jobs.enum";
 import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
@@ -346,6 +346,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
           achievement: milestone.achievement,
         })),
       };
+      payload.initialBiddableDetails = payload.biddableDetails;
     }
   
    
@@ -423,6 +424,167 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       limit
     );
     return successResponse(res, StatusCodes.OK, data);
+  });
+
+  const counterOfferSummary = (project: any) => {
+    const offers = project.counterOffers || [];
+    const jobOwnerUsed = offers.filter((offer: any) => offer.madeByRole === CounterOfferRoleEnum.job_owner).length;
+    const applicantUsed = offers.filter((offer: any) => offer.madeByRole === CounterOfferRoleEnum.applicant).length;
+    return {
+      maxPerParty: 2,
+      jobOwnerUsed,
+      applicantUsed,
+      jobOwnerRemaining: Math.max(0, 2 - jobOwnerUsed),
+      applicantRemaining: Math.max(0, 2 - applicantUsed),
+    };
+  };
+
+  export const counterBidController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = String(req.user.id);
+    const { projectId } = req.params;
+    const { maximumPrice, milestones, message } = req.body;
+    const project: any = await projectService.fetchProjectById(projectId);
+
+    if (!project) throw new NotFoundError("Application not found!");
+    const isOwner = String(project.creator) === userId;
+    const isApplicant = String(project.user) === userId;
+    if (!isOwner && !isApplicant) throw new UnauthorizedError("Only the job owner or applicant can counter this bid!");
+
+    const job: any = await jobService.fetchJobById(String(project.job));
+    if (!job) throw new NotFoundError("Job not found!");
+    if (job.type !== JobType.biddable) throw new BadRequestError("Counteroffers are only allowed for biddable jobs!");
+    if (job.acceptedApplicationId || ![ProjectStatusEnum.applied, ProjectStatusEnum.in_review, ProjectStatusEnum.pending].includes(project.status)) {
+      throw new BadRequestError("This application is no longer open for negotiation!");
+    }
+
+    const role = isOwner ? CounterOfferRoleEnum.job_owner : CounterOfferRoleEnum.applicant;
+    const offers: any[] = project.counterOffers || [];
+    const latest = offers[offers.length - 1];
+    const used = offers.filter((offer: any) => offer.madeByRole === role).length;
+    if (used >= 2) throw new BadRequestError(`The ${isOwner ? 'job owner' : 'applicant'} has already used both counteroffers!`);
+    if (!latest && isApplicant) throw new BadRequestError("The applicant's original bid is already the current offer. Wait for the job owner to counter it!");
+    if (latest?.status === CounterOfferStatusEnum.accepted) throw new BadRequestError("This negotiation has already been accepted!");
+    if (latest?.status === CounterOfferStatusEnum.pending && latest.madeByRole === role) {
+      throw new BadRequestError("You cannot make two counteroffers in a row. Wait for the other party to respond!");
+    }
+    if (latest?.status === CounterOfferStatusEnum.rejected && latest.madeByRole !== role) {
+      throw new BadRequestError("Only the party whose counteroffer was rejected can submit the next counteroffer!");
+    }
+
+    const milestoneIds = milestones.map((milestone: any) => String(milestone.milestoneId));
+    const validMilestoneIds = new Set((job.milestones || []).map((milestone: any) => String(milestone._id)));
+    if (new Set(milestoneIds).size !== milestoneIds.length || milestoneIds.some((id: string) => !validMilestoneIds.has(id))) {
+      throw new BadRequestError("Each milestoneId must be unique and belong to this job!");
+    }
+    if (milestoneIds.length !== validMilestoneIds.size) {
+      throw new BadRequestError("The counteroffer must include every job milestone!");
+    }
+    const milestoneTotal = milestones.reduce((sum: number, milestone: any) => sum + Number(milestone.amount), 0);
+    if (Math.abs(milestoneTotal - Number(maximumPrice)) > 0.01) {
+      throw new BadRequestError("maximumPrice must equal the total of all milestone amounts!");
+    }
+
+    if (!project.initialBiddableDetails) project.initialBiddableDetails = project.biddableDetails;
+    if (latest?.status === CounterOfferStatusEnum.pending) {
+      latest.status = CounterOfferStatusEnum.countered;
+      latest.respondedAt = new Date();
+    }
+    const normalizedMilestones = milestones.map((milestone: any) => ({
+      milestoneId: milestone.milestoneId,
+      amount: milestone.amount,
+      achievement: milestone.achievement,
+    }));
+    project.counterOffers.push({
+      madeBy: userId,
+      madeByRole: role,
+      maximumPrice,
+      milestones: normalizedMilestones,
+      message,
+      status: CounterOfferStatusEnum.pending,
+    });
+    project.biddableDetails = { maximumPrice, milestones: normalizedMilestones };
+    await project.save();
+
+    const recipientId = isOwner ? String(project.user) : String(project.creator);
+    await notificationService.createNotification({
+      userId: recipientId,
+      title: "New counteroffer",
+      message: `${req.user.userName} sent a counteroffer for ${job.title}`,
+      type: NotificationTypeEnum.info,
+    });
+
+    return successResponse(res, StatusCodes.OK, {
+      application: project,
+      counterOfferSummary: counterOfferSummary(project),
+    });
+  });
+
+  export const respondToCounterBidController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = String(req.user.id);
+    const { projectId } = req.params;
+    const { action } = req.body;
+    const project: any = await projectService.fetchProjectById(projectId);
+
+    if (!project) throw new NotFoundError("Application not found!");
+    const isOwner = String(project.creator) === userId;
+    const isApplicant = String(project.user) === userId;
+    if (!isOwner && !isApplicant) throw new UnauthorizedError("Only the job owner or applicant can respond to this counteroffer!");
+
+    const job: any = await jobService.fetchJobById(String(project.job));
+    if (!job) throw new NotFoundError("Job not found!");
+    if (job.type !== JobType.biddable) throw new BadRequestError("Counteroffers are only allowed for biddable jobs!");
+    if (![ProjectStatusEnum.applied, ProjectStatusEnum.in_review, ProjectStatusEnum.pending].includes(project.status)) {
+      throw new BadRequestError("This application is no longer open for negotiation!");
+    }
+    const offers: any[] = project.counterOffers || [];
+    const latest = offers[offers.length - 1];
+    if (!latest || latest.status !== CounterOfferStatusEnum.pending) throw new BadRequestError("There is no pending counteroffer to respond to!");
+    if (String(latest.madeBy) === userId) throw new BadRequestError("You cannot respond to your own counteroffer!");
+    if (job.acceptedApplicationId) throw new BadRequestError("This job already has an accepted applicant!");
+
+    latest.respondedAt = new Date();
+    if (action === 'reject') {
+      latest.status = CounterOfferStatusEnum.rejected;
+      const previousOffer = offers.length > 1 ? offers[offers.length - 2] : project.initialBiddableDetails;
+      if (previousOffer) {
+        project.biddableDetails = {
+          maximumPrice: previousOffer.maximumPrice,
+          milestones: previousOffer.milestones,
+        };
+      }
+      await project.save();
+    } else {
+      latest.status = CounterOfferStatusEnum.accepted;
+      project.status = ProjectStatusEnum.accepted;
+      project.acceptedAt = new Date();
+      job.status = JobStatusEnum.active;
+      job.acceptedApplicationId = project._id;
+      job.startDate = project.acceptedAt;
+      job.maximumPrice = project.biddableDetails.maximumPrice;
+      (project.biddableDetails.milestones || []).forEach((offeredMilestone: any) => {
+        const milestone = (job.milestones || []).find((item: any) => String(item._id) === String(offeredMilestone.milestoneId));
+        if (milestone) {
+          milestone.amount = offeredMilestone.amount;
+          milestone.achievement = offeredMilestone.achievement;
+        }
+      });
+      if (job.milestones?.length) job.milestones[0].status = MilestoneEnum.active;
+      await projectService.updateRejectProject(projectId, String(job._id));
+      await project.save();
+      await job.save();
+    }
+
+    await notificationService.createNotification({
+      userId: String(latest.madeBy),
+      title: `Counteroffer ${action}ed`,
+      message: `${req.user.userName} ${action}ed your counteroffer for ${job.title}`,
+      type: NotificationTypeEnum.info,
+    });
+
+    return successResponse(res, StatusCodes.OK, {
+      application: project,
+      counterOfferSummary: counterOfferSummary(project),
+    });
   });
 
   export const listJobController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -532,6 +694,9 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     project.status = ProjectStatusEnum.applied;
 
     }else if (status == ProjectStatusEnum.accepted){
+      if ((project as any).counterOffers?.length) {
+        throw new BadRequestError("Use the counteroffer response endpoint to accept the negotiated bid!");
+      }
       job.status = JobStatusEnum.active;
       job.acceptedApplicationId = projectId;
       project.acceptedAt = new Date();

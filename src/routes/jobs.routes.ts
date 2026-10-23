@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as jobController from "../controllers/jobs.controller";
-import { validateJob, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateRecurringJob, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
+import { validateCounterBid, validateCounterBidResponse, validateJob, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateRecurringJob, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
 import { optionalUserAuth, userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload, parseJobBody } from "../utils/image-upload";
 import * as paymentController from "../controllers/payment.controller";
@@ -20,6 +20,8 @@ router.route("/withdraw-job-application/:projectId").delete(userAuth, jobControl
 router.route("/delete-job/:jobId").delete(userAuth, jobController.deleteJobController);
 router.route("/update-job/:jobId").put(userAuth, multipleUpload, parseJobBody, validateUpdateJob, jobController.updateJobController);
 router.route("/fetch-applicants").get(userAuth, jobController.fetchJobApplicantsController);
+router.route("/counter-bid/:projectId").patch(userAuth, validateCounterBid, jobController.counterBidController);
+router.route("/respond-counter-bid/:projectId").patch(userAuth, validateCounterBidResponse, jobController.respondToCounterBidController);
 router.route("/list-job/:jobId").patch(userAuth, jobController.listJobController);
 router.route("/delist-job/:jobId").patch(userAuth, jobController.delistJobController);
 router.route("/update-application-status/:projectId").patch(userAuth, jobController.jobStatusController);

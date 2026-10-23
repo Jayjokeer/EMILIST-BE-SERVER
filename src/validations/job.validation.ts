@@ -451,6 +451,40 @@ export const validateProjectApplication = (req: Request, res: Response, next: Ne
   next();
 };
 
+export const validateCounterBid = (req: Request, res: Response, next: NextFunction) => {
+  const validation = Joi.object({
+    maximumPrice: Joi.number().positive().required(),
+    milestones: Joi.array().items(
+      Joi.object({
+        milestoneId: Joi.string().required(),
+        amount: Joi.number().positive().required(),
+        achievement: Joi.string().trim().required(),
+      })
+    ).min(1).max(5).required(),
+    message: Joi.string().trim().max(500).optional().allow(''),
+  });
+
+  const { error } = validation.validate(req.body, { abortEarly: false });
+  if (error) {
+    res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+    return;
+  }
+  next();
+};
+
+export const validateCounterBidResponse = (req: Request, res: Response, next: NextFunction) => {
+  const validation = Joi.object({
+    action: Joi.string().valid('accept', 'reject').required(),
+  });
+
+  const { error } = validation.validate(req.body);
+  if (error) {
+    res.status(400).json({ message: error.details[0].message });
+    return;
+  }
+  next();
+};
+
 export const validateMilestoneStatusUpdate = (req: Request, res: Response, next: NextFunction) => {
   const milestoneValidation = Joi.object({
     status: Joi.string()

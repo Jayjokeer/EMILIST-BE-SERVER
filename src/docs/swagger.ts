@@ -1378,7 +1378,7 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
 - Only the **job poster** sees applicants (results are scoped to jobs the user created).
 - Optionally filter by \`jobId\` (must be one of the user's jobs) and/or application \`status\`.
 - Each applicant includes \`applicantName\`, their profile, selected \`businessId\`, \`businessReviewCount\`,
-  application status, applied/accepted/rejected dates, bid details (biddable jobs) and quote.`,
+  application status, applied/accepted/rejected dates, bid details, \`counterOffers\` (biddable jobs) and quote.`,
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "jobId", in: "query", required: false, schema: { type: "string" }, description: "Filter by a specific job (ObjectId)", example: "64f5c0a1b2c3d4e5f6a7b8c9" },
@@ -1408,6 +1408,8 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
                         status: "pending",
                         appliedAt: "2025-01-12T10:00:00.000Z",
                         biddableDetails: { maximumPrice: 75000, milestones: [{ milestoneId: "64fb0a1b2c3d4e5f6a7b8c9b", amount: 40000, achievement: "Replace sink and connect pipes" }] },
+                        counterOffers: [],
+                        counterOfferSummary: { maxPerParty: 2, jobOwnerUsed: 0, applicantUsed: 0, jobOwnerRemaining: 2, applicantRemaining: 2 },
                         quote: null,
                       },
                     ],
@@ -1418,6 +1420,100 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
           },
           "401": { description: "Unauthorized" },
           "500": { description: "Server error" },
+        },
+      },
+    },
+    "/jobs/counter-bid/{projectId}": {
+      patch: {
+        tags: ["Jobs"],
+        summary: "Send a counteroffer for a biddable job application",
+        description: `Sends a counteroffer between the job owner and applicant.
+
+- The job owner makes the first counteroffer against the applicant's original bid.
+- Thereafter the parties alternate; neither party can send two pending counteroffers in a row.
+- The job owner and applicant can each make at most **two** counteroffers.
+- A rejected counteroffer may be revised by its sender if that party still has a counteroffer remaining.
+- \`maximumPrice\` must equal the sum of the milestone amounts, and every job milestone must be included.
+- The current agreed-to-or-countered terms are exposed in \`biddableDetails\`; the audit trail is in \`counterOffers\`.`,
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "projectId", in: "path", required: true, schema: { type: "string" }, description: "Application/project ObjectId", example: "64fc0a1b2c3d4e5f6a7b8c9a" },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["maximumPrice", "milestones"],
+                properties: {
+                  maximumPrice: { type: "number", minimum: 0, example: 70000 },
+                  message: { type: "string", maxLength: 500, example: "Can we agree on this amount?" },
+                  milestones: {
+                    type: "array",
+                    minItems: 1,
+                    maxItems: 5,
+                    items: {
+                      type: "object",
+                      required: ["milestoneId", "amount", "achievement"],
+                      properties: {
+                        milestoneId: { type: "string" },
+                        amount: { type: "number", minimum: 0 },
+                        achievement: { type: "string" },
+                      },
+                    },
+                  },
+                },
+              },
+              example: {
+                maximumPrice: 70000,
+                message: "Can we agree on this amount?",
+                milestones: [
+                  { milestoneId: "64fb0a1b2c3d4e5f6a7b8c9b", amount: 40000, achievement: "Replace sink and connect pipes" },
+                  { milestoneId: "64fb0a1b2c3d4e5f6a7b8c9c", amount: 30000, achievement: "Test and clean up" },
+                ],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Counteroffer sent; returns the application and per-party usage/remaining counts" },
+          "400": { description: "Invalid turn, limit reached, terms invalid, or application is no longer negotiable" },
+          "401": { description: "User is not the job owner or applicant" },
+          "404": { description: "Application or job not found" },
+        },
+      },
+    },
+    "/jobs/respond-counter-bid/{projectId}": {
+      patch: {
+        tags: ["Jobs"],
+        summary: "Accept or reject the latest counteroffer",
+        description: `Responds to the latest pending counteroffer. Only its recipient can respond.
+
+- \`accept\` finalizes the latest terms, accepts the application, rejects competing applications, and activates the job.
+- \`reject\` restores the preceding bid terms. The sender may revise the rejected offer if they have not used both counters.`,
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "projectId", in: "path", required: true, schema: { type: "string" }, description: "Application/project ObjectId", example: "64fc0a1b2c3d4e5f6a7b8c9a" },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["action"],
+                properties: { action: { type: "string", enum: ["accept", "reject"] } },
+              },
+              example: { action: "accept" },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Counteroffer response recorded; returns the application and counteroffer summary" },
+          "400": { description: "No pending counteroffer, own offer, or job already accepted" },
+          "401": { description: "User is not the job owner or applicant" },
+          "404": { description: "Application or job not found" },
         },
       },
     },

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneStatusUpdate = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = void 0;
+exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneStatusUpdate = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = void 0;
 const joi_1 = __importDefault(require("joi"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 // ===================== SHARED REUSABLE SCHEMAS =====================
@@ -427,6 +427,36 @@ const validateProjectApplication = (req, res, next) => {
     next();
 };
 exports.validateProjectApplication = validateProjectApplication;
+const validateCounterBid = (req, res, next) => {
+    const validation = joi_1.default.object({
+        maximumPrice: joi_1.default.number().positive().required(),
+        milestones: joi_1.default.array().items(joi_1.default.object({
+            milestoneId: joi_1.default.string().required(),
+            amount: joi_1.default.number().positive().required(),
+            achievement: joi_1.default.string().trim().required(),
+        })).min(1).max(5).required(),
+        message: joi_1.default.string().trim().max(500).optional().allow(''),
+    });
+    const { error } = validation.validate(req.body, { abortEarly: false });
+    if (error) {
+        res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+        return;
+    }
+    next();
+};
+exports.validateCounterBid = validateCounterBid;
+const validateCounterBidResponse = (req, res, next) => {
+    const validation = joi_1.default.object({
+        action: joi_1.default.string().valid('accept', 'reject').required(),
+    });
+    const { error } = validation.validate(req.body);
+    if (error) {
+        res.status(400).json({ message: error.details[0].message });
+        return;
+    }
+    next();
+};
+exports.validateCounterBidResponse = validateCounterBidResponse;
 const validateMilestoneStatusUpdate = (req, res, next) => {
     const milestoneValidation = joi_1.default.object({
         status: joi_1.default.string()

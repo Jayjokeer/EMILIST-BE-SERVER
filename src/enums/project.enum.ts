@@ -15,3 +15,15 @@ export enum QuoteStatusEnum {
   accepted = 'accepted',
   rejected = 'rejected',
 }
+
+export enum CounterOfferRoleEnum {
+  job_owner = 'job_owner',
+  applicant = 'applicant',
+}
+
+export enum CounterOfferStatusEnum {
+  pending = 'pending',
+  countered = 'countered',
+  accepted = 'accepted',
+  rejected = 'rejected',
+}

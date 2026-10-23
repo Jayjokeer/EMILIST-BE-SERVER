@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.QuoteStatusEnum = exports.ProjectStatusEnum = void 0;
+exports.CounterOfferStatusEnum = exports.CounterOfferRoleEnum = exports.QuoteStatusEnum = exports.ProjectStatusEnum = void 0;
 var ProjectStatusEnum;
 (function (ProjectStatusEnum) {
     ProjectStatusEnum["pending"] = "pending";
@@ -19,3 +19,15 @@ var QuoteStatusEnum;
     QuoteStatusEnum["accepted"] = "accepted";
     QuoteStatusEnum["rejected"] = "rejected";
 })(QuoteStatusEnum || (exports.QuoteStatusEnum = QuoteStatusEnum = {}));
+var CounterOfferRoleEnum;
+(function (CounterOfferRoleEnum) {
+    CounterOfferRoleEnum["job_owner"] = "job_owner";
+    CounterOfferRoleEnum["applicant"] = "applicant";
+})(CounterOfferRoleEnum || (exports.CounterOfferRoleEnum = CounterOfferRoleEnum = {}));
+var CounterOfferStatusEnum;
+(function (CounterOfferStatusEnum) {
+    CounterOfferStatusEnum["pending"] = "pending";
+    CounterOfferStatusEnum["countered"] = "countered";
+    CounterOfferStatusEnum["accepted"] = "accepted";
+    CounterOfferStatusEnum["rejected"] = "rejected";
+})(CounterOfferStatusEnum || (exports.CounterOfferStatusEnum = CounterOfferStatusEnum = {}));

@@ -54,6 +54,24 @@ const QuoteSchema = new mongoose_1.default.Schema({
     milestones: { type: [MilestoneSchema] },
     status: { type: String, enum: project_enum_1.QuoteStatusEnum, default: project_enum_1.QuoteStatusEnum.pending }
 });
+const BiddableDetailsSchema = new mongoose_1.default.Schema({
+    maximumPrice: { type: Number, required: true },
+    milestones: { type: [MilestoneSchema], required: true },
+}, { _id: false });
+const CounterOfferSchema = new mongoose_1.default.Schema({
+    madeBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Users', required: true },
+    madeByRole: { type: String, enum: project_enum_1.CounterOfferRoleEnum, required: true },
+    maximumPrice: { type: Number, required: true },
+    milestones: { type: [MilestoneSchema], required: true },
+    message: { type: String, trim: true, maxlength: 500 },
+    status: {
+        type: String,
+        enum: project_enum_1.CounterOfferStatusEnum,
+        default: project_enum_1.CounterOfferStatusEnum.pending,
+    },
+    respondedAt: { type: Date },
+    createdAt: { type: Date, default: Date.now },
+});
 const projectSchema = new mongoose_1.default.Schema({
     job: {
         type: mongoose_1.Schema.Types.ObjectId,
@@ -89,14 +107,9 @@ const projectSchema = new mongoose_1.default.Schema({
         type: String,
         enum: project_enum_1.ProjectStatusEnum,
     },
-    biddableDetails: {
-        maximumPrice: { type: Number },
-        milestones: [{
-                milestoneId: { type: String },
-                amount: { type: Number },
-                achievement: { type: String },
-            }],
-    },
+    biddableDetails: { type: BiddableDetailsSchema },
+    initialBiddableDetails: { type: BiddableDetailsSchema },
+    counterOffers: { type: [CounterOfferSchema], default: [] },
     quote: {
         type: QuoteSchema,
     },

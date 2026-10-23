@@ -55,6 +55,8 @@ router.route("/withdraw-job-application/:projectId").delete(current_user_1.userA
 router.route("/delete-job/:jobId").delete(current_user_1.userAuth, jobController.deleteJobController);
 router.route("/update-job/:jobId").put(current_user_1.userAuth, image_upload_1.multipleUpload, image_upload_1.parseJobBody, job_validation_1.validateUpdateJob, jobController.updateJobController);
 router.route("/fetch-applicants").get(current_user_1.userAuth, jobController.fetchJobApplicantsController);
+router.route("/counter-bid/:projectId").patch(current_user_1.userAuth, job_validation_1.validateCounterBid, jobController.counterBidController);
+router.route("/respond-counter-bid/:projectId").patch(current_user_1.userAuth, job_validation_1.validateCounterBidResponse, jobController.respondToCounterBidController);
 router.route("/list-job/:jobId").patch(current_user_1.userAuth, jobController.listJobController);
 router.route("/delist-job/:jobId").patch(current_user_1.userAuth, jobController.delistJobController);
 router.route("/update-application-status/:projectId").patch(current_user_1.userAuth, jobController.jobStatusController);

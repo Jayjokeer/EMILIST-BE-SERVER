@@ -526,6 +526,16 @@ export const fetchJobApplicants = async (
     applicants: applicants.map((application: any) => {
       const plain = application.toObject();
       plain.businessReviewCount = businessReviewCounts.get(String(plain.businessId)) ?? 0;
+      const counterOffers = Array.isArray(plain.counterOffers) ? plain.counterOffers : [];
+      const jobOwnerCounters = counterOffers.filter((offer: any) => offer.madeByRole === 'job_owner').length;
+      const applicantCounters = counterOffers.filter((offer: any) => offer.madeByRole === 'applicant').length;
+      plain.counterOfferSummary = {
+        maxPerParty: 2,
+        jobOwnerUsed: jobOwnerCounters,
+        applicantUsed: applicantCounters,
+        jobOwnerRemaining: Math.max(0, 2 - jobOwnerCounters),
+        applicantRemaining: Math.max(0, 2 - applicantCounters),
+      };
       if (plain.user) {
         const applicantName = [plain.user.firstName, plain.user.lastName]
           .filter(Boolean)
