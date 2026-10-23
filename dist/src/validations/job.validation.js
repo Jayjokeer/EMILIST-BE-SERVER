@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneStatusUpdate = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = void 0;
+exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneStatusUpdate = exports.validateAttentionViewed = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = void 0;
 const joi_1 = __importDefault(require("joi"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 // ===================== SHARED REUSABLE SCHEMAS =====================
@@ -457,6 +457,19 @@ const validateCounterBidResponse = (req, res, next) => {
     next();
 };
 exports.validateCounterBidResponse = validateCounterBidResponse;
+const validateAttentionViewed = (req, res, next) => {
+    const validation = joi_1.default.object({
+        eventIds: joi_1.default.array().items(joi_1.default.string().required()).min(1),
+        viewedThrough: joi_1.default.date().iso().max('now'),
+    }).or('eventIds', 'viewedThrough');
+    const { error } = validation.validate(req.body, { abortEarly: false });
+    if (error) {
+        res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+        return;
+    }
+    next();
+};
+exports.validateAttentionViewed = validateAttentionViewed;
 const validateMilestoneStatusUpdate = (req, res, next) => {
     const milestoneValidation = joi_1.default.object({
         status: joi_1.default.string()

@@ -1,0 +1,4 @@
+export enum JobAttentionType {
+  NEW_APPLICATION = 'NEW_APPLICATION',
+  COUNTER_OFFER = 'COUNTER_OFFER',
+}

@@ -24,6 +24,10 @@ import * as subscriptionService from "../services/subscription.service";
 import * as planService from "../services/plan.service";
 import { PlanEnum } from "../enums/plan.enum";
 import { calculateNextMaintenanceDate } from "../utils/utility";
+import { JobAttentionType } from "../enums/job-attention.enum";
+import * as jobAttentionService from "../services/job-attention.service";
+import { getUserRoom } from "../socket";
+import { io } from "../server";
 
 // ===================== HELPER: Map new fields to old for backward compat =====================
 function mapJobBodyToLegacy(body: any): any {
@@ -86,6 +90,17 @@ function mapJobBodyToLegacy(body: any): any {
 
   return mapped;
 }
+
+const emitJobAttention = (recipientId: string, event: any) => {
+  if (!io) return;
+  io.to(getUserRoom(recipientId)).emit('job:attention:new', {
+    eventId: String(event._id),
+    jobId: String(event.jobId),
+    applicationId: event.applicationId ? String(event.applicationId) : undefined,
+    type: event.type,
+    createdAt: event.createdAt,
+  });
+};
 
 /**
  * Sanitize body to strip fields not matching the jobUrgency
@@ -227,7 +242,7 @@ function parseListParam(value: unknown): string[] | undefined {
 export const allJobsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const { page = 1, limit = 10, title, location, category, service } = req.query;
 
-    const userId = req.user?.id ?? req.user?._id ?? (req.query.userId ? String(req.query.userId) : null);
+    const userId = req.user?.id ?? req.user?._id ?? null;
     const search = req.query.search as string || null;
     const filters = {
       title,
@@ -247,7 +262,7 @@ export const allJobsController = catchAsync(async (req: JwtPayload, res: Respons
   });
 
 export const fetchSingleJobController = catchAsync( async (req: JwtPayload, res: Response) => {
-    const { id, reviewsPage = 1, reviewsLimit = 5, userId } = req.query;
+    const { id, reviewsPage = 1, reviewsLimit = 5 } = req.query;
     if(!id){
         throw new NotFoundError("Id required!");
     };
@@ -255,7 +270,7 @@ export const fetchSingleJobController = catchAsync( async (req: JwtPayload, res:
       String(id),
       Number(reviewsPage),
       Number(reviewsLimit),
-      String(req.user?.id ?? req.user?._id ?? userId ?? '') || undefined,
+      String(req.user?.id ?? req.user?._id ?? '') || undefined,
     );
 
 
@@ -355,6 +370,16 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     
     job.applications!.push(String(projectData._id));
     await job.save();
+
+    const attentionEvent = await jobAttentionService.createAttentionEvent({
+      jobId: String(job._id),
+      applicationId: String(projectData._id),
+      recipientId: String(job.userId),
+      actorId: String(userId),
+      type: JobAttentionType.NEW_APPLICATION,
+      sourceId: String(projectData._id),
+    });
+    emitJobAttention(String(job.userId), attentionEvent);
   
     const notificationPayload = {
       userId: job.userId,
@@ -506,6 +531,18 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     await project.save();
 
     const recipientId = isOwner ? String(project.user) : String(project.creator);
+    if (isOwner) {
+      const createdCounterOffer = project.counterOffers[project.counterOffers.length - 1];
+      const attentionEvent = await jobAttentionService.createAttentionEvent({
+        jobId: String(job._id),
+        applicationId: String(project._id),
+        recipientId,
+        actorId: userId,
+        type: JobAttentionType.COUNTER_OFFER,
+        sourceId: String(createdCounterOffer._id),
+      });
+      emitJobAttention(recipientId, attentionEvent);
+    }
     await notificationService.createNotification({
       userId: recipientId,
       title: "New counteroffer",
@@ -602,6 +639,40 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       application: project,
       counterOfferSummary: counterOfferSummary(project),
     });
+  });
+
+  export const markJobAttentionViewedController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = String(req.user.id);
+    const { jobId } = req.params;
+    const job = await jobService.fetchJobById(jobId);
+    if (!job) throw new NotFoundError('Job not found!');
+    if (String(job.userId) !== userId) throw new UnauthorizedError('Only the job owner can view job applicant attention!');
+
+    const attention = await jobAttentionService.markAttentionViewed({
+      recipientId: userId,
+      jobId,
+      type: JobAttentionType.NEW_APPLICATION,
+      eventIds: req.body.eventIds,
+      viewedThrough: req.body.viewedThrough ? new Date(req.body.viewedThrough) : undefined,
+    });
+    return successResponse(res, StatusCodes.OK, { attention });
+  });
+
+  export const markApplicationAttentionViewedController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = String(req.user.id);
+    const { applicationId } = req.params;
+    const project = await projectService.fetchProjectById(applicationId);
+    if (!project) throw new NotFoundError('Application not found!');
+    if (String(project.user) !== userId) throw new UnauthorizedError('Only the applicant can view counteroffer attention!');
+
+    const attention = await jobAttentionService.markAttentionViewed({
+      recipientId: userId,
+      applicationId,
+      type: JobAttentionType.COUNTER_OFFER,
+      eventIds: req.body.eventIds,
+      viewedThrough: req.body.viewedThrough ? new Date(req.body.viewedThrough) : undefined,
+    });
+    return successResponse(res, StatusCodes.OK, { attention });
   });
 
   export const listJobController = catchAsync(async (req: JwtPayload, res: Response) => {

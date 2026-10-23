@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.delistJobController = exports.listJobController = exports.respondToCounterBidController = exports.counterBidController = exports.fetchJobApplicantsController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
+exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.delistJobController = exports.listJobController = exports.markApplicationAttentionViewedController = exports.markJobAttentionViewedController = exports.respondToCounterBidController = exports.counterBidController = exports.fetchJobApplicantsController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -58,6 +58,10 @@ const reviewService = __importStar(require("../services/review.service"));
 const subscriptionService = __importStar(require("../services/subscription.service"));
 const plan_enum_1 = require("../enums/plan.enum");
 const utility_1 = require("../utils/utility");
+const job_attention_enum_1 = require("../enums/job-attention.enum");
+const jobAttentionService = __importStar(require("../services/job-attention.service"));
+const socket_1 = require("../socket");
+const server_1 = require("../server");
 // ===================== HELPER: Map new fields to old for backward compat =====================
 function mapJobBodyToLegacy(body) {
     const mapped = { ...body };
@@ -112,6 +116,17 @@ function mapJobBodyToLegacy(body) {
     }
     return mapped;
 }
+const emitJobAttention = (recipientId, event) => {
+    if (!server_1.io)
+        return;
+    server_1.io.to((0, socket_1.getUserRoom)(recipientId)).emit('job:attention:new', {
+        eventId: String(event._id),
+        jobId: String(event.jobId),
+        applicationId: event.applicationId ? String(event.applicationId) : undefined,
+        type: event.type,
+        createdAt: event.createdAt,
+    });
+};
 /**
  * Sanitize body to strip fields not matching the jobUrgency
  */
@@ -232,7 +247,7 @@ function parseListParam(value) {
 }
 exports.allJobsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page = 1, limit = 10, title, location, category, service } = req.query;
-    const userId = req.user?.id ?? req.user?._id ?? (req.query.userId ? String(req.query.userId) : null);
+    const userId = req.user?.id ?? req.user?._id ?? null;
     const search = req.query.search || null;
     const filters = {
         title,
@@ -251,12 +266,12 @@ exports.allJobsController = (0, error_handler_1.catchAsync)(async (req, res) => 
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
 exports.fetchSingleJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { id, reviewsPage = 1, reviewsLimit = 5, userId } = req.query;
+    const { id, reviewsPage = 1, reviewsLimit = 5 } = req.query;
     if (!id) {
         throw new error_1.NotFoundError("Id required!");
     }
     ;
-    const data = await jobService.fetchJobByIdWithDetails(String(id), Number(reviewsPage), Number(reviewsLimit), String(req.user?.id ?? req.user?._id ?? userId ?? '') || undefined);
+    const data = await jobService.fetchJobByIdWithDetails(String(id), Number(reviewsPage), Number(reviewsLimit), String(req.user?.id ?? req.user?._id ?? '') || undefined);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
 exports.likeJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
@@ -329,6 +344,15 @@ exports.applyForJobController = (0, error_handler_1.catchAsync)(async (req, res)
     const projectData = await projectService.createProject({ ...payload, status: project_enum_1.ProjectStatusEnum.applied });
     job.applications.push(String(projectData._id));
     await job.save();
+    const attentionEvent = await jobAttentionService.createAttentionEvent({
+        jobId: String(job._id),
+        applicationId: String(projectData._id),
+        recipientId: String(job.userId),
+        actorId: String(userId),
+        type: job_attention_enum_1.JobAttentionType.NEW_APPLICATION,
+        sourceId: String(projectData._id),
+    });
+    emitJobAttention(String(job.userId), attentionEvent);
     const notificationPayload = {
         userId: job.userId,
         title: "Job Application",
@@ -471,6 +495,18 @@ exports.counterBidController = (0, error_handler_1.catchAsync)(async (req, res) 
     project.biddableDetails = { maximumPrice, milestones: normalizedMilestones };
     await project.save();
     const recipientId = isOwner ? String(project.user) : String(project.creator);
+    if (isOwner) {
+        const createdCounterOffer = project.counterOffers[project.counterOffers.length - 1];
+        const attentionEvent = await jobAttentionService.createAttentionEvent({
+            jobId: String(job._id),
+            applicationId: String(project._id),
+            recipientId,
+            actorId: userId,
+            type: job_attention_enum_1.JobAttentionType.COUNTER_OFFER,
+            sourceId: String(createdCounterOffer._id),
+        });
+        emitJobAttention(recipientId, attentionEvent);
+    }
     await notificationService.createNotification({
         userId: recipientId,
         title: "New counteroffer",
@@ -564,6 +600,40 @@ exports.respondToCounterBidController = (0, error_handler_1.catchAsync)(async (r
         application: project,
         counterOfferSummary: counterOfferSummary(project),
     });
+});
+exports.markJobAttentionViewedController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = String(req.user.id);
+    const { jobId } = req.params;
+    const job = await jobService.fetchJobById(jobId);
+    if (!job)
+        throw new error_1.NotFoundError('Job not found!');
+    if (String(job.userId) !== userId)
+        throw new error_1.UnauthorizedError('Only the job owner can view job applicant attention!');
+    const attention = await jobAttentionService.markAttentionViewed({
+        recipientId: userId,
+        jobId,
+        type: job_attention_enum_1.JobAttentionType.NEW_APPLICATION,
+        eventIds: req.body.eventIds,
+        viewedThrough: req.body.viewedThrough ? new Date(req.body.viewedThrough) : undefined,
+    });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { attention });
+});
+exports.markApplicationAttentionViewedController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = String(req.user.id);
+    const { applicationId } = req.params;
+    const project = await projectService.fetchProjectById(applicationId);
+    if (!project)
+        throw new error_1.NotFoundError('Application not found!');
+    if (String(project.user) !== userId)
+        throw new error_1.UnauthorizedError('Only the applicant can view counteroffer attention!');
+    const attention = await jobAttentionService.markAttentionViewed({
+        recipientId: userId,
+        applicationId,
+        type: job_attention_enum_1.JobAttentionType.COUNTER_OFFER,
+        eventIds: req.body.eventIds,
+        viewedThrough: req.body.viewedThrough ? new Date(req.body.viewedThrough) : undefined,
+    });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { attention });
 });
 exports.listJobController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;

@@ -50,6 +50,7 @@ const mongoose_1 = require("mongoose");
 const business_model_1 = __importDefault(require("../models/business.model"));
 const recurring_job_model_1 = __importDefault(require("../models/recurring-job.model"));
 const reviewService = __importStar(require("./review.service"));
+const jobAttentionService = __importStar(require("./job-attention.service"));
 const normalizeJobStatus = (status) => {
     if (!status)
         return null;
@@ -122,6 +123,41 @@ const withJobDisplayStatus = (job, viewerUserId) => {
 exports.withJobDisplayStatus = withJobDisplayStatus;
 const withJobsDisplayStatus = (jobs, viewerUserId) => jobs.map((job) => (0, exports.withJobDisplayStatus)(job, viewerUserId));
 exports.withJobsDisplayStatus = withJobsDisplayStatus;
+const withJobAttention = async (jobs, userId) => {
+    const plainJobs = jobs.map(job => typeof job?.toObject === 'function' ? job.toObject() : { ...job });
+    if (!userId) {
+        return plainJobs.map(job => ({ ...job, attention: jobAttentionService.emptyAttentionSummary() }));
+    }
+    const summaries = await jobAttentionService.getJobAttentionSummaries(userId, plainJobs.map(job => String(job._id)));
+    return plainJobs.map(job => ({
+        ...job,
+        ...(() => {
+            const application = Array.isArray(job.applications)
+                ? job.applications.find((item) => String(item?.user?._id || item?.user || '') === String(userId))
+                : undefined;
+            return application ? { applicationId: application._id, applicationStatus: application.status } : {};
+        })(),
+        attention: summaries.get(String(job._id)) || jobAttentionService.emptyAttentionSummary(),
+    }));
+};
+const withApplicationAttention = async (jobs, userId) => {
+    const contexts = jobs.map(job => {
+        const plain = typeof job?.toObject === 'function' ? job.toObject() : { ...job };
+        const applications = Array.isArray(plain.applications) ? plain.applications : [];
+        const application = applications.find((item) => String(item?.user?._id || item?.user || '') === String(userId));
+        return { plain, application };
+    });
+    const applicationIds = contexts.map(({ application }) => String(application?._id || '')).filter(Boolean);
+    const summaries = await jobAttentionService.getApplicationAttentionSummaries(userId, applicationIds);
+    return contexts.map(({ plain, application }) => ({
+        ...plain,
+        applicationId: application?._id || null,
+        applicationStatus: application?.status || null,
+        attention: application
+            ? summaries.get(String(application._id)) || jobAttentionService.emptyAttentionSummary()
+            : jobAttentionService.emptyAttentionSummary(),
+    }));
+};
 const createJob = async (data) => {
     if (!data.status)
         data.status = jobs_enum_1.JobStatusEnum.listed;
@@ -188,8 +224,10 @@ const fetchAllUserJobs = async (userId, page, limit, search = null, filters = {}
         .skip(skip)
         .limit(limit);
     const totalJobs = await jobs_model_1.default.countDocuments(searchCriteria);
+    const displayJobs = (0, exports.withJobsDisplayStatus)(jobs, userId);
+    const jobsWithAttention = await withJobAttention(displayJobs, userId);
     return {
-        jobs: (0, exports.withJobsDisplayStatus)(jobs, userId),
+        jobs: jobsWithAttention,
         totalPages: Math.ceil(totalJobs / limit),
         currentPage: page,
         totalJobs,
@@ -321,6 +359,7 @@ const fetchAllJobs = async (page, limit, userId, search, filters = {}) => {
     if (filters.minRating !== undefined) {
         jobsWithLikeStatus = jobsWithLikeStatus.filter((job) => job.posterRating.averageRating >= filters.minRating);
     }
+    jobsWithLikeStatus = await withJobAttention(jobsWithLikeStatus, userId);
     return {
         jobs: jobsWithLikeStatus,
         totalPages: Math.ceil(totalJobs / limit),
@@ -381,9 +420,10 @@ const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5,
         milestones = job.milestones;
     }
     const displayJob = (0, exports.withJobDisplayStatus)(job, viewerUserId);
+    const [jobWithAttention] = await withJobAttention([displayJob], viewerUserId);
     return {
         job: {
-            ...displayJob,
+            ...jobWithAttention,
             dueDate: jobDueDate,
             milestones: milestones,
             applicantsCount,
@@ -518,12 +558,14 @@ const fetchJobApplicants = async (userId, jobId, status, page = 1, limit = 10) =
                 totalReviews,
             }];
     }));
+    const applicantAttention = await jobAttentionService.getApplicationAttentionSummaries(userId, applicants.map((application) => String(application._id)));
     return {
         total,
         page: Number(page),
         limit: Number(limit),
         applicants: applicants.map((application) => {
             const plain = application.toObject();
+            plain.attention = applicantAttention.get(String(plain._id)) || jobAttentionService.emptyAttentionSummary();
             const businessDetails = businessDetailsById.get(String(plain.businessId));
             const levelMap = {
                 one: 'apprentice',
@@ -696,7 +738,7 @@ const fetchUserJobApplications = async (userId, skip, limit, status, page, searc
         return true;
     });
     const totalApplications = filteredWithDisplay.length;
-    const paginatedApplications = filteredWithDisplay.slice(skip, skip + limit);
+    const paginatedApplications = await withApplicationAttention(filteredWithDisplay.slice(skip, skip + limit), userId);
     return {
         total: totalApplications,
         page,
@@ -735,7 +777,7 @@ const fetchUserApplications = async (userId, skip, limit, status, page) => {
             plain.status = jobs_enum_1.JobStatusEnum.listed;
         return plain;
     };
-    const _mapped = userApplications.map(_mapStatus);
+    const _mapped = await withApplicationAttention(userApplications.map(_mapStatus), userId);
     return {
         total: totalApplications,
         page: Number(page),
@@ -1187,6 +1229,6 @@ const fetchAllRecurringJobs = async (userId, limit, page) => {
 exports.fetchAllRecurringJobs = fetchAllRecurringJobs;
 const fetchJobsByUserId = async (userId) => {
     const jobs = await jobs_model_1.default.find({ userId: userId }).populate('applications', 'status user');
-    return (0, exports.withJobsDisplayStatus)(jobs, userId);
+    return await withJobAttention((0, exports.withJobsDisplayStatus)(jobs, userId), userId);
 };
 exports.fetchJobsByUserId = fetchJobsByUserId;

@@ -1008,7 +1008,9 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
         summary: "Fetch jobs posted by or applied to by the current user",
         description: `Returns one paginated feed containing jobs created by the authenticated user and
 jobs the user applied to. Status is viewer-specific: an owner sees \`in review\` when their job has an
-active application, while an applicant sees their application status such as \`applied\`.`,
+active application, while an applicant sees their application status such as \`applied\`.
+Each job includes a recipient-scoped \`attention\` summary. Applied jobs also include the viewer's
+\`applicationId\` and \`applicationStatus\`.`,
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "page", in: "query", required: false, schema: { type: "integer", default: 1 } },
@@ -1020,7 +1022,7 @@ active application, while an applicant sees their application status such as \`a
           { name: "service", in: "query", required: false, schema: { type: "string" } },
         ],
         responses: {
-          "200": { description: "Paginated list of jobs posted by or applied to by the user", content: { "application/json": { example: { message: "success", data: { currentPage: 1, totalPages: 1, totalJobs: 2, jobs: [{ _id: "64f5c0a1b2c3d4e5f6a7b8c9", title: "Fix leaking kitchen sink", status: "in review", isListed: true }, { _id: "64f5c0a1b2c3d4e5f6a7b8ca", title: "Paint an apartment", status: "applied", isListed: true }] } } } } },
+          "200": { description: "Paginated list of jobs posted by or applied to by the user", content: { "application/json": { example: { message: "success", data: { currentPage: 1, totalPages: 1, totalJobs: 2, jobs: [{ _id: "64f5c0a1b2c3d4e5f6a7b8c9", title: "Fix leaking kitchen sink", status: "in review", isListed: true, attention: { requiresAttention: true, unviewedCount: 2, types: ["NEW_APPLICATION"], latestEventAt: "2026-10-23T08:30:00.000Z", eventIds: ["64fe0a1b2c3d4e5f6a7b8c9d"] } }, { _id: "64f5c0a1b2c3d4e5f6a7b8ca", title: "Paint an apartment", status: "applied", applicationId: "64fc0a1b2c3d4e5f6a7b8c9a", applicationStatus: "applied", isListed: true, attention: { requiresAttention: true, unviewedCount: 1, types: ["COUNTER_OFFER"], latestEventAt: "2026-10-23T08:35:00.000Z", eventIds: ["64fe0a1b2c3d4e5f6a7b8c9e"] } }] } } } } },
           "401": { description: "Unauthorized", content: { "application/json": { example: { message: "Kindly login" } } } },
           "500": { description: "Server error" },
         },
@@ -1110,7 +1112,6 @@ owner, \`applied\` for an applicant, and \`listed\` for other artisans.`,
           { name: "id", in: "query", required: true, schema: { type: "string" }, description: "MongoDB ObjectId of the job", example: "64f5c0a1b2c3d4e5f6a7b8c9" },
           { name: "reviewsPage", in: "query", required: false, schema: { type: "integer", default: 1 }, description: "Page number for the poster's reviews/comments list" },
           { name: "reviewsLimit", in: "query", required: false, schema: { type: "integer", default: 5 }, description: "Items per page for the poster's reviews/comments list" },
-          { name: "userId", in: "query", required: false, deprecated: true, schema: { type: "string" }, description: "Legacy fallback. Prefer a bearer token; authenticated viewer identity is derived automatically." },
         ],
         responses: {
           "200": {
@@ -1137,6 +1138,7 @@ owner, \`applied\` for an applicant, and \`listed\` for other artisans.`,
                       applications: [],
                       applicantsCount: 13,
                       milestonesCount: 3,
+                      attention: { requiresAttention: false, unviewedCount: 0, types: [], latestEventAt: null, eventIds: [] },
                       milestones: [
                         {
                           _id: "64fb0a1b2c3d4e5f6a7b8c9b",
@@ -1382,7 +1384,8 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
   \`completedJobs\`, \`averageRating\`, and \`totalReviews\` (also returned as \`businessReviewCount\`).
 - \`yearsOfExperience\` is calculated from the business's \`yearFounded\`; \`experienceLevel\` comes from
   the applicant's profile level.
-- The response also includes application status, dates, bid details, \`counterOffers\` and quote.`,
+- The response also includes application status, dates, bid details, \`counterOffers\`, quote, and the
+  owner's application-scoped \`attention\` summary.`,
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "jobId", in: "query", required: false, schema: { type: "string" }, description: "Filter by a specific job (ObjectId)", example: "64f5c0a1b2c3d4e5f6a7b8c9" },
@@ -1404,6 +1407,7 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
                     applicants: [
                       {
                         _id: "64fc0a1b2c3d4e5f6a7b8c9a",
+                        attention: { requiresAttention: true, unviewedCount: 1, types: ["NEW_APPLICATION"], latestEventAt: "2026-10-23T08:30:00.000Z", eventIds: ["64fe0a1b2c3d4e5f6a7b8c9d"] },
                         job: { _id: "64f5c0a1b2c3d4e5f6a7b8c9", title: "Fix leaking kitchen sink", type: "biddable", status: "pending", jobCategory: "Plumbing", service: "Repair" },
                         applicantName: "Jane Artisan",
                         user: { _id: "64e1a2b3c4d5e6f7a8b9c0d1", firstName: "Jane", lastName: "Artisan", fullName: "Jane Artisan", userName: "jane_the_pro", email: "jane@example.com", displayImage: "https://cdn.emilist.com/avatar.jpg", profileImage: "https://cdn.emilist.com/avatar.jpg", level: "intermediate" },
@@ -1527,6 +1531,80 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
           "400": { description: "No pending counteroffer, own offer, or job already accepted" },
           "401": { description: "User is not the job owner or applicant" },
           "404": { description: "Application or job not found" },
+        },
+      },
+    },
+    "/jobs/{jobId}/attention/viewed": {
+      patch: {
+        tags: ["Jobs"],
+        summary: "Mark loaded new-application attention as viewed",
+        description: `Used by a job owner after displaying new applicants. It changes only attention
+visibility and does not alter any application status. To prevent a newly-arrived application from being
+cleared accidentally, send either the exact \`eventIds\` returned in the attention summary or its
+\`latestEventAt\` value as \`viewedThrough\`. Repeating the same request is safe.`,
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "jobId", in: "path", required: true, schema: { type: "string" }, example: "64f5c0a1b2c3d4e5f6a7b8c9" },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  eventIds: { type: "array", minItems: 1, items: { type: "string" } },
+                  viewedThrough: { type: "string", format: "date-time" },
+                },
+                anyOf: [{ required: ["eventIds"] }, { required: ["viewedThrough"] }],
+              },
+              examples: {
+                exactEvents: { value: { eventIds: ["64fe0a1b2c3d4e5f6a7b8c9d"] } },
+                snapshot: { value: { viewedThrough: "2026-10-23T08:30:00.000Z" } },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Updated attention summary", content: { "application/json": { example: { message: "success", data: { attention: { requiresAttention: false, unviewedCount: 0, types: [], latestEventAt: null, eventIds: [] } } } } } },
+          "400": { description: "Missing/invalid snapshot or event IDs outside this context" },
+          "401": { description: "Only the job owner may mark these events viewed" },
+          "404": { description: "Job not found" },
+        },
+      },
+    },
+    "/jobs/applications/{applicationId}/attention/viewed": {
+      patch: {
+        tags: ["Jobs"],
+        summary: "Mark loaded counteroffer attention as viewed",
+        description: `Used by the applicant after displaying a counteroffer. Viewing does not accept,
+reject, or otherwise change the counteroffer/application. Send exact \`eventIds\` or the attention
+summary's \`latestEventAt\` as \`viewedThrough\`; events created after that snapshot remain unviewed.`,
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "applicationId", in: "path", required: true, schema: { type: "string" }, example: "64fc0a1b2c3d4e5f6a7b8c9a" },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  eventIds: { type: "array", minItems: 1, items: { type: "string" } },
+                  viewedThrough: { type: "string", format: "date-time" },
+                },
+                anyOf: [{ required: ["eventIds"] }, { required: ["viewedThrough"] }],
+              },
+              example: { eventIds: ["64fe0a1b2c3d4e5f6a7b8c9e"] },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Updated attention summary", content: { "application/json": { example: { message: "success", data: { attention: { requiresAttention: false, unviewedCount: 0, types: [], latestEventAt: null, eventIds: [] } } } } } },
+          "400": { description: "Missing/invalid snapshot or event IDs outside this context" },
+          "401": { description: "Only the applicant may mark counteroffer attention viewed" },
+          "404": { description: "Application not found" },
         },
       },
     },
@@ -1674,7 +1752,7 @@ Allowed \`status\` values: \`applied\`, \`accepted\`, \`rejected\`, \`pause\`, \
       get: {
         tags: ["Jobs"],
         summary: "Fetch jobs the user has applied to (by status)",
-        description: "Returns a paginated list of jobs the current user applied to, optionally filtered by application `status`.",
+        description: "Returns a paginated list of jobs the current user applied to, optionally filtered by application `status`. Each item includes `applicationId`, `applicationStatus`, and an application-scoped `attention` summary.",
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "status", in: "query", required: false, schema: { type: "string", enum: ["applied", "pending", "accepted", "rejected", "completed", "pause", "unpause", "cancelled"] }, description: "Application status filter (applicant lens: applied = you applied; rejected = your application was rejected)", example: "applied" },

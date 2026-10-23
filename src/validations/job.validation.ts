@@ -485,6 +485,20 @@ export const validateCounterBidResponse = (req: Request, res: Response, next: Ne
   next();
 };
 
+export const validateAttentionViewed = (req: Request, res: Response, next: NextFunction) => {
+  const validation = Joi.object({
+    eventIds: Joi.array().items(Joi.string().required()).min(1),
+    viewedThrough: Joi.date().iso().max('now'),
+  }).or('eventIds', 'viewedThrough');
+
+  const { error } = validation.validate(req.body, { abortEarly: false });
+  if (error) {
+    res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+    return;
+  }
+  next();
+};
+
 export const validateMilestoneStatusUpdate = (req: Request, res: Response, next: NextFunction) => {
   const milestoneValidation = Joi.object({
     status: Joi.string()
