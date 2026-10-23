@@ -385,7 +385,7 @@ const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5,
         .populate('userId', 'fullName userName email location level profileImage uniqueId')
         .populate({
         path: 'applications',
-        populate: { path: 'user', select: 'fullName userName email location level profileImage' },
+        select: '_id user status',
     });
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
@@ -421,14 +421,17 @@ const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5,
     }
     const displayJob = (0, exports.withJobDisplayStatus)(job, viewerUserId);
     const [jobWithAttention] = await withJobAttention([displayJob], viewerUserId);
+    const publicJob = {
+        ...jobWithAttention,
+        applicationId: jobWithAttention.applicationId ?? null,
+        dueDate: jobDueDate,
+        milestones,
+        applicantsCount,
+        milestonesCount: milestones.length,
+    };
+    delete publicJob.applications;
     return {
-        job: {
-            ...jobWithAttention,
-            dueDate: jobDueDate,
-            milestones: milestones,
-            applicantsCount,
-            milestonesCount: milestones.length,
-        },
+        job: publicJob,
         totalJobsPosted,
         totalArtisansHired,
         reviews: reviewsSummary,

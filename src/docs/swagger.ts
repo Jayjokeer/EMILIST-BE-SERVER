@@ -1101,12 +1101,13 @@ Each job includes a recipient-scoped \`attention\` summary. Applied jobs also in
       get: {
         tags: ["Jobs"],
         summary: "Fetch a single job by id (public)",
-        description: `Returns full details of a single job, including populated user/application info,
+        description: `Returns full details of a single job, including populated job-owner info,
 the milestones panel (each with computed \`dueDate\`), \`applicantsCount\`, and the job poster's
 review summary and comments (\`reviews\`: average rating, star distribution, and a paginated list
 of reviews/comments pulled from the poster's Business profile). Authentication is optional. When a
 bearer token is supplied, viewer-specific status is derived automatically: \`in review\` for the
-owner, \`applied\` for an applicant, and \`listed\` for other artisans.`,
+owner, \`applied\` for an applicant, and \`listed\` for other artisans. \`applicationId\` contains
+the authenticated viewer's application ID or null. The internal \`applications\` array is not exposed.`,
         security: [{}, { bearerAuth: [] }],
         parameters: [
           { name: "id", in: "query", required: true, schema: { type: "string" }, description: "MongoDB ObjectId of the job", example: "64f5c0a1b2c3d4e5f6a7b8c9" },
@@ -1135,7 +1136,7 @@ owner, \`applied\` for an applicant, and \`listed\` for other artisans.`,
                       startDate: "2025-01-10T09:30:00.000Z",
                       dueDate: "2025-01-24T09:30:00.000Z",
                       userId: { _id: "64e1a2b3c4d5e6f7a8b9c0d1", userName: "john_doe", email: "john@example.com" },
-                      applications: [],
+                      applicationId: "64fc0a1b2c3d4e5f6a7b8c9a",
                       applicantsCount: 13,
                       milestonesCount: 3,
                       attention: { requiresAttention: false, unviewedCount: 0, types: [], latestEventAt: null, eventIds: [] },
