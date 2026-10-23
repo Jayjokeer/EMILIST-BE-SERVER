@@ -1379,8 +1379,12 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
 
 - Only the **job poster** sees applicants (results are scoped to jobs the user created).
 - Optionally filter by \`jobId\` (must be one of the user's jobs) and/or application \`status\`.
-- Each applicant includes \`applicantName\`, their profile, selected \`businessId\`, \`businessReviewCount\`,
-  application status, applied/accepted/rejected dates, bid details, \`counterOffers\` (biddable jobs) and quote.`,
+- Each applicant includes \`applicantName\`, their profile and selected business details: \`businessId\`,
+  \`businessName\`, \`businessLocation\`, \`mainService\`, \`experienceLevel\`, \`yearsOfExperience\`,
+  \`completedJobs\`, \`averageRating\`, and \`totalReviews\` (also returned as \`businessReviewCount\`).
+- \`yearsOfExperience\` is calculated from the business's \`yearFounded\`; \`experienceLevel\` comes from
+  the applicant's profile level.
+- The response also includes application status, dates, bid details, \`counterOffers\` and quote.`,
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     { name: "jobId", in: "query", required: false, schema: { type: "string" }, description: "Filter by a specific job (ObjectId)", example: "64f5c0a1b2c3d4e5f6a7b8c9" },
@@ -1406,6 +1410,14 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
                                                 applicantName: "Jane Artisan",
                                                 user: { _id: "64e1a2b3c4d5e6f7a8b9c0d1", firstName: "Jane", lastName: "Artisan", fullName: "Jane Artisan", userName: "jane_the_pro", email: "jane@example.com", displayImage: "https://cdn.emilist.com/avatar.jpg", profileImage: "https://cdn.emilist.com/avatar.jpg", level: "intermediate" },
                                                 businessId: "64f7c0a1b2c3d4e5f6a7b8d0",
+                                                businessName: "Jane Plumbing Services",
+                                                businessLocation: { address: "12 Admiralty Way", city: "Lekki", state: "Lagos", country: "Nigeria", formatted: "12 Admiralty Way, Lekki, Lagos, Nigeria" },
+                                                mainService: "Plumbing",
+                                                experienceLevel: "intermediate",
+                                                yearsOfExperience: 8,
+                                                completedJobs: 24,
+                                                averageRating: 4.75,
+                                                totalReviews: 12,
                                                 businessReviewCount: 12,
                                                 status: "pending",
                                                 appliedAt: "2025-01-12T10:00:00.000Z",

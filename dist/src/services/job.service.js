@@ -46,6 +46,7 @@ const project_enum_1 = require("../enums/project.enum");
 const date_fns_1 = require("date-fns");
 const moment_1 = __importDefault(require("moment"));
 const userService = __importStar(require("./auth.service"));
+const mongoose_1 = require("mongoose");
 const business_model_1 = __importDefault(require("../models/business.model"));
 const recurring_job_model_1 = __importDefault(require("../models/recurring-job.model"));
 const reviewService = __importStar(require("./review.service"));
@@ -468,23 +469,77 @@ const fetchJobApplicants = async (userId, jobId, status, page = 1, limit = 10) =
         .skip(skip)
         .limit(Number(limit));
     const total = await project_model_1.default.countDocuments(query);
-    const businessIds = applicants
-        .map((application) => application.businessId)
-        .filter(Boolean);
+    const businessIds = [...new Set(applicants
+            .map((application) => application.businessId)
+            .filter(Boolean)
+            .map((businessId) => String(businessId)))];
     const businesses = businessIds.length
-        ? await business_model_1.default.find({ _id: { $in: businessIds } }).select('_id reviews').lean()
+        ? await business_model_1.default.find({ _id: { $in: businessIds } })
+            .select('_id businessName services renderedServices yearFounded businessAddress businessCity businessState businessCountry address city state country reviews')
+            .populate('reviews', 'rating')
+            .lean()
         : [];
-    const businessReviewCounts = new Map(businesses.map((business) => [
-        String(business._id),
-        Array.isArray(business.reviews) ? business.reviews.length : 0,
-    ]));
+    const completedJobCounts = businessIds.length
+        ? await project_model_1.default.aggregate([
+            { $match: { businessId: { $in: businessIds.map(id => new mongoose_1.Types.ObjectId(id)) }, status: project_enum_1.ProjectStatusEnum.completed } },
+            { $group: { _id: '$businessId', count: { $sum: 1 } } },
+        ])
+        : [];
+    const completedJobsByBusiness = new Map(completedJobCounts.map((entry) => [String(entry._id), entry.count]));
+    const businessDetailsById = new Map(businesses.map((business) => {
+        const reviews = Array.isArray(business.reviews) ? business.reviews : [];
+        const totalReviews = reviews.length;
+        const averageRating = totalReviews
+            ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / totalReviews
+            : 0;
+        const foundedYear = Number.parseInt(String(business.yearFounded || ''), 10);
+        const currentYear = new Date().getFullYear();
+        const yearsOfExperience = Number.isInteger(foundedYear) && foundedYear > 0 && foundedYear <= currentYear
+            ? currentYear - foundedYear
+            : null;
+        const address = business.businessAddress || business.address || null;
+        const city = business.businessCity || business.city || null;
+        const state = business.businessState || business.state || null;
+        const country = business.businessCountry || business.country || null;
+        return [String(business._id), {
+                businessId: String(business._id),
+                businessName: business.businessName || null,
+                businessLocation: {
+                    address,
+                    city,
+                    state,
+                    country,
+                    formatted: [address, city, state, country].filter(Boolean).join(', '),
+                },
+                mainService: business.services?.[0] || business.renderedServices?.[0]?.name || null,
+                yearsOfExperience,
+                completedJobs: completedJobsByBusiness.get(String(business._id)) ?? 0,
+                averageRating: Number(averageRating.toFixed(2)),
+                totalReviews,
+            }];
+    }));
     return {
         total,
         page: Number(page),
         limit: Number(limit),
         applicants: applicants.map((application) => {
             const plain = application.toObject();
-            plain.businessReviewCount = businessReviewCounts.get(String(plain.businessId)) ?? 0;
+            const businessDetails = businessDetailsById.get(String(plain.businessId));
+            const levelMap = {
+                one: 'apprentice',
+                two: 'junior',
+                three: 'intermediate',
+                four: 'senior',
+            };
+            plain.businessName = businessDetails?.businessName ?? null;
+            plain.businessLocation = businessDetails?.businessLocation ?? null;
+            plain.mainService = businessDetails?.mainService ?? null;
+            plain.experienceLevel = plain.user?.level ? levelMap[plain.user.level] || plain.user.level : null;
+            plain.yearsOfExperience = businessDetails?.yearsOfExperience ?? null;
+            plain.completedJobs = businessDetails?.completedJobs ?? 0;
+            plain.averageRating = businessDetails?.averageRating ?? 0;
+            plain.totalReviews = businessDetails?.totalReviews ?? 0;
+            plain.businessReviewCount = plain.totalReviews;
             const counterOffers = Array.isArray(plain.counterOffers) ? plain.counterOffers : [];
             const jobOwnerCounters = counterOffers.filter((offer) => offer.madeByRole === 'job_owner').length;
             const applicantCounters = counterOffers.filter((offer) => offer.madeByRole === 'applicant').length;
