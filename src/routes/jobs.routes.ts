@@ -20,6 +20,7 @@ router.route("/withdraw-job-application/:projectId").delete(userAuth, jobControl
 router.route("/delete-job/:jobId").delete(userAuth, jobController.deleteJobController);
 router.route("/update-job/:jobId").put(userAuth, multipleUpload, parseJobBody, validateUpdateJob, jobController.updateJobController);
 router.route("/fetch-applicants").get(userAuth, jobController.fetchJobApplicantsController);
+router.route("/fetch-application-by-id/:applicationId").get(userAuth, jobController.fetchApplicationByIdController);
 router.route("/counter-bid/:projectId").patch(userAuth, validateCounterBid, jobController.counterBidController);
 router.route("/respond-counter-bid/:projectId").patch(userAuth, validateCounterBidResponse, jobController.respondToCounterBidController);
 router.route("/:jobId/attention/viewed").patch(userAuth, validateAttentionViewed, jobController.markJobAttentionViewedController);

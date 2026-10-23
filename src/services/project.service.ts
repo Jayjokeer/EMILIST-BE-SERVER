@@ -10,6 +10,19 @@ export const fetchProjectById = async (projectId: string) =>{
     return await Project.findById(projectId);
 };
 
+export const fetchApplicationByIdWithDetails = async (applicationId: string) => {
+  return Project.findById(applicationId)
+    .populate('user', 'firstName lastName userName displayImage level uniqueId')
+    .populate('creator', 'firstName lastName userName displayImage uniqueId')
+    .populate('businessId', 'businessName services renderedServices yearFounded businessAddress businessCity businessState businessCountry')
+    .populate({
+      path: 'job',
+      select: 'title description type status jobCategory service currency maximumPrice milestones location userId acceptedApplicationId',
+    })
+    .populate('counterOffers.madeBy', 'firstName lastName userName displayImage uniqueId')
+    .lean();
+};
+
 export const fetchApplicationByJobAndUser = async (jobId: string, userId: string) => {
   return await Project.findOne({
     job: jobId,

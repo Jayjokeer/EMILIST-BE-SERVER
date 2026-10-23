@@ -451,6 +451,65 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     return successResponse(res, StatusCodes.OK, data);
   });
 
+  export const fetchApplicationByIdController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const userId = String(req.user.id);
+    const { applicationId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      throw new BadRequestError('Invalid application ID!');
+    }
+
+    const application: any = await projectService.fetchApplicationByIdWithDetails(applicationId);
+    if (!application) throw new NotFoundError('Application not found!');
+
+    const applicantId = String(application.user?._id || application.user);
+    const jobOwnerId = String(application.creator?._id || application.creator);
+    if (userId !== applicantId && userId !== jobOwnerId) {
+      throw new UnauthorizedError('Only the job owner or applicant can view this application!');
+    }
+
+    const offers = Array.isArray(application.counterOffers) ? application.counterOffers : [];
+    const initialBid = application.initialBiddableDetails || null;
+    const currentBid = application.biddableDetails || null;
+    const bidHistory = [
+      ...(initialBid ? [{
+        type: 'INITIAL_BID',
+        madeBy: application.user,
+        madeByRole: CounterOfferRoleEnum.applicant,
+        maximumPrice: initialBid.maximumPrice,
+        milestones: initialBid.milestones || [],
+        message: null,
+        status: offers.length ? 'countered' : 'submitted',
+        createdAt: application.appliedAt || application.createdAt,
+        respondedAt: null,
+      }] : []),
+      ...offers.map((offer: any) => ({
+        _id: offer._id,
+        type: 'COUNTER_OFFER',
+        madeBy: offer.madeBy,
+        madeByRole: offer.madeByRole,
+        maximumPrice: offer.maximumPrice,
+        milestones: offer.milestones || [],
+        message: offer.message || null,
+        status: offer.status,
+        createdAt: offer.createdAt,
+        respondedAt: offer.respondedAt || null,
+      })),
+    ];
+    const attentionMap = await jobAttentionService.getApplicationAttentionSummaries(userId, [applicationId]);
+
+    return successResponse(res, StatusCodes.OK, {
+      ...application,
+      participantRole: userId === jobOwnerId ? CounterOfferRoleEnum.job_owner : CounterOfferRoleEnum.applicant,
+      initialBid,
+      currentBid,
+      bidHistory,
+      latestCounterOffer: offers.length ? offers[offers.length - 1] : null,
+      counterOfferSummary: counterOfferSummary(application),
+      attention: attentionMap.get(applicationId) || jobAttentionService.emptyAttentionSummary(),
+    });
+  });
+
   const counterOfferSummary = (project: any) => {
     const offers = project.counterOffers || [];
     const jobOwnerUsed = offers.filter((offer: any) => offer.madeByRole === CounterOfferRoleEnum.job_owner).length;

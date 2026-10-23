@@ -1439,6 +1439,115 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
         },
       },
     },
+    "/jobs/fetch-application-by-id/{applicationId}": {
+      get: {
+        tags: ["Jobs"],
+        summary: "Fetch one job application with its bid history",
+        description: `Returns a single application to either the applicant or the owner of its job.
+
+For a biddable application, the response separates the immutable original terms in \`initialBid\` from
+the currently proposed/agreed terms in \`currentBid\`. \`bidHistory\` starts with the applicant's
+original bid and then contains every counteroffer in chronological order. The original \`counterOffers\`
+array is also retained. Regular applications return null bids and an empty history.`,
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "applicationId",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Application/project ObjectId",
+            example: "64fc0a1b2c3d4e5f6a7b8c9a",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Application, participants, job information, bids and counteroffer history",
+            content: {
+              "application/json": {
+                example: {
+                  message: "success",
+                  data: {
+                    _id: "64fc0a1b2c3d4e5f6a7b8c9a",
+                    status: "applied",
+                    participantRole: "applicant",
+                    appliedAt: "2026-10-23T08:00:00.000Z",
+                    job: {
+                      _id: "64f5c0a1b2c3d4e5f6a7b8c9",
+                      title: "Fix leaking kitchen sink",
+                      type: "biddable",
+                      status: "in review",
+                      currency: "NGN",
+                    },
+                    user: {
+                      _id: "64e1a2b3c4d5e6f7a8b9c0d1",
+                      firstName: "Jane",
+                      lastName: "Artisan",
+                      userName: "jane_the_pro",
+                    },
+                    creator: {
+                      _id: "64e1a2b3c4d5e6f7a8b9c0d2",
+                      firstName: "John",
+                      lastName: "Owner",
+                    },
+                    initialBid: {
+                      maximumPrice: 75000,
+                      milestones: [{ milestoneId: "64fb0a1b2c3d4e5f6a7b8c9b", amount: 75000, achievement: "Complete the repair" }],
+                    },
+                    currentBid: {
+                      maximumPrice: 70000,
+                      milestones: [{ milestoneId: "64fb0a1b2c3d4e5f6a7b8c9b", amount: 70000, achievement: "Complete the repair" }],
+                    },
+                    bidHistory: [
+                      {
+                        type: "INITIAL_BID",
+                        madeByRole: "applicant",
+                        maximumPrice: 75000,
+                        status: "countered",
+                        createdAt: "2026-10-23T08:00:00.000Z",
+                      },
+                      {
+                        _id: "64fd0a1b2c3d4e5f6a7b8c9",
+                        type: "COUNTER_OFFER",
+                        madeByRole: "job_owner",
+                        maximumPrice: 70000,
+                        message: "Can we agree on this amount?",
+                        status: "pending",
+                        createdAt: "2026-10-23T08:30:00.000Z",
+                        respondedAt: null,
+                      },
+                    ],
+                    latestCounterOffer: {
+                      _id: "64fd0a1b2c3d4e5f6a7b8c9",
+                      madeByRole: "job_owner",
+                      maximumPrice: 70000,
+                      status: "pending",
+                    },
+                    counterOfferSummary: {
+                      maxPerParty: 2,
+                      jobOwnerUsed: 1,
+                      applicantUsed: 0,
+                      jobOwnerRemaining: 1,
+                      applicantRemaining: 2,
+                    },
+                    attention: {
+                      requiresAttention: true,
+                      unviewedCount: 1,
+                      types: ["COUNTER_OFFER"],
+                      latestEventAt: "2026-10-23T08:30:00.000Z",
+                      eventIds: ["64fe0a1b2c3d4e5f6a7b8c9d"],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Invalid application ID" },
+          "401": { description: "User is not the job owner or applicant" },
+          "404": { description: "Application not found" },
+        },
+      },
+    },
     "/jobs/counter-bid/{projectId}": {
       patch: {
         tags: ["Jobs"],

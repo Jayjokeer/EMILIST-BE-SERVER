@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.delistJobController = exports.listJobController = exports.markApplicationAttentionViewedController = exports.markJobAttentionViewedController = exports.respondToCounterBidController = exports.counterBidController = exports.fetchJobApplicantsController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
+exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.delistJobController = exports.listJobController = exports.markApplicationAttentionViewedController = exports.markJobAttentionViewedController = exports.respondToCounterBidController = exports.counterBidController = exports.fetchApplicationByIdController = exports.fetchJobApplicantsController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -413,6 +413,60 @@ exports.fetchJobApplicantsController = (0, error_handler_1.catchAsync)(async (re
     const limit = parseInt(req.query.limit, 10) || 10;
     const data = await jobService.fetchJobApplicants(String(userId), jobId ? String(jobId) : undefined, status ? String(status) : undefined, page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+exports.fetchApplicationByIdController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const userId = String(req.user.id);
+    const { applicationId } = req.params;
+    if (!mongoose_1.default.Types.ObjectId.isValid(applicationId)) {
+        throw new error_1.BadRequestError('Invalid application ID!');
+    }
+    const application = await projectService.fetchApplicationByIdWithDetails(applicationId);
+    if (!application)
+        throw new error_1.NotFoundError('Application not found!');
+    const applicantId = String(application.user?._id || application.user);
+    const jobOwnerId = String(application.creator?._id || application.creator);
+    if (userId !== applicantId && userId !== jobOwnerId) {
+        throw new error_1.UnauthorizedError('Only the job owner or applicant can view this application!');
+    }
+    const offers = Array.isArray(application.counterOffers) ? application.counterOffers : [];
+    const initialBid = application.initialBiddableDetails || null;
+    const currentBid = application.biddableDetails || null;
+    const bidHistory = [
+        ...(initialBid ? [{
+                type: 'INITIAL_BID',
+                madeBy: application.user,
+                madeByRole: project_enum_1.CounterOfferRoleEnum.applicant,
+                maximumPrice: initialBid.maximumPrice,
+                milestones: initialBid.milestones || [],
+                message: null,
+                status: offers.length ? 'countered' : 'submitted',
+                createdAt: application.appliedAt || application.createdAt,
+                respondedAt: null,
+            }] : []),
+        ...offers.map((offer) => ({
+            _id: offer._id,
+            type: 'COUNTER_OFFER',
+            madeBy: offer.madeBy,
+            madeByRole: offer.madeByRole,
+            maximumPrice: offer.maximumPrice,
+            milestones: offer.milestones || [],
+            message: offer.message || null,
+            status: offer.status,
+            createdAt: offer.createdAt,
+            respondedAt: offer.respondedAt || null,
+        })),
+    ];
+    const attentionMap = await jobAttentionService.getApplicationAttentionSummaries(userId, [applicationId]);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        ...application,
+        participantRole: userId === jobOwnerId ? project_enum_1.CounterOfferRoleEnum.job_owner : project_enum_1.CounterOfferRoleEnum.applicant,
+        initialBid,
+        currentBid,
+        bidHistory,
+        latestCounterOffer: offers.length ? offers[offers.length - 1] : null,
+        counterOfferSummary: counterOfferSummary(application),
+        attention: attentionMap.get(applicationId) || jobAttentionService.emptyAttentionSummary(),
+    });
 });
 const counterOfferSummary = (project) => {
     const offers = project.counterOffers || [];
