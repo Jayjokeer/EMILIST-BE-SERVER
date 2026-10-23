@@ -494,7 +494,7 @@ export const fetchJobApplicants = async (
   }
 
   const applicants = await Project.find(query)
-    .populate('user', 'fullName userName email profileImage level uniqueId')
+    .populate('user', 'firstName lastName userName email displayImage level uniqueId')
     .populate({
       path: 'job',
       select: 'title status jobCategory service userId applications',
@@ -506,12 +506,36 @@ export const fetchJobApplicants = async (
 
   const total = await Project.countDocuments(query);
 
+  const businessIds = applicants
+    .map((application: any) => application.businessId)
+    .filter(Boolean);
+  const businesses = businessIds.length
+    ? await Business.find({ _id: { $in: businessIds } }).select('_id reviews').lean()
+    : [];
+  const businessReviewCounts = new Map(
+    businesses.map((business: any) => [
+      String(business._id),
+      Array.isArray(business.reviews) ? business.reviews.length : 0,
+    ])
+  );
+
   return {
     total,
     page: Number(page),
     limit: Number(limit),
     applicants: applicants.map((application: any) => {
       const plain = application.toObject();
+      plain.businessReviewCount = businessReviewCounts.get(String(plain.businessId)) ?? 0;
+      if (plain.user) {
+        const applicantName = [plain.user.firstName, plain.user.lastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || plain.user.userName || '';
+
+        plain.applicantName = applicantName;
+        plain.user.fullName = applicantName;
+        plain.user.profileImage = plain.user.displayImage;
+      }
       if (plain.job) plain.job = withJobDisplayStatus(plain.job, userId);
       return plain;
     }),

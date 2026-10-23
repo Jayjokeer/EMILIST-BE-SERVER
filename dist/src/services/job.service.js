@@ -458,7 +458,7 @@ const fetchJobApplicants = async (userId, jobId, status, page = 1, limit = 10) =
             query.status = status;
     }
     const applicants = await project_model_1.default.find(query)
-        .populate('user', 'fullName userName email profileImage level uniqueId')
+        .populate('user', 'firstName lastName userName email displayImage level uniqueId')
         .populate({
         path: 'job',
         select: 'title status jobCategory service userId applications',
@@ -468,12 +468,32 @@ const fetchJobApplicants = async (userId, jobId, status, page = 1, limit = 10) =
         .skip(skip)
         .limit(Number(limit));
     const total = await project_model_1.default.countDocuments(query);
+    const businessIds = applicants
+        .map((application) => application.businessId)
+        .filter(Boolean);
+    const businesses = businessIds.length
+        ? await business_model_1.default.find({ _id: { $in: businessIds } }).select('_id reviews').lean()
+        : [];
+    const businessReviewCounts = new Map(businesses.map((business) => [
+        String(business._id),
+        Array.isArray(business.reviews) ? business.reviews.length : 0,
+    ]));
     return {
         total,
         page: Number(page),
         limit: Number(limit),
         applicants: applicants.map((application) => {
             const plain = application.toObject();
+            plain.businessReviewCount = businessReviewCounts.get(String(plain.businessId)) ?? 0;
+            if (plain.user) {
+                const applicantName = [plain.user.firstName, plain.user.lastName]
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim() || plain.user.userName || '';
+                plain.applicantName = applicantName;
+                plain.user.fullName = applicantName;
+                plain.user.profileImage = plain.user.displayImage;
+            }
             if (plain.job)
                 plain.job = (0, exports.withJobDisplayStatus)(plain.job, userId);
             return plain;

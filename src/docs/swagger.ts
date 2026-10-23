@@ -1377,8 +1377,8 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
 
 - Only the **job poster** sees applicants (results are scoped to jobs the user created).
 - Optionally filter by \`jobId\` (must be one of the user's jobs) and/or application \`status\`.
-- Each applicant includes their profile, application status, applied/accepted/rejected dates,
-  bid details (biddable jobs) and quote.`,
+- Each applicant includes \`applicantName\`, their profile, selected \`businessId\`, \`businessReviewCount\`,
+  application status, applied/accepted/rejected dates, bid details (biddable jobs) and quote.`,
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "jobId", in: "query", required: false, schema: { type: "string" }, description: "Filter by a specific job (ObjectId)", example: "64f5c0a1b2c3d4e5f6a7b8c9" },
@@ -1401,7 +1401,10 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
                       {
                         _id: "64fc0a1b2c3d4e5f6a7b8c9a",
                         job: { _id: "64f5c0a1b2c3d4e5f6a7b8c9", title: "Fix leaking kitchen sink", status: "pending", jobCategory: "Plumbing", service: "Repair" },
-                        user: { _id: "64e1a2b3c4d5e6f7a8b9c0d1", fullName: "Jane Artisan", userName: "jane_the_pro", email: "jane@example.com", profileImage: "https://cdn.emilist.com/avatar.jpg", level: "intermediate" },
+                        applicantName: "Jane Artisan",
+                        user: { _id: "64e1a2b3c4d5e6f7a8b9c0d1", firstName: "Jane", lastName: "Artisan", fullName: "Jane Artisan", userName: "jane_the_pro", email: "jane@example.com", displayImage: "https://cdn.emilist.com/avatar.jpg", profileImage: "https://cdn.emilist.com/avatar.jpg", level: "intermediate" },
+                        businessId: "64f7c0a1b2c3d4e5f6a7b8d0",
+                        businessReviewCount: 12,
                         status: "pending",
                         appliedAt: "2025-01-12T10:00:00.000Z",
                         biddableDetails: { maximumPrice: 75000, milestones: [{ milestoneId: "64fb0a1b2c3d4e5f6a7b8c9b", amount: 40000, achievement: "Replace sink and connect pipes" }] },
