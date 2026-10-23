@@ -497,7 +497,7 @@ export const fetchJobApplicants = async (
     .populate('user', 'firstName lastName userName email displayImage level uniqueId')
     .populate({
       path: 'job',
-      select: 'title status jobCategory service userId applications',
+      select: 'title type status jobCategory service userId applications',
       populate: { path: 'applications', select: 'status user' },
     })
     .sort({ appliedAt: -1 })

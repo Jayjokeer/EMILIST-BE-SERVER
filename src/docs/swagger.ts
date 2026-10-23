@@ -1404,7 +1404,7 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
                     applicants: [
                       {
                         _id: "64fc0a1b2c3d4e5f6a7b8c9a",
-                        job: { _id: "64f5c0a1b2c3d4e5f6a7b8c9", title: "Fix leaking kitchen sink", status: "pending", jobCategory: "Plumbing", service: "Repair" },
+                        job: { _id: "64f5c0a1b2c3d4e5f6a7b8c9", title: "Fix leaking kitchen sink", type: "biddable", status: "pending", jobCategory: "Plumbing", service: "Repair" },
                         applicantName: "Jane Artisan",
                         user: { _id: "64e1a2b3c4d5e6f7a8b9c0d1", firstName: "Jane", lastName: "Artisan", fullName: "Jane Artisan", userName: "jane_the_pro", email: "jane@example.com", displayImage: "https://cdn.emilist.com/avatar.jpg", profileImage: "https://cdn.emilist.com/avatar.jpg", level: "intermediate" },
                         businessId: "64f7c0a1b2c3d4e5f6a7b8d0",

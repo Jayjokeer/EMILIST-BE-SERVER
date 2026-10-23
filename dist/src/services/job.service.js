@@ -462,7 +462,7 @@ const fetchJobApplicants = async (userId, jobId, status, page = 1, limit = 10) =
         .populate('user', 'firstName lastName userName email displayImage level uniqueId')
         .populate({
         path: 'job',
-        select: 'title status jobCategory service userId applications',
+        select: 'title type status jobCategory service userId applications',
         populate: { path: 'applications', select: 'status user' },
     })
         .sort({ appliedAt: -1 })
