@@ -12,7 +12,7 @@ import { CounterOfferRoleEnum, CounterOfferStatusEnum, ProjectStatusEnum } from 
 import { JobStatusEnum, JobType, MilestoneEnum, MilestonePaymentStatus, QuoteStatusEnum, JobUrgencyEnum } from "../enums/jobs.enum";
 import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
-import { acceptDirectJobApplicationMessage, acceptJobApplicationMessage, directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage, sendJobApplicationMessage } from "../utils/templates";
+import { acceptDirectJobApplicationMessage, acceptJobApplicationMessage, counterOfferMessage, directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage, sendJobApplicationMessage } from "../utils/templates";
 import mongoose from "mongoose";
 import Project from "../models/project.model";
 import * as  businessService from "../services/business.service";
@@ -512,6 +512,23 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       message: `${req.user.userName} sent a counteroffer for ${job.title}`,
       type: NotificationTypeEnum.info,
     });
+    const recipient = await userService.findUserById(recipientId);
+    if (recipient?.email) {
+      const recipientName = recipient.userName || recipient.firstName || 'there';
+      const senderName = req.user.userName || req.user.firstName || 'A user';
+      const { html, subject } = counterOfferMessage(
+        recipientName,
+        senderName,
+        job.title,
+        Number(maximumPrice),
+        job.currency,
+      );
+      try {
+        await sendEmail(recipient.email, subject, html);
+      } catch (error) {
+        console.error(`Failed to send counteroffer email for application ${projectId}:`, error);
+      }
+    }
 
     return successResponse(res, StatusCodes.OK, {
       application: project,

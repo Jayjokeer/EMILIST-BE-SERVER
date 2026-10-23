@@ -477,6 +477,18 @@ exports.counterBidController = (0, error_handler_1.catchAsync)(async (req, res) 
         message: `${req.user.userName} sent a counteroffer for ${job.title}`,
         type: notification_enum_1.NotificationTypeEnum.info,
     });
+    const recipient = await userService.findUserById(recipientId);
+    if (recipient?.email) {
+        const recipientName = recipient.userName || recipient.firstName || 'there';
+        const senderName = req.user.userName || req.user.firstName || 'A user';
+        const { html, subject } = (0, templates_1.counterOfferMessage)(recipientName, senderName, job.title, Number(maximumPrice), job.currency);
+        try {
+            await (0, send_email_1.sendEmail)(recipient.email, subject, html);
+        }
+        catch (error) {
+            console.error(`Failed to send counteroffer email for application ${projectId}:`, error);
+        }
+    }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
         application: project,
         counterOfferSummary: counterOfferSummary(project),

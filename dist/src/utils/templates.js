@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateReminderEmail = exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
+exports.generateReminderEmail = exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.counterOfferMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
 const config_1 = require("./config");
 const otpMessage = (otp) => {
     const subject = "Otp Email";
@@ -58,6 +58,14 @@ const sendJobApplicationMessage = (name, user, title) => {
     return { html, subject };
 };
 exports.sendJobApplicationMessage = sendJobApplicationMessage;
+const counterOfferMessage = (recipientName, senderName, jobTitle, amount, currency) => {
+    const subject = `New counteroffer for ${jobTitle}`;
+    const formattedAmount = `${currency ? `${currency} ` : ''}${Number(amount).toLocaleString()}`;
+    const html = `
+        Hi ${recipientName}!, ${senderName} sent you a counteroffer of ${formattedAmount} for the job titled: ${jobTitle}. Kindly log in to review, accept, reject, or counter the offer: ${config_1.config.frontendLoginUrl}`;
+    return { html, subject };
+};
+exports.counterOfferMessage = counterOfferMessage;
 const acceptJobApplicationMessage = (name, user, title, status) => {
     const subject = "Application Accepted!";
     const html = `

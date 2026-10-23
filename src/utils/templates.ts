@@ -62,6 +62,21 @@ export const sendJobApplicationMessage = (name: string, user: string,title: stri
 
   return { html, subject };
 };
+
+export const counterOfferMessage = (
+  recipientName: string,
+  senderName: string,
+  jobTitle: string,
+  amount: number,
+  currency?: string,
+) => {
+  const subject = `New counteroffer for ${jobTitle}`;
+  const formattedAmount = `${currency ? `${currency} ` : ''}${Number(amount).toLocaleString()}`;
+  const html = `
+        Hi ${recipientName}!, ${senderName} sent you a counteroffer of ${formattedAmount} for the job titled: ${jobTitle}. Kindly log in to review, accept, reject, or counter the offer: ${config.frontendLoginUrl}`;
+
+  return { html, subject };
+};
 export const acceptJobApplicationMessage = (name: string, user: string,title: string, status: string) => {
   const subject = "Application Accepted!";
   const html = `

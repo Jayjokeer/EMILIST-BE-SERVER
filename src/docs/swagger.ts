@@ -1446,6 +1446,7 @@ Object/array fields may be sent as JSON strings in multipart form data; empty op
 - The job owner and applicant can each make at most **two** counteroffers.
 - A rejected counteroffer may be revised by its sender if that party still has a counteroffer remaining.
 - \`maximumPrice\` must equal the sum of the milestone amounts, and every job milestone must be included.
+- The recipient receives both an in-app notification and an email containing the job and offered amount.
 - The current agreed-to-or-countered terms are exposed in \`biddableDetails\`; the audit trail is in \`counterOffers\`.`,
         security: [{ bearerAuth: [] }],
         parameters: [
