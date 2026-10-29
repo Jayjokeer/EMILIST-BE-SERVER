@@ -70,7 +70,8 @@ const normalizeProjectStatus = (status) => {
 };
 exports.normalizeProjectStatus = normalizeProjectStatus;
 // Display status depends on who is viewing the job:
-// - applicant (non-owner) sees their own application's lens: applied / rejected / accepted...
+// - applicant (non-owner) sees their own application's lens. Once accepted,
+//   the job itself is active; the applicationStatus remains accepted.
 // - creator (owner) sees the job lens: listed (no active applications) or in review.
 const resolveJobDisplayStatus = (job, viewerUserId) => {
     const status = job?.status;
@@ -96,7 +97,7 @@ const resolveJobDisplayStatus = (job, viewerUserId) => {
     if (myStatus === project_enum_1.ProjectStatusEnum.rejected || myStatus === 'rejected')
         return project_enum_1.ProjectStatusEnum.rejected;
     if (myStatus === project_enum_1.ProjectStatusEnum.accepted || myStatus === 'accepted')
-        return project_enum_1.ProjectStatusEnum.accepted;
+        return jobs_enum_1.JobStatusEnum.active;
     if (myStatus === project_enum_1.ProjectStatusEnum.applied || myStatus === 'pending')
         return project_enum_1.ProjectStatusEnum.applied;
     if (myStatus)
@@ -726,7 +727,7 @@ const fetchUserJobApplications = async (userId, skip, limit, status, page, searc
         if (myStatus === "rejected")
             plain.status = project_enum_1.ProjectStatusEnum.rejected;
         else if (myStatus === "accepted")
-            plain.status = project_enum_1.ProjectStatusEnum.accepted;
+            plain.status = jobs_enum_1.JobStatusEnum.active;
         else if (myStatus === "applied" || myStatus === "pending")
             plain.status = project_enum_1.ProjectStatusEnum.applied;
         else if (plain.status === jobs_enum_1.JobStatusEnum.pending)
@@ -773,7 +774,7 @@ const fetchUserApplications = async (userId, skip, limit, status, page) => {
         if (myStatus === "rejected")
             plain.status = project_enum_1.ProjectStatusEnum.rejected;
         else if (myStatus === "accepted")
-            plain.status = project_enum_1.ProjectStatusEnum.accepted;
+            plain.status = jobs_enum_1.JobStatusEnum.active;
         else if (myStatus === "applied" || myStatus === "pending")
             plain.status = project_enum_1.ProjectStatusEnum.applied;
         else if (plain.status === jobs_enum_1.JobStatusEnum.pending)

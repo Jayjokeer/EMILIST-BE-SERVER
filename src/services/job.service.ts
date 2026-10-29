@@ -29,7 +29,8 @@ export const normalizeProjectStatus = (status?: string | null): string | null =>
 };
 
 // Display status depends on who is viewing the job:
-// - applicant (non-owner) sees their own application's lens: applied / rejected / accepted...
+// - applicant (non-owner) sees their own application's lens. Once accepted,
+//   the job itself is active; the applicationStatus remains accepted.
 // - creator (owner) sees the job lens: listed (no active applications) or in review.
 export const resolveJobDisplayStatus = (job: any, viewerUserId?: string | null) => {
   const status = job?.status;
@@ -54,7 +55,7 @@ export const resolveJobDisplayStatus = (job: any, viewerUserId?: string | null) 
     : undefined;
   const myStatus = mine ? String((mine as any)?.status || '').toLowerCase() : null;
   if (myStatus === ProjectStatusEnum.rejected || myStatus === 'rejected') return ProjectStatusEnum.rejected;
-  if (myStatus === ProjectStatusEnum.accepted || myStatus === 'accepted') return ProjectStatusEnum.accepted;
+  if (myStatus === ProjectStatusEnum.accepted || myStatus === 'accepted') return JobStatusEnum.active;
   if (myStatus === ProjectStatusEnum.applied || myStatus === 'pending') return ProjectStatusEnum.applied;
   if (myStatus) return myStatus;
   // Legacy records may have persisted `in review`. For everyone except the
@@ -803,7 +804,7 @@ export const fetchUserJobApplications = async (
     const mine = apps.find((a: any) => a && a.user && String(a.user._id || a.user) === String(userId));
     const myStatus = mine ? String(mine.status || "").toLowerCase() : null;
     if (myStatus === "rejected") plain.status = ProjectStatusEnum.rejected;
-    else if (myStatus === "accepted") plain.status = ProjectStatusEnum.accepted;
+    else if (myStatus === "accepted") plain.status = JobStatusEnum.active;
     else if (myStatus === "applied" || myStatus === "pending") plain.status = ProjectStatusEnum.applied;
     else if (plain.status === JobStatusEnum.pending) plain.status = JobStatusEnum.listed;
     return plain;
@@ -854,7 +855,7 @@ export const fetchUserJobApplications = async (
       const mine = apps.find((a: any) => a && a.user && String(a.user._id || a.user) === String(userId));
       const myStatus = mine ? String(mine.status || "").toLowerCase() : String(status || "").toLowerCase();
       if (myStatus === "rejected") plain.status = ProjectStatusEnum.rejected;
-      else if (myStatus === "accepted") plain.status = ProjectStatusEnum.accepted;
+      else if (myStatus === "accepted") plain.status = JobStatusEnum.active;
       else if (myStatus === "applied" || myStatus === "pending") plain.status = ProjectStatusEnum.applied;
       else if (plain.status === JobStatusEnum.pending) plain.status = JobStatusEnum.listed;
       return plain;
