@@ -55,7 +55,11 @@ export const resolveJobDisplayStatus = (job: any, viewerUserId?: string | null) 
     : undefined;
   const myStatus = mine ? String((mine as any)?.status || '').toLowerCase() : null;
   if (myStatus === ProjectStatusEnum.rejected || myStatus === 'rejected') return ProjectStatusEnum.rejected;
-  if (myStatus === ProjectStatusEnum.accepted || myStatus === 'accepted') return JobStatusEnum.active;
+  if (myStatus === ProjectStatusEnum.accepted || myStatus === 'accepted') {
+    return [JobStatusEnum.active, JobStatusEnum.paused, JobStatusEnum.complete].includes(status)
+      ? status
+      : JobStatusEnum.active;
+  }
   if (myStatus === ProjectStatusEnum.applied || myStatus === 'pending') return ProjectStatusEnum.applied;
   if (myStatus) return myStatus;
   // Legacy records may have persisted `in review`. For everyone except the
@@ -1370,7 +1374,17 @@ const totalJobs = await RecurringJob.countDocuments()
   }
 };
 
+export const buildVisibleJobsQuery = (userId: string, userProjectIds: any[]) => ({
+  $or: [
+    { userId },
+    { acceptedApplicationId: { $in: userProjectIds } },
+  ],
+});
+
 export const fetchJobsByUserId = async(userId: string)=>{
-  const jobs = await Jobs.find({userId: userId}).populate('applications', 'status user');
+  const userProjects = await Project.find({ user: userId }).select('_id');
+  const userProjectIds = userProjects.map(project => project._id);
+  const jobs = await Jobs.find(buildVisibleJobsQuery(userId, userProjectIds))
+    .populate('applications', 'status user');
   return await withJobAttention(withJobsDisplayStatus(jobs, userId), userId);
 }

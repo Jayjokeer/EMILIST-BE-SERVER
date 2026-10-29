@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsByUserId = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
+exports.fetchJobsByUserId = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -96,8 +96,11 @@ const resolveJobDisplayStatus = (job, viewerUserId) => {
     const myStatus = mine ? String(mine?.status || '').toLowerCase() : null;
     if (myStatus === project_enum_1.ProjectStatusEnum.rejected || myStatus === 'rejected')
         return project_enum_1.ProjectStatusEnum.rejected;
-    if (myStatus === project_enum_1.ProjectStatusEnum.accepted || myStatus === 'accepted')
-        return jobs_enum_1.JobStatusEnum.active;
+    if (myStatus === project_enum_1.ProjectStatusEnum.accepted || myStatus === 'accepted') {
+        return [jobs_enum_1.JobStatusEnum.active, jobs_enum_1.JobStatusEnum.paused, jobs_enum_1.JobStatusEnum.complete].includes(status)
+            ? status
+            : jobs_enum_1.JobStatusEnum.active;
+    }
     if (myStatus === project_enum_1.ProjectStatusEnum.applied || myStatus === 'pending')
         return project_enum_1.ProjectStatusEnum.applied;
     if (myStatus)
@@ -1231,8 +1234,18 @@ const fetchAllRecurringJobs = async (userId, limit, page) => {
     };
 };
 exports.fetchAllRecurringJobs = fetchAllRecurringJobs;
+const buildVisibleJobsQuery = (userId, userProjectIds) => ({
+    $or: [
+        { userId },
+        { acceptedApplicationId: { $in: userProjectIds } },
+    ],
+});
+exports.buildVisibleJobsQuery = buildVisibleJobsQuery;
 const fetchJobsByUserId = async (userId) => {
-    const jobs = await jobs_model_1.default.find({ userId: userId }).populate('applications', 'status user');
+    const userProjects = await project_model_1.default.find({ user: userId }).select('_id');
+    const userProjectIds = userProjects.map(project => project._id);
+    const jobs = await jobs_model_1.default.find((0, exports.buildVisibleJobsQuery)(userId, userProjectIds))
+        .populate('applications', 'status user');
     return await withJobAttention((0, exports.withJobsDisplayStatus)(jobs, userId), userId);
 };
 exports.fetchJobsByUserId = fetchJobsByUserId;

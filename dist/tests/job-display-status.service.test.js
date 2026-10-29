@@ -8,6 +8,14 @@ const strict_1 = __importDefault(require("node:assert/strict"));
 const jobs_enum_1 = require("../src/enums/jobs.enum");
 const project_enum_1 = require("../src/enums/project.enum");
 const job_service_1 = require("../src/services/job.service");
+(0, node_test_1.default)('status endpoint includes jobs owned by or assigned to the artisan', () => {
+    strict_1.default.deepEqual((0, job_service_1.buildVisibleJobsQuery)('artisan-1', ['application-1']), {
+        $or: [
+            { userId: 'artisan-1' },
+            { acceptedApplicationId: { $in: ['application-1'] } },
+        ],
+    });
+});
 (0, node_test_1.default)('an accepted job is active from the artisan perspective', () => {
     const artisanId = 'artisan-1';
     const job = {
@@ -16,6 +24,26 @@ const job_service_1 = require("../src/services/job.service");
         applications: [{ user: artisanId, status: project_enum_1.ProjectStatusEnum.accepted }],
     };
     strict_1.default.equal((0, job_service_1.resolveJobDisplayStatus)(job, artisanId), jobs_enum_1.JobStatusEnum.active);
+});
+(0, node_test_1.default)('an accepted application follows the job lifecycle after activation', () => {
+    const artisanId = 'artisan-1';
+    const application = {
+        _id: 'application-1',
+        user: artisanId,
+        status: project_enum_1.ProjectStatusEnum.accepted,
+    };
+    strict_1.default.equal((0, job_service_1.resolveJobDisplayStatus)({
+        userId: 'owner-1',
+        acceptedApplicationId: application._id,
+        status: jobs_enum_1.JobStatusEnum.paused,
+        applications: [application],
+    }, artisanId), jobs_enum_1.JobStatusEnum.paused);
+    strict_1.default.equal((0, job_service_1.resolveJobDisplayStatus)({
+        userId: 'owner-1',
+        acceptedApplicationId: application._id,
+        status: jobs_enum_1.JobStatusEnum.complete,
+        applications: [application],
+    }, artisanId), jobs_enum_1.JobStatusEnum.complete);
 });
 (0, node_test_1.default)('application-only states remain visible to the artisan', () => {
     const artisanId = 'artisan-1';
