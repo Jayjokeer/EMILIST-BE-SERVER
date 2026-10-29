@@ -8,6 +8,35 @@ const strict_1 = __importDefault(require("node:assert/strict"));
 const jobs_enum_1 = require("../src/enums/jobs.enum");
 const project_enum_1 = require("../src/enums/project.enum");
 const job_service_1 = require("../src/services/job.service");
+(0, node_test_1.default)('invoice issue date is recorded once and preserved', () => {
+    const firstIssueDate = new Date('2026-10-29T10:00:00.000Z');
+    const invoice = { invoiceRaised: false };
+    (0, job_service_1.raiseMilestoneInvoice)(invoice, firstIssueDate);
+    (0, job_service_1.raiseMilestoneInvoice)(invoice, new Date('2026-10-30T10:00:00.000Z'));
+    strict_1.default.equal(invoice.invoiceRaised, true);
+    strict_1.default.equal(invoice.issuedAt, firstIssueDate);
+});
+(0, node_test_1.default)('legacy invoices expose a null issue date in job details', () => {
+    strict_1.default.deepEqual((0, job_service_1.serializeMilestoneWithInvoiceDate)({
+        status: jobs_enum_1.MilestoneEnum.completed,
+        invoice: { invoiceRaised: true },
+    }).invoice, {
+        invoiceRaised: true,
+        issuedAt: null,
+    });
+});
+(0, node_test_1.default)('completed milestone work does not complete the job before payment', () => {
+    strict_1.default.equal((0, job_service_1.areAllMilestonesCompletedAndPaid)([{
+            status: jobs_enum_1.MilestoneEnum.completed,
+            paymentStatus: jobs_enum_1.MilestonePaymentStatus.unpaid,
+        }]), false);
+});
+(0, node_test_1.default)('the job can complete after every completed milestone is paid', () => {
+    strict_1.default.equal((0, job_service_1.areAllMilestonesCompletedAndPaid)([
+        { status: jobs_enum_1.MilestoneEnum.completed, paymentStatus: jobs_enum_1.MilestonePaymentStatus.paid },
+        { status: jobs_enum_1.MilestoneEnum.completed, paymentStatus: jobs_enum_1.MilestonePaymentStatus.paid },
+    ]), true);
+});
 (0, node_test_1.default)('status endpoint includes jobs owned by or assigned to the artisan', () => {
     strict_1.default.deepEqual((0, job_service_1.buildVisibleJobsQuery)('artisan-1', ['application-1']), {
         $or: [

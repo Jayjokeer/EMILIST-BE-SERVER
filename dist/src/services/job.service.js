@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsByUserId = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
+exports.fetchJobsByUserId = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.serializeMilestoneWithInvoiceDate = exports.raiseMilestoneInvoice = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -69,6 +69,25 @@ const normalizeProjectStatus = (status) => {
     return status;
 };
 exports.normalizeProjectStatus = normalizeProjectStatus;
+const areAllMilestonesCompletedAndPaid = (milestones = []) => milestones.length > 0 && milestones.every(milestone => milestone.status === jobs_enum_1.MilestoneEnum.completed
+    && milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.paid);
+exports.areAllMilestonesCompletedAndPaid = areAllMilestonesCompletedAndPaid;
+const raiseMilestoneInvoice = (invoice, issuedAt = new Date()) => {
+    if (!invoice.issuedAt)
+        invoice.issuedAt = issuedAt;
+    invoice.invoiceRaised = true;
+    return invoice;
+};
+exports.raiseMilestoneInvoice = raiseMilestoneInvoice;
+const serializeMilestoneWithInvoiceDate = (milestone) => {
+    const plain = typeof milestone?.toObject === 'function' ? milestone.toObject() : { ...milestone };
+    plain.invoice = {
+        ...(plain.invoice || {}),
+        issuedAt: plain.invoice?.issuedAt ?? null,
+    };
+    return plain;
+};
+exports.serializeMilestoneWithInvoiceDate = serializeMilestoneWithInvoiceDate;
 // Display status depends on who is viewing the job:
 // - applicant (non-owner) sees their own application's lens. Once accepted,
 //   the job itself is active; the applicationStatus remains accepted.
@@ -416,12 +435,12 @@ const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5,
         }
         jobDueDate = (0, date_fns_1.add)(job.startDate, { days: cumulativeDays });
         milestones = job.milestones.map((milestone) => ({
-            ...milestone.toObject(),
+            ...(0, exports.serializeMilestoneWithInvoiceDate)(milestone),
             dueDate: (0, date_fns_1.add)(job.startDate, { days: cumulativeDays }),
         }));
     }
     else {
-        milestones = job.milestones;
+        milestones = job.milestones.map(exports.serializeMilestoneWithInvoiceDate);
     }
     const displayJob = (0, exports.withJobDisplayStatus)(job, viewerUserId);
     const [jobWithAttention] = await withJobAttention([displayJob], viewerUserId);

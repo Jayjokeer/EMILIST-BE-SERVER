@@ -1905,7 +1905,7 @@ Allowed \`status\` values: \`applied\`, \`accepted\`, \`rejected\`, \`pause\`, \
                 summary: "Update milestone status",
                 description: `The assigned expert (project.user) updates the status of a milestone.
 
-- \`completed\` activates the next milestone and, when all are complete, sets the job & project to \`completed\`.
+- \`completed\` records finished work, raises the invoice, and activates the next milestone. The job remains \`active\` while any completed milestone is unpaid.
 - \`note\` / \`additionalAmount\` can be attached to the milestone invoice when completing.`,
                 security: [{ bearerAuth: [] }],
                 parameters: [
@@ -1922,7 +1922,7 @@ Allowed \`status\` values: \`applied\`, \`accepted\`, \`rejected\`, \`pause\`, \
                     },
                 },
                 responses: {
-                    "200": { description: "Milestone updated - returns the full job", content: { "application/json": { example: { message: "success", data: { _id: "64f5c0a1b2c3d4e5f6a7b8c9", status: "active", milestones: [{ _id: "64fb0a1b2c3d4e5f6a7b8c9b", status: "completed", invoice: { note: "Work done and verified", additionalAmount: 5000, invoiceRaised: true } }] } } } } },
+                    "200": { description: "Milestone updated - returns the full job", content: { "application/json": { example: { message: "success", data: { _id: "64f5c0a1b2c3d4e5f6a7b8c9", status: "active", milestones: [{ _id: "64fb0a1b2c3d4e5f6a7b8c9b", status: "completed", invoice: { note: "Work done and verified", additionalAmount: 5000, invoiceRaised: true, issuedAt: "2026-10-29T10:00:00.000Z" } }] } } } } },
                     "400": { description: "Cannot update a pending job milestone" },
                     "401": { description: "Unauthorized" },
                     "404": { description: "Job, application or milestone not found" },
@@ -2010,7 +2010,7 @@ Allowed \`status\` values: \`applied\`, \`accepted\`, \`rejected\`, \`pause\`, \
             patch: {
                 tags: ["Jobs"],
                 summary: "Record a milestone payment (with optional receipt)",
-                description: `The job creator records that a milestone has been paid. Sends the receipt image under the \`image\` field and the other fields as form values.`,
+                description: `The job creator records that a milestone has been paid. Sends the receipt image under the \`image\` field and the other fields as form values. When every milestone is both completed and paid, the job and accepted project become \`completed\`.`,
                 security: [{ bearerAuth: [] }],
                 requestBody: {
                     required: true,
@@ -2626,6 +2626,7 @@ required fields for that type. Two media types are supported:
                             note: { type: "string" },
                             additionalAmount: { type: "number", default: 0 },
                             invoiceRaised: { type: "boolean", default: false },
+                            issuedAt: { type: "string", format: "date-time", nullable: true },
                         },
                     },
                 },

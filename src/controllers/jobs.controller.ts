@@ -1216,22 +1216,13 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
         nextMilestone.status = MilestoneEnum.active;
       }
 
-      const allMilestonesCompleted = job.milestones.every(
-        (m: any) => m.status === MilestoneEnum.completed
-      );
-  
-      if (allMilestonesCompleted) {
-        job.status = JobStatusEnum.complete;
-        project.status = ProjectStatusEnum.completed;
-        await project.save();
-      }
       if(note){
         milestone.invoice.note = note;
       }
       if(additionalAmount){
       milestone.invoice.additionalAmount = additionalAmount;
       }
-      milestone.invoice.invoiceRaised = true;
+      jobService.raiseMilestoneInvoice(milestone.invoice);
     }
     
     if(!milestone) throw new NotFoundError("Milestone not found");
@@ -1390,6 +1381,15 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
     }
     milestone.paymentStatus = MilestonePaymentStatus.paid;
 
+    if (jobService.areAllMilestonesCompletedAndPaid(job.milestones)) {
+      job.status = JobStatusEnum.complete;
+      const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
+      if (project) {
+        project.status = ProjectStatusEnum.completed;
+        await project.save();
+      }
+    }
+
     await job.save();
     const data = await jobService.fetchJobById(String(jobId));
 
@@ -1417,9 +1417,7 @@ export const closeContractController = catchAsync( async(req:JwtPayload, res: Re
   }
   if (job.isClosed) throw new BadRequestError('Contract is already closed!');
 
-  const allMilestonesCompletedAndPaid = job.milestones.every(
-    (milestone: any) => milestone.status === MilestoneEnum.completed && milestone.paymentStatus === MilestonePaymentStatus.paid
-  );
+  const allMilestonesCompletedAndPaid = jobService.areAllMilestonesCompletedAndPaid(job.milestones);
 
   if (!allMilestonesCompletedAndPaid) {
     throw new BadRequestError('All milestones must be completed and paid before closing the contract.');

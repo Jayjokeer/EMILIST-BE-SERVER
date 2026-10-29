@@ -1,8 +1,43 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { JobStatusEnum } from '../src/enums/jobs.enum';
+import { JobStatusEnum, MilestoneEnum, MilestonePaymentStatus } from '../src/enums/jobs.enum';
 import { ProjectStatusEnum } from '../src/enums/project.enum';
-import { buildVisibleJobsQuery, resolveJobDisplayStatus } from '../src/services/job.service';
+import { areAllMilestonesCompletedAndPaid, buildVisibleJobsQuery, raiseMilestoneInvoice, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate } from '../src/services/job.service';
+
+test('invoice issue date is recorded once and preserved', () => {
+  const firstIssueDate = new Date('2026-10-29T10:00:00.000Z');
+  const invoice: any = { invoiceRaised: false };
+
+  raiseMilestoneInvoice(invoice, firstIssueDate);
+  raiseMilestoneInvoice(invoice, new Date('2026-10-30T10:00:00.000Z'));
+
+  assert.equal(invoice.invoiceRaised, true);
+  assert.equal(invoice.issuedAt, firstIssueDate);
+});
+
+test('legacy invoices expose a null issue date in job details', () => {
+  assert.deepEqual(serializeMilestoneWithInvoiceDate({
+    status: MilestoneEnum.completed,
+    invoice: { invoiceRaised: true },
+  }).invoice, {
+    invoiceRaised: true,
+    issuedAt: null,
+  });
+});
+
+test('completed milestone work does not complete the job before payment', () => {
+  assert.equal(areAllMilestonesCompletedAndPaid([{
+    status: MilestoneEnum.completed,
+    paymentStatus: MilestonePaymentStatus.unpaid,
+  }]), false);
+});
+
+test('the job can complete after every completed milestone is paid', () => {
+  assert.equal(areAllMilestonesCompletedAndPaid([
+    { status: MilestoneEnum.completed, paymentStatus: MilestonePaymentStatus.paid },
+    { status: MilestoneEnum.completed, paymentStatus: MilestonePaymentStatus.paid },
+  ]), true);
+});
 
 test('status endpoint includes jobs owned by or assigned to the artisan', () => {
   assert.deepEqual(buildVisibleJobsQuery('artisan-1', ['application-1']), {

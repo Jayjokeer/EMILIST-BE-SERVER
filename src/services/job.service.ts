@@ -3,7 +3,7 @@ import Jobs from "../models/jobs.model";
 import  JobLike  from "../models/joblike.model";
 import Project from "../models/project.model";
 import { BadRequestError, NotFoundError } from "../errors/error";
-import { JobStatusEnum, JobType, MilestoneEnum } from "../enums/jobs.enum";
+import { JobStatusEnum, JobType, MilestoneEnum, MilestonePaymentStatus } from "../enums/jobs.enum";
 import { ProjectStatusEnum } from "../enums/project.enum";
 import { add, format, startOfDay } from 'date-fns';
 import moment from "moment";
@@ -26,6 +26,27 @@ export const normalizeProjectStatus = (status?: string | null): string | null =>
   const value = String(status).toLowerCase().trim();
   if (value === 'pending') return ProjectStatusEnum.applied;
   return status as string;
+};
+
+export const areAllMilestonesCompletedAndPaid = (milestones: any[] = []) =>
+  milestones.length > 0 && milestones.every(
+    milestone => milestone.status === MilestoneEnum.completed
+      && milestone.paymentStatus === MilestonePaymentStatus.paid,
+  );
+
+export const raiseMilestoneInvoice = (invoice: any, issuedAt = new Date()) => {
+  if (!invoice.issuedAt) invoice.issuedAt = issuedAt;
+  invoice.invoiceRaised = true;
+  return invoice;
+};
+
+export const serializeMilestoneWithInvoiceDate = (milestone: any) => {
+  const plain = typeof milestone?.toObject === 'function' ? milestone.toObject() : { ...milestone };
+  plain.invoice = {
+    ...(plain.invoice || {}),
+    issuedAt: plain.invoice?.issuedAt ?? null,
+  };
+  return plain;
 };
 
 // Display status depends on who is viewing the job:
@@ -442,11 +463,11 @@ export const fetchJobByIdWithDetails = async (
 
     jobDueDate = add(job.startDate, { days: cumulativeDays });
     milestones = job.milestones.map((milestone: any) => ({
-      ...milestone.toObject(),
+      ...serializeMilestoneWithInvoiceDate(milestone),
       dueDate: add(job.startDate!, { days: cumulativeDays }),
     }));
   } else {
-    milestones = job.milestones;
+    milestones = job.milestones.map(serializeMilestoneWithInvoiceDate);
   }
 
   const displayJob = withJobDisplayStatus(job, viewerUserId);

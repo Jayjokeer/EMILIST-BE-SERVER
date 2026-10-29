@@ -40,7 +40,8 @@ const MilestoneSchema = new Schema<IMilestone>({
     invoice: {
       note: {type: String},
       additionalAmount: {type: Number, default: 0},
-      invoiceRaised: {type: Boolean, default: false}
+      invoiceRaised: {type: Boolean, default: false},
+      issuedAt: {type: Date}
       }
   });
 

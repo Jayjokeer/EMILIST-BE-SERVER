@@ -1112,19 +1112,13 @@ exports.updateMilestoneStatusController = (0, error_handler_1.catchAsync)(async 
         if (nextMilestone && nextMilestone.status === jobs_enum_1.MilestoneEnum.pending) {
             nextMilestone.status = jobs_enum_1.MilestoneEnum.active;
         }
-        const allMilestonesCompleted = job.milestones.every((m) => m.status === jobs_enum_1.MilestoneEnum.completed);
-        if (allMilestonesCompleted) {
-            job.status = jobs_enum_1.JobStatusEnum.complete;
-            project.status = project_enum_1.ProjectStatusEnum.completed;
-            await project.save();
-        }
         if (note) {
             milestone.invoice.note = note;
         }
         if (additionalAmount) {
             milestone.invoice.additionalAmount = additionalAmount;
         }
-        milestone.invoice.invoiceRaised = true;
+        jobService.raiseMilestoneInvoice(milestone.invoice);
     }
     if (!milestone)
         throw new error_1.NotFoundError("Milestone not found");
@@ -1274,6 +1268,14 @@ exports.updateMilestonePaymentController = (0, error_handler_1.catchAsync)(async
         milestone.paymentInfo.paymentReciept = req.file.path;
     }
     milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.paid;
+    if (jobService.areAllMilestonesCompletedAndPaid(job.milestones)) {
+        job.status = jobs_enum_1.JobStatusEnum.complete;
+        const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
+        if (project) {
+            project.status = project_enum_1.ProjectStatusEnum.completed;
+            await project.save();
+        }
+    }
     await job.save();
     const data = await jobService.fetchJobById(String(jobId));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
@@ -1296,7 +1298,7 @@ exports.closeContractController = (0, error_handler_1.catchAsync)(async (req, re
     }
     if (job.isClosed)
         throw new error_1.BadRequestError('Contract is already closed!');
-    const allMilestonesCompletedAndPaid = job.milestones.every((milestone) => milestone.status === jobs_enum_1.MilestoneEnum.completed && milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.paid);
+    const allMilestonesCompletedAndPaid = jobService.areAllMilestonesCompletedAndPaid(job.milestones);
     if (!allMilestonesCompletedAndPaid) {
         throw new error_1.BadRequestError('All milestones must be completed and paid before closing the contract.');
     }
