@@ -526,6 +526,23 @@ export const validateMilestoneStatusUpdate = (req: Request, res: Response, next:
 
   next();
 };
+
+export const validateMilestoneRejection = (req: Request, res: Response, next: NextFunction) => {
+  const { error } = Joi.object({
+    reason: Joi.string().trim().min(3).max(1000).required().messages({
+      'string.empty': 'Rejection reason is required',
+      'string.min': 'Rejection reason must be at least 3 characters',
+      'string.max': 'Rejection reason cannot exceed 1000 characters',
+      'any.required': 'Rejection reason is required',
+    }),
+  }).validate(req.body, { abortEarly: false });
+
+  if (error) {
+    res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+    return;
+  }
+  next();
+};
 export const validatePostQuote = (req: Request, res: Response, next: NextFunction) => {
   const quoteValidation = Joi.object({
     totalAmount: Joi.number().required().messages({

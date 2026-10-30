@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as jobController from "../controllers/jobs.controller";
-import { validateAttentionViewed, validateCounterBid, validateCounterBidResponse, validateJob, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateRecurringJob, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
+import { validateAttentionViewed, validateCounterBid, validateCounterBidResponse, validateJob, validateMilestoneRejection, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateRecurringJob, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
 import { optionalUserAuth, userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload, parseJobBody } from "../utils/image-upload";
 import * as paymentController from "../controllers/payment.controller";
@@ -34,6 +34,7 @@ router.route("/accept-direct-job/:projectId").patch(userAuth, jobController.acce
 router.route("/fetch-applied-jobs-by-status").get(userAuth, jobController.fetchUserAppliedJobsController);
 router.route("/fetch-applications-by-status").get(userAuth, jobController.fetchApplicationByStatusController);
 router.route("/update-milestone-status/:jobId/milestone/:milestoneId").patch(userAuth,validateMilestoneStatusUpdate, jobController.updateMilestoneStatusController);
+router.route("/reject-milestone/:jobId/milestone/:milestoneId").patch(userAuth,validateMilestoneRejection, jobController.rejectMilestoneController);
 router.route("/request-for-quote/:jobId").patch(userAuth, jobController.requestForQuoteController);
 router.route("/post-quote").patch(userAuth, validatePostQuote, jobController.postQuoteController);
 router.route("/update-quote-status/:projectId").patch(userAuth, jobController.acceptQuoteController);

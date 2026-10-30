@@ -69,6 +69,7 @@ router.route("/accept-direct-job/:projectId").patch(current_user_1.userAuth, job
 router.route("/fetch-applied-jobs-by-status").get(current_user_1.userAuth, jobController.fetchUserAppliedJobsController);
 router.route("/fetch-applications-by-status").get(current_user_1.userAuth, jobController.fetchApplicationByStatusController);
 router.route("/update-milestone-status/:jobId/milestone/:milestoneId").patch(current_user_1.userAuth, job_validation_1.validateMilestoneStatusUpdate, jobController.updateMilestoneStatusController);
+router.route("/reject-milestone/:jobId/milestone/:milestoneId").patch(current_user_1.userAuth, job_validation_1.validateMilestoneRejection, jobController.rejectMilestoneController);
 router.route("/request-for-quote/:jobId").patch(current_user_1.userAuth, jobController.requestForQuoteController);
 router.route("/post-quote").patch(current_user_1.userAuth, job_validation_1.validatePostQuote, jobController.postQuoteController);
 router.route("/update-quote-status/:projectId").patch(current_user_1.userAuth, jobController.acceptQuoteController);

@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsByUserId = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.serializeMilestoneWithInvoiceDate = exports.raiseMilestoneInvoice = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
+exports.fetchJobsByUserId = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -72,17 +72,29 @@ exports.normalizeProjectStatus = normalizeProjectStatus;
 const areAllMilestonesCompletedAndPaid = (milestones = []) => milestones.length > 0 && milestones.every(milestone => milestone.status === jobs_enum_1.MilestoneEnum.completed
     && milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.paid);
 exports.areAllMilestonesCompletedAndPaid = areAllMilestonesCompletedAndPaid;
-const raiseMilestoneInvoice = (invoice, issuedAt = new Date()) => {
+const raiseMilestoneInvoice = (invoice, issuedAt = new Date(), invoiceId = new mongoose_1.Types.ObjectId()) => {
+    if (!invoice.invoiceId)
+        invoice.invoiceId = invoiceId;
     if (!invoice.issuedAt)
         invoice.issuedAt = issuedAt;
     invoice.invoiceRaised = true;
+    invoice.reviewStatus = 'pending';
     return invoice;
 };
 exports.raiseMilestoneInvoice = raiseMilestoneInvoice;
+const rejectCompletedMilestone = (milestone, reason, rejectedAt = new Date()) => {
+    milestone.status = jobs_enum_1.MilestoneEnum.active;
+    milestone.invoice.reviewStatus = 'rejected';
+    milestone.invoice.rejectedAt = rejectedAt;
+    milestone.invoice.rejectionReason = reason;
+    return milestone;
+};
+exports.rejectCompletedMilestone = rejectCompletedMilestone;
 const serializeMilestoneWithInvoiceDate = (milestone) => {
     const plain = typeof milestone?.toObject === 'function' ? milestone.toObject() : { ...milestone };
     plain.invoice = {
         ...(plain.invoice || {}),
+        invoiceId: plain.invoice?.invoiceId ?? null,
         issuedAt: plain.invoice?.issuedAt ?? null,
     };
     return plain;

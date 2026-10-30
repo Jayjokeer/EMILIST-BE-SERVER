@@ -1232,6 +1232,48 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
 
     return  successResponse(res, StatusCodes.OK, data);
   });
+
+  export const rejectMilestoneController = catchAsync(async (req: JwtPayload, res: Response) => {
+    const { jobId, milestoneId } = req.params;
+    const { reason } = req.body;
+    const job = await jobService.fetchJobById(String(jobId));
+
+    if (!job) throw new NotFoundError('Job not found!');
+    if (String(job.userId) !== String(req.user.id)) {
+      throw new UnauthorizedError('Only the job owner can reject a milestone!');
+    }
+
+    const milestoneIndex = job.milestones.findIndex(
+      (item: any) => String(item._id) === String(milestoneId),
+    );
+    if (milestoneIndex === -1) throw new NotFoundError('Milestone not found!');
+
+    const milestone = job.milestones[milestoneIndex];
+    if (milestone.status !== MilestoneEnum.completed) {
+      throw new BadRequestError('Only a completed milestone can be rejected!');
+    }
+    if (milestone.paymentStatus === MilestonePaymentStatus.paid) {
+      throw new BadRequestError('A paid milestone cannot be rejected!');
+    }
+
+    jobService.rejectCompletedMilestone(milestone, reason);
+    const nextMilestone = job.milestones[milestoneIndex + 1];
+    if (nextMilestone?.status === MilestoneEnum.active
+      && nextMilestone.paymentStatus !== MilestonePaymentStatus.paid) {
+      nextMilestone.status = MilestoneEnum.pending;
+    }
+    job.status = JobStatusEnum.active;
+
+    const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
+    if (project && project.status === ProjectStatusEnum.completed) {
+      project.status = ProjectStatusEnum.accepted;
+      await project.save();
+    }
+
+    await job.save();
+    const data = await jobService.fetchJobById(String(jobId));
+    return successResponse(res, StatusCodes.OK, data);
+  });
   export const requestForQuoteController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {jobId} = req.params;
     const loggedInUser =  req.user;
@@ -1380,6 +1422,7 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
       milestone.paymentInfo.paymentReciept = req.file.path;
     }
     milestone.paymentStatus = MilestonePaymentStatus.paid;
+    milestone.invoice.reviewStatus = 'paid';
 
     if (jobService.areAllMilestonesCompletedAndPaid(job.milestones)) {
       job.status = JobStatusEnum.complete;

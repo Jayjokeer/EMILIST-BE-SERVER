@@ -34,16 +34,35 @@ export const areAllMilestonesCompletedAndPaid = (milestones: any[] = []) =>
       && milestone.paymentStatus === MilestonePaymentStatus.paid,
   );
 
-export const raiseMilestoneInvoice = (invoice: any, issuedAt = new Date()) => {
+export const raiseMilestoneInvoice = (
+  invoice: any,
+  issuedAt = new Date(),
+  invoiceId: any = new Types.ObjectId(),
+) => {
+  if (!invoice.invoiceId) invoice.invoiceId = invoiceId;
   if (!invoice.issuedAt) invoice.issuedAt = issuedAt;
   invoice.invoiceRaised = true;
+  invoice.reviewStatus = 'pending';
   return invoice;
+};
+
+export const rejectCompletedMilestone = (
+  milestone: any,
+  reason: string,
+  rejectedAt = new Date(),
+) => {
+  milestone.status = MilestoneEnum.active;
+  milestone.invoice.reviewStatus = 'rejected';
+  milestone.invoice.rejectedAt = rejectedAt;
+  milestone.invoice.rejectionReason = reason;
+  return milestone;
 };
 
 export const serializeMilestoneWithInvoiceDate = (milestone: any) => {
   const plain = typeof milestone?.toObject === 'function' ? milestone.toObject() : { ...milestone };
   plain.invoice = {
     ...(plain.invoice || {}),
+    invoiceId: plain.invoice?.invoiceId ?? null,
     issuedAt: plain.invoice?.issuedAt ?? null,
   };
   return plain;

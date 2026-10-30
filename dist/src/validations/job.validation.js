@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneStatusUpdate = exports.validateAttentionViewed = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = void 0;
+exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneRejection = exports.validateMilestoneStatusUpdate = exports.validateAttentionViewed = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = void 0;
 const joi_1 = __importDefault(require("joi"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 // ===================== SHARED REUSABLE SCHEMAS =====================
@@ -495,6 +495,22 @@ const validateMilestoneStatusUpdate = (req, res, next) => {
     next();
 };
 exports.validateMilestoneStatusUpdate = validateMilestoneStatusUpdate;
+const validateMilestoneRejection = (req, res, next) => {
+    const { error } = joi_1.default.object({
+        reason: joi_1.default.string().trim().min(3).max(1000).required().messages({
+            'string.empty': 'Rejection reason is required',
+            'string.min': 'Rejection reason must be at least 3 characters',
+            'string.max': 'Rejection reason cannot exceed 1000 characters',
+            'any.required': 'Rejection reason is required',
+        }),
+    }).validate(req.body, { abortEarly: false });
+    if (error) {
+        res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+        return;
+    }
+    next();
+};
+exports.validateMilestoneRejection = validateMilestoneRejection;
 const validatePostQuote = (req, res, next) => {
     const quoteValidation = joi_1.default.object({
         totalAmount: joi_1.default.number().required().messages({

@@ -10,10 +10,12 @@ const project_enum_1 = require("../src/enums/project.enum");
 const job_service_1 = require("../src/services/job.service");
 (0, node_test_1.default)('invoice issue date is recorded once and preserved', () => {
     const firstIssueDate = new Date('2026-10-29T10:00:00.000Z');
+    const firstInvoiceId = 'invoice-1';
     const invoice = { invoiceRaised: false };
-    (0, job_service_1.raiseMilestoneInvoice)(invoice, firstIssueDate);
-    (0, job_service_1.raiseMilestoneInvoice)(invoice, new Date('2026-10-30T10:00:00.000Z'));
+    (0, job_service_1.raiseMilestoneInvoice)(invoice, firstIssueDate, firstInvoiceId);
+    (0, job_service_1.raiseMilestoneInvoice)(invoice, new Date('2026-10-30T10:00:00.000Z'), 'invoice-2');
     strict_1.default.equal(invoice.invoiceRaised, true);
+    strict_1.default.equal(invoice.invoiceId, firstInvoiceId);
     strict_1.default.equal(invoice.issuedAt, firstIssueDate);
 });
 (0, node_test_1.default)('legacy invoices expose a null issue date in job details', () => {
@@ -22,8 +24,22 @@ const job_service_1 = require("../src/services/job.service");
         invoice: { invoiceRaised: true },
     }).invoice, {
         invoiceRaised: true,
+        invoiceId: null,
         issuedAt: null,
     });
+});
+(0, node_test_1.default)('owner rejection reactivates completed work and records the reason', () => {
+    const rejectedAt = new Date('2026-10-30T09:00:00.000Z');
+    const milestone = {
+        status: jobs_enum_1.MilestoneEnum.completed,
+        paymentStatus: jobs_enum_1.MilestonePaymentStatus.unpaid,
+        invoice: { invoiceRaised: true, reviewStatus: 'pending' },
+    };
+    (0, job_service_1.rejectCompletedMilestone)(milestone, 'Please correct the leaking joint.', rejectedAt);
+    strict_1.default.equal(milestone.status, jobs_enum_1.MilestoneEnum.active);
+    strict_1.default.equal(milestone.invoice.reviewStatus, 'rejected');
+    strict_1.default.equal(milestone.invoice.rejectionReason, 'Please correct the leaking joint.');
+    strict_1.default.equal(milestone.invoice.rejectedAt, rejectedAt);
 });
 (0, node_test_1.default)('completed milestone work does not complete the job before payment', () => {
     strict_1.default.equal((0, job_service_1.areAllMilestonesCompletedAndPaid)([{

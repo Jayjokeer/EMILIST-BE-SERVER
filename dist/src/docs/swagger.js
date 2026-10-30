@@ -1922,10 +1922,39 @@ Allowed \`status\` values: \`applied\`, \`accepted\`, \`rejected\`, \`pause\`, \
                     },
                 },
                 responses: {
-                    "200": { description: "Milestone updated - returns the full job", content: { "application/json": { example: { message: "success", data: { _id: "64f5c0a1b2c3d4e5f6a7b8c9", status: "active", milestones: [{ _id: "64fb0a1b2c3d4e5f6a7b8c9b", status: "completed", invoice: { note: "Work done and verified", additionalAmount: 5000, invoiceRaised: true, issuedAt: "2026-10-29T10:00:00.000Z" } }] } } } } },
+                    "200": { description: "Milestone updated - returns the full job", content: { "application/json": { example: { message: "success", data: { _id: "64f5c0a1b2c3d4e5f6a7b8c9", status: "active", milestones: [{ _id: "64fb0a1b2c3d4e5f6a7b8c9b", status: "completed", invoice: { invoiceId: "690350c02c3f5f56cc7537f1", note: "Work done and verified", additionalAmount: 5000, invoiceRaised: true, issuedAt: "2026-10-29T10:00:00.000Z" } }] } } } } },
                     "400": { description: "Cannot update a pending job milestone" },
                     "401": { description: "Unauthorized" },
                     "404": { description: "Job, application or milestone not found" },
+                },
+            },
+        },
+        "/jobs/reject-milestone/{jobId}/milestone/{milestoneId}": {
+            patch: {
+                tags: ["Jobs"],
+                summary: "Reject a completed milestone",
+                description: `The job owner rejects an unpaid milestone submitted as completed by the assigned artisan.
+
+The milestone returns to \`active\`, its invoice review status becomes \`rejected\`, and the job remains \`active\`. A paid milestone cannot be rejected.`,
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    { name: "jobId", in: "path", required: true, schema: { type: "string" } },
+                    { name: "milestoneId", in: "path", required: true, schema: { type: "string" } },
+                ],
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: { type: "object", required: ["reason"], properties: { reason: { type: "string", minLength: 3, maxLength: 1000 } } },
+                            example: { reason: "Please correct the leaking joint and resubmit." },
+                        },
+                    },
+                },
+                responses: {
+                    "200": { description: "Milestone rejected and returned to active" },
+                    "400": { description: "Milestone is not completed or has already been paid" },
+                    "401": { description: "Only the job owner may reject the milestone" },
+                    "404": { description: "Job or milestone not found" },
                 },
             },
         },
@@ -2626,7 +2655,11 @@ required fields for that type. Two media types are supported:
                             note: { type: "string" },
                             additionalAmount: { type: "number", default: 0 },
                             invoiceRaised: { type: "boolean", default: false },
+                            invoiceId: { type: "string", nullable: true },
                             issuedAt: { type: "string", format: "date-time", nullable: true },
+                            reviewStatus: { type: "string", enum: ["pending", "rejected", "paid"], nullable: true },
+                            rejectedAt: { type: "string", format: "date-time", nullable: true },
+                            rejectionReason: { type: "string", nullable: true },
                         },
                     },
                 },

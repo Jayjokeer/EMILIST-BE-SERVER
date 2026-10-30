@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.delistJobController = exports.listJobController = exports.markApplicationAttentionViewedController = exports.markJobAttentionViewedController = exports.respondToCounterBidController = exports.counterBidController = exports.fetchApplicationByIdController = exports.fetchJobApplicantsController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
+exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.rejectMilestoneController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.delistJobController = exports.listJobController = exports.markApplicationAttentionViewedController = exports.markJobAttentionViewedController = exports.respondToCounterBidController = exports.counterBidController = exports.fetchApplicationByIdController = exports.fetchJobApplicantsController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -1127,6 +1127,41 @@ exports.updateMilestoneStatusController = (0, error_handler_1.catchAsync)(async 
     const data = await jobService.fetchJobById(String(jobId));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
+exports.rejectMilestoneController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const { jobId, milestoneId } = req.params;
+    const { reason } = req.body;
+    const job = await jobService.fetchJobById(String(jobId));
+    if (!job)
+        throw new error_1.NotFoundError('Job not found!');
+    if (String(job.userId) !== String(req.user.id)) {
+        throw new error_1.UnauthorizedError('Only the job owner can reject a milestone!');
+    }
+    const milestoneIndex = job.milestones.findIndex((item) => String(item._id) === String(milestoneId));
+    if (milestoneIndex === -1)
+        throw new error_1.NotFoundError('Milestone not found!');
+    const milestone = job.milestones[milestoneIndex];
+    if (milestone.status !== jobs_enum_1.MilestoneEnum.completed) {
+        throw new error_1.BadRequestError('Only a completed milestone can be rejected!');
+    }
+    if (milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.paid) {
+        throw new error_1.BadRequestError('A paid milestone cannot be rejected!');
+    }
+    jobService.rejectCompletedMilestone(milestone, reason);
+    const nextMilestone = job.milestones[milestoneIndex + 1];
+    if (nextMilestone?.status === jobs_enum_1.MilestoneEnum.active
+        && nextMilestone.paymentStatus !== jobs_enum_1.MilestonePaymentStatus.paid) {
+        nextMilestone.status = jobs_enum_1.MilestoneEnum.pending;
+    }
+    job.status = jobs_enum_1.JobStatusEnum.active;
+    const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
+    if (project && project.status === project_enum_1.ProjectStatusEnum.completed) {
+        project.status = project_enum_1.ProjectStatusEnum.accepted;
+        await project.save();
+    }
+    await job.save();
+    const data = await jobService.fetchJobById(String(jobId));
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
 exports.requestForQuoteController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { jobId } = req.params;
     const loggedInUser = req.user;
@@ -1268,6 +1303,7 @@ exports.updateMilestonePaymentController = (0, error_handler_1.catchAsync)(async
         milestone.paymentInfo.paymentReciept = req.file.path;
     }
     milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.paid;
+    milestone.invoice.reviewStatus = 'paid';
     if (jobService.areAllMilestonesCompletedAndPaid(job.milestones)) {
         job.status = jobs_enum_1.JobStatusEnum.complete;
         const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));

@@ -2,16 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JobStatusEnum, MilestoneEnum, MilestonePaymentStatus } from '../src/enums/jobs.enum';
 import { ProjectStatusEnum } from '../src/enums/project.enum';
-import { areAllMilestonesCompletedAndPaid, buildVisibleJobsQuery, raiseMilestoneInvoice, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate } from '../src/services/job.service';
+import { areAllMilestonesCompletedAndPaid, buildVisibleJobsQuery, raiseMilestoneInvoice, rejectCompletedMilestone, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate } from '../src/services/job.service';
 
 test('invoice issue date is recorded once and preserved', () => {
   const firstIssueDate = new Date('2026-10-29T10:00:00.000Z');
+  const firstInvoiceId = 'invoice-1';
   const invoice: any = { invoiceRaised: false };
 
-  raiseMilestoneInvoice(invoice, firstIssueDate);
-  raiseMilestoneInvoice(invoice, new Date('2026-10-30T10:00:00.000Z'));
+  raiseMilestoneInvoice(invoice, firstIssueDate, firstInvoiceId);
+  raiseMilestoneInvoice(invoice, new Date('2026-10-30T10:00:00.000Z'), 'invoice-2');
 
   assert.equal(invoice.invoiceRaised, true);
+  assert.equal(invoice.invoiceId, firstInvoiceId);
   assert.equal(invoice.issuedAt, firstIssueDate);
 });
 
@@ -21,8 +23,25 @@ test('legacy invoices expose a null issue date in job details', () => {
     invoice: { invoiceRaised: true },
   }).invoice, {
     invoiceRaised: true,
+    invoiceId: null,
     issuedAt: null,
   });
+});
+
+test('owner rejection reactivates completed work and records the reason', () => {
+  const rejectedAt = new Date('2026-10-30T09:00:00.000Z');
+  const milestone: any = {
+    status: MilestoneEnum.completed,
+    paymentStatus: MilestonePaymentStatus.unpaid,
+    invoice: { invoiceRaised: true, reviewStatus: 'pending' },
+  };
+
+  rejectCompletedMilestone(milestone, 'Please correct the leaking joint.', rejectedAt);
+
+  assert.equal(milestone.status, MilestoneEnum.active);
+  assert.equal(milestone.invoice.reviewStatus, 'rejected');
+  assert.equal(milestone.invoice.rejectionReason, 'Please correct the leaking joint.');
+  assert.equal(milestone.invoice.rejectedAt, rejectedAt);
 });
 
 test('completed milestone work does not complete the job before payment', () => {
