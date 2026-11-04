@@ -89,9 +89,24 @@ const fetchAdminPaymentSummary = async (rangeValue, currencyValue) => {
     const withdrawalMatch = { currency, serviceType: transaction_enum_1.ServiceEnum.withdrawal, status: transaction_enum_1.TransactionEnum.pending };
     const failedMatch = { currency, status: { $in: [transaction_enum_1.TransactionEnum.failed, transaction_enum_1.TransactionEnum.declined] } };
     const volumeMatch = { currency, status: transaction_enum_1.TransactionEnum.completed };
-    const [escrow, walletRows, pendingWithdrawals, failedTransactions, grossVolume, escrowChange, withdrawalChange, failedChange, volumeChange] = await Promise.all([
+    const [escrow, escrowRecords, walletRows, walletNetRows, pendingWithdrawals, failedTransactions, grossVolume, escrowChange, withdrawalChange, failedChange, volumeChange] = await Promise.all([
         amountAggregate(transaction_model_1.default, escrowMatch),
+        transaction_model_1.default.aggregate([
+            { $match: escrowMatch },
+            { $project: { recordId: { $ifNull: ["$jobId", "$orderId"] } } },
+            { $match: { recordId: { $ne: null } } },
+            { $group: { _id: "$recordId" } },
+            { $count: "count" },
+        ]),
         wallet_model_1.default.aggregate([{ $match: { currency } }, { $group: { _id: null, amount: { $sum: "$balance" }, count: { $sum: 1 } } }]),
+        transaction_model_1.default.aggregate([
+            { $match: { currency, status: transaction_enum_1.TransactionEnum.completed, createdAt: { $gte: range.currentStart, $lte: range.currentEnd } } },
+            { $group: {
+                    _id: null,
+                    credits: { $sum: { $cond: [{ $eq: ["$type", transaction_enum_1.TransactionType.CREDIT] }, "$amount", 0] } },
+                    debits: { $sum: { $cond: [{ $eq: ["$type", transaction_enum_1.TransactionType.DEBIT] }, "$amount", 0] } },
+                } },
+        ]),
         amountAggregate(transaction_model_1.default, withdrawalMatch),
         amountAggregate(transaction_model_1.default, { ...failedMatch, createdAt: { $gte: range.currentStart, $lte: range.currentEnd } }),
         amountAggregate(transaction_model_1.default, { ...volumeMatch, createdAt: { $gte: range.currentStart, $lte: range.currentEnd } }),
@@ -100,11 +115,19 @@ const fetchAdminPaymentSummary = async (rangeValue, currencyValue) => {
         comparison(failedMatch, range),
         comparison(volumeMatch, range),
     ]);
-    const userBalance = { amount: walletRows[0]?.amount || 0, wallets: walletRows[0]?.count || 0 };
+    const userBalanceAmount = walletRows[0]?.amount || 0;
+    const walletNetChange = (walletNetRows[0]?.credits || 0) - (walletNetRows[0]?.debits || 0);
+    const estimatedPreviousBalance = userBalanceAmount - walletNetChange;
+    const userBalance = {
+        amount: userBalanceAmount,
+        wallets: walletRows[0]?.count || 0,
+        estimatedPreviousBalance,
+        change: (0, admin_overview_service_1.percentageChange)(userBalanceAmount, estimatedPreviousBalance),
+    };
     return {
         range: range.range,
         currency,
-        totalEscrowBalance: { ...escrow, activeRecords: escrow.count, change: escrowChange.percentageChange },
+        totalEscrowBalance: { ...escrow, activeRecords: escrowRecords[0]?.count || 0, change: escrowChange.percentageChange },
         totalUserBalance: userBalance,
         pendingWithdrawals: { ...pendingWithdrawals, requests: pendingWithdrawals.count, change: withdrawalChange.percentageChange },
         failedTransactions: { ...failedTransactions, value: failedTransactions.amount, change: failedChange.percentageChange },
