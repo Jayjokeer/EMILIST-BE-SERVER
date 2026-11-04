@@ -3,12 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateJobPaymentAdmin = exports.validateAddUserAdmin = exports.validateAdminCustomerMessage = exports.validateCustomerWalletAdjustment = exports.validateCustomerReactivation = exports.validateCustomerSuspension = exports.validateUpdateCustomerProfile = exports.validateCreateCustomer = exports.validateAdminPasswordResetComplete = exports.validateAdminPasswordResetMfa = exports.validateAdminPasswordResetRequest = exports.validateAdminMfaEnrollment = exports.validateAdminMfaLogin = exports.validateAdminLogin = exports.validateAdminInvitationToken = exports.validateAdminAuthenticator = exports.validateAdminPasswordSetup = exports.validateCreateAdminInvitation = void 0;
+exports.validateJobPaymentAdmin = exports.validateAddUserAdmin = exports.validateAdminWithdrawalDecision = exports.validateAdminOrderReturn = exports.validateAdminMaterialDelist = exports.validateAdminJobAction = exports.validateUpdateSupportRequest = exports.validateCreateSupportRequest = exports.validateAdminCustomerMessage = exports.validateCustomerWalletAdjustment = exports.validateCustomerReactivation = exports.validateCustomerSuspension = exports.validateUpdateCustomerProfile = exports.validateCreateCustomer = exports.validateAdminPasswordResetComplete = exports.validateAdminPasswordResetMfa = exports.validateAdminPasswordResetRequest = exports.validateAdminMfaEnrollment = exports.validateAdminMfaLogin = exports.validateAdminLogin = exports.validateAdminInvitationToken = exports.validateAdminAuthenticator = exports.validateAdminPasswordSetup = exports.validateCreateAdminInvitation = void 0;
 const joi_1 = __importDefault(require("joi"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 const user_enums_1 = require("../enums/user.enums");
 const admin_customer_enum_1 = require("../enums/admin-customer.enum");
 const transaction_enum_1 = require("../enums/transaction.enum");
+const support_enum_1 = require("../enums/support.enum");
 const validate = (schema) => (req, res, next) => {
     const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
     if (error) {
@@ -113,6 +114,56 @@ exports.validateCustomerWalletAdjustment = validate(joi_1.default.object({
 exports.validateAdminCustomerMessage = validate(joi_1.default.object({
     subject: joi_1.default.string().trim().min(3).max(150).required(),
     message: joi_1.default.string().trim().min(1).max(5000).required(),
+}));
+exports.validateCreateSupportRequest = validate(joi_1.default.object({
+    subject: joi_1.default.string().trim().min(3).max(150).required(),
+    description: joi_1.default.string().trim().min(3).max(5000).required(),
+    category: joi_1.default.string().valid(...Object.values(support_enum_1.SupportRequestCategory)).default(support_enum_1.SupportRequestCategory.other),
+    priority: joi_1.default.string().valid(...Object.values(support_enum_1.SupportRequestPriority)).default(support_enum_1.SupportRequestPriority.normal),
+    linkedType: joi_1.default.string().valid("job", "customer", "listing", "payment", "order"),
+    linkedRecordId: joi_1.default.string().hex().length(24).when("linkedType", { is: joi_1.default.exist(), then: joi_1.default.required() }),
+}));
+exports.validateUpdateSupportRequest = validate(joi_1.default.object({
+    status: joi_1.default.string().valid(...Object.values(support_enum_1.SupportRequestStatus)),
+    priority: joi_1.default.string().valid(...Object.values(support_enum_1.SupportRequestPriority)),
+    assignedAdminId: joi_1.default.string().hex().length(24).allow(null, ""),
+    resolution: joi_1.default.string().trim().max(5000).allow("", null),
+    note: joi_1.default.string().trim().max(2000).allow("", null),
+}).min(1));
+exports.validateAdminJobAction = validate(joi_1.default.object({
+    action: joi_1.default.string().valid(...Object.values(jobs_enum_1.AdminJobActionEnum)).required(),
+    reason: joi_1.default.string().trim().min(3).max(1000).when("action", {
+        is: jobs_enum_1.AdminJobActionEnum.convertToRecurring,
+        then: joi_1.default.optional(),
+        otherwise: joi_1.default.required(),
+    }),
+    frequency: joi_1.default.string().valid(...Object.values(jobs_enum_1.JobFrequencyEnum)).when("action", {
+        is: jobs_enum_1.AdminJobActionEnum.convertToRecurring, then: joi_1.default.required(), otherwise: joi_1.default.forbidden(),
+    }),
+    startDate: joi_1.default.date().when("action", {
+        is: jobs_enum_1.AdminJobActionEnum.convertToRecurring, then: joi_1.default.required(), otherwise: joi_1.default.forbidden(),
+    }),
+    endDate: joi_1.default.date().greater(joi_1.default.ref("startDate")).when("action", {
+        is: jobs_enum_1.AdminJobActionEnum.convertToRecurring, then: joi_1.default.required(), otherwise: joi_1.default.forbidden(),
+    }),
+    currency: joi_1.default.string().valid(...Object.values(transaction_enum_1.WalletEnum)).when("action", {
+        is: jobs_enum_1.AdminJobActionEnum.convertToRecurring, then: joi_1.default.required(), otherwise: joi_1.default.forbidden(),
+    }),
+    amount: joi_1.default.number().positive().precision(2).when("action", {
+        is: jobs_enum_1.AdminJobActionEnum.convertToRecurring, then: joi_1.default.required(), otherwise: joi_1.default.forbidden(),
+    }),
+    budgetPeriod: joi_1.default.string().valid(...Object.values(jobs_enum_1.JobFrequencyEnum)).when("action", {
+        is: jobs_enum_1.AdminJobActionEnum.convertToRecurring, then: joi_1.default.required(), otherwise: joi_1.default.forbidden(),
+    }),
+}));
+exports.validateAdminMaterialDelist = validate(joi_1.default.object({
+    reason: joi_1.default.string().trim().min(3).max(1000).required(),
+}));
+exports.validateAdminOrderReturn = validate(joi_1.default.object({
+    reason: joi_1.default.string().trim().min(3).max(1000).required(),
+}));
+exports.validateAdminWithdrawalDecision = validate(joi_1.default.object({
+    reason: joi_1.default.string().trim().min(3).max(1000).required(),
 }));
 const validateAddUserAdmin = (req, res, next) => {
     const adminaddUserValidation = joi_1.default.object({

@@ -176,6 +176,12 @@ const ProductSchema = new mongoose_1.Schema({
     rejectionReason: {
         type: String,
     },
+    moderation: {
+        isDelisted: { type: Boolean, default: false },
+        reason: { type: String, trim: true },
+        adminId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Admin" },
+        delistedAt: { type: Date },
+    },
     reviews: [
         {
             type: mongoose_1.Schema.Types.ObjectId,

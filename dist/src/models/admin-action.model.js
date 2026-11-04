@@ -36,7 +36,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const AdminActionSchema = new mongoose_1.Schema({
     adminId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Admin", required: true, index: true },
-    targetUserId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users", required: true, index: true },
+    targetUserId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users", index: true },
+    targetType: { type: String, enum: ["customer", "job", "product", "order", "transaction", "support_request"], default: "customer", index: true },
+    targetId: { type: mongoose_1.Schema.Types.ObjectId, index: true },
     action: { type: String, required: true, index: true },
     reason: { type: String, trim: true },
     context: { type: String, trim: true },
@@ -45,4 +47,5 @@ const AdminActionSchema = new mongoose_1.Schema({
     metadata: { type: mongoose_1.Schema.Types.Mixed },
 }, { timestamps: true });
 AdminActionSchema.index({ targetUserId: 1, createdAt: -1 });
+AdminActionSchema.index({ targetType: 1, targetId: 1, createdAt: -1 });
 exports.default = mongoose_1.default.model("AdminAction", AdminActionSchema);

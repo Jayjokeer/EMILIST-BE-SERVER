@@ -17,6 +17,7 @@ const jobs_enum_1 = require("../enums/jobs.enum");
 const order_enum_1 = require("../enums/order.enum");
 const transaction_enum_1 = require("../enums/transaction.enum");
 const user_enums_1 = require("../enums/user.enums");
+const support_request_service_1 = require("./support-request.service");
 const RANGE_DAYS = {
     "7d": 7,
     "30d": 30,
@@ -45,6 +46,7 @@ const countComparison = async (model, baseQuery, range) => {
 const sumRows = (rows, key) => rows.find((row) => row._id === key)?.count || 0;
 const fetchAdminOverview = async (rangeValue) => {
     const range = (0, exports.overviewRange)(rangeValue);
+    const unresolvedSupportRequests = await (0, support_request_service_1.countUnresolvedSupportRequests)();
     const [signUps, pendingTransactions, ordersInTransit, pausedMilestonesRows, transactionRows, transactionValueRows, jobRows, totalApplications, activeCustomers, pendingKyc, inactiveCustomers, expertIds, merchantIds, customerGrowth, revenueRows, previousRevenueRows, revenueTrend, categoryCount, verifiedMerchantIds, newOrders, orderRows, grossSalesRows,] = await Promise.all([
         countComparison(users_model_1.default, {}, range),
         countComparison(transaction_model_1.default, { status: { $in: [transaction_enum_1.TransactionEnum.pending, transaction_enum_1.TransactionEnum.processing] } }, range),
@@ -144,7 +146,7 @@ const fetchAdminOverview = async (rangeValue) => {
             overdueJobs: sumRows(jobRows, jobs_enum_1.JobStatusEnum.overdue),
             pausedJobs: sumRows(jobRows, jobs_enum_1.JobStatusEnum.paused),
             failedTransactions: sumRows(transactionRows, transaction_enum_1.TransactionEnum.failed),
-            customerSupport: { count: 0, available: false, reason: "Support requests are not yet stored in this backend" },
+            customerSupport: { count: unresolvedSupportRequests, available: true },
         },
         tradeSummary: {
             verifiedMerchants,

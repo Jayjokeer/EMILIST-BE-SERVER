@@ -180,6 +180,13 @@ const ProductSchema = new Schema<IProduct>(
       type: String,
     },
 
+    moderation: {
+      isDelisted: { type: Boolean, default: false },
+      reason: { type: String, trim: true },
+      adminId: { type: Schema.Types.ObjectId, ref: "Admin" },
+      delistedAt: { type: Date },
+    },
+
     reviews: [
       {
         type: Schema.Types.ObjectId,

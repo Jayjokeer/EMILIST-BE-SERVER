@@ -11,6 +11,7 @@ import { JobStatusEnum, MilestoneEnum } from "../enums/jobs.enum";
 import { OrderDeliveryStatus, OrderPaymentStatus } from "../enums/order.enum";
 import { TransactionEnum } from "../enums/transaction.enum";
 import { UserStatus } from "../enums/user.enums";
+import { countUnresolvedSupportRequests } from "./support-request.service";
 
 const RANGE_DAYS: Record<string, number> = {
   "7d": 7,
@@ -44,6 +45,7 @@ const sumRows = (rows: any[], key: string) => rows.find((row) => row._id === key
 
 export const fetchAdminOverview = async (rangeValue?: string) => {
   const range = overviewRange(rangeValue);
+  const unresolvedSupportRequests = await countUnresolvedSupportRequests();
 
   const [
     signUps,
@@ -170,7 +172,7 @@ export const fetchAdminOverview = async (rangeValue?: string) => {
       overdueJobs: sumRows(jobRows, JobStatusEnum.overdue),
       pausedJobs: sumRows(jobRows, JobStatusEnum.paused),
       failedTransactions: sumRows(transactionRows, TransactionEnum.failed),
-      customerSupport: { count: 0, available: false, reason: "Support requests are not yet stored in this backend" },
+      customerSupport: { count: unresolvedSupportRequests, available: true },
     },
     tradeSummary: {
       verifiedMerchants,

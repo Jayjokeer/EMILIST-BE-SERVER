@@ -69,6 +69,7 @@ export interface IJob {
     expertId?: string;           // Business uniqueId for direct hire to an expert
     isDirectHire?: boolean;      // Flag indicating this job was directly assigned to an expert
     isListed?: boolean;          // Whether the job appears in public search (list/delist)
+    adminAction?: any;
 
     // Urgency-specific nested objects (all optional, gated by jobUrgency)
     jobFrequency?: JobFrequencyEnum;

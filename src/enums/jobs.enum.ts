@@ -35,6 +35,7 @@ export enum JobExpertLevel {
 }
 
 export enum JobStatusEnum {
+  draft = "draft",
   listed = "listed",
   in_review = "in review",
   pending = "pending",
@@ -42,6 +43,17 @@ export enum JobStatusEnum {
   active = "active",
   paused = "paused",
   overdue = "overdue",
+  cancelled = "cancelled",
+}
+
+export enum AdminJobActionEnum {
+  approveListing = "approve_listing",
+  rejectListing = "reject_listing",
+  removeListing = "remove_listing",
+  pause = "pause",
+  resume = "resume",
+  cancel = "cancel",
+  convertToRecurring = "convert_to_recurring",
 }
 
 export enum QuoteStatusEnum {

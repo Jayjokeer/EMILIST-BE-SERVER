@@ -75,6 +75,11 @@ const OrderSchema: Schema = new Schema(
     cancelledAt: { type: Date },
     returnReason: { type: String, trim: true },
     returnedAt: { type: Date },
+    adminReturn: {
+      initiatedBy: { type: Schema.Types.ObjectId, ref: "Admin" },
+      initiatedAt: { type: Date },
+      reason: { type: String, trim: true },
+    },
   },
   { timestamps: true }
 );

@@ -36,8 +36,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.customerOrdersController = exports.customerListingsController = exports.customerJobsController = exports.customerServicesController = exports.customerDetailsController = exports.customerOverviewController = exports.customersController = exports.customerSummaryController = exports.fetchAdminsController = exports.resetPasswordController = exports.verifyAdminPasswordResetMfaController = exports.inspectAdminPasswordResetController = exports.forgetPasswordController = exports.changeStatusAdmin = exports.activateLegacyAdminMfaController = exports.verifyAdminLoginMfaController = exports.loginAdminController = exports.activateAdminAccountController = exports.getAdminAuthenticatorSetupController = exports.setAdminOnboardingPasswordController = exports.inspectAdminInvitationController = exports.createAdminController = exports.fetchAllVerificationsController = exports.fetchUserSubscriptionsController = exports.fetchUserAccountDetailsController = exports.fetchAllCategoriesController = exports.fetchSingleCategoryController = exports.deleteCategoryController = exports.addCategoriesController = exports.updateJobPaymentStatusController = exports.fetchPrivateExpertByIdController = exports.fetchAllPrivateExpertsController = exports.declineWithdrawalController = exports.approveWithdrawalController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminOverviewController = exports.adminDashboardController = void 0;
-exports.sendCustomerMessageController = exports.customerAuditHistoryController = exports.adjustCustomerWalletController = exports.reactivateCustomerController = exports.suspendCustomerController = exports.triggerCustomerPasswordResetController = exports.updateCustomerProfileController = exports.createCustomerController = exports.customerSubscriptionsController = exports.customerTransactionsController = exports.customerSalesController = void 0;
+exports.addCategoriesController = exports.updateJobPaymentStatusController = exports.fetchPrivateExpertByIdController = exports.fetchAllPrivateExpertsController = exports.declineWithdrawalController = exports.approveWithdrawalController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.declineAdminWithdrawalController = exports.approveAdminWithdrawalController = exports.adminWithdrawalsController = exports.downloadAdminPaymentPdfController = exports.adminPaymentDetailsController = exports.adminPaymentsController = exports.adminPaymentSummaryController = exports.initiateAdminMaterialOrderReturnController = exports.adminMaterialOrderDetailsController = exports.adminMaterialOrdersController = exports.delistAdminMaterialController = exports.adminMaterialProductOrdersController = exports.adminMaterialReviewsController = exports.adminMaterialDetailsController = exports.adminMaterialsController = exports.adminMaterialSummaryController = exports.updateSupportRequestController = exports.supportRequestController = exports.supportRequestsController = exports.adminJobActionController = exports.downloadAdminJobPaymentReceiptController = exports.downloadAdminJobInvoiceController = exports.adminJobPaymentsController = exports.adminJobInvoicesController = exports.adminJobApplicantsController = exports.adminJobDetailsController = exports.adminJobsController = exports.adminJobSummaryController = exports.adminOverviewController = exports.adminDashboardController = void 0;
+exports.sendCustomerMessageController = exports.customerAuditHistoryController = exports.adjustCustomerWalletController = exports.reactivateCustomerController = exports.suspendCustomerController = exports.triggerCustomerPasswordResetController = exports.updateCustomerProfileController = exports.createCustomerController = exports.customerSubscriptionsController = exports.customerTransactionsController = exports.customerSalesController = exports.customerOrdersController = exports.customerListingsController = exports.customerJobsController = exports.customerServicesController = exports.customerDetailsController = exports.customerOverviewController = exports.customersController = exports.customerSummaryController = exports.fetchAdminsController = exports.resetPasswordController = exports.verifyAdminPasswordResetMfaController = exports.inspectAdminPasswordResetController = exports.forgetPasswordController = exports.changeStatusAdmin = exports.activateLegacyAdminMfaController = exports.verifyAdminLoginMfaController = exports.loginAdminController = exports.activateAdminAccountController = exports.getAdminAuthenticatorSetupController = exports.setAdminOnboardingPasswordController = exports.inspectAdminInvitationController = exports.createAdminController = exports.fetchAllVerificationsController = exports.fetchUserSubscriptionsController = exports.fetchUserAccountDetailsController = exports.fetchAllCategoriesController = exports.fetchSingleCategoryController = exports.deleteCategoryController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -73,6 +73,12 @@ const config_1 = require("../utils/config");
 const adminCustomerService = __importStar(require("../services/admin-customer.service"));
 const notificationService = __importStar(require("../services/notification.service"));
 const adminOverviewService = __importStar(require("../services/admin-overview.service"));
+const adminJobService = __importStar(require("../services/admin-job.service"));
+const supportRequestService = __importStar(require("../services/support-request.service"));
+const adminJobDocumentService = __importStar(require("../services/admin-job-document.service"));
+const adminMaterialService = __importStar(require("../services/admin-material.service"));
+const adminPaymentService = __importStar(require("../services/admin-payment.service"));
+const adminPaymentDocumentService = __importStar(require("../services/admin-payment-document.service"));
 exports.adminDashboardController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { currency, year } = req.query;
     const data = {
@@ -87,6 +93,103 @@ exports.adminDashboardController = (0, error_handler_1.catchAsync)(async (req, r
 exports.adminOverviewController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const range = typeof req.query.range === "string" ? req.query.range : undefined;
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminOverviewService.fetchAdminOverview(range));
+});
+exports.adminJobSummaryController = (0, error_handler_1.catchAsync)(async (_req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminJobService.fetchAdminJobSummary());
+});
+exports.adminJobsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminJobService.fetchAdminJobs(req.query));
+});
+exports.adminJobDetailsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminJobService.fetchAdminJobDetails(String(req.params.jobId)));
+});
+exports.adminJobApplicantsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminJobService.fetchAdminJobApplicants(String(req.params.jobId), req.query));
+});
+exports.adminJobInvoicesController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminJobService.fetchAdminJobInvoices(String(req.params.jobId)));
+});
+exports.adminJobPaymentsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminJobService.fetchAdminJobPayments(String(req.params.jobId)));
+});
+exports.downloadAdminJobInvoiceController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const buffer = await adminJobDocumentService.buildAdminJobInvoicePdf(String(req.params.jobId), String(req.params.invoiceId));
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="job-invoice-${String(req.params.invoiceId).replace(/[^a-zA-Z0-9_-]/g, "-")}.pdf"`);
+    return res.status(http_status_codes_1.StatusCodes.OK).send(buffer);
+});
+exports.downloadAdminJobPaymentReceiptController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const buffer = await adminJobDocumentService.buildAdminJobPaymentReceiptPdf(String(req.params.jobId), String(req.params.paymentId));
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="job-payment-${String(req.params.paymentId).replace(/[^a-zA-Z0-9_-]/g, "-")}.pdf"`);
+    return res.status(http_status_codes_1.StatusCodes.OK).send(buffer);
+});
+exports.adminJobActionController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminJobService.applyAdminJobAction(String(req.params.jobId), requestingAdminId(req), req.body));
+});
+exports.supportRequestsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await supportRequestService.fetchSupportRequests(req.query));
+});
+exports.supportRequestController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await supportRequestService.fetchSupportRequest(String(req.params.requestId)));
+});
+exports.updateSupportRequestController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await supportRequestService.updateSupportRequest(String(req.params.requestId), requestingAdminId(req), req.body));
+});
+exports.adminMaterialSummaryController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const range = typeof req.query.range === "string" ? req.query.range : undefined;
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminMaterialService.fetchAdminMaterialSummary(range));
+});
+exports.adminMaterialsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminMaterialService.fetchAdminMaterials(req.query));
+});
+exports.adminMaterialDetailsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminMaterialService.fetchAdminMaterialDetails(String(req.params.productId), req.query));
+});
+exports.adminMaterialReviewsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminMaterialService.fetchAdminMaterialReviews(String(req.params.productId), req.query));
+});
+exports.adminMaterialProductOrdersController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminMaterialService.fetchAdminMaterialOrders(req.query, String(req.params.productId)));
+});
+exports.delistAdminMaterialController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminMaterialService.delistAdminMaterial(String(req.params.productId), requestingAdminId(req), req.body.reason));
+});
+exports.adminMaterialOrdersController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminMaterialService.fetchAdminMaterialOrders(req.query));
+});
+exports.adminMaterialOrderDetailsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminMaterialService.fetchAdminMaterialOrderDetails(String(req.params.orderId), req.query));
+});
+exports.initiateAdminMaterialOrderReturnController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminMaterialService.initiateAdminOrderReturn(String(req.params.orderId), requestingAdminId(req), req.body.reason));
+});
+exports.adminPaymentSummaryController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const range = typeof req.query.range === "string" ? req.query.range : undefined;
+    const currency = typeof req.query.currency === "string" ? req.query.currency : undefined;
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminPaymentService.fetchAdminPaymentSummary(range, currency));
+});
+exports.adminPaymentsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminPaymentService.fetchAdminPayments(req.query));
+});
+exports.adminPaymentDetailsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminPaymentService.fetchAdminPayment(String(req.params.transactionId)));
+});
+exports.downloadAdminPaymentPdfController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const transactionId = String(req.params.transactionId);
+    const buffer = await adminPaymentDocumentService.buildAdminPaymentPdf(transactionId);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="transaction-${transactionId.replace(/[^a-zA-Z0-9_-]/g, "-")}.pdf"`);
+    return res.status(http_status_codes_1.StatusCodes.OK).send(buffer);
+});
+exports.adminWithdrawalsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminPaymentService.fetchAdminWithdrawals(req.query));
+});
+exports.approveAdminWithdrawalController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminPaymentService.processAdminWithdrawal(String(req.params.transactionId), requestingAdminId(req), "approve", req.body.reason));
+});
+exports.declineAdminWithdrawalController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminPaymentService.processAdminWithdrawal(String(req.params.transactionId), requestingAdminId(req), "decline", req.body.reason));
 });
 exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page, limit, q, search } = req.query;

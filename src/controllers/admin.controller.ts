@@ -49,6 +49,12 @@ import { config } from "../utils/config";
 import * as adminCustomerService from "../services/admin-customer.service";
 import * as notificationService from "../services/notification.service";
 import * as adminOverviewService from "../services/admin-overview.service";
+import * as adminJobService from "../services/admin-job.service";
+import * as supportRequestService from "../services/support-request.service";
+import * as adminJobDocumentService from "../services/admin-job-document.service";
+import * as adminMaterialService from "../services/admin-material.service";
+import * as adminPaymentService from "../services/admin-payment.service";
+import * as adminPaymentDocumentService from "../services/admin-payment-document.service";
 
 export const adminDashboardController = catchAsync(async (req: JwtPayload, res: Response) => {
 const {currency, year}= req.query; 
@@ -67,6 +73,143 @@ const data = {
 export const adminOverviewController = catchAsync(async (req: Request, res: Response) => {
   const range = typeof req.query.range === "string" ? req.query.range : undefined;
   return successResponse(res, StatusCodes.OK, await adminOverviewService.fetchAdminOverview(range));
+});
+
+export const adminJobSummaryController = catchAsync(async (_req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminJobService.fetchAdminJobSummary());
+});
+
+export const adminJobsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminJobService.fetchAdminJobs(req.query));
+});
+
+export const adminJobDetailsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminJobService.fetchAdminJobDetails(String(req.params.jobId)));
+});
+
+export const adminJobApplicantsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminJobService.fetchAdminJobApplicants(String(req.params.jobId), req.query));
+});
+
+export const adminJobInvoicesController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminJobService.fetchAdminJobInvoices(String(req.params.jobId)));
+});
+
+export const adminJobPaymentsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminJobService.fetchAdminJobPayments(String(req.params.jobId)));
+});
+
+export const downloadAdminJobInvoiceController = catchAsync(async (req: Request, res: Response) => {
+  const buffer = await adminJobDocumentService.buildAdminJobInvoicePdf(String(req.params.jobId), String(req.params.invoiceId));
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="job-invoice-${String(req.params.invoiceId).replace(/[^a-zA-Z0-9_-]/g, "-")}.pdf"`);
+  return res.status(StatusCodes.OK).send(buffer);
+});
+
+export const downloadAdminJobPaymentReceiptController = catchAsync(async (req: Request, res: Response) => {
+  const buffer = await adminJobDocumentService.buildAdminJobPaymentReceiptPdf(String(req.params.jobId), String(req.params.paymentId));
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="job-payment-${String(req.params.paymentId).replace(/[^a-zA-Z0-9_-]/g, "-")}.pdf"`);
+  return res.status(StatusCodes.OK).send(buffer);
+});
+
+export const adminJobActionController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminJobService.applyAdminJobAction(
+    String(req.params.jobId), requestingAdminId(req), req.body,
+  ));
+});
+
+export const supportRequestsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await supportRequestService.fetchSupportRequests(req.query));
+});
+
+export const supportRequestController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await supportRequestService.fetchSupportRequest(String(req.params.requestId)));
+});
+
+export const updateSupportRequestController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await supportRequestService.updateSupportRequest(
+    String(req.params.requestId), requestingAdminId(req), req.body,
+  ));
+});
+
+export const adminMaterialSummaryController = catchAsync(async (req: Request, res: Response) => {
+  const range = typeof req.query.range === "string" ? req.query.range : undefined;
+  return successResponse(res, StatusCodes.OK, await adminMaterialService.fetchAdminMaterialSummary(range));
+});
+
+export const adminMaterialsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminMaterialService.fetchAdminMaterials(req.query));
+});
+
+export const adminMaterialDetailsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminMaterialService.fetchAdminMaterialDetails(String(req.params.productId), req.query));
+});
+
+export const adminMaterialReviewsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminMaterialService.fetchAdminMaterialReviews(String(req.params.productId), req.query));
+});
+
+export const adminMaterialProductOrdersController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminMaterialService.fetchAdminMaterialOrders(req.query, String(req.params.productId)));
+});
+
+export const delistAdminMaterialController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminMaterialService.delistAdminMaterial(
+    String(req.params.productId), requestingAdminId(req), req.body.reason,
+  ));
+});
+
+export const adminMaterialOrdersController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminMaterialService.fetchAdminMaterialOrders(req.query));
+});
+
+export const adminMaterialOrderDetailsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminMaterialService.fetchAdminMaterialOrderDetails(String(req.params.orderId), req.query));
+});
+
+export const initiateAdminMaterialOrderReturnController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminMaterialService.initiateAdminOrderReturn(
+    String(req.params.orderId), requestingAdminId(req), req.body.reason,
+  ));
+});
+
+export const adminPaymentSummaryController = catchAsync(async (req: Request, res: Response) => {
+  const range = typeof req.query.range === "string" ? req.query.range : undefined;
+  const currency = typeof req.query.currency === "string" ? req.query.currency : undefined;
+  return successResponse(res, StatusCodes.OK, await adminPaymentService.fetchAdminPaymentSummary(range, currency));
+});
+
+export const adminPaymentsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminPaymentService.fetchAdminPayments(req.query));
+});
+
+export const adminPaymentDetailsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminPaymentService.fetchAdminPayment(String(req.params.transactionId)));
+});
+
+export const downloadAdminPaymentPdfController = catchAsync(async (req: Request, res: Response) => {
+  const transactionId = String(req.params.transactionId);
+  const buffer = await adminPaymentDocumentService.buildAdminPaymentPdf(transactionId);
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="transaction-${transactionId.replace(/[^a-zA-Z0-9_-]/g, "-")}.pdf"`);
+  return res.status(StatusCodes.OK).send(buffer);
+});
+
+export const adminWithdrawalsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminPaymentService.fetchAdminWithdrawals(req.query));
+});
+
+export const approveAdminWithdrawalController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminPaymentService.processAdminWithdrawal(
+    String(req.params.transactionId), requestingAdminId(req), "approve", req.body.reason,
+  ));
+});
+
+export const declineAdminWithdrawalController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminPaymentService.processAdminWithdrawal(
+    String(req.params.transactionId), requestingAdminId(req), "decline", req.body.reason,
+  ));
 });
 
 export const fetchAllUsersAdminController = catchAsync(async (req: JwtPayload, res: Response) => {

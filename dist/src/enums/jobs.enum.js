@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ExperienceLevelEnum = exports.DurationUnitEnum = exports.JobFrequencyEnum = exports.JobUrgencyEnum = exports.FrequencyEnum = exports.RatingEnum = exports.QuoteStatusEnum = exports.JobStatusEnum = exports.MilestonePaymentStatus = exports.MilestoneEnum = exports.JobPeriod = exports.JobExpertLevel = exports.JobType = void 0;
+exports.ExperienceLevelEnum = exports.DurationUnitEnum = exports.JobFrequencyEnum = exports.JobUrgencyEnum = exports.FrequencyEnum = exports.RatingEnum = exports.QuoteStatusEnum = exports.AdminJobActionEnum = exports.JobStatusEnum = exports.MilestonePaymentStatus = exports.MilestoneEnum = exports.JobPeriod = exports.JobExpertLevel = exports.JobType = void 0;
 var JobType;
 (function (JobType) {
     JobType["biddable"] = "biddable";
@@ -39,6 +39,7 @@ var MilestonePaymentStatus;
 })(MilestonePaymentStatus || (exports.MilestonePaymentStatus = MilestonePaymentStatus = {}));
 var JobStatusEnum;
 (function (JobStatusEnum) {
+    JobStatusEnum["draft"] = "draft";
     JobStatusEnum["listed"] = "listed";
     JobStatusEnum["in_review"] = "in review";
     JobStatusEnum["pending"] = "pending";
@@ -46,7 +47,18 @@ var JobStatusEnum;
     JobStatusEnum["active"] = "active";
     JobStatusEnum["paused"] = "paused";
     JobStatusEnum["overdue"] = "overdue";
+    JobStatusEnum["cancelled"] = "cancelled";
 })(JobStatusEnum || (exports.JobStatusEnum = JobStatusEnum = {}));
+var AdminJobActionEnum;
+(function (AdminJobActionEnum) {
+    AdminJobActionEnum["approveListing"] = "approve_listing";
+    AdminJobActionEnum["rejectListing"] = "reject_listing";
+    AdminJobActionEnum["removeListing"] = "remove_listing";
+    AdminJobActionEnum["pause"] = "pause";
+    AdminJobActionEnum["resume"] = "resume";
+    AdminJobActionEnum["cancel"] = "cancel";
+    AdminJobActionEnum["convertToRecurring"] = "convert_to_recurring";
+})(AdminJobActionEnum || (exports.AdminJobActionEnum = AdminJobActionEnum = {}));
 var QuoteStatusEnum;
 (function (QuoteStatusEnum) {
     QuoteStatusEnum["pending"] = "pending";

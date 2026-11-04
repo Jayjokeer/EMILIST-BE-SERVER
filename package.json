@@ -10,6 +10,9 @@
     "test:admin-onboarding": "node --test -r ts-node/register tests/admin-onboarding.service.test.ts",
     "test:admin-customer": "node --test -r ts-node/register tests/admin-customer.service.test.ts",
     "test:admin-overview": "node --test -r ts-node/register tests/admin-overview.service.test.ts",
+    "test:admin-jobs": "node --test -r ts-node/register tests/admin-job.service.test.ts tests/support-request.service.test.ts",
+    "test:admin-materials": "node --test -r ts-node/register tests/admin-material.service.test.ts",
+    "test:admin-payments": "node --test -r ts-node/register tests/admin-payment.service.test.ts",
     "dev": "nodemon --legacy-watch --watch ./src --ext ts,json --exec ts-node ./src/server.ts",
     "start": "node  --max-old-space-size=4024 ./dist/src/server.js"
   },

@@ -1,9 +1,10 @@
 import Joi from "joi";
 import { Request, Response, NextFunction } from "express";
-import { MilestonePaymentStatus } from "../enums/jobs.enum";
+import { AdminJobActionEnum, JobFrequencyEnum, MilestonePaymentStatus } from "../enums/jobs.enum";
 import { AdminRolesEnum } from "../enums/user.enums";
 import { CustomerSuspensionReason, CustomerSuspensionType } from "../enums/admin-customer.enum";
 import { WalletEnum } from "../enums/transaction.enum";
+import { SupportRequestCategory, SupportRequestPriority, SupportRequestStatus } from "../enums/support.enum";
 
 const validate = (schema: Joi.ObjectSchema) =>
   (req: Request, res: Response, next: NextFunction) => {
@@ -126,6 +127,62 @@ export const validateCustomerWalletAdjustment = validate(Joi.object({
 export const validateAdminCustomerMessage = validate(Joi.object({
   subject: Joi.string().trim().min(3).max(150).required(),
   message: Joi.string().trim().min(1).max(5000).required(),
+}));
+
+export const validateCreateSupportRequest = validate(Joi.object({
+  subject: Joi.string().trim().min(3).max(150).required(),
+  description: Joi.string().trim().min(3).max(5000).required(),
+  category: Joi.string().valid(...Object.values(SupportRequestCategory)).default(SupportRequestCategory.other),
+  priority: Joi.string().valid(...Object.values(SupportRequestPriority)).default(SupportRequestPriority.normal),
+  linkedType: Joi.string().valid("job", "customer", "listing", "payment", "order"),
+  linkedRecordId: Joi.string().hex().length(24).when("linkedType", { is: Joi.exist(), then: Joi.required() }),
+}));
+
+export const validateUpdateSupportRequest = validate(Joi.object({
+  status: Joi.string().valid(...Object.values(SupportRequestStatus)),
+  priority: Joi.string().valid(...Object.values(SupportRequestPriority)),
+  assignedAdminId: Joi.string().hex().length(24).allow(null, ""),
+  resolution: Joi.string().trim().max(5000).allow("", null),
+  note: Joi.string().trim().max(2000).allow("", null),
+}).min(1));
+
+export const validateAdminJobAction = validate(Joi.object({
+  action: Joi.string().valid(...Object.values(AdminJobActionEnum)).required(),
+  reason: Joi.string().trim().min(3).max(1000).when("action", {
+    is: AdminJobActionEnum.convertToRecurring,
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
+  frequency: Joi.string().valid(...Object.values(JobFrequencyEnum)).when("action", {
+    is: AdminJobActionEnum.convertToRecurring, then: Joi.required(), otherwise: Joi.forbidden(),
+  }),
+  startDate: Joi.date().when("action", {
+    is: AdminJobActionEnum.convertToRecurring, then: Joi.required(), otherwise: Joi.forbidden(),
+  }),
+  endDate: Joi.date().greater(Joi.ref("startDate")).when("action", {
+    is: AdminJobActionEnum.convertToRecurring, then: Joi.required(), otherwise: Joi.forbidden(),
+  }),
+  currency: Joi.string().valid(...Object.values(WalletEnum)).when("action", {
+    is: AdminJobActionEnum.convertToRecurring, then: Joi.required(), otherwise: Joi.forbidden(),
+  }),
+  amount: Joi.number().positive().precision(2).when("action", {
+    is: AdminJobActionEnum.convertToRecurring, then: Joi.required(), otherwise: Joi.forbidden(),
+  }),
+  budgetPeriod: Joi.string().valid(...Object.values(JobFrequencyEnum)).when("action", {
+    is: AdminJobActionEnum.convertToRecurring, then: Joi.required(), otherwise: Joi.forbidden(),
+  }),
+}));
+
+export const validateAdminMaterialDelist = validate(Joi.object({
+  reason: Joi.string().trim().min(3).max(1000).required(),
+}));
+
+export const validateAdminOrderReturn = validate(Joi.object({
+  reason: Joi.string().trim().min(3).max(1000).required(),
+}));
+
+export const validateAdminWithdrawalDecision = validate(Joi.object({
+  reason: Joi.string().trim().min(3).max(1000).required(),
 }));
 
 

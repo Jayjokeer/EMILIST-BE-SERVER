@@ -69,7 +69,7 @@ Endpoints marked as \`multipart/form-data\` expect the file(s) under the field
         },
         { name: "Auth", description: "Authentication, accounts, and user profiles." },
         { name: "Admin", description: "Administrative and super-administrator operations." },
-        { name: "new-admin", description: "New Emilist Admin onboarding, secure access, operational overview, and customer operations." },
+        { name: "new-admin", description: "New Emilist Admin onboarding, secure access, overview, support, customers, jobs, materials, and payment operations." },
         { name: "Cart", description: "Shopping cart and checkout operations." },
         { name: "Chat", description: "Direct messages and conversation lists." },
         { name: "Notifications", description: "User notification management." },

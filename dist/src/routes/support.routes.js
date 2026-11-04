@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SupportRoute = void 0;
+const express_1 = require("express");
+const current_user_1 = require("../middlewares/current-user");
+const support_controller_1 = require("../controllers/support.controller");
+const admin_validation_1 = require("../validations/admin.validation");
+const router = (0, express_1.Router)();
+exports.SupportRoute = router;
+router.post("/requests", current_user_1.userAuth, admin_validation_1.validateCreateSupportRequest, support_controller_1.createSupportRequestController);

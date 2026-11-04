@@ -56,4 +56,9 @@ export interface IOrder extends Document {
     cancelledAt?: Date;
     returnReason?: string;
     returnedAt?: Date;
+    adminReturn?: {
+      initiatedBy?: Schema.Types.ObjectId;
+      initiatedAt?: Date;
+      reason?: string;
+    };
 };

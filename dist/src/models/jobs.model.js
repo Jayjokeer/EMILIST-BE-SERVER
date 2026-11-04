@@ -168,6 +168,12 @@ const jobSchema = new mongoose_1.default.Schema({
     expertId: { type: String },
     isDirectHire: { type: Boolean, default: false },
     isListed: { type: Boolean, default: true },
+    adminAction: {
+        action: { type: String },
+        reason: { type: String },
+        adminId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Admin' },
+        actedAt: { type: Date },
+    },
     // Urgency-specific nested objects
     jobFrequency: { type: String, enum: jobs_enum_1.JobFrequencyEnum },
     recurringBudget: { type: RecurringBudgetSchema },

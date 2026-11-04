@@ -72,6 +72,12 @@ export interface IProduct {
   approvedBy?: Types.ObjectId;
   approvedAt?: Date;
   rejectionReason?: string;
+  moderation?: {
+    isDelisted?: boolean;
+    reason?: string;
+    adminId?: Types.ObjectId;
+    delistedAt?: Date;
+  };
 
   isDeleted: boolean;
 

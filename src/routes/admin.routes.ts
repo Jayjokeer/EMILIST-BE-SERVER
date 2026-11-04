@@ -19,6 +19,11 @@ import {
   validateCustomerWalletAdjustment,
   validateUpdateCustomerProfile,
   validateCreateAdminInvitation,
+  validateAdminJobAction,
+  validateUpdateSupportRequest,
+  validateAdminMaterialDelist,
+  validateAdminOrderReturn,
+  validateAdminWithdrawalDecision,
   validateJobPaymentAdmin,
 } from "../validations/admin.validation";
 import { multipleUpload, singleUpload } from "../utils/image-upload";
@@ -30,6 +35,34 @@ const router = Router();
 
 router.route("/dashboard").get(adminAuth, adminController.adminDashboardController);
 router.route("/overview").get(adminAuth, adminController.adminOverviewController);
+router.route("/jobs/summary").get(adminAuth, adminController.adminJobSummaryController);
+router.route("/jobs").get(adminAuth, adminController.adminJobsController);
+router.route("/jobs/:jobId/details").get(adminAuth, adminController.adminJobDetailsController);
+router.route("/jobs/:jobId/applicants").get(adminAuth, adminController.adminJobApplicantsController);
+router.route("/jobs/:jobId/invoices").get(adminAuth, adminController.adminJobInvoicesController);
+router.route("/jobs/:jobId/invoices/:invoiceId/download").get(adminAuth, adminController.downloadAdminJobInvoiceController);
+router.route("/jobs/:jobId/payments").get(adminAuth, adminController.adminJobPaymentsController);
+router.route("/jobs/:jobId/payments/:paymentId/receipt").get(adminAuth, adminController.downloadAdminJobPaymentReceiptController);
+router.route("/jobs/:jobId/actions").post(adminAuth, validateAdminJobAction, adminController.adminJobActionController);
+router.route("/support-requests").get(adminAuth, adminController.supportRequestsController);
+router.route("/support-requests/:requestId").get(adminAuth, adminController.supportRequestController);
+router.route("/support-requests/:requestId").patch(adminAuth, validateUpdateSupportRequest, adminController.updateSupportRequestController);
+router.route("/materials/summary").get(adminAuth, adminController.adminMaterialSummaryController);
+router.route("/materials/products").get(adminAuth, adminController.adminMaterialsController);
+router.route("/materials/products/:productId/details").get(adminAuth, adminController.adminMaterialDetailsController);
+router.route("/materials/products/:productId/reviews").get(adminAuth, adminController.adminMaterialReviewsController);
+router.route("/materials/products/:productId/orders").get(adminAuth, adminController.adminMaterialProductOrdersController);
+router.route("/materials/products/:productId/delist").post(adminAuth, validateAdminMaterialDelist, adminController.delistAdminMaterialController);
+router.route("/materials/orders").get(adminAuth, adminController.adminMaterialOrdersController);
+router.route("/materials/orders/:orderId/details").get(adminAuth, adminController.adminMaterialOrderDetailsController);
+router.route("/materials/orders/:orderId/returns").post(adminAuth, validateAdminOrderReturn, adminController.initiateAdminMaterialOrderReturnController);
+router.route("/payments/summary").get(adminAuth, adminController.adminPaymentSummaryController);
+router.route("/payments").get(adminAuth, adminController.adminPaymentsController);
+router.route("/payments/withdrawals").get(adminAuth, adminController.adminWithdrawalsController);
+router.route("/payments/withdrawals/:transactionId/approve").post(adminAuth, validateAdminWithdrawalDecision, adminController.approveAdminWithdrawalController);
+router.route("/payments/withdrawals/:transactionId/decline").post(adminAuth, validateAdminWithdrawalDecision, adminController.declineAdminWithdrawalController);
+router.route("/payments/:transactionId/details").get(adminAuth, adminController.adminPaymentDetailsController);
+router.route("/payments/:transactionId/pdf").get(adminAuth, adminController.downloadAdminPaymentPdfController);
 router.route("/users").get(adminAuth, adminController.fetchAllUsersAdminController);
 router.route("/verify-user").patch(adminAuth, adminController.verifyUserAdminController);
 router.route("/fetch-userDetails/:userId").get(adminAuth, adminController.fetchUserDetails);

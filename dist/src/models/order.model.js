@@ -101,5 +101,10 @@ const OrderSchema = new mongoose_1.Schema({
     cancelledAt: { type: Date },
     returnReason: { type: String, trim: true },
     returnedAt: { type: Date },
+    adminReturn: {
+        initiatedBy: { type: mongoose_1.Schema.Types.ObjectId, ref: "Admin" },
+        initiatedAt: { type: Date },
+        reason: { type: String, trim: true },
+    },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("Order", OrderSchema);
