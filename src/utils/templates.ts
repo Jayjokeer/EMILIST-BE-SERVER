@@ -15,14 +15,59 @@ export const welcomeMessageAdmin = (name: string) => {
   return { html, subject };
 };
 
-
-export const passwordResetMessage= (name: string, otp: string) => {
-  const subject = "Password reset otp";
+export const adminInvitationMessage = (name: string, invitationUrl: string) => {
+  const subject = "Your Emilist Admin invitation";
   const html = `
-        Your password reset otp is ${otp}, valid for 10 minutes!`;
+        <p>Hi ${name},</p>
+        <p>You have been invited to Emilist Admin. This invitation expires in 48 hours.</p>
+        <p><a href="${invitationUrl}">Accept invite</a></p>`;
 
   return { html, subject };
 };
+
+
+export const passwordResetMessage= (name: string, resetUrl: string) => {
+  const subject = "Reset your Emilist Admin password";
+  const html = `
+        <p>Hi ${name},</p>
+        <p>Use the secure link below to reset your Emilist Admin password. You will also need your authenticator app.</p>
+        <p><a href="${resetUrl}">Reset password</a></p>
+        <p>This one-time link expires in 30 minutes. If you did not request it, you can ignore this email.</p>`;
+
+  return { html, subject };
+};
+
+export const customerPasswordResetMessage = (name: string, resetUrl: string) => {
+  const subject = "Reset your Emilist password";
+  const html = `
+        <p>Hi ${name},</p>
+        <p>An Emilist administrator sent you a secure password reset link.</p>
+        <p><a href="${resetUrl}">Reset password</a></p>
+        <p>This one-time link expires in 30 minutes. If you did not expect it, contact Emilist support.</p>`;
+  return { html, subject };
+};
+
+export const adminCreatedCustomerMessage = (name: string, resetUrl: string) => {
+  const subject = "Your Emilist account has been created";
+  const html = `
+        <p>Hi ${name},</p>
+        <p>An Emilist administrator created your customer profile.</p>
+        <p><a href="${resetUrl}">Create your password</a></p>
+        <p>This secure link expires in 30 minutes.</p>`;
+  return { html, subject };
+};
+
+const escapeHtml = (value: string) => value
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#039;");
+
+export const adminCustomerMessage = (name: string, subject: string, message: string) => ({
+  subject,
+  html: `<p>Hi ${escapeHtml(name)},</p><p>${escapeHtml(message).replace(/\n/g, "<br/>")}</p><p>— Emilist Admin</p>`,
+});
 
 export const directJobApplicationMessage = (name: string, creatorName: string, id: string) => {
   const subject = "Job Assigned to you";

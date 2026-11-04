@@ -57,6 +57,7 @@ router.route("/verify-email").post(auth_validation_1.validateVerifyEmail, authCo
 router.route("/forgot-password").post(auth_validation_1.validateForgetPassword, authController.forgetPasswordController);
 router.route("/verify-password-otp").post(auth_validation_1.validatePasswordOtp, authController.verifyPasswordOtpController);
 router.route("/reset-password").post(auth_validation_1.validateResetPassword, authController.resetPasswordController);
+router.route("/admin-triggered-password-reset").post(auth_validation_1.validateAdminTriggeredPasswordReset, authController.adminTriggeredPasswordResetController);
 //file uploads
 router.route("/upload-image").post(image_upload_1.singleUpload, authController.uploadImage);
 router.route("/upload-files").post(image_upload_1.multipleUpload, authController.uploadMultipleFiles);

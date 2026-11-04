@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyJWT = exports.generateJWTwithExpiryDate = void 0;
+exports.verifyAdminFlowToken = exports.generateAdminFlowToken = exports.verifyJWT = exports.generateJWTwithExpiryDate = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const error_1 = require("../errors/error");
 const generateJWTwithExpiryDate = (payload) => {
@@ -27,3 +27,17 @@ const verifyJWT = (token) => {
     }
 };
 exports.verifyJWT = verifyJWT;
+const generateAdminFlowToken = (payload, expiresIn = "5m") => jsonwebtoken_1.default.sign(payload, process.env.JWT_SECRET, { expiresIn });
+exports.generateAdminFlowToken = generateAdminFlowToken;
+const verifyAdminFlowToken = (token, purpose) => {
+    try {
+        const payload = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+        if (payload.purpose !== purpose)
+            throw new Error("Invalid token purpose");
+        return payload;
+    }
+    catch (error) {
+        throw new error_1.BadRequestError(error instanceof jsonwebtoken_1.default.TokenExpiredError ? "Challenge expired, please sign in again" : "Invalid challenge token");
+    }
+};
+exports.verifyAdminFlowToken = verifyAdminFlowToken;

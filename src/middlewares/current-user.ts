@@ -4,7 +4,7 @@ import { verifyJWT } from "../utils/jwt";
 import { UnauthorizedError } from "../errors/error";
 import * as authService from '../services/auth.service';
 import { JwtPayload } from "jsonwebtoken";
-import { AdminRolesEnum, UserRolesEnum } from "../enums/user.enums";
+import { AdminOnboardingStatus, AdminRolesEnum, UserRolesEnum, UserStatus } from "../enums/user.enums";
 import * as adminService from "../services/admin.service";
 
 
@@ -35,6 +35,19 @@ export const userAuth = async (req: JwtPayload, res: Response, next: NextFunctio
 
     if (!user.isEmailVerified) {
       throw new UnauthorizedError("Access Denied! Your account is disabled, please contact admin.");
+    }
+    if (user.status === UserStatus.suspended) {
+      const suspension = (user as any).suspension;
+      if (suspension?.type === "temporary" && suspension?.expiresAt && new Date(suspension.expiresAt).getTime() <= Date.now()) {
+        user.status = UserStatus.active;
+        suspension.reactivatedAt = new Date();
+        await user.save();
+      } else {
+        throw new UnauthorizedError("Access Denied! Your account is suspended, please contact admin.");
+      }
+    }
+    if (user.status === UserStatus.deactivated) {
+      throw new UnauthorizedError("Access Denied! Your account is inactive, please contact admin.");
     }
     req.user = user;
     
@@ -75,6 +88,9 @@ export const optionalUserAuth = async (req: JwtPayload, res: Response, next: Nex
     if (!user.isEmailVerified) {
       throw new UnauthorizedError('Access Denied! Your account is disabled, please contact admin.');
     }
+    if (user.status !== UserStatus.active) {
+      throw new UnauthorizedError('Access Denied! Your account is not active.');
+    }
 
     req.user = user;
     next();
@@ -111,6 +127,10 @@ export const adminAuth = async (req: JwtPayload, res: Response, next: NextFuncti
    if (user.role !== AdminRolesEnum.admin && user.role !== AdminRolesEnum.superAdmin) {
   throw new UnauthorizedError("Admin access only");
 }
+    if (user.status !== UserStatus.active) throw new UnauthorizedError("Admin account is not active");
+    if (!user.mfaEnabled || user.onboardingStatus !== AdminOnboardingStatus.active) {
+      throw new UnauthorizedError("Admin MFA enrollment is required");
+    }
 
     req.user = user;
     
@@ -153,6 +173,10 @@ export const superAdminAuth = async (req: JwtPayload, res: Response, next: NextF
    if ( user.role !== AdminRolesEnum.superAdmin) {
   throw new UnauthorizedError("Super Admin access only");
 }
+    if (user.status !== UserStatus.active) throw new UnauthorizedError("Admin account is not active");
+    if (!user.mfaEnabled || user.onboardingStatus !== AdminOnboardingStatus.active) {
+      throw new UnauthorizedError("Admin MFA enrollment is required");
+    }
 
     req.user = user;
     

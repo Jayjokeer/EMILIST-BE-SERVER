@@ -64,6 +64,20 @@ const userAuth = async (req, res, next) => {
         if (!user.isEmailVerified) {
             throw new error_1.UnauthorizedError("Access Denied! Your account is disabled, please contact admin.");
         }
+        if (user.status === user_enums_1.UserStatus.suspended) {
+            const suspension = user.suspension;
+            if (suspension?.type === "temporary" && suspension?.expiresAt && new Date(suspension.expiresAt).getTime() <= Date.now()) {
+                user.status = user_enums_1.UserStatus.active;
+                suspension.reactivatedAt = new Date();
+                await user.save();
+            }
+            else {
+                throw new error_1.UnauthorizedError("Access Denied! Your account is suspended, please contact admin.");
+            }
+        }
+        if (user.status === user_enums_1.UserStatus.deactivated) {
+            throw new error_1.UnauthorizedError("Access Denied! Your account is inactive, please contact admin.");
+        }
         req.user = user;
         next();
     }
@@ -100,6 +114,9 @@ const optionalUserAuth = async (req, res, next) => {
         if (!user.isEmailVerified) {
             throw new error_1.UnauthorizedError('Access Denied! Your account is disabled, please contact admin.');
         }
+        if (user.status !== user_enums_1.UserStatus.active) {
+            throw new error_1.UnauthorizedError('Access Denied! Your account is not active.');
+        }
         req.user = user;
         next();
     }
@@ -130,6 +147,11 @@ const adminAuth = async (req, res, next) => {
         }
         if (user.role !== user_enums_1.AdminRolesEnum.admin && user.role !== user_enums_1.AdminRolesEnum.superAdmin) {
             throw new error_1.UnauthorizedError("Admin access only");
+        }
+        if (user.status !== user_enums_1.UserStatus.active)
+            throw new error_1.UnauthorizedError("Admin account is not active");
+        if (!user.mfaEnabled || user.onboardingStatus !== user_enums_1.AdminOnboardingStatus.active) {
+            throw new error_1.UnauthorizedError("Admin MFA enrollment is required");
         }
         req.user = user;
         next();
@@ -163,6 +185,11 @@ const superAdminAuth = async (req, res, next) => {
         }
         if (user.role !== user_enums_1.AdminRolesEnum.superAdmin) {
             throw new error_1.UnauthorizedError("Super Admin access only");
+        }
+        if (user.status !== user_enums_1.UserStatus.active)
+            throw new error_1.UnauthorizedError("Admin account is not active");
+        if (!user.mfaEnabled || user.onboardingStatus !== user_enums_1.AdminOnboardingStatus.active) {
+            throw new error_1.UnauthorizedError("Admin MFA enrollment is required");
         }
         req.user = user;
         next();

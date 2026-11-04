@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AdminRolesEnum = exports.VerificationEnum = exports.UserRolesEnum = exports.UserStatus = void 0;
+exports.AdminOnboardingStatus = exports.AdminRolesEnum = exports.VerificationEnum = exports.UserRolesEnum = exports.UserStatus = void 0;
 var UserStatus;
 (function (UserStatus) {
     UserStatus["active"] = "Active";
@@ -23,3 +23,10 @@ var AdminRolesEnum;
     AdminRolesEnum["admin"] = "admin";
     AdminRolesEnum["superAdmin"] = "superAdmin";
 })(AdminRolesEnum || (exports.AdminRolesEnum = AdminRolesEnum = {}));
+var AdminOnboardingStatus;
+(function (AdminOnboardingStatus) {
+    AdminOnboardingStatus["invited"] = "invited";
+    AdminOnboardingStatus["passwordSet"] = "password_set";
+    AdminOnboardingStatus["authenticatorPending"] = "authenticator_pending";
+    AdminOnboardingStatus["active"] = "active";
+})(AdminOnboardingStatus || (exports.AdminOnboardingStatus = AdminOnboardingStatus = {}));

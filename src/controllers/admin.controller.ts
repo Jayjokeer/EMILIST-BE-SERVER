@@ -15,7 +15,7 @@ import * as privateExpertService from "../services/private-expert.service";
 import * as transactionService from "../services/transaction.service";
 import { ServiceEnum, TransactionEnum, WalletEnum } from "../enums/transaction.enum";
 import * as planService from "../services/plan.service";
-import { UserStatus, VerificationEnum } from "../enums/user.enums";
+import { AdminOnboardingStatus, UserStatus, VerificationEnum } from "../enums/user.enums";
 import * as businessService from "../services/business.service";
 import * as projectService from "../services/project.service";
 import * as authService from "../services/auth.service";
@@ -23,8 +23,8 @@ import * as walletService from "../services/wallet.services";
 import { PlanEnum } from "../enums/plan.enum";
 import { ICreateUser } from "../interfaces/user.interface";
 import { sendEmail } from "../utils/send_email";
-import { directJobApplicationMessage, otpMessage, passwordResetMessage, welcomeMessageAdmin } from "../utils/templates";
-import { generateShortUUID, generateOTPData } from "../utils/utility";
+import { adminCreatedCustomerMessage, adminCustomerMessage, adminInvitationMessage, customerPasswordResetMessage, directJobApplicationMessage, passwordResetMessage, welcomeMessageAdmin } from "../utils/templates";
+import { generateShortUUID } from "../utils/utility";
 import { IJob } from "../interfaces/jobs.interface";
 import mongoose from "mongoose";
 import { JobType, MilestonePaymentStatus, QuoteStatusEnum } from "../enums/jobs.enum";
@@ -33,8 +33,22 @@ import * as verificationService from "../services/verification.service";
 import { OrderPaymentStatus } from "../enums/order.enum";
 import * as  adminService from "../services/admin.service";
 import {  hashPassword ,  comparePassword  } from "../utils/hashing";
-import { generateJWTwithExpiryDate } from "../utils/jwt";
+import { generateAdminFlowToken, generateJWTwithExpiryDate, verifyAdminFlowToken } from "../utils/jwt";
 import { NotificationTypeEnum } from "../enums/notification.enum";
+import {
+  ADMIN_INVITATION_TTL_MS,
+  assertPasswordNotReused,
+  assertStrongAdminPassword,
+  createAuthenticatorEnrollment,
+  decryptMfaSecret,
+  encryptMfaSecret,
+  PASSWORD_HISTORY_LIMIT,
+  verifyAuthenticatorCode,
+} from "../services/admin-onboarding.service";
+import { config } from "../utils/config";
+import * as adminCustomerService from "../services/admin-customer.service";
+import * as notificationService from "../services/notification.service";
+import * as adminOverviewService from "../services/admin-overview.service";
 
 export const adminDashboardController = catchAsync(async (req: JwtPayload, res: Response) => {
 const {currency, year}= req.query; 
@@ -49,6 +63,11 @@ const data = {
 
     return successResponse(res, StatusCodes.CREATED, data);
   });
+
+export const adminOverviewController = catchAsync(async (req: Request, res: Response) => {
+  const range = typeof req.query.range === "string" ? req.query.range : undefined;
+  return successResponse(res, StatusCodes.OK, await adminOverviewService.fetchAdminOverview(range));
+});
 
 export const fetchAllUsersAdminController = catchAsync(async (req: JwtPayload, res: Response) => {
       const {page, limit, q, search} = req.query;
@@ -552,22 +571,131 @@ export const fetchAllVerificationsController = catchAsync(async(req: JwtPayload,
    return successResponse(res,StatusCodes.OK, data);
 });
 
-export const createAdminController = catchAsync(async(req: JwtPayload, res: Response)=>{
-    const{fullName, mobile, email, password} = req.body;
-    const isEmailExists = await adminService.getAdminByEmail(email.toLowerCase())
-    if(isEmailExists){
-        throw new BadRequestError('Email exists')
-    }
-    const encryptPwd = await hashPassword(password);
-    
-    const data = await adminService.createAdmin({
-        fullName, 
-        mobile, 
-        email: email.toLowerCase(), 
-        password: encryptPwd
-    });
+const adminResponse = (admin: any) => ({
+  id: admin._id,
+  fullName: admin.fullName,
+  email: admin.email,
+  mobile: admin.mobile || null,
+  department: admin.department,
+  role: admin.role,
+  status: admin.status,
+  onboardingStatus: admin.onboardingStatus,
+  mfaEnabled: admin.mfaEnabled,
+});
 
-   return successResponse(res,StatusCodes.CREATED,"Admin created");
+const getValidInvitation = async (token: string) => {
+  const admin = await adminService.getAdminByInvitationToken(token);
+  if (!admin) throw new NotFoundError("Invitation is invalid or has already been used");
+  if (!admin.invitationExpiresAt || admin.invitationExpiresAt.getTime() <= Date.now()) {
+    throw new BadRequestError("Invitation has expired. Ask a Super Admin to send a new one");
+  }
+  return admin;
+};
+
+export const createAdminController = catchAsync(async(req: JwtPayload, res: Response)=>{
+  const { fullName, mobile, email, department, role } = req.body;
+  const normalizedEmail = email.toLowerCase();
+  const isEmailExists = await adminService.getAdminByEmail(normalizedEmail);
+  if (isEmailExists) throw new BadRequestError("An admin with this email already exists");
+
+  const { token, tokenHash } = adminService.createInvitationToken();
+  const invitationExpiresAt = new Date(Date.now() + ADMIN_INVITATION_TTL_MS);
+  const admin = await adminService.createAdmin({
+    fullName,
+    mobile,
+    email: normalizedEmail,
+    department,
+    role,
+    onboardingStatus: AdminOnboardingStatus.invited,
+    invitationTokenHash: tokenHash,
+    invitationExpiresAt,
+  });
+
+  const adminFrontendUrl = config.adminFrontendUrl || config.frontendLoginUrl || "";
+  const separator = adminFrontendUrl.includes("?") ? "&" : "?";
+  const invitationUrl = `${adminFrontendUrl}${separator}invite=${encodeURIComponent(token)}`;
+  const { html, subject } = adminInvitationMessage(fullName, invitationUrl);
+  await sendEmail(normalizedEmail, subject, html);
+
+  return successResponse(res, StatusCodes.CREATED, {
+    admin: adminResponse(admin),
+    invitationExpiresAt,
+  });
+});
+
+export const inspectAdminInvitationController = catchAsync(async(req: Request, res: Response)=>{
+  const admin = await getValidInvitation(String(req.params.token));
+  return successResponse(res, StatusCodes.OK, {
+    admin: adminResponse(admin),
+    nextStep: admin.onboardingStatus === AdminOnboardingStatus.invited ? "password" : "authenticator",
+    invitationExpiresAt: admin.invitationExpiresAt,
+  });
+});
+
+export const setAdminOnboardingPasswordController = catchAsync(async(req: Request, res: Response)=>{
+  const { token, password, confirmPassword } = req.body;
+  const admin = await getValidInvitation(token);
+  if (admin.onboardingStatus !== AdminOnboardingStatus.invited) {
+    throw new BadRequestError("Password has already been created for this invitation");
+  }
+
+  assertStrongAdminPassword(password, confirmPassword);
+  await assertPasswordNotReused(password, admin.password, admin.passwordHistory);
+  const enrollment = createAuthenticatorEnrollment(admin.email);
+
+  admin.password = await hashPassword(password);
+  admin.passwordHistory = [];
+  admin.mfaSecret = encryptMfaSecret(enrollment.secret);
+  admin.onboardingStatus = AdminOnboardingStatus.authenticatorPending;
+  admin.invitationAcceptedAt = new Date();
+  await admin.save();
+
+  return successResponse(res, StatusCodes.OK, {
+    admin: adminResponse(admin),
+    authenticator: {
+      secret: enrollment.secret,
+      otpauthUri: enrollment.otpauthUri,
+      issuer: "Emilist Admin",
+      accountName: admin.email,
+    },
+  });
+});
+
+export const getAdminAuthenticatorSetupController = catchAsync(async(req: Request, res: Response)=>{
+  const admin = await getValidInvitation(req.body.token);
+  if (admin.onboardingStatus !== AdminOnboardingStatus.authenticatorPending || !admin.mfaSecret) {
+    throw new BadRequestError("Create your password before setting up the authenticator");
+  }
+  const enrollment = createAuthenticatorEnrollment(admin.email, decryptMfaSecret(admin.mfaSecret));
+  return successResponse(res, StatusCodes.OK, {
+    secret: enrollment.secret,
+    otpauthUri: enrollment.otpauthUri,
+    issuer: "Emilist Admin",
+    accountName: admin.email,
+  });
+});
+
+export const activateAdminAccountController = catchAsync(async(req: Request, res: Response)=>{
+  const { token, code } = req.body;
+  const admin = await getValidInvitation(token);
+  if (admin.onboardingStatus !== AdminOnboardingStatus.authenticatorPending || !admin.mfaSecret) {
+    throw new BadRequestError("Authenticator setup is not ready for verification");
+  }
+  if (!verifyAuthenticatorCode(decryptMfaSecret(admin.mfaSecret), code)) {
+    throw new BadRequestError("Invalid authenticator code");
+  }
+
+  admin.mfaEnabled = true;
+  admin.mfaVerifiedAt = new Date();
+  admin.isEmailVerified = true;
+  admin.onboardingStatus = AdminOnboardingStatus.active;
+  admin.invitationTokenHash = undefined;
+  admin.invitationExpiresAt = undefined;
+  admin.lastLoginAt = new Date();
+  await admin.save();
+
+  const authToken = generateJWTwithExpiryDate({ email: admin.email, id: admin._id });
+  return successResponse(res, StatusCodes.OK, { token: authToken, admin: adminResponse(admin) });
 });
 
 export const loginAdminController = catchAsync(async (req: Request, res: Response) => {
@@ -576,12 +704,12 @@ export const loginAdminController = catchAsync(async (req: Request, res: Respons
     password
   } = req.body;
 
-  const foundUser = await adminService.getAdminByEmail(email.toLowerCase());
-  if(!foundUser) throw new NotFoundError("Invalid credentials!");
+  const foundUser = await adminService.getAdminForAuthentication(email.toLowerCase());
+  if(!foundUser || !foundUser.password) throw new UnauthorizedError("Invalid credentials");
 
   const userPwd: string = foundUser.password as string
   const pwdCompare = await comparePassword(password, userPwd);
-  if(!pwdCompare) throw new NotFoundError("Invalid credentials!");
+  if(!pwdCompare) throw new UnauthorizedError("Invalid credentials");
 
   if(foundUser.status == UserStatus.deactivated){
     throw new UnauthorizedError("Account Deactivated!!")
@@ -589,20 +717,81 @@ export const loginAdminController = catchAsync(async (req: Request, res: Respons
   if(foundUser.status == UserStatus.suspended){
     throw new UnauthorizedError("Account Suspended kindly Contact Admin!!")
   }
-//   if(foundUser.isEmailVerified == false){
-//     throw new BadRequestError("Kindly verify your email!");
-//   }
-  const token = await generateJWTwithExpiryDate({
-    email: foundUser.email as string,
-    id: foundUser._id,
-  });
-  const userData = await authService.findUserById(String(foundUser._id));
-const user = {
-  token,
-  userData
-};
+  if (!foundUser.mfaEnabled) {
+    if (foundUser.invitationTokenHash) throw new UnauthorizedError("Account onboarding is incomplete");
 
-  return successResponse(res, StatusCodes.OK, user)
+    const enrollment = createAuthenticatorEnrollment(
+      foundUser.email,
+      foundUser.mfaSecret ? decryptMfaSecret(foundUser.mfaSecret) : undefined,
+    );
+    foundUser.mfaSecret = encryptMfaSecret(enrollment.secret);
+    foundUser.onboardingStatus = AdminOnboardingStatus.authenticatorPending;
+    await foundUser.save();
+    const enrollmentToken = generateAdminFlowToken({
+      email: foundUser.email,
+      id: String(foundUser._id),
+      purpose: "admin_mfa_enrollment",
+    }, "15m");
+    return successResponse(res, StatusCodes.OK, {
+      mfaEnrollmentRequired: true,
+      enrollmentToken,
+      authenticator: {
+        secret: enrollment.secret,
+        otpauthUri: enrollment.otpauthUri,
+        issuer: "Emilist Admin",
+        accountName: foundUser.email,
+      },
+    });
+  }
+  if (foundUser.onboardingStatus !== AdminOnboardingStatus.active) {
+    throw new UnauthorizedError("Account onboarding is incomplete");
+  }
+
+  const challengeToken = generateAdminFlowToken({
+    email: foundUser.email,
+    id: String(foundUser._id),
+    purpose: "admin_mfa_login",
+  });
+  return successResponse(res, StatusCodes.OK, { mfaRequired: true, challengeToken });
+});
+
+export const verifyAdminLoginMfaController = catchAsync(async (req: Request, res: Response) => {
+  const { challengeToken, code } = req.body;
+  const challenge = verifyAdminFlowToken(challengeToken, "admin_mfa_login");
+  const admin = await adminService.getAdminForAuthentication(challenge.email.toLowerCase());
+  if (!admin || String(admin._id) !== challenge.id || !admin.mfaEnabled || !admin.mfaSecret) {
+    throw new UnauthorizedError("Invalid sign-in challenge");
+  }
+  if (admin.status !== UserStatus.active) throw new UnauthorizedError("Admin account is not active");
+  if (!verifyAuthenticatorCode(decryptMfaSecret(admin.mfaSecret), code)) {
+    throw new BadRequestError("Invalid authenticator code");
+  }
+
+  admin.lastLoginAt = new Date();
+  await admin.save();
+  const token = generateJWTwithExpiryDate({ email: admin.email, id: admin._id });
+  return successResponse(res, StatusCodes.OK, { token, admin: adminResponse(admin) });
+});
+
+export const activateLegacyAdminMfaController = catchAsync(async (req: Request, res: Response) => {
+  const { enrollmentToken, code } = req.body;
+  const challenge = verifyAdminFlowToken(enrollmentToken, "admin_mfa_enrollment");
+  const admin = await adminService.getAdminForAuthentication(challenge.email.toLowerCase());
+  if (!admin || String(admin._id) !== challenge.id || admin.mfaEnabled || !admin.mfaSecret) {
+    throw new UnauthorizedError("Invalid authenticator enrollment challenge");
+  }
+  if (!verifyAuthenticatorCode(decryptMfaSecret(admin.mfaSecret), code)) {
+    throw new BadRequestError("Invalid authenticator code");
+  }
+
+  admin.mfaEnabled = true;
+  admin.mfaVerifiedAt = new Date();
+  admin.isEmailVerified = true;
+  admin.onboardingStatus = AdminOnboardingStatus.active;
+  admin.lastLoginAt = new Date();
+  await admin.save();
+  const token = generateJWTwithExpiryDate({ email: admin.email, id: admin._id });
+  return successResponse(res, StatusCodes.OK, { token, admin: adminResponse(admin) });
 });
 
 export const changeStatusAdmin = catchAsync(async(req: JwtPayload, res: Response)=>{
@@ -620,43 +809,106 @@ export const changeStatusAdmin = catchAsync(async(req: JwtPayload, res: Response
 
 export const forgetPasswordController = catchAsync(async (req: Request, res: Response) => {
   const { email } = req.body;
+  const normalizedEmail = email.toLowerCase();
+  const admin = await adminService.getAdminForAuthentication(normalizedEmail);
 
-  const foundUser = await adminService.getAdminByEmail(email.toLowerCase());
-  if (!foundUser) throw new NotFoundError("Admin not found!");
+  if (admin && admin.status === UserStatus.active && admin.mfaEnabled && admin.mfaSecret) {
+    const { token, tokenHash } = adminService.createPasswordResetToken();
+    admin.passwordResetTokenHash = tokenHash;
+    admin.passwordResetExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    admin.passwordResetAuthorizationHash = undefined;
+    admin.passwordResetAuthorizationExpiresAt = undefined;
+    admin.passwordResetOtp = undefined;
+    admin.otpExpiresAt = undefined;
+    await admin.save();
 
-  const { otp, otpExpiryTime } = await generateOTPData(String(foundUser._id));
-  foundUser.otpExpiresAt = otpExpiryTime;
-  foundUser.passwordResetOtp = otp;
-  await foundUser.save();
+    const adminFrontendUrl = config.adminFrontendUrl || config.frontendLoginUrl || "";
+    const resetUrl = `${adminFrontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
+    const { html, subject } = passwordResetMessage(String(admin.fullName || "Admin"), resetUrl);
+    try {
+      await sendEmail(normalizedEmail, subject, html);
+    } catch (error) {
+      // Preserve the same public response for existing and non-existing accounts.
+      console.error("Admin password reset email failed:", error);
+    }
+  }
 
-  const { html, subject } = passwordResetMessage(String(foundUser.fullName), otp);
-  await sendEmail(email, subject, html); 
+  return successResponse(res, StatusCodes.OK, {
+    message: `If an admin account exists for ${normalizedEmail}, a reset link is on its way.`,
+    expiresInMinutes: 30,
+  });
+});
 
-  return successResponse(res, StatusCodes.OK, "Password reset OTP sent to your email.");
+const getValidPasswordReset = async (token: string) => {
+  const admin = await adminService.getAdminByPasswordResetToken(token);
+  if (!admin || !admin.passwordResetExpiresAt || admin.passwordResetExpiresAt.getTime() <= Date.now()) {
+    throw new BadRequestError("This reset link is invalid or has expired");
+  }
+  if (admin.status !== UserStatus.active || !admin.mfaEnabled || !admin.mfaSecret) {
+    throw new UnauthorizedError("This account cannot be reset using this link");
+  }
+  return admin;
+};
+
+export const inspectAdminPasswordResetController = catchAsync(async (req: Request, res: Response) => {
+  const admin = await getValidPasswordReset(String(req.params.token));
+  return successResponse(res, StatusCodes.OK, {
+    admin: adminResponse(admin),
+    nextStep: "authenticator",
+    expiresAt: admin.passwordResetExpiresAt,
+  });
+});
+
+export const verifyAdminPasswordResetMfaController = catchAsync(async (req: Request, res: Response) => {
+  const { token, code } = req.body;
+  const admin = await getValidPasswordReset(token);
+  if (!verifyAuthenticatorCode(decryptMfaSecret(admin.mfaSecret!), code)) {
+    throw new BadRequestError("Invalid authenticator code");
+  }
+
+  const authorization = adminService.createPasswordResetToken();
+  admin.passwordResetTokenHash = undefined;
+  admin.passwordResetExpiresAt = undefined;
+  admin.passwordResetAuthorizationHash = authorization.tokenHash;
+  admin.passwordResetAuthorizationExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  await admin.save();
+
+  return successResponse(res, StatusCodes.OK, {
+    authorizationToken: authorization.token,
+    expiresInMinutes: 10,
+    admin: adminResponse(admin),
+  });
 });
 
 export const resetPasswordController = catchAsync(async (req: Request, res: Response) => {
-  const { email, otp, newPassword } = req.body;
+  const { authorizationToken, password, confirmPassword } = req.body;
 
-  const foundUser = await adminService.getAdminByEmail(email.toLowerCase());
-  if (!foundUser) throw new NotFoundError("User not found!");
-
-  if (foundUser.passwordResetOtp !== otp) throw new BadRequestError("Invalid OTP");
-  const expiresAt = foundUser.otpExpiresAt as any;
-  if (foundUser.otpExpiresAt && Date.now() > expiresAt) {
-    throw new BadRequestError("OTP expired, request a new one.");
+  const foundUser = await adminService.getAdminByPasswordResetAuthorization(authorizationToken);
+  if (
+    !foundUser ||
+    !foundUser.passwordResetAuthorizationExpiresAt ||
+    foundUser.passwordResetAuthorizationExpiresAt.getTime() <= Date.now()
+  ) {
+    throw new BadRequestError("Password reset authorization is invalid or has expired");
   }
 
-  const hashedPassword = await hashPassword(newPassword);
+  assertStrongAdminPassword(password, confirmPassword);
+  await assertPasswordNotReused(password, foundUser.password, foundUser.passwordHistory);
+  const previousPassword = foundUser.password;
+  const hashedPassword = await hashPassword(password);
   foundUser.password = hashedPassword;
+  foundUser.passwordHistory = previousPassword
+    ? [previousPassword, ...(foundUser.passwordHistory || [])].slice(0, PASSWORD_HISTORY_LIMIT)
+    : foundUser.passwordHistory;
   foundUser.passwordResetOtp = undefined;
   foundUser.otpExpiresAt = undefined;
-  if(foundUser.isEmailVerified == false){
-    foundUser.isEmailVerified = true;
-  }
+  foundUser.passwordResetTokenHash = undefined;
+  foundUser.passwordResetExpiresAt = undefined;
+  foundUser.passwordResetAuthorizationHash = undefined;
+  foundUser.passwordResetAuthorizationExpiresAt = undefined;
   await foundUser.save();
 
-  return successResponse(res, StatusCodes.OK, "Password reset successfully!");
+  return successResponse(res, StatusCodes.OK, "Password reset successfully");
 });
 
 export const fetchAdminsController = catchAsync(async (req: Request, res: Response) => {
@@ -670,4 +922,142 @@ export const fetchAdminsController = catchAsync(async (req: Request, res: Respon
 
     }
   return successResponse(res, StatusCodes.OK, data);
+});
+
+const requestingAdminId = (req: Request) => String((req as any).user?._id || (req as any).user?.id);
+const customerResetUrl = (token: string) => {
+  const frontendUrl = config.customerFrontendUrl || config.frontendLoginUrl || "";
+  return `${frontendUrl.replace(/\/$/, "")}/reset-password?adminToken=${encodeURIComponent(token)}`;
+};
+
+export const customerSummaryController = catchAsync(async (_req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminCustomerService.fetchCustomerSummary());
+});
+
+export const customersController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminCustomerService.fetchCustomers(req.query));
+});
+
+export const customerOverviewController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminCustomerService.fetchCustomerOverview(String(req.params.customerId)));
+});
+
+export const customerDetailsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminCustomerService.fetchCustomerDetails(String(req.params.customerId)));
+});
+
+export const customerServicesController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminCustomerService.fetchCustomerServices(String(req.params.customerId)));
+});
+
+export const customerJobsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminCustomerService.fetchCustomerJobs(String(req.params.customerId), req.query));
+});
+
+export const customerListingsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminCustomerService.fetchCustomerListings(String(req.params.customerId), req.query));
+});
+
+export const customerOrdersController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminCustomerService.fetchCustomerOrders(String(req.params.customerId), req.query));
+});
+
+export const customerSalesController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminCustomerService.fetchCustomerSales(String(req.params.customerId), req.query));
+});
+
+export const customerTransactionsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminCustomerService.fetchCustomerTransactions(String(req.params.customerId), req.query));
+});
+
+export const customerSubscriptionsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminCustomerService.fetchCustomerSubscriptions(String(req.params.customerId), req.query));
+});
+
+export const createCustomerController = catchAsync(async (req: Request, res: Response) => {
+  const file = req.file as Express.Multer.File | undefined;
+  const user = await adminCustomerService.createCustomer({
+    ...req.body,
+    displayImage: file?.path || req.body.displayImage,
+  }, requestingAdminId(req));
+  const reset = await adminCustomerService.createCustomerPasswordReset(String(user._id), requestingAdminId(req));
+  const { html, subject } = adminCreatedCustomerMessage(
+    [user.firstName, user.lastName].filter(Boolean).join(" ") || "there",
+    customerResetUrl(reset.token),
+  );
+  let emailSent = true;
+  try {
+    await sendEmail(user.email, subject, html);
+  } catch (error) {
+    emailSent = false;
+    console.error("Customer setup email failed:", error);
+  }
+  return successResponse(res, StatusCodes.CREATED, {
+    ...(await adminCustomerService.fetchCustomerOverview(String(user._id))),
+    emailSent,
+  });
+});
+
+export const updateCustomerProfileController = catchAsync(async (req: Request, res: Response) => {
+  const data = await adminCustomerService.updateCustomerProfile(String(req.params.customerId), req.body, requestingAdminId(req));
+  return successResponse(res, StatusCodes.OK, data);
+});
+
+export const triggerCustomerPasswordResetController = catchAsync(async (req: Request, res: Response) => {
+  const reset = await adminCustomerService.createCustomerPasswordReset(String(req.params.customerId), requestingAdminId(req));
+  const { html, subject } = customerPasswordResetMessage(
+    [reset.user.firstName, reset.user.lastName].filter(Boolean).join(" ") || "there",
+    customerResetUrl(reset.token),
+  );
+  let sent = true;
+  try {
+    await sendEmail(reset.user.email, subject, html);
+  } catch (error) {
+    sent = false;
+    console.error("Customer password reset email failed:", error);
+  }
+  return successResponse(res, StatusCodes.OK, { sent, expiresAt: reset.expiresAt });
+});
+
+export const suspendCustomerController = catchAsync(async (req: Request, res: Response) => {
+  const data = await adminCustomerService.suspendCustomer(String(req.params.customerId), req.body, requestingAdminId(req));
+  return successResponse(res, StatusCodes.OK, data);
+});
+
+export const reactivateCustomerController = catchAsync(async (req: Request, res: Response) => {
+  const data = await adminCustomerService.reactivateCustomer(String(req.params.customerId), req.body.reason, requestingAdminId(req));
+  return successResponse(res, StatusCodes.OK, data);
+});
+
+export const adjustCustomerWalletController = catchAsync(async (req: Request, res: Response) => {
+  const data = await adminCustomerService.adjustCustomerWallet(String(req.params.customerId), req.body, requestingAdminId(req));
+  return successResponse(res, StatusCodes.OK, data);
+});
+
+export const customerAuditHistoryController = catchAsync(async (req: Request, res: Response) => {
+  const data = await adminCustomerService.fetchCustomerAuditHistory(String(req.params.customerId), req.query);
+  return successResponse(res, StatusCodes.OK, data);
+});
+
+export const sendCustomerMessageController = catchAsync(async (req: Request, res: Response) => {
+  const user = await adminCustomerService.logCustomerMessage(String(req.params.customerId), req.body.subject, requestingAdminId(req));
+  await notificationService.createNotification({
+    userId: user._id,
+    title: req.body.subject,
+    message: req.body.message,
+    type: NotificationTypeEnum.info,
+  });
+  const { html, subject } = adminCustomerMessage(
+    [user.firstName, user.lastName].filter(Boolean).join(" ") || "there",
+    req.body.subject,
+    req.body.message,
+  );
+  let emailSent = true;
+  try {
+    await sendEmail(user.email, subject, html);
+  } catch (error) {
+    emailSent = false;
+    console.error("Admin customer message email failed:", error);
+  }
+  return successResponse(res, StatusCodes.CREATED, { sent: true, emailSent });
 });

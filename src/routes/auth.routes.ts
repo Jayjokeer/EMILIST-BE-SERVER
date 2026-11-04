@@ -3,7 +3,7 @@ import * as authController from "../controllers/auth.controller";
 import { userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload } from "../utils/image-upload";
 import passport from "passport";
-import { validateRegisterUser, validateLoginUser, validateVerifyEmail, validateForgetPassword, validateResetPassword, validateChangePassword, validateUpdateAccountDetails, validatePaymentForVerification, validateUpdateUser, validatePasswordOtp } from "../validations/auth.validation";
+import { validateAdminTriggeredPasswordReset, validateRegisterUser, validateLoginUser, validateVerifyEmail, validateForgetPassword, validateResetPassword, validateChangePassword, validateUpdateAccountDetails, validatePaymentForVerification, validateUpdateUser, validatePasswordOtp } from "../validations/auth.validation";
 import *  as paymentController from "../controllers/payment.controller";
 import { config } from "../utils/config";
 
@@ -19,6 +19,7 @@ router.route("/verify-email").post(validateVerifyEmail, authController.verifyEma
 router.route("/forgot-password").post(validateForgetPassword, authController.forgetPasswordController);
 router.route("/verify-password-otp").post(validatePasswordOtp, authController.verifyPasswordOtpController);
 router.route("/reset-password").post(validateResetPassword, authController.resetPasswordController);
+router.route("/admin-triggered-password-reset").post(validateAdminTriggeredPasswordReset, authController.adminTriggeredPasswordResetController);
 //file uploads
 router.route("/upload-image").post(singleUpload, authController.uploadImage);
 router.route("/upload-files").post(multipleUpload, authController.uploadMultipleFiles);

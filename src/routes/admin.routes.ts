@@ -1,8 +1,27 @@
 import { Router, Request, Response } from "express";
 import { adminAuth, superAdminAuth } from "../middlewares/current-user";
 import * as adminController from "../controllers/admin.controller";
-import { validateAddUserAdmin, validateJobPaymentAdmin } from "../validations/admin.validation";
-import { multipleUpload } from "../utils/image-upload";
+import {
+  validateAddUserAdmin,
+  validateAdminAuthenticator,
+  validateAdminInvitationToken,
+  validateAdminLogin,
+  validateAdminMfaLogin,
+  validateAdminMfaEnrollment,
+  validateAdminPasswordSetup,
+  validateAdminPasswordResetComplete,
+  validateAdminPasswordResetMfa,
+  validateAdminPasswordResetRequest,
+  validateAdminCustomerMessage,
+  validateCreateCustomer,
+  validateCustomerReactivation,
+  validateCustomerSuspension,
+  validateCustomerWalletAdjustment,
+  validateUpdateCustomerProfile,
+  validateCreateAdminInvitation,
+  validateJobPaymentAdmin,
+} from "../validations/admin.validation";
+import { multipleUpload, singleUpload } from "../utils/image-upload";
 import { validateJob } from "../validations/job.validation";
 import * as walletController from "../controllers/wallet.controller";
 
@@ -10,6 +29,7 @@ import * as walletController from "../controllers/wallet.controller";
 const router = Router();
 
 router.route("/dashboard").get(adminAuth, adminController.adminDashboardController);
+router.route("/overview").get(adminAuth, adminController.adminOverviewController);
 router.route("/users").get(adminAuth, adminController.fetchAllUsersAdminController);
 router.route("/verify-user").patch(adminAuth, adminController.verifyUserAdminController);
 router.route("/fetch-userDetails/:userId").get(adminAuth, adminController.fetchUserDetails);
@@ -37,12 +57,41 @@ router.route("/fetch-all-categories").get(adminController.fetchAllCategoriesCont
 router.route("/fetch-user-account-details/:userId").get(adminAuth, adminController.fetchUserAccountDetailsController );
 router.route("/fetch-user-subscriptions/:userId").get(adminAuth, adminController.fetchUserSubscriptionsController );
 router.route("/fetch-all-verifications").get(adminAuth, adminController.fetchAllVerificationsController );
-router.route("/create-admin").post(superAdminAuth, adminController.createAdminController);
-router.route("/login").post(adminController.loginAdminController);
+router.route("/create-admin").post(superAdminAuth, validateCreateAdminInvitation, adminController.createAdminController);
+router.route("/onboarding/invitation/:token").get(adminController.inspectAdminInvitationController);
+router.route("/onboarding/password").post(validateAdminPasswordSetup, adminController.setAdminOnboardingPasswordController);
+router.route("/onboarding/authenticator/setup").post(validateAdminInvitationToken, adminController.getAdminAuthenticatorSetupController);
+router.route("/onboarding/authenticator/activate").post(validateAdminAuthenticator, adminController.activateAdminAccountController);
+router.route("/login").post(validateAdminLogin, adminController.loginAdminController);
+router.route("/login/mfa").post(validateAdminMfaLogin, adminController.verifyAdminLoginMfaController);
+router.route("/login/mfa/enroll").post(validateAdminMfaEnrollment, adminController.activateLegacyAdminMfaController);
 router.route("/change-status-admin").patch(superAdminAuth,adminController.changeStatusAdmin);
-router.route("/forgot-password").patch(adminController.forgetPasswordController);
-router.route("/password-reset").patch(adminController.resetPasswordController);
+router.route("/password-reset/request").post(validateAdminPasswordResetRequest, adminController.forgetPasswordController);
+router.route("/password-reset/verify-authenticator").post(validateAdminPasswordResetMfa, adminController.verifyAdminPasswordResetMfaController);
+router.route("/password-reset/complete").post(validateAdminPasswordResetComplete, adminController.resetPasswordController);
+router.route("/password-reset/:token").get(adminController.inspectAdminPasswordResetController);
+router.route("/forgot-password").patch(validateAdminPasswordResetRequest, adminController.forgetPasswordController);
+router.route("/password-reset").patch(validateAdminPasswordResetComplete, adminController.resetPasswordController);
 router.route("/fetch-admins").get(superAdminAuth,adminController.fetchAdminsController);
+router.route("/customers/summary").get(adminAuth, adminController.customerSummaryController);
+router.route("/customers").get(adminAuth, adminController.customersController);
+router.route("/customers").post(adminAuth, singleUpload, validateCreateCustomer, adminController.createCustomerController);
+router.route("/customers/:customerId/overview").get(adminAuth, adminController.customerOverviewController);
+router.route("/customers/:customerId/details").get(adminAuth, adminController.customerDetailsController);
+router.route("/customers/:customerId/services").get(adminAuth, adminController.customerServicesController);
+router.route("/customers/:customerId/jobs").get(adminAuth, adminController.customerJobsController);
+router.route("/customers/:customerId/listings").get(adminAuth, adminController.customerListingsController);
+router.route("/customers/:customerId/orders").get(adminAuth, adminController.customerOrdersController);
+router.route("/customers/:customerId/sales").get(adminAuth, adminController.customerSalesController);
+router.route("/customers/:customerId/transactions").get(adminAuth, adminController.customerTransactionsController);
+router.route("/customers/:customerId/subscriptions").get(adminAuth, adminController.customerSubscriptionsController);
+router.route("/customers/:customerId/profile").patch(adminAuth, validateUpdateCustomerProfile, adminController.updateCustomerProfileController);
+router.route("/customers/:customerId/messages").post(adminAuth, validateAdminCustomerMessage, adminController.sendCustomerMessageController);
+router.route("/customers/:customerId/password-reset").post(adminAuth, adminController.triggerCustomerPasswordResetController);
+router.route("/customers/:customerId/suspensions").post(adminAuth, validateCustomerSuspension, adminController.suspendCustomerController);
+router.route("/customers/:customerId/reactivate").post(adminAuth, validateCustomerReactivation, adminController.reactivateCustomerController);
+router.route("/customers/:customerId/wallet-adjustments").post(adminAuth, validateCustomerWalletAdjustment, adminController.adjustCustomerWalletController);
+router.route("/customers/:customerId/audit-history").get(adminAuth, adminController.customerAuditHistoryController);
 
 
 export { router as AdminRoute };

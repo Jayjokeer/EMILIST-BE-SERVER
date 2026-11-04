@@ -40,6 +40,7 @@ const walletSchema = new mongoose_1.Schema({
     balance: { type: Number, default: 0 },
     currency: { type: String, default: transaction_enum_1.WalletEnum.NGN },
     isDefault: { type: Boolean, default: false },
+    appliedAdjustments: { type: [String], default: [], select: false },
 }, { timestamps: true });
 walletSchema.index({ userId: 1, currency: 1 }, { unique: true });
 exports.default = mongoose_1.default.model('Wallet', walletSchema);

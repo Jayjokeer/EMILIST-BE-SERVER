@@ -6,6 +6,7 @@ import {JobExpertLevel } from "../enums/jobs.enum";
 const userSchema: Schema = new mongoose.Schema(
   {
     firstName: { type: String},
+    middleName: { type: String},
     lastName: { type: String},
     countryCode: {type: String},
     email: { type: String, required: true, unique: true },
@@ -16,6 +17,8 @@ const userSchema: Schema = new mongoose.Schema(
     gender: { type: String},
     languages: [{type: String}],
     mobile: {type: String},
+    businessMobile: {type: String},
+    whatsAppNumber: {type: String},
     city: {type: String},
     state: {type: String},
     country: {type: String},
@@ -29,6 +32,8 @@ const userSchema: Schema = new mongoose.Schema(
     registrationOtp: {type: String, default: null},
     otpExpiresAt: {type: Date, default: null},
     passwordResetOtp: {type: String},
+    adminPasswordResetTokenHash: {type: String, select: false},
+    adminPasswordResetExpiresAt: {type: Date, select: false},
     displayImage: {type: String},
     googleId: {type: String},
     accessToken: {type: String},
@@ -51,6 +56,16 @@ const userSchema: Schema = new mongoose.Schema(
     sharedCount: {type: Number, default: 0},
     mutedBusinesses: [{ type: Schema.Types.ObjectId, ref: 'Business' }],
     isProfileComplete: {type: Boolean, default: false},
+    suspension: {
+      type: {type: String},
+      reason: {type: String},
+      context: {type: String},
+      suspendedAt: {type: Date},
+      suspendedBy: {type: Schema.Types.ObjectId, ref: 'Admin'},
+      expiresAt: {type: Date},
+      reactivatedAt: {type: Date},
+      reactivatedBy: {type: Schema.Types.ObjectId, ref: 'Admin'},
+    },
   },
   { timestamps: true }
 

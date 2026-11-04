@@ -36,7 +36,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAdminsController = exports.resetPasswordController = exports.forgetPasswordController = exports.changeStatusAdmin = exports.loginAdminController = exports.createAdminController = exports.fetchAllVerificationsController = exports.fetchUserSubscriptionsController = exports.fetchUserAccountDetailsController = exports.fetchAllCategoriesController = exports.fetchSingleCategoryController = exports.deleteCategoryController = exports.addCategoriesController = exports.updateJobPaymentStatusController = exports.fetchPrivateExpertByIdController = exports.fetchAllPrivateExpertsController = exports.declineWithdrawalController = exports.approveWithdrawalController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminDashboardController = void 0;
+exports.customerOrdersController = exports.customerListingsController = exports.customerJobsController = exports.customerServicesController = exports.customerDetailsController = exports.customerOverviewController = exports.customersController = exports.customerSummaryController = exports.fetchAdminsController = exports.resetPasswordController = exports.verifyAdminPasswordResetMfaController = exports.inspectAdminPasswordResetController = exports.forgetPasswordController = exports.changeStatusAdmin = exports.activateLegacyAdminMfaController = exports.verifyAdminLoginMfaController = exports.loginAdminController = exports.activateAdminAccountController = exports.getAdminAuthenticatorSetupController = exports.setAdminOnboardingPasswordController = exports.inspectAdminInvitationController = exports.createAdminController = exports.fetchAllVerificationsController = exports.fetchUserSubscriptionsController = exports.fetchUserAccountDetailsController = exports.fetchAllCategoriesController = exports.fetchSingleCategoryController = exports.deleteCategoryController = exports.addCategoriesController = exports.updateJobPaymentStatusController = exports.fetchPrivateExpertByIdController = exports.fetchAllPrivateExpertsController = exports.declineWithdrawalController = exports.approveWithdrawalController = exports.updateVatController = exports.fetchSingleTransactionAdminController = exports.fetchAllTransactionsAdminController = exports.fetchSubscriptionsController = exports.fetchSingleMaterialController = exports.fetchAllMaterialsAdminController = exports.createJobAdminController = exports.fetchSingleJobAdminController = exports.fetchJobsAdminController = exports.addUserAdminController = exports.fetchUserDetails = exports.suspendUserAdminController = exports.verifyUserAdminController = exports.fetchAllUsersAdminController = exports.adminOverviewController = exports.adminDashboardController = void 0;
+exports.sendCustomerMessageController = exports.customerAuditHistoryController = exports.adjustCustomerWalletController = exports.reactivateCustomerController = exports.suspendCustomerController = exports.triggerCustomerPasswordResetController = exports.updateCustomerProfileController = exports.createCustomerController = exports.customerSubscriptionsController = exports.customerTransactionsController = exports.customerSalesController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const productService = __importStar(require("../services/product.service"));
@@ -66,6 +67,12 @@ const order_enum_1 = require("../enums/order.enum");
 const adminService = __importStar(require("../services/admin.service"));
 const hashing_1 = require("../utils/hashing");
 const jwt_1 = require("../utils/jwt");
+const notification_enum_1 = require("../enums/notification.enum");
+const admin_onboarding_service_1 = require("../services/admin-onboarding.service");
+const config_1 = require("../utils/config");
+const adminCustomerService = __importStar(require("../services/admin-customer.service"));
+const notificationService = __importStar(require("../services/notification.service"));
+const adminOverviewService = __importStar(require("../services/admin-overview.service"));
 exports.adminDashboardController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { currency, year } = req.query;
     const data = {
@@ -76,6 +83,10 @@ exports.adminDashboardController = (0, error_handler_1.catchAsync)(async (req, r
         totalTransactions: await transactionService.fetchTransactionChartAdminDashboard(year, currency),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
+});
+exports.adminOverviewController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const range = typeof req.query.range === "string" ? req.query.range : undefined;
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminOverviewService.fetchAdminOverview(range));
 });
 exports.fetchAllUsersAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page, limit, q, search } = req.query;
@@ -505,49 +516,203 @@ exports.fetchAllVerificationsController = (0, error_handler_1.catchAsync)(async 
     const data = await verificationService.fetchAllVerifications(page, limit);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
-exports.createAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { fullName, mobile, email, password } = req.body;
-    const isEmailExists = await adminService.getAdminByEmail(email.toLowerCase());
-    if (isEmailExists) {
-        throw new error_1.BadRequestError('Email exists');
+const adminResponse = (admin) => ({
+    id: admin._id,
+    fullName: admin.fullName,
+    email: admin.email,
+    mobile: admin.mobile || null,
+    department: admin.department,
+    role: admin.role,
+    status: admin.status,
+    onboardingStatus: admin.onboardingStatus,
+    mfaEnabled: admin.mfaEnabled,
+});
+const getValidInvitation = async (token) => {
+    const admin = await adminService.getAdminByInvitationToken(token);
+    if (!admin)
+        throw new error_1.NotFoundError("Invitation is invalid or has already been used");
+    if (!admin.invitationExpiresAt || admin.invitationExpiresAt.getTime() <= Date.now()) {
+        throw new error_1.BadRequestError("Invitation has expired. Ask a Super Admin to send a new one");
     }
-    const encryptPwd = await (0, hashing_1.hashPassword)(password);
-    const data = await adminService.createAdmin({
+    return admin;
+};
+exports.createAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const { fullName, mobile, email, department, role } = req.body;
+    const normalizedEmail = email.toLowerCase();
+    const isEmailExists = await adminService.getAdminByEmail(normalizedEmail);
+    if (isEmailExists)
+        throw new error_1.BadRequestError("An admin with this email already exists");
+    const { token, tokenHash } = adminService.createInvitationToken();
+    const invitationExpiresAt = new Date(Date.now() + admin_onboarding_service_1.ADMIN_INVITATION_TTL_MS);
+    const admin = await adminService.createAdmin({
         fullName,
         mobile,
-        email: email.toLowerCase(),
-        password: encryptPwd
+        email: normalizedEmail,
+        department,
+        role,
+        onboardingStatus: user_enums_1.AdminOnboardingStatus.invited,
+        invitationTokenHash: tokenHash,
+        invitationExpiresAt,
     });
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, "Admin created");
+    const adminFrontendUrl = config_1.config.adminFrontendUrl || config_1.config.frontendLoginUrl || "";
+    const separator = adminFrontendUrl.includes("?") ? "&" : "?";
+    const invitationUrl = `${adminFrontendUrl}${separator}invite=${encodeURIComponent(token)}`;
+    const { html, subject } = (0, templates_1.adminInvitationMessage)(fullName, invitationUrl);
+    await (0, send_email_1.sendEmail)(normalizedEmail, subject, html);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, {
+        admin: adminResponse(admin),
+        invitationExpiresAt,
+    });
+});
+exports.inspectAdminInvitationController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const admin = await getValidInvitation(String(req.params.token));
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        admin: adminResponse(admin),
+        nextStep: admin.onboardingStatus === user_enums_1.AdminOnboardingStatus.invited ? "password" : "authenticator",
+        invitationExpiresAt: admin.invitationExpiresAt,
+    });
+});
+exports.setAdminOnboardingPasswordController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const { token, password, confirmPassword } = req.body;
+    const admin = await getValidInvitation(token);
+    if (admin.onboardingStatus !== user_enums_1.AdminOnboardingStatus.invited) {
+        throw new error_1.BadRequestError("Password has already been created for this invitation");
+    }
+    (0, admin_onboarding_service_1.assertStrongAdminPassword)(password, confirmPassword);
+    await (0, admin_onboarding_service_1.assertPasswordNotReused)(password, admin.password, admin.passwordHistory);
+    const enrollment = (0, admin_onboarding_service_1.createAuthenticatorEnrollment)(admin.email);
+    admin.password = await (0, hashing_1.hashPassword)(password);
+    admin.passwordHistory = [];
+    admin.mfaSecret = (0, admin_onboarding_service_1.encryptMfaSecret)(enrollment.secret);
+    admin.onboardingStatus = user_enums_1.AdminOnboardingStatus.authenticatorPending;
+    admin.invitationAcceptedAt = new Date();
+    await admin.save();
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        admin: adminResponse(admin),
+        authenticator: {
+            secret: enrollment.secret,
+            otpauthUri: enrollment.otpauthUri,
+            issuer: "Emilist Admin",
+            accountName: admin.email,
+        },
+    });
+});
+exports.getAdminAuthenticatorSetupController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const admin = await getValidInvitation(req.body.token);
+    if (admin.onboardingStatus !== user_enums_1.AdminOnboardingStatus.authenticatorPending || !admin.mfaSecret) {
+        throw new error_1.BadRequestError("Create your password before setting up the authenticator");
+    }
+    const enrollment = (0, admin_onboarding_service_1.createAuthenticatorEnrollment)(admin.email, (0, admin_onboarding_service_1.decryptMfaSecret)(admin.mfaSecret));
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        secret: enrollment.secret,
+        otpauthUri: enrollment.otpauthUri,
+        issuer: "Emilist Admin",
+        accountName: admin.email,
+    });
+});
+exports.activateAdminAccountController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const { token, code } = req.body;
+    const admin = await getValidInvitation(token);
+    if (admin.onboardingStatus !== user_enums_1.AdminOnboardingStatus.authenticatorPending || !admin.mfaSecret) {
+        throw new error_1.BadRequestError("Authenticator setup is not ready for verification");
+    }
+    if (!(0, admin_onboarding_service_1.verifyAuthenticatorCode)((0, admin_onboarding_service_1.decryptMfaSecret)(admin.mfaSecret), code)) {
+        throw new error_1.BadRequestError("Invalid authenticator code");
+    }
+    admin.mfaEnabled = true;
+    admin.mfaVerifiedAt = new Date();
+    admin.isEmailVerified = true;
+    admin.onboardingStatus = user_enums_1.AdminOnboardingStatus.active;
+    admin.invitationTokenHash = undefined;
+    admin.invitationExpiresAt = undefined;
+    admin.lastLoginAt = new Date();
+    await admin.save();
+    const authToken = (0, jwt_1.generateJWTwithExpiryDate)({ email: admin.email, id: admin._id });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { token: authToken, admin: adminResponse(admin) });
 });
 exports.loginAdminController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { email, password } = req.body;
-    const foundUser = await adminService.getAdminByEmail(email.toLowerCase());
-    if (!foundUser)
-        throw new error_1.NotFoundError("Invalid credentials!");
+    const foundUser = await adminService.getAdminForAuthentication(email.toLowerCase());
+    if (!foundUser || !foundUser.password)
+        throw new error_1.UnauthorizedError("Invalid credentials");
     const userPwd = foundUser.password;
     const pwdCompare = await (0, hashing_1.comparePassword)(password, userPwd);
     if (!pwdCompare)
-        throw new error_1.NotFoundError("Invalid credentials!");
+        throw new error_1.UnauthorizedError("Invalid credentials");
     if (foundUser.status == user_enums_1.UserStatus.deactivated) {
         throw new error_1.UnauthorizedError("Account Deactivated!!");
     }
     if (foundUser.status == user_enums_1.UserStatus.suspended) {
         throw new error_1.UnauthorizedError("Account Suspended kindly Contact Admin!!");
     }
-    //   if(foundUser.isEmailVerified == false){
-    //     throw new BadRequestError("Kindly verify your email!");
-    //   }
-    const token = await (0, jwt_1.generateJWTwithExpiryDate)({
+    if (!foundUser.mfaEnabled) {
+        if (foundUser.invitationTokenHash)
+            throw new error_1.UnauthorizedError("Account onboarding is incomplete");
+        const enrollment = (0, admin_onboarding_service_1.createAuthenticatorEnrollment)(foundUser.email, foundUser.mfaSecret ? (0, admin_onboarding_service_1.decryptMfaSecret)(foundUser.mfaSecret) : undefined);
+        foundUser.mfaSecret = (0, admin_onboarding_service_1.encryptMfaSecret)(enrollment.secret);
+        foundUser.onboardingStatus = user_enums_1.AdminOnboardingStatus.authenticatorPending;
+        await foundUser.save();
+        const enrollmentToken = (0, jwt_1.generateAdminFlowToken)({
+            email: foundUser.email,
+            id: String(foundUser._id),
+            purpose: "admin_mfa_enrollment",
+        }, "15m");
+        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+            mfaEnrollmentRequired: true,
+            enrollmentToken,
+            authenticator: {
+                secret: enrollment.secret,
+                otpauthUri: enrollment.otpauthUri,
+                issuer: "Emilist Admin",
+                accountName: foundUser.email,
+            },
+        });
+    }
+    if (foundUser.onboardingStatus !== user_enums_1.AdminOnboardingStatus.active) {
+        throw new error_1.UnauthorizedError("Account onboarding is incomplete");
+    }
+    const challengeToken = (0, jwt_1.generateAdminFlowToken)({
         email: foundUser.email,
-        id: foundUser._id,
+        id: String(foundUser._id),
+        purpose: "admin_mfa_login",
     });
-    const userData = await authService.findUserById(String(foundUser._id));
-    const user = {
-        token,
-        userData
-    };
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, user);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { mfaRequired: true, challengeToken });
+});
+exports.verifyAdminLoginMfaController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const { challengeToken, code } = req.body;
+    const challenge = (0, jwt_1.verifyAdminFlowToken)(challengeToken, "admin_mfa_login");
+    const admin = await adminService.getAdminForAuthentication(challenge.email.toLowerCase());
+    if (!admin || String(admin._id) !== challenge.id || !admin.mfaEnabled || !admin.mfaSecret) {
+        throw new error_1.UnauthorizedError("Invalid sign-in challenge");
+    }
+    if (admin.status !== user_enums_1.UserStatus.active)
+        throw new error_1.UnauthorizedError("Admin account is not active");
+    if (!(0, admin_onboarding_service_1.verifyAuthenticatorCode)((0, admin_onboarding_service_1.decryptMfaSecret)(admin.mfaSecret), code)) {
+        throw new error_1.BadRequestError("Invalid authenticator code");
+    }
+    admin.lastLoginAt = new Date();
+    await admin.save();
+    const token = (0, jwt_1.generateJWTwithExpiryDate)({ email: admin.email, id: admin._id });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { token, admin: adminResponse(admin) });
+});
+exports.activateLegacyAdminMfaController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const { enrollmentToken, code } = req.body;
+    const challenge = (0, jwt_1.verifyAdminFlowToken)(enrollmentToken, "admin_mfa_enrollment");
+    const admin = await adminService.getAdminForAuthentication(challenge.email.toLowerCase());
+    if (!admin || String(admin._id) !== challenge.id || admin.mfaEnabled || !admin.mfaSecret) {
+        throw new error_1.UnauthorizedError("Invalid authenticator enrollment challenge");
+    }
+    if (!(0, admin_onboarding_service_1.verifyAuthenticatorCode)((0, admin_onboarding_service_1.decryptMfaSecret)(admin.mfaSecret), code)) {
+        throw new error_1.BadRequestError("Invalid authenticator code");
+    }
+    admin.mfaEnabled = true;
+    admin.mfaVerifiedAt = new Date();
+    admin.isEmailVerified = true;
+    admin.onboardingStatus = user_enums_1.AdminOnboardingStatus.active;
+    admin.lastLoginAt = new Date();
+    await admin.save();
+    const token = (0, jwt_1.generateJWTwithExpiryDate)({ email: admin.email, id: admin._id });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { token, admin: adminResponse(admin) });
 });
 exports.changeStatusAdmin = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { status, id } = req.body;
@@ -561,37 +726,93 @@ exports.changeStatusAdmin = (0, error_handler_1.catchAsync)(async (req, res) => 
 });
 exports.forgetPasswordController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { email } = req.body;
-    const foundUser = await adminService.getAdminByEmail(email.toLowerCase());
-    if (!foundUser)
-        throw new error_1.NotFoundError("Admin not found!");
-    const { otp, otpExpiryTime } = await (0, utility_1.generateOTPData)(String(foundUser._id));
-    foundUser.otpExpiresAt = otpExpiryTime;
-    foundUser.passwordResetOtp = otp;
-    await foundUser.save();
-    const { html, subject } = (0, templates_1.passwordResetMessage)(String(foundUser.fullName), otp);
-    await (0, send_email_1.sendEmail)(email, subject, html);
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Password reset OTP sent to your email.");
+    const normalizedEmail = email.toLowerCase();
+    const admin = await adminService.getAdminForAuthentication(normalizedEmail);
+    if (admin && admin.status === user_enums_1.UserStatus.active && admin.mfaEnabled && admin.mfaSecret) {
+        const { token, tokenHash } = adminService.createPasswordResetToken();
+        admin.passwordResetTokenHash = tokenHash;
+        admin.passwordResetExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
+        admin.passwordResetAuthorizationHash = undefined;
+        admin.passwordResetAuthorizationExpiresAt = undefined;
+        admin.passwordResetOtp = undefined;
+        admin.otpExpiresAt = undefined;
+        await admin.save();
+        const adminFrontendUrl = config_1.config.adminFrontendUrl || config_1.config.frontendLoginUrl || "";
+        const resetUrl = `${adminFrontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
+        const { html, subject } = (0, templates_1.passwordResetMessage)(String(admin.fullName || "Admin"), resetUrl);
+        try {
+            await (0, send_email_1.sendEmail)(normalizedEmail, subject, html);
+        }
+        catch (error) {
+            // Preserve the same public response for existing and non-existing accounts.
+            console.error("Admin password reset email failed:", error);
+        }
+    }
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        message: `If an admin account exists for ${normalizedEmail}, a reset link is on its way.`,
+        expiresInMinutes: 30,
+    });
+});
+const getValidPasswordReset = async (token) => {
+    const admin = await adminService.getAdminByPasswordResetToken(token);
+    if (!admin || !admin.passwordResetExpiresAt || admin.passwordResetExpiresAt.getTime() <= Date.now()) {
+        throw new error_1.BadRequestError("This reset link is invalid or has expired");
+    }
+    if (admin.status !== user_enums_1.UserStatus.active || !admin.mfaEnabled || !admin.mfaSecret) {
+        throw new error_1.UnauthorizedError("This account cannot be reset using this link");
+    }
+    return admin;
+};
+exports.inspectAdminPasswordResetController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const admin = await getValidPasswordReset(String(req.params.token));
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        admin: adminResponse(admin),
+        nextStep: "authenticator",
+        expiresAt: admin.passwordResetExpiresAt,
+    });
+});
+exports.verifyAdminPasswordResetMfaController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const { token, code } = req.body;
+    const admin = await getValidPasswordReset(token);
+    if (!(0, admin_onboarding_service_1.verifyAuthenticatorCode)((0, admin_onboarding_service_1.decryptMfaSecret)(admin.mfaSecret), code)) {
+        throw new error_1.BadRequestError("Invalid authenticator code");
+    }
+    const authorization = adminService.createPasswordResetToken();
+    admin.passwordResetTokenHash = undefined;
+    admin.passwordResetExpiresAt = undefined;
+    admin.passwordResetAuthorizationHash = authorization.tokenHash;
+    admin.passwordResetAuthorizationExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await admin.save();
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        authorizationToken: authorization.token,
+        expiresInMinutes: 10,
+        admin: adminResponse(admin),
+    });
 });
 exports.resetPasswordController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { email, otp, newPassword } = req.body;
-    const foundUser = await adminService.getAdminByEmail(email.toLowerCase());
-    if (!foundUser)
-        throw new error_1.NotFoundError("User not found!");
-    if (foundUser.passwordResetOtp !== otp)
-        throw new error_1.BadRequestError("Invalid OTP");
-    const expiresAt = foundUser.otpExpiresAt;
-    if (foundUser.otpExpiresAt && Date.now() > expiresAt) {
-        throw new error_1.BadRequestError("OTP expired, request a new one.");
+    const { authorizationToken, password, confirmPassword } = req.body;
+    const foundUser = await adminService.getAdminByPasswordResetAuthorization(authorizationToken);
+    if (!foundUser ||
+        !foundUser.passwordResetAuthorizationExpiresAt ||
+        foundUser.passwordResetAuthorizationExpiresAt.getTime() <= Date.now()) {
+        throw new error_1.BadRequestError("Password reset authorization is invalid or has expired");
     }
-    const hashedPassword = await (0, hashing_1.hashPassword)(newPassword);
+    (0, admin_onboarding_service_1.assertStrongAdminPassword)(password, confirmPassword);
+    await (0, admin_onboarding_service_1.assertPasswordNotReused)(password, foundUser.password, foundUser.passwordHistory);
+    const previousPassword = foundUser.password;
+    const hashedPassword = await (0, hashing_1.hashPassword)(password);
     foundUser.password = hashedPassword;
+    foundUser.passwordHistory = previousPassword
+        ? [previousPassword, ...(foundUser.passwordHistory || [])].slice(0, admin_onboarding_service_1.PASSWORD_HISTORY_LIMIT)
+        : foundUser.passwordHistory;
     foundUser.passwordResetOtp = undefined;
     foundUser.otpExpiresAt = undefined;
-    if (foundUser.isEmailVerified == false) {
-        foundUser.isEmailVerified = true;
-    }
+    foundUser.passwordResetTokenHash = undefined;
+    foundUser.passwordResetExpiresAt = undefined;
+    foundUser.passwordResetAuthorizationHash = undefined;
+    foundUser.passwordResetAuthorizationExpiresAt = undefined;
     await foundUser.save();
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Password reset successfully!");
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Password reset successfully");
 });
 exports.fetchAdminsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page = 1, limit = 10, search } = req.query;
@@ -603,4 +824,115 @@ exports.fetchAdminsController = (0, error_handler_1.catchAsync)(async (req, res)
         totalPages: Math.ceil(totalAdmins / Number(limit)),
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+const requestingAdminId = (req) => String(req.user?._id || req.user?.id);
+const customerResetUrl = (token) => {
+    const frontendUrl = config_1.config.customerFrontendUrl || config_1.config.frontendLoginUrl || "";
+    return `${frontendUrl.replace(/\/$/, "")}/reset-password?adminToken=${encodeURIComponent(token)}`;
+};
+exports.customerSummaryController = (0, error_handler_1.catchAsync)(async (_req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminCustomerService.fetchCustomerSummary());
+});
+exports.customersController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminCustomerService.fetchCustomers(req.query));
+});
+exports.customerOverviewController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminCustomerService.fetchCustomerOverview(String(req.params.customerId)));
+});
+exports.customerDetailsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminCustomerService.fetchCustomerDetails(String(req.params.customerId)));
+});
+exports.customerServicesController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminCustomerService.fetchCustomerServices(String(req.params.customerId)));
+});
+exports.customerJobsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminCustomerService.fetchCustomerJobs(String(req.params.customerId), req.query));
+});
+exports.customerListingsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminCustomerService.fetchCustomerListings(String(req.params.customerId), req.query));
+});
+exports.customerOrdersController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminCustomerService.fetchCustomerOrders(String(req.params.customerId), req.query));
+});
+exports.customerSalesController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminCustomerService.fetchCustomerSales(String(req.params.customerId), req.query));
+});
+exports.customerTransactionsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminCustomerService.fetchCustomerTransactions(String(req.params.customerId), req.query));
+});
+exports.customerSubscriptionsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminCustomerService.fetchCustomerSubscriptions(String(req.params.customerId), req.query));
+});
+exports.createCustomerController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const file = req.file;
+    const user = await adminCustomerService.createCustomer({
+        ...req.body,
+        displayImage: file?.path || req.body.displayImage,
+    }, requestingAdminId(req));
+    const reset = await adminCustomerService.createCustomerPasswordReset(String(user._id), requestingAdminId(req));
+    const { html, subject } = (0, templates_1.adminCreatedCustomerMessage)([user.firstName, user.lastName].filter(Boolean).join(" ") || "there", customerResetUrl(reset.token));
+    let emailSent = true;
+    try {
+        await (0, send_email_1.sendEmail)(user.email, subject, html);
+    }
+    catch (error) {
+        emailSent = false;
+        console.error("Customer setup email failed:", error);
+    }
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, {
+        ...(await adminCustomerService.fetchCustomerOverview(String(user._id))),
+        emailSent,
+    });
+});
+exports.updateCustomerProfileController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const data = await adminCustomerService.updateCustomerProfile(String(req.params.customerId), req.body, requestingAdminId(req));
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+exports.triggerCustomerPasswordResetController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const reset = await adminCustomerService.createCustomerPasswordReset(String(req.params.customerId), requestingAdminId(req));
+    const { html, subject } = (0, templates_1.customerPasswordResetMessage)([reset.user.firstName, reset.user.lastName].filter(Boolean).join(" ") || "there", customerResetUrl(reset.token));
+    let sent = true;
+    try {
+        await (0, send_email_1.sendEmail)(reset.user.email, subject, html);
+    }
+    catch (error) {
+        sent = false;
+        console.error("Customer password reset email failed:", error);
+    }
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, { sent, expiresAt: reset.expiresAt });
+});
+exports.suspendCustomerController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const data = await adminCustomerService.suspendCustomer(String(req.params.customerId), req.body, requestingAdminId(req));
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+exports.reactivateCustomerController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const data = await adminCustomerService.reactivateCustomer(String(req.params.customerId), req.body.reason, requestingAdminId(req));
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+exports.adjustCustomerWalletController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const data = await adminCustomerService.adjustCustomerWallet(String(req.params.customerId), req.body, requestingAdminId(req));
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+exports.customerAuditHistoryController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const data = await adminCustomerService.fetchCustomerAuditHistory(String(req.params.customerId), req.query);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+exports.sendCustomerMessageController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const user = await adminCustomerService.logCustomerMessage(String(req.params.customerId), req.body.subject, requestingAdminId(req));
+    await notificationService.createNotification({
+        userId: user._id,
+        title: req.body.subject,
+        message: req.body.message,
+        type: notification_enum_1.NotificationTypeEnum.info,
+    });
+    const { html, subject } = (0, templates_1.adminCustomerMessage)([user.firstName, user.lastName].filter(Boolean).join(" ") || "there", req.body.subject, req.body.message);
+    let emailSent = true;
+    try {
+        await (0, send_email_1.sendEmail)(user.email, subject, html);
+    }
+    catch (error) {
+        emailSent = false;
+        console.error("Admin customer message email failed:", error);
+    }
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, { sent: true, emailSent });
 });

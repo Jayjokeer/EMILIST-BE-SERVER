@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateUpdateUser = exports.validatePaymentForVerification = exports.validateChangePassword = exports.validateUpdateAccountDetails = exports.validatePasswordOtp = exports.validateResetPassword = exports.validateForgetPassword = exports.validateVerifyEmail = exports.validateLoginUser = exports.validateRegisterUser = void 0;
+exports.validateUpdateUser = exports.validatePaymentForVerification = exports.validateChangePassword = exports.validateUpdateAccountDetails = exports.validatePasswordOtp = exports.validateAdminTriggeredPasswordReset = exports.validateResetPassword = exports.validateForgetPassword = exports.validateVerifyEmail = exports.validateLoginUser = exports.validateRegisterUser = void 0;
 const joi_1 = __importDefault(require("joi"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const validateRegisterUser = (req, res, next) => {
@@ -105,6 +105,21 @@ const validateResetPassword = (req, res, next) => {
     next();
 };
 exports.validateResetPassword = validateResetPassword;
+const validateAdminTriggeredPasswordReset = (req, res, next) => {
+    const schema = joi_1.default.object({
+        token: joi_1.default.string().required(),
+        password: joi_1.default.string().min(8).required(),
+        confirmPassword: joi_1.default.string().valid(joi_1.default.ref("password")).required(),
+    });
+    const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) {
+        res.status(400).json({ errors: error.details.map((detail) => detail.message) });
+        return;
+    }
+    req.body = value;
+    next();
+};
+exports.validateAdminTriggeredPasswordReset = validateAdminTriggeredPasswordReset;
 const validatePasswordOtp = (req, res, next) => {
     const schema = joi_1.default.object({
         email: joi_1.default.string().email().required(),

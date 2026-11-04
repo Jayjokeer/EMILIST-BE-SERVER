@@ -27,4 +27,6 @@ exports.config = {
     paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY,
     adminEmail: process.env.ADMIN_EMAIL,
     frontendLoginUrl: process.env.FRONTEND_LOGIN,
+    adminFrontendUrl: process.env.ADMIN_FRONTEND_URL,
+    customerFrontendUrl: process.env.CUSTOMER_FRONTEND_URL,
 };

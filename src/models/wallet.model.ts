@@ -9,6 +9,7 @@ const walletSchema = new Schema(
     balance: { type: Number, default: 0 },
     currency: { type: String, default: WalletEnum.NGN },
     isDefault: { type: Boolean, default: false },
+    appliedAdjustments: { type: [String], default: [], select: false },
   },
   { timestamps: true }
 );

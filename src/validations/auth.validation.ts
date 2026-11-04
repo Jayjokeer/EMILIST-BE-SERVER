@@ -107,6 +107,21 @@ export const validateRegisterUser = (req: Request, res: Response, next: NextFunc
   
     next();
   };
+
+export const validateAdminTriggeredPasswordReset = (req: Request, res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    token: Joi.string().required(),
+    password: Joi.string().min(8).required(),
+    confirmPassword: Joi.string().valid(Joi.ref("password")).required(),
+  });
+  const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    res.status(400).json({ errors: error.details.map((detail) => detail.message) });
+    return;
+  }
+  req.body = value;
+  next();
+};
     export const validatePasswordOtp = (req: Request, res: Response, next: NextFunction) => {
     const schema = Joi.object({
       email: Joi.string().email().required(),

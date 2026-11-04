@@ -8,7 +8,7 @@ import { NotFoundError, BadRequestError, UnauthorizedError } from '../errors/err
 import { generateOTPData, generateShortUUID } from "../utils/utility";
 import { generateJWTwithExpiryDate } from "../utils/jwt";
 import { catchAsync } from "../errors/error-handler";
-import { otpMessage, passwordResetMessage, sendInviteMessage } from "../utils/templates";
+import { otpMessage, sendInviteMessage } from "../utils/templates";
 import { sendEmail } from "../utils/send_email";
 import { JwtPayload } from "jsonwebtoken";
 import { config } from "../utils/config";
@@ -28,6 +28,7 @@ import * as newsLetterService from "../services/newsletter.service";
 import * as verificationService from "../services/verification.service";
 import { extractProfileDto } from "../helpers/validation.helper";
 import Users from "../models/users.model";
+import * as adminCustomerService from "../services/admin-customer.service";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -180,7 +181,7 @@ export const forgetPasswordController = catchAsync(async (req: Request, res: Res
   foundUser.passwordResetOtp = otp;
   await foundUser.save();
 
-  const { html, subject } = passwordResetMessage('user', otp);
+  const { html, subject } = otpMessage(otp);
    await sendEmail(email, subject, html); 
 
   return successResponse(res, StatusCodes.OK, "Password reset OTP sent to your email.");
@@ -207,6 +208,23 @@ export const resetPasswordController = catchAsync(async (req: Request, res: Resp
   }
   await notificationService.createNotification(notificationPayload);
   return successResponse(res, StatusCodes.OK, "Password reset successfully!");
+});
+
+export const adminTriggeredPasswordResetController = catchAsync(async (req: Request, res: Response) => {
+  const { token, password } = req.body;
+  const user = await adminCustomerService.consumeCustomerPasswordReset(token);
+  user.password = await hashPassword(password);
+  user.adminPasswordResetTokenHash = undefined;
+  user.adminPasswordResetExpiresAt = undefined;
+  user.isEmailVerified = true;
+  await user.save();
+  await notificationService.createNotification({
+    userId: user._id,
+    title: "Password Reset",
+    message: "Your password was reset using an administrator-issued secure link",
+    type: NotificationTypeEnum.info,
+  });
+  return successResponse(res, StatusCodes.OK, "Password reset successfully");
 });
 export const verifyPasswordOtpController = catchAsync(async (req: Request, res: Response) => {
   const { email, otp } = req.body;

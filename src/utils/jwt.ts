@@ -3,6 +3,14 @@ import jwt from "jsonwebtoken";
 import { BadRequestError } from "../errors/error";
 import { ISignUser } from "../interfaces/user.interface";
 
+type AdminTokenPurpose = "admin_mfa_login" | "admin_mfa_enrollment";
+
+interface AdminFlowToken {
+  id: string;
+  email: string;
+  purpose: AdminTokenPurpose;
+}
+
 
 export const generateJWTwithExpiryDate = (
   payload: ISignUser
@@ -23,5 +31,25 @@ export const verifyJWT = (token: string) => {
     } else {
       throw new BadRequestError("This token is invalid");
     }
+  }
+};
+
+export const generateAdminFlowToken = (
+  payload: AdminFlowToken,
+  expiresIn: string | number = "5m",
+) => jwt.sign(payload, process.env.JWT_SECRET!, { expiresIn } as jwt.SignOptions);
+
+export const verifyAdminFlowToken = (
+  token: string,
+  purpose: AdminTokenPurpose,
+): AdminFlowToken => {
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET!) as AdminFlowToken;
+    if (payload.purpose !== purpose) throw new Error("Invalid token purpose");
+    return payload;
+  } catch (error) {
+    throw new BadRequestError(
+      error instanceof jwt.TokenExpiredError ? "Challenge expired, please sign in again" : "Invalid challenge token",
+    );
   }
 };

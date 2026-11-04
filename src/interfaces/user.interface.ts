@@ -3,6 +3,7 @@ import { UserRolesEnum } from "../enums/user.enums";
 
 export interface IUser {
     firstName: string;
+    middleName?: string;
     lastName: string;
     email: string;
     password: string;
@@ -13,6 +14,8 @@ export interface IUser {
     houseAddress?: string;
     countryCode?: string;
     mobile?: string;
+    businessMobile?: string;
+    whatsAppNumber?: string;
     city?: string;
     bio?: string;
     state?: string;
@@ -22,6 +25,8 @@ export interface IUser {
     otpExpiresAt?: Date;
     registrationOtp?: string;
     passwordResetOtp?: String;
+    adminPasswordResetTokenHash?: string;
+    adminPasswordResetExpiresAt?: Date;
     displayImage?: string;
     status?: string; 
     accessToken?: string;
@@ -42,6 +47,7 @@ export interface IUser {
     sharedCount?: number;
     mutedBusinesses?: any;
     isProfileComplete?: boolean;
+    suspension?: any;
   }
   
 export interface ICreateUser {

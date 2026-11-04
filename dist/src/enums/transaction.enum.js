@@ -52,5 +52,6 @@ var ServiceEnum;
     ServiceEnum["withdrawal"] = "Withdrawal";
     ServiceEnum["subscription"] = "Subscription";
     ServiceEnum["verification"] = "verification";
+    ServiceEnum["adminAdjustment"] = "AdminAdjustment";
 })(ServiceEnum || (exports.ServiceEnum = ServiceEnum = {}));
 ;

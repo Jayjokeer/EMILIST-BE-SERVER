@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateReminderEmail = exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.counterOfferMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.passwordResetMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
+exports.generateReminderEmail = exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.counterOfferMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.adminCustomerMessage = exports.adminCreatedCustomerMessage = exports.customerPasswordResetMessage = exports.passwordResetMessage = exports.adminInvitationMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
 const config_1 = require("./config");
 const otpMessage = (otp) => {
     const subject = "Otp Email";
@@ -16,13 +16,56 @@ const welcomeMessageAdmin = (name) => {
     return { html, subject };
 };
 exports.welcomeMessageAdmin = welcomeMessageAdmin;
-const passwordResetMessage = (name, otp) => {
-    const subject = "Password reset otp";
+const adminInvitationMessage = (name, invitationUrl) => {
+    const subject = "Your Emilist Admin invitation";
     const html = `
-        Your password reset otp is ${otp}, valid for 10 minutes!`;
+        <p>Hi ${name},</p>
+        <p>You have been invited to Emilist Admin. This invitation expires in 48 hours.</p>
+        <p><a href="${invitationUrl}">Accept invite</a></p>`;
+    return { html, subject };
+};
+exports.adminInvitationMessage = adminInvitationMessage;
+const passwordResetMessage = (name, resetUrl) => {
+    const subject = "Reset your Emilist Admin password";
+    const html = `
+        <p>Hi ${name},</p>
+        <p>Use the secure link below to reset your Emilist Admin password. You will also need your authenticator app.</p>
+        <p><a href="${resetUrl}">Reset password</a></p>
+        <p>This one-time link expires in 30 minutes. If you did not request it, you can ignore this email.</p>`;
     return { html, subject };
 };
 exports.passwordResetMessage = passwordResetMessage;
+const customerPasswordResetMessage = (name, resetUrl) => {
+    const subject = "Reset your Emilist password";
+    const html = `
+        <p>Hi ${name},</p>
+        <p>An Emilist administrator sent you a secure password reset link.</p>
+        <p><a href="${resetUrl}">Reset password</a></p>
+        <p>This one-time link expires in 30 minutes. If you did not expect it, contact Emilist support.</p>`;
+    return { html, subject };
+};
+exports.customerPasswordResetMessage = customerPasswordResetMessage;
+const adminCreatedCustomerMessage = (name, resetUrl) => {
+    const subject = "Your Emilist account has been created";
+    const html = `
+        <p>Hi ${name},</p>
+        <p>An Emilist administrator created your customer profile.</p>
+        <p><a href="${resetUrl}">Create your password</a></p>
+        <p>This secure link expires in 30 minutes.</p>`;
+    return { html, subject };
+};
+exports.adminCreatedCustomerMessage = adminCreatedCustomerMessage;
+const escapeHtml = (value) => value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+const adminCustomerMessage = (name, subject, message) => ({
+    subject,
+    html: `<p>Hi ${escapeHtml(name)},</p><p>${escapeHtml(message).replace(/\n/g, "<br/>")}</p><p>— Emilist Admin</p>`,
+});
+exports.adminCustomerMessage = adminCustomerMessage;
 const directJobApplicationMessage = (name, creatorName, id) => {
     const subject = "Job Assigned to you";
     const html = `

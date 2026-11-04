@@ -43,4 +43,5 @@ export enum ServiceEnum {
     withdrawal = 'Withdrawal',
     subscription = 'Subscription',
     verification = 'verification',
+    adminAdjustment = 'AdminAdjustment',
 };

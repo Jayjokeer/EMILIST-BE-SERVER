@@ -38,6 +38,7 @@ const user_enums_1 = require("../enums/user.enums");
 const jobs_enum_1 = require("../enums/jobs.enum");
 const userSchema = new mongoose_1.default.Schema({
     firstName: { type: String },
+    middleName: { type: String },
     lastName: { type: String },
     countryCode: { type: String },
     email: { type: String, required: true, unique: true },
@@ -48,6 +49,8 @@ const userSchema = new mongoose_1.default.Schema({
     gender: { type: String },
     languages: [{ type: String }],
     mobile: { type: String },
+    businessMobile: { type: String },
+    whatsAppNumber: { type: String },
     city: { type: String },
     state: { type: String },
     country: { type: String },
@@ -61,6 +64,8 @@ const userSchema = new mongoose_1.default.Schema({
     registrationOtp: { type: String, default: null },
     otpExpiresAt: { type: Date, default: null },
     passwordResetOtp: { type: String },
+    adminPasswordResetTokenHash: { type: String, select: false },
+    adminPasswordResetExpiresAt: { type: Date, select: false },
     displayImage: { type: String },
     googleId: { type: String },
     accessToken: { type: String },
@@ -83,5 +88,15 @@ const userSchema = new mongoose_1.default.Schema({
     sharedCount: { type: Number, default: 0 },
     mutedBusinesses: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Business' }],
     isProfileComplete: { type: Boolean, default: false },
+    suspension: {
+        type: { type: String },
+        reason: { type: String },
+        context: { type: String },
+        suspendedAt: { type: Date },
+        suspendedBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Admin' },
+        expiresAt: { type: Date },
+        reactivatedAt: { type: Date },
+        reactivatedBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Admin' },
+    },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Users', userSchema);

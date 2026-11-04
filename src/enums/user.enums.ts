@@ -16,3 +16,10 @@ export enum AdminRolesEnum {
     admin = "admin",
     superAdmin = "superAdmin"
 }
+
+export enum AdminOnboardingStatus {
+    invited = "invited",
+    passwordSet = "password_set",
+    authenticatorPending = "authenticator_pending",
+    active = "active"
+}

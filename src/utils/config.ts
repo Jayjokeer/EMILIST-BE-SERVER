@@ -26,4 +26,6 @@ export const config = {
   paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY as string,
   adminEmail: process.env.ADMIN_EMAIL as string,
   frontendLoginUrl: process.env.FRONTEND_LOGIN as string,
+  adminFrontendUrl: process.env.ADMIN_FRONTEND_URL as string,
+  customerFrontendUrl: process.env.CUSTOMER_FRONTEND_URL as string,
 };
