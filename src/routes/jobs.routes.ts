@@ -9,7 +9,7 @@ import { validatePaymentForJob } from "../validations/product.validation";
 const router = Router();
 
 router.route("/create-job").post(userAuth,multipleUpload,parseJobBody,validateJob,jobController.createJobController);
-router.route("/fetch-all-jobs").get(optionalUserAuth,jobController.allJobsController);
+router.route("/fetch-all-jobs").get(jobController.allJobsController);
 router.route("/fetch-listed-jobs").get(userAuth,jobController.allUserJobController);
 router.route("/fetch-job-by-id").get(optionalUserAuth,jobController.fetchSingleJobController);
 router.route("/like-job/:jobId").post(userAuth,jobController.likeJobController);

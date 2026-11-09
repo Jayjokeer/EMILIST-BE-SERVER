@@ -814,7 +814,7 @@ Each job in the response includes \`applicantsCount\`, \`milestonesCount\`, \`li
 poster's Business reviews, 0/0 when they don't run a Business).
 
 Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = false\`) are excluded.`,
-                security: [{}, { bearerAuth: [] }],
+                security: [],
                 parameters: [
                     { name: "page", in: "query", required: false, schema: { type: "integer", default: 1 }, description: "Page number" },
                     { name: "limit", in: "query", required: false, schema: { type: "integer", default: 10 }, description: "Items per page" },
