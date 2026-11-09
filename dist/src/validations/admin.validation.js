@@ -3,12 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateJobPaymentAdmin = exports.validateAddUserAdmin = exports.validateAdminWithdrawalDecision = exports.validateAdminOrderReturn = exports.validateAdminMaterialDelist = exports.validateAdminJobAction = exports.validateUpdateSupportRequest = exports.validateCreateSupportRequest = exports.validateAdminCustomerMessage = exports.validateCustomerWalletAdjustment = exports.validateCustomerReactivation = exports.validateCustomerSuspension = exports.validateUpdateCustomerProfile = exports.validateCreateCustomer = exports.validateAdminPasswordResetComplete = exports.validateAdminPasswordResetMfa = exports.validateAdminPasswordResetRequest = exports.validateAdminMfaEnrollment = exports.validateAdminMfaLogin = exports.validateAdminLogin = exports.validateAdminInvitationToken = exports.validateAdminAuthenticator = exports.validateAdminPasswordSetup = exports.validateCreateAdminInvitation = void 0;
+exports.validateJobPaymentAdmin = exports.validateAddUserAdmin = exports.validateAdminWithdrawalDecision = exports.validateAdminOrderReturn = exports.validateAdminMaterialDelist = exports.validateAdminJobAction = exports.validateAssignSupportRequest = exports.validateResolveSupportRequest = exports.validateSupportNote = exports.validateSupportReply = exports.validateUpdateSupportRequest = exports.validateCreateSupportRequest = exports.validateAdminCustomerMessage = exports.validateCustomerWalletAdjustment = exports.validateCustomerReactivation = exports.validateCustomerSuspension = exports.validateUpdateCustomerProfile = exports.validateCreateCustomer = exports.validateAdminPasswordResetComplete = exports.validateAdminPasswordResetMfa = exports.validateAdminPasswordResetRequest = exports.validateAdminMfaEnrollment = exports.validateAdminMfaLogin = exports.validateAdminLogin = exports.validateAdminInvitationToken = exports.validateAdminAuthenticator = exports.validateAdminPasswordSetup = exports.validateAdminProfileUpdate = exports.validateSpotlightSettings = exports.validateSubscriptionPrices = exports.validatePlatformSettings = exports.validateAdminReportExport = exports.validateCreateAdminInvitation = void 0;
 const joi_1 = __importDefault(require("joi"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 const user_enums_1 = require("../enums/user.enums");
 const admin_customer_enum_1 = require("../enums/admin-customer.enum");
 const transaction_enum_1 = require("../enums/transaction.enum");
+const plan_enum_1 = require("../enums/plan.enum");
 const support_enum_1 = require("../enums/support.enum");
 const validate = (schema) => (req, res, next) => {
     const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
@@ -20,11 +21,45 @@ const validate = (schema) => (req, res, next) => {
     next();
 };
 exports.validateCreateAdminInvitation = validate(joi_1.default.object({
-    fullName: joi_1.default.string().trim().min(2).required(),
+    fullName: joi_1.default.string().trim().min(2),
+    firstName: joi_1.default.string().trim().min(1).max(60),
+    lastName: joi_1.default.string().trim().min(1).max(60).when("firstName", { is: joi_1.default.exist(), then: joi_1.default.required() }),
     email: joi_1.default.string().trim().lowercase().email().required(),
     mobile: joi_1.default.string().trim().allow("", null),
     department: joi_1.default.string().trim().max(80).default("Operations"),
+    jobTitle: joi_1.default.string().trim().max(100).allow("", null),
     role: joi_1.default.string().valid(...Object.values(user_enums_1.AdminRolesEnum)).default(user_enums_1.AdminRolesEnum.admin),
+}).or("fullName", "firstName"));
+exports.validateAdminReportExport = validate(joi_1.default.object({
+    report: joi_1.default.string().valid("platform_churn", "user_acquisition", "job_success", "daily_active_users", "material_sales", "subscription_performance").required(),
+    startDate: joi_1.default.date().iso().required(),
+    endDate: joi_1.default.date().iso().min(joi_1.default.ref("startDate")).required(),
+    format: joi_1.default.string().valid("pdf", "csv", "md").required(),
+}));
+exports.validatePlatformSettings = validate(joi_1.default.object({
+    platformCommissionPercent: joi_1.default.number().min(0).max(100),
+    withdrawalCurrency: joi_1.default.string().valid(...Object.values(transaction_enum_1.WalletEnum)),
+    minimumWithdrawalAmount: joi_1.default.number().min(0),
+    maximumWithdrawalAmount: joi_1.default.number().min(0),
+    minimumDepositAmount: joi_1.default.number().min(0),
+}).min(1));
+exports.validateSubscriptionPrices = validate(joi_1.default.object({
+    plans: joi_1.default.array().items(joi_1.default.object({
+        name: joi_1.default.string().valid(...Object.values(plan_enum_1.PlanEnum)).required(),
+        price: joi_1.default.number().min(0).required(),
+        isActive: joi_1.default.boolean(),
+    })).min(1).required(),
+}));
+exports.validateSpotlightSettings = validate(joi_1.default.object({
+    expertUserId: joi_1.default.string().hex().length(24).required(),
+    merchantUserId: joi_1.default.string().hex().length(24).required(),
+}));
+exports.validateAdminProfileUpdate = validate(joi_1.default.object({
+    fullName: joi_1.default.string().trim().min(2).max(120),
+    mobile: joi_1.default.string().trim().max(30).allow("", null),
+    department: joi_1.default.string().trim().max(80),
+    jobTitle: joi_1.default.string().trim().max(100).allow("", null),
+    profileImage: joi_1.default.string().uri().allow("", null),
 }));
 exports.validateAdminPasswordSetup = validate(joi_1.default.object({
     token: joi_1.default.string().required(),
@@ -122,14 +157,32 @@ exports.validateCreateSupportRequest = validate(joi_1.default.object({
     priority: joi_1.default.string().valid(...Object.values(support_enum_1.SupportRequestPriority)).default(support_enum_1.SupportRequestPriority.normal),
     linkedType: joi_1.default.string().valid("job", "customer", "listing", "payment", "order"),
     linkedRecordId: joi_1.default.string().hex().length(24).when("linkedType", { is: joi_1.default.exist(), then: joi_1.default.required() }),
+    attachments: joi_1.default.array().items(joi_1.default.string().uri()).max(10).default([]),
 }));
 exports.validateUpdateSupportRequest = validate(joi_1.default.object({
     status: joi_1.default.string().valid(...Object.values(support_enum_1.SupportRequestStatus)),
     priority: joi_1.default.string().valid(...Object.values(support_enum_1.SupportRequestPriority)),
     assignedAdminId: joi_1.default.string().hex().length(24).allow(null, ""),
+    assignedTeam: joi_1.default.string().trim().max(100).allow("", null),
+    escalated: joi_1.default.boolean(),
     resolution: joi_1.default.string().trim().max(5000).allow("", null),
     note: joi_1.default.string().trim().max(2000).allow("", null),
 }).min(1));
+exports.validateSupportReply = validate(joi_1.default.object({
+    message: joi_1.default.string().trim().min(1).max(5000).required(),
+    attachments: joi_1.default.array().items(joi_1.default.string().uri()).max(10).default([]),
+}));
+exports.validateSupportNote = validate(joi_1.default.object({
+    content: joi_1.default.string().trim().min(1).max(5000).required(),
+}));
+exports.validateResolveSupportRequest = validate(joi_1.default.object({
+    resolution: joi_1.default.string().trim().min(3).max(5000).required(),
+}));
+exports.validateAssignSupportRequest = validate(joi_1.default.object({
+    assignedAdminId: joi_1.default.string().hex().length(24).allow(null, ""),
+    assignedTeam: joi_1.default.string().trim().max(100).allow("", null),
+    priority: joi_1.default.string().valid(...Object.values(support_enum_1.SupportRequestPriority)),
+}).or("assignedAdminId", "assignedTeam", "priority"));
 exports.validateAdminJobAction = validate(joi_1.default.object({
     action: joi_1.default.string().valid(...Object.values(jobs_enum_1.AdminJobActionEnum)).required(),
     reason: joi_1.default.string().trim().min(3).max(1000).when("action", {

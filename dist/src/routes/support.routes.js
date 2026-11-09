@@ -8,3 +8,4 @@ const admin_validation_1 = require("../validations/admin.validation");
 const router = (0, express_1.Router)();
 exports.SupportRoute = router;
 router.post("/requests", current_user_1.userAuth, admin_validation_1.validateCreateSupportRequest, support_controller_1.createSupportRequestController);
+router.post("/requests/:requestId/replies", current_user_1.userAuth, admin_validation_1.validateSupportReply, support_controller_1.customerReplyToSupportRequestController);

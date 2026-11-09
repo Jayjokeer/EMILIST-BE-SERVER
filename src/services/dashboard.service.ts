@@ -1,6 +1,7 @@
 import Jobs from "../models/jobs.model";
 import Project from "../models/project.model";
 import Business from "../models/business.model";
+import AppConfig from "../models/app-config.model";
 import Users from "../models/users.model";
 import { JobStatusEnum } from "../enums/jobs.enum";
 import { ProjectStatusEnum } from "../enums/project.enum";
@@ -127,10 +128,22 @@ const getJobCompletionBreakdown = async (userId: string) => {
 // "Service Provider of the Week" - highest-rated Business profile (min 1 review),
 // tie-broken by review count. Not a stored/rotating weekly pick.
 const getSpotlight = async (excludeUserId: string) => {
-  const businesses = await Business.find({ userId: { $ne: excludeUserId } })
+  const config = await AppConfig.findOne().select("spotlightExpertUserId").lean();
+  const selectedUserId = (config as any)?.spotlightExpertUserId;
+  const selectedIsVisible = selectedUserId && String(selectedUserId) !== String(excludeUserId);
+  let businesses = await Business.find(selectedIsVisible ? { userId: selectedUserId } : { userId: { $ne: excludeUserId } })
     .select('businessName services expertType userId reviews')
     .populate('userId', 'fullName userName displayImage level')
     .populate('reviews', 'rating');
+
+  // A removed configured profile must not leave the dashboard without its
+  // existing highest-rated fallback.
+  if (selectedIsVisible && !businesses.length) {
+    businesses = await Business.find({ userId: { $ne: excludeUserId } })
+      .select('businessName services expertType userId reviews')
+      .populate('userId', 'fullName userName displayImage level')
+      .populate('reviews', 'rating');
+  }
 
   let best: any = null;
   let bestScore = { averageRating: 0, totalReviews: 0 };
@@ -138,7 +151,7 @@ const getSpotlight = async (excludeUserId: string) => {
   for (const business of businesses) {
     const reviews = (business.reviews as any[]) || [];
     const totalReviews = reviews.length;
-    if (totalReviews === 0) continue;
+    if (totalReviews === 0 && !selectedIsVisible) continue;
     const averageRating = reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / totalReviews;
 
     const isBetter =
@@ -151,6 +164,7 @@ const getSpotlight = async (excludeUserId: string) => {
     }
   }
 
+  if (!best && businesses.length) best = businesses[0];
   if (!best) return null;
 
   return {

@@ -9,6 +9,8 @@ export interface AdminDocument extends Document {
   passwordHistory: string[];
   mobile?: string;
   department: string;
+  jobTitle?: string;
+  permissions: string[];
   isEmailVerified: boolean;
   status: UserStatus;
   registrationOtp?: string | null;
@@ -28,6 +30,8 @@ export interface AdminDocument extends Document {
   mfaEnabled: boolean;
   mfaVerifiedAt?: Date;
   lastLoginAt?: Date;
+  lastLoginIp?: string;
+  lastLoginUserAgent?: string;
 }
 
 const adminSchema: Schema<AdminDocument> = new mongoose.Schema(
@@ -38,6 +42,8 @@ const adminSchema: Schema<AdminDocument> = new mongoose.Schema(
     passwordHistory: { type: [String], default: [], select: false },
     mobile: {type: String},
     department: {type: String, default: 'Operations'},
+    jobTitle: {type: String},
+    permissions: {type: [String], default: []},
     isEmailVerified: {type: Boolean, default: false},
     status: {type: String, enum: UserStatus, default: UserStatus.active}, 
     registrationOtp: {type: String, default: null},
@@ -61,6 +67,8 @@ const adminSchema: Schema<AdminDocument> = new mongoose.Schema(
     mfaEnabled: {type: Boolean, default: false},
     mfaVerifiedAt: {type: Date},
     lastLoginAt: {type: Date},
+    lastLoginIp: {type: String},
+    lastLoginUserAgent: {type: String},
   },
   { timestamps: true }
 

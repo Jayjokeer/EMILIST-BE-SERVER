@@ -24,7 +24,16 @@ import {
   validateAdminMaterialDelist,
   validateAdminOrderReturn,
   validateAdminWithdrawalDecision,
+  validateSupportReply,
+  validateSupportNote,
+  validateResolveSupportRequest,
+  validateAssignSupportRequest,
   validateJobPaymentAdmin,
+  validateAdminReportExport,
+  validatePlatformSettings,
+  validateSubscriptionPrices,
+  validateSpotlightSettings,
+  validateAdminProfileUpdate,
 } from "../validations/admin.validation";
 import { multipleUpload, singleUpload } from "../utils/image-upload";
 import { validateJob } from "../validations/job.validation";
@@ -35,6 +44,14 @@ const router = Router();
 
 router.route("/dashboard").get(adminAuth, adminController.adminDashboardController);
 router.route("/overview").get(adminAuth, adminController.adminOverviewController);
+router.route("/reports").get(adminAuth, adminController.adminReportsController);
+router.route("/reports/export").post(adminAuth, validateAdminReportExport, adminController.exportAdminReportController);
+router.route("/settings").get(adminAuth, adminController.adminSettingsController);
+router.route("/settings/platform").patch(superAdminAuth, validatePlatformSettings, adminController.updatePlatformSettingsController);
+router.route("/settings/subscriptions").patch(superAdminAuth, validateSubscriptionPrices, adminController.updateSubscriptionPricesController);
+router.route("/settings/spotlight").put(superAdminAuth, validateSpotlightSettings, adminController.publishSpotlightController);
+router.route("/profile").get(adminAuth, adminController.adminProfileController);
+router.route("/profile").patch(adminAuth, singleUpload, validateAdminProfileUpdate, adminController.updateAdminProfileController);
 router.route("/jobs/summary").get(adminAuth, adminController.adminJobSummaryController);
 router.route("/jobs").get(adminAuth, adminController.adminJobsController);
 router.route("/jobs/:jobId/details").get(adminAuth, adminController.adminJobDetailsController);
@@ -44,7 +61,13 @@ router.route("/jobs/:jobId/invoices/:invoiceId/download").get(adminAuth, adminCo
 router.route("/jobs/:jobId/payments").get(adminAuth, adminController.adminJobPaymentsController);
 router.route("/jobs/:jobId/payments/:paymentId/receipt").get(adminAuth, adminController.downloadAdminJobPaymentReceiptController);
 router.route("/jobs/:jobId/actions").post(adminAuth, validateAdminJobAction, adminController.adminJobActionController);
+router.route("/support-requests/summary").get(adminAuth, adminController.supportSummaryController);
+router.route("/support-requests/assignees").get(adminAuth, adminController.supportAssigneesController);
 router.route("/support-requests").get(adminAuth, adminController.supportRequestsController);
+router.route("/support-requests/:requestId/assignment").patch(adminAuth, validateAssignSupportRequest, adminController.assignSupportRequestController);
+router.route("/support-requests/:requestId/replies").post(adminAuth, validateSupportReply, adminController.replyToSupportRequestController);
+router.route("/support-requests/:requestId/notes").post(adminAuth, validateSupportNote, adminController.addSupportAdminNoteController);
+router.route("/support-requests/:requestId/resolve").post(adminAuth, validateResolveSupportRequest, adminController.resolveSupportRequestController);
 router.route("/support-requests/:requestId").get(adminAuth, adminController.supportRequestController);
 router.route("/support-requests/:requestId").patch(adminAuth, validateUpdateSupportRequest, adminController.updateSupportRequestController);
 router.route("/materials/summary").get(adminAuth, adminController.adminMaterialSummaryController);

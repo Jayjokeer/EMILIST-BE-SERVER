@@ -12,6 +12,8 @@ const adminSchema = new mongoose_1.default.Schema({
     passwordHistory: { type: [String], default: [], select: false },
     mobile: { type: String },
     department: { type: String, default: 'Operations' },
+    jobTitle: { type: String },
+    permissions: { type: [String], default: [] },
     isEmailVerified: { type: Boolean, default: false },
     status: { type: String, enum: user_enums_1.UserStatus, default: user_enums_1.UserStatus.active },
     registrationOtp: { type: String, default: null },
@@ -35,5 +37,7 @@ const adminSchema = new mongoose_1.default.Schema({
     mfaEnabled: { type: Boolean, default: false },
     mfaVerifiedAt: { type: Date },
     lastLoginAt: { type: Date },
+    lastLoginIp: { type: String },
+    lastLoginUserAgent: { type: String },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('Admin', adminSchema);

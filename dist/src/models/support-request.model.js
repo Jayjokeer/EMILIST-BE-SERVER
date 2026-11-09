@@ -43,8 +43,22 @@ const SupportHistorySchema = new mongoose_1.Schema({
     toStatus: { type: String, enum: support_enum_1.SupportRequestStatus },
     createdAt: { type: Date, default: Date.now },
 }, { _id: true });
+const SupportMessageSchema = new mongoose_1.Schema({
+    senderType: { type: String, enum: ["customer", "admin", "system"], required: true },
+    senderUserId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users" },
+    senderAdminId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Admin" },
+    content: { type: String, required: true, trim: true, maxlength: 5000 },
+    attachments: [{ type: String, trim: true }],
+    createdAt: { type: Date, default: Date.now },
+}, { _id: true });
+const SupportNoteSchema = new mongoose_1.Schema({
+    adminId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Admin", required: true },
+    content: { type: String, required: true, trim: true, maxlength: 5000 },
+    createdAt: { type: Date, default: Date.now },
+}, { _id: true });
 const SupportRequestSchema = new mongoose_1.Schema({
     requesterId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users", required: true, index: true },
+    ticketCode: { type: String, unique: true, sparse: true, index: true },
     subject: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
     category: { type: String, enum: support_enum_1.SupportRequestCategory, default: support_enum_1.SupportRequestCategory.other, index: true },
@@ -53,10 +67,20 @@ const SupportRequestSchema = new mongoose_1.Schema({
     linkedType: { type: String, enum: ["job", "customer", "listing", "payment", "order"] },
     linkedRecordId: { type: mongoose_1.Schema.Types.ObjectId },
     assignedAdminId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Admin" },
+    assignedTeam: { type: String, trim: true, maxlength: 100 },
+    escalatedAt: { type: Date },
+    lastMessageAt: { type: Date },
+    messages: { type: [SupportMessageSchema], default: [] },
+    adminNotes: { type: [SupportNoteSchema], default: [] },
     resolvedAt: { type: Date },
     resolution: { type: String, trim: true },
     history: { type: [SupportHistorySchema], default: [] },
 }, { timestamps: true });
+SupportRequestSchema.pre("validate", function () {
+    const request = this;
+    if (!request.ticketCode && request._id)
+        request.ticketCode = `TKT-${String(request._id).slice(-6).toUpperCase()}`;
+});
 SupportRequestSchema.index({ status: 1, priority: 1, createdAt: -1 });
 SupportRequestSchema.index({ subject: "text", description: "text" });
 exports.default = mongoose_1.default.model("SupportRequest", SupportRequestSchema);

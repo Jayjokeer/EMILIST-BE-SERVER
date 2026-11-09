@@ -3,7 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const AdminActionSchema = new Schema({
   adminId: { type: Schema.Types.ObjectId, ref: "Admin", required: true, index: true },
   targetUserId: { type: Schema.Types.ObjectId, ref: "Users", index: true },
-  targetType: { type: String, enum: ["customer", "job", "product", "order", "transaction", "support_request"], default: "customer", index: true },
+  targetType: { type: String, enum: ["customer", "job", "product", "order", "transaction", "support_request", "admin", "settings"], default: "customer", index: true },
   targetId: { type: Schema.Types.ObjectId, index: true },
   action: { type: String, required: true, index: true },
   reason: { type: String, trim: true },

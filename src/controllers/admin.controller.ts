@@ -55,6 +55,9 @@ import * as adminJobDocumentService from "../services/admin-job-document.service
 import * as adminMaterialService from "../services/admin-material.service";
 import * as adminPaymentService from "../services/admin-payment.service";
 import * as adminPaymentDocumentService from "../services/admin-payment-document.service";
+import * as adminReportService from "../services/admin-report.service";
+import * as adminSettingsService from "../services/admin-settings.service";
+import * as adminProfileService from "../services/admin-profile.service";
 
 export const adminDashboardController = catchAsync(async (req: JwtPayload, res: Response) => {
 const {currency, year}= req.query; 
@@ -123,6 +126,14 @@ export const supportRequestsController = catchAsync(async (req: Request, res: Re
   return successResponse(res, StatusCodes.OK, await supportRequestService.fetchSupportRequests(req.query));
 });
 
+export const supportSummaryController = catchAsync(async (_req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await supportRequestService.fetchSupportSummary());
+});
+
+export const supportAssigneesController = catchAsync(async (_req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await supportRequestService.fetchSupportAssignees());
+});
+
 export const supportRequestController = catchAsync(async (req: Request, res: Response) => {
   return successResponse(res, StatusCodes.OK, await supportRequestService.fetchSupportRequest(String(req.params.requestId)));
 });
@@ -130,6 +141,37 @@ export const supportRequestController = catchAsync(async (req: Request, res: Res
 export const updateSupportRequestController = catchAsync(async (req: Request, res: Response) => {
   return successResponse(res, StatusCodes.OK, await supportRequestService.updateSupportRequest(
     String(req.params.requestId), requestingAdminId(req), req.body,
+  ));
+});
+
+export const assignSupportRequestController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await supportRequestService.assignSupportRequest(
+    String(req.params.requestId), requestingAdminId(req), req.body,
+  ));
+});
+
+export const replyToSupportRequestController = catchAsync(async (req: Request, res: Response) => {
+  const ticket: any = await supportRequestService.replyToSupportRequest(
+    String(req.params.requestId), requestingAdminId(req), req.body,
+  );
+  await notificationService.createNotification({
+    userId: ticket.requesterId?._id || ticket.requesterId,
+    title: `Support update${ticket.ticketCode ? ` ${ticket.ticketCode}` : ""}`,
+    message: req.body.message.slice(0, 240),
+    type: NotificationTypeEnum.info,
+  });
+  return successResponse(res, StatusCodes.CREATED, ticket);
+});
+
+export const addSupportAdminNoteController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.CREATED, await supportRequestService.addSupportAdminNote(
+    String(req.params.requestId), requestingAdminId(req), req.body.content,
+  ));
+});
+
+export const resolveSupportRequestController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await supportRequestService.resolveSupportRequest(
+    String(req.params.requestId), requestingAdminId(req), req.body.resolution,
   ));
 });
 
@@ -719,7 +761,10 @@ const adminResponse = (admin: any) => ({
   fullName: admin.fullName,
   email: admin.email,
   mobile: admin.mobile || null,
+  profileImage: admin.profileImage || null,
   department: admin.department,
+  jobTitle: admin.jobTitle || null,
+  permissions: admin.permissions || [],
   role: admin.role,
   status: admin.status,
   onboardingStatus: admin.onboardingStatus,
@@ -736,7 +781,8 @@ const getValidInvitation = async (token: string) => {
 };
 
 export const createAdminController = catchAsync(async(req: JwtPayload, res: Response)=>{
-  const { fullName, mobile, email, department, role } = req.body;
+  const { mobile, email, department, jobTitle, role } = req.body;
+  const fullName = req.body.fullName || [req.body.firstName, req.body.lastName].filter(Boolean).join(" ");
   const normalizedEmail = email.toLowerCase();
   const isEmailExists = await adminService.getAdminByEmail(normalizedEmail);
   if (isEmailExists) throw new BadRequestError("An admin with this email already exists");
@@ -748,6 +794,7 @@ export const createAdminController = catchAsync(async(req: JwtPayload, res: Resp
     mobile,
     email: normalizedEmail,
     department,
+    jobTitle,
     role,
     onboardingStatus: AdminOnboardingStatus.invited,
     invitationTokenHash: tokenHash,
@@ -835,7 +882,7 @@ export const activateAdminAccountController = catchAsync(async(req: Request, res
   admin.invitationTokenHash = undefined;
   admin.invitationExpiresAt = undefined;
   admin.lastLoginAt = new Date();
-  await admin.save();
+  await adminProfileService.logAdminSignIn(admin, req.ip, req.get("user-agent"));
 
   const authToken = generateJWTwithExpiryDate({ email: admin.email, id: admin._id });
   return successResponse(res, StatusCodes.OK, { token: authToken, admin: adminResponse(admin) });
@@ -911,7 +958,7 @@ export const verifyAdminLoginMfaController = catchAsync(async (req: Request, res
   }
 
   admin.lastLoginAt = new Date();
-  await admin.save();
+  await adminProfileService.logAdminSignIn(admin, req.ip, req.get("user-agent"));
   const token = generateJWTwithExpiryDate({ email: admin.email, id: admin._id });
   return successResponse(res, StatusCodes.OK, { token, admin: adminResponse(admin) });
 });
@@ -932,7 +979,7 @@ export const activateLegacyAdminMfaController = catchAsync(async (req: Request, 
   admin.isEmailVerified = true;
   admin.onboardingStatus = AdminOnboardingStatus.active;
   admin.lastLoginAt = new Date();
-  await admin.save();
+  await adminProfileService.logAdminSignIn(admin, req.ip, req.get("user-agent"));
   const token = generateJWTwithExpiryDate({ email: admin.email, id: admin._id });
   return successResponse(res, StatusCodes.OK, { token, admin: adminResponse(admin) });
 });
@@ -1065,6 +1112,49 @@ export const fetchAdminsController = catchAsync(async (req: Request, res: Respon
 
     }
   return successResponse(res, StatusCodes.OK, data);
+});
+
+export const adminReportsController = catchAsync(async (req: Request, res: Response) => {
+  const startDate = typeof req.query.startDate === "string" ? req.query.startDate : undefined;
+  const endDate = typeof req.query.endDate === "string" ? req.query.endDate : undefined;
+  return successResponse(res, StatusCodes.OK, await adminReportService.fetchReportsAnalytics(startDate, endDate));
+});
+
+export const exportAdminReportController = catchAsync(async (req: Request, res: Response) => {
+  const report = await adminReportService.exportReport(req.body.report, req.body.format, req.body.startDate, req.body.endDate);
+  res.setHeader("Content-Type", report.contentType);
+  res.setHeader("Content-Disposition", `attachment; filename="${report.filename}"`);
+  return res.status(StatusCodes.OK).send(report.body);
+});
+
+export const adminSettingsController = catchAsync(async (req: Request, res: Response) => {
+  const search = typeof req.query.search === "string" ? req.query.search : "";
+  return successResponse(res, StatusCodes.OK, await adminSettingsService.fetchAdminSettings(search));
+});
+
+export const updatePlatformSettingsController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminSettingsService.updatePlatformSettings(req.body, requestingAdminId(req)));
+});
+
+export const updateSubscriptionPricesController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminSettingsService.updateSubscriptionPrices(req.body.plans, requestingAdminId(req)));
+});
+
+export const publishSpotlightController = catchAsync(async (req: Request, res: Response) => {
+  return successResponse(res, StatusCodes.OK, await adminSettingsService.publishSpotlight(req.body.expertUserId, req.body.merchantUserId, requestingAdminId(req)));
+});
+
+export const adminProfileController = catchAsync(async (req: Request, res: Response) => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+  const hours = req.query.hours === "all" ? 0 : Math.min(24 * 365, Math.max(1, Number(req.query.hours) || 24));
+  return successResponse(res, StatusCodes.OK, await adminProfileService.fetchAdminProfile(requestingAdminId(req), page, limit, hours));
+});
+
+export const updateAdminProfileController = catchAsync(async (req: Request, res: Response) => {
+  const file = req.file as Express.Multer.File | undefined;
+  if (!file?.path && !Object.keys(req.body).length) throw new BadRequestError("Provide at least one profile field or image");
+  return successResponse(res, StatusCodes.OK, await adminProfileService.updateAdminProfile(requestingAdminId(req), { ...req.body, ...(file?.path ? { profileImage: file.path } : {}) }));
 });
 
 const requestingAdminId = (req: Request) => String((req as any).user?._id || (req as any).user?.id);

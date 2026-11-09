@@ -7,6 +7,7 @@ exports.fetchDashboardOverview = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
 const business_model_1 = __importDefault(require("../models/business.model"));
+const app_config_model_1 = __importDefault(require("../models/app-config.model"));
 const users_model_1 = __importDefault(require("../models/users.model"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 const project_enum_1 = require("../enums/project.enum");
@@ -116,16 +117,27 @@ const getJobCompletionBreakdown = async (userId) => {
 // "Service Provider of the Week" - highest-rated Business profile (min 1 review),
 // tie-broken by review count. Not a stored/rotating weekly pick.
 const getSpotlight = async (excludeUserId) => {
-    const businesses = await business_model_1.default.find({ userId: { $ne: excludeUserId } })
+    const config = await app_config_model_1.default.findOne().select("spotlightExpertUserId").lean();
+    const selectedUserId = config?.spotlightExpertUserId;
+    const selectedIsVisible = selectedUserId && String(selectedUserId) !== String(excludeUserId);
+    let businesses = await business_model_1.default.find(selectedIsVisible ? { userId: selectedUserId } : { userId: { $ne: excludeUserId } })
         .select('businessName services expertType userId reviews')
         .populate('userId', 'fullName userName displayImage level')
         .populate('reviews', 'rating');
+    // A removed configured profile must not leave the dashboard without its
+    // existing highest-rated fallback.
+    if (selectedIsVisible && !businesses.length) {
+        businesses = await business_model_1.default.find({ userId: { $ne: excludeUserId } })
+            .select('businessName services expertType userId reviews')
+            .populate('userId', 'fullName userName displayImage level')
+            .populate('reviews', 'rating');
+    }
     let best = null;
     let bestScore = { averageRating: 0, totalReviews: 0 };
     for (const business of businesses) {
         const reviews = business.reviews || [];
         const totalReviews = reviews.length;
-        if (totalReviews === 0)
+        if (totalReviews === 0 && !selectedIsVisible)
             continue;
         const averageRating = reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews;
         const isBetter = averageRating > bestScore.averageRating ||
@@ -135,6 +147,8 @@ const getSpotlight = async (excludeUserId) => {
             bestScore = { averageRating, totalReviews };
         }
     }
+    if (!best && businesses.length)
+        best = businesses[0];
     if (!best)
         return null;
     return {

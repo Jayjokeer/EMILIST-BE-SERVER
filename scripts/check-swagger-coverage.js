@@ -16,6 +16,7 @@ const routePrefixes = {
   'target.routes.ts': '/target',
   'subscription.routes.ts': '/subscription',
   'admin.routes.ts': '/admin',
+  'support.routes.ts': '/support',
   'order.routes.ts': '/orders',
   'dashboard.routes.ts': '/dashboard',
   'webhook.routes.ts': '/webhooks',

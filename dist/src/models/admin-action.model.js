@@ -37,7 +37,7 @@ const mongoose_1 = __importStar(require("mongoose"));
 const AdminActionSchema = new mongoose_1.Schema({
     adminId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Admin", required: true, index: true },
     targetUserId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users", index: true },
-    targetType: { type: String, enum: ["customer", "job", "product", "order", "transaction", "support_request"], default: "customer", index: true },
+    targetType: { type: String, enum: ["customer", "job", "product", "order", "transaction", "support_request", "admin", "settings"], default: "customer", index: true },
     targetId: { type: mongoose_1.Schema.Types.ObjectId, index: true },
     action: { type: String, required: true, index: true },
     reason: { type: String, trim: true },

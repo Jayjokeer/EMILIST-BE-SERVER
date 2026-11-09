@@ -4,6 +4,7 @@ import { AdminJobActionEnum, JobFrequencyEnum, MilestonePaymentStatus } from "..
 import { AdminRolesEnum } from "../enums/user.enums";
 import { CustomerSuspensionReason, CustomerSuspensionType } from "../enums/admin-customer.enum";
 import { WalletEnum } from "../enums/transaction.enum";
+import { PlanEnum } from "../enums/plan.enum";
 import { SupportRequestCategory, SupportRequestPriority, SupportRequestStatus } from "../enums/support.enum";
 
 const validate = (schema: Joi.ObjectSchema) =>
@@ -18,11 +19,50 @@ const validate = (schema: Joi.ObjectSchema) =>
   };
 
 export const validateCreateAdminInvitation = validate(Joi.object({
-  fullName: Joi.string().trim().min(2).required(),
+  fullName: Joi.string().trim().min(2),
+  firstName: Joi.string().trim().min(1).max(60),
+  lastName: Joi.string().trim().min(1).max(60).when("firstName", { is: Joi.exist(), then: Joi.required() }),
   email: Joi.string().trim().lowercase().email().required(),
   mobile: Joi.string().trim().allow("", null),
   department: Joi.string().trim().max(80).default("Operations"),
+  jobTitle: Joi.string().trim().max(100).allow("", null),
   role: Joi.string().valid(...Object.values(AdminRolesEnum)).default(AdminRolesEnum.admin),
+}).or("fullName", "firstName"));
+
+export const validateAdminReportExport = validate(Joi.object({
+  report: Joi.string().valid("platform_churn", "user_acquisition", "job_success", "daily_active_users", "material_sales", "subscription_performance").required(),
+  startDate: Joi.date().iso().required(),
+  endDate: Joi.date().iso().min(Joi.ref("startDate")).required(),
+  format: Joi.string().valid("pdf", "csv", "md").required(),
+}));
+
+export const validatePlatformSettings = validate(Joi.object({
+  platformCommissionPercent: Joi.number().min(0).max(100),
+  withdrawalCurrency: Joi.string().valid(...Object.values(WalletEnum)),
+  minimumWithdrawalAmount: Joi.number().min(0),
+  maximumWithdrawalAmount: Joi.number().min(0),
+  minimumDepositAmount: Joi.number().min(0),
+}).min(1));
+
+export const validateSubscriptionPrices = validate(Joi.object({
+  plans: Joi.array().items(Joi.object({
+    name: Joi.string().valid(...Object.values(PlanEnum)).required(),
+    price: Joi.number().min(0).required(),
+    isActive: Joi.boolean(),
+  })).min(1).required(),
+}));
+
+export const validateSpotlightSettings = validate(Joi.object({
+  expertUserId: Joi.string().hex().length(24).required(),
+  merchantUserId: Joi.string().hex().length(24).required(),
+}));
+
+export const validateAdminProfileUpdate = validate(Joi.object({
+  fullName: Joi.string().trim().min(2).max(120),
+  mobile: Joi.string().trim().max(30).allow("", null),
+  department: Joi.string().trim().max(80),
+  jobTitle: Joi.string().trim().max(100).allow("", null),
+  profileImage: Joi.string().uri().allow("", null),
 }));
 
 export const validateAdminPasswordSetup = validate(Joi.object({
@@ -136,15 +176,37 @@ export const validateCreateSupportRequest = validate(Joi.object({
   priority: Joi.string().valid(...Object.values(SupportRequestPriority)).default(SupportRequestPriority.normal),
   linkedType: Joi.string().valid("job", "customer", "listing", "payment", "order"),
   linkedRecordId: Joi.string().hex().length(24).when("linkedType", { is: Joi.exist(), then: Joi.required() }),
+  attachments: Joi.array().items(Joi.string().uri()).max(10).default([]),
 }));
 
 export const validateUpdateSupportRequest = validate(Joi.object({
   status: Joi.string().valid(...Object.values(SupportRequestStatus)),
   priority: Joi.string().valid(...Object.values(SupportRequestPriority)),
   assignedAdminId: Joi.string().hex().length(24).allow(null, ""),
+  assignedTeam: Joi.string().trim().max(100).allow("", null),
+  escalated: Joi.boolean(),
   resolution: Joi.string().trim().max(5000).allow("", null),
   note: Joi.string().trim().max(2000).allow("", null),
 }).min(1));
+
+export const validateSupportReply = validate(Joi.object({
+  message: Joi.string().trim().min(1).max(5000).required(),
+  attachments: Joi.array().items(Joi.string().uri()).max(10).default([]),
+}));
+
+export const validateSupportNote = validate(Joi.object({
+  content: Joi.string().trim().min(1).max(5000).required(),
+}));
+
+export const validateResolveSupportRequest = validate(Joi.object({
+  resolution: Joi.string().trim().min(3).max(5000).required(),
+}));
+
+export const validateAssignSupportRequest = validate(Joi.object({
+  assignedAdminId: Joi.string().hex().length(24).allow(null, ""),
+  assignedTeam: Joi.string().trim().max(100).allow("", null),
+  priority: Joi.string().valid(...Object.values(SupportRequestPriority)),
+}).or("assignedAdminId", "assignedTeam", "priority"));
 
 export const validateAdminJobAction = validate(Joi.object({
   action: Joi.string().valid(...Object.values(AdminJobActionEnum)).required(),

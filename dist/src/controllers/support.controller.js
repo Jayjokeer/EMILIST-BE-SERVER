@@ -33,12 +33,19 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createSupportRequestController = void 0;
+exports.customerReplyToSupportRequestController = exports.createSupportRequestController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const supportService = __importStar(require("../services/support-request.service"));
+const error_1 = require("../errors/error");
 exports.createSupportRequestController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const request = await supportService.createSupportRequest(String(req.user._id), req.body);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, request);
+});
+exports.customerReplyToSupportRequestController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    if (!req.params.requestId)
+        throw new error_1.BadRequestError("Support request id is required");
+    const request = await supportService.customerReplyToSupportRequest(String(req.params.requestId), String(req.user._id), req.body);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, request);
 });
