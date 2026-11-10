@@ -3,8 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.markAttentionViewed = exports.getApplicationAttentionSummaries = exports.getJobAttentionSummaries = exports.createAttentionEvent = exports.emptyAttentionSummary = void 0;
+exports.markAttentionViewed = exports.resolveApplicationAttention = exports.getApplicationAttentionSummaries = exports.getJobAttentionSummaries = exports.createAttentionEvent = exports.emptyAttentionSummary = void 0;
 const mongoose_1 = require("mongoose");
+const job_attention_enum_1 = require("../enums/job-attention.enum");
 const error_1 = require("../errors/error");
 const job_attention_model_1 = __importDefault(require("../models/job-attention.model"));
 const emptyAttentionSummary = () => ({
@@ -26,6 +27,7 @@ const buildSummaryMap = async (recipientId, field, ids) => {
             $match: {
                 recipientId: new mongoose_1.Types.ObjectId(recipientId),
                 viewedAt: null,
+                resolvedAt: null,
                 [field]: { $in: uniqueIds.map(id => new mongoose_1.Types.ObjectId(id)) },
             },
         },
@@ -55,6 +57,18 @@ const getJobAttentionSummaries = (recipientId, jobIds) => buildSummaryMap(recipi
 exports.getJobAttentionSummaries = getJobAttentionSummaries;
 const getApplicationAttentionSummaries = (recipientId, applicationIds) => buildSummaryMap(recipientId, 'applicationId', applicationIds);
 exports.getApplicationAttentionSummaries = getApplicationAttentionSummaries;
+const resolveApplicationAttention = async (data) => {
+    const resolvedAt = new Date();
+    await job_attention_model_1.default.updateMany({
+        recipientId: data.recipientId,
+        applicationId: data.applicationId,
+        type: data.type || job_attention_enum_1.JobAttentionType.NEW_APPLICATION,
+        resolvedAt: null,
+    }, { $set: { resolvedAt } });
+    const map = await (0, exports.getApplicationAttentionSummaries)(data.recipientId, [data.applicationId]);
+    return map.get(data.applicationId) || (0, exports.emptyAttentionSummary)();
+};
+exports.resolveApplicationAttention = resolveApplicationAttention;
 const validateViewSelection = async (recipientId, context, eventIds) => {
     if (!eventIds?.length)
         return;

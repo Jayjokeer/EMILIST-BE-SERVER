@@ -61,6 +61,10 @@ const escapeHtml = (value) => value
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+const emailText = (value, fallback) => {
+    const text = typeof value === "string" ? value.trim() : "";
+    return escapeHtml(text && text !== "undefined" && text !== "null" ? text : fallback);
+};
 const adminCustomerMessage = (name, subject, message) => ({
     subject,
     html: `<p>Hi ${escapeHtml(name)},</p><p>${escapeHtml(message).replace(/\n/g, "<br/>")}</p><p>— Emilist Admin</p>`,
@@ -69,7 +73,9 @@ exports.adminCustomerMessage = adminCustomerMessage;
 const directJobApplicationMessage = (name, creatorName, id) => {
     const subject = "Job Assigned to you";
     const html = `
-        Hi ${name}!, ${creatorName} created and assigned a job to you with ID: ${id}. kindly log into to your account to view and accept the job.`;
+        <p>Hi ${emailText(name, "there")},</p>
+        <p>${emailText(creatorName, "An Emilist customer")} created and assigned a job to you with ID: ${emailText(id, "unavailable")}.</p>
+        <p>Kindly <a href="${emailText(config_1.config.frontendLoginUrl, "#")}">log in to your account</a> to view and accept the job.</p>`;
     return { html, subject };
 };
 exports.directJobApplicationMessage = directJobApplicationMessage;
@@ -97,7 +103,9 @@ exports.sendMessage = sendMessage;
 const sendJobApplicationMessage = (name, user, title) => {
     const subject = "New Job Application";
     const html = `
-        Hi ${name}!, ${user} applied to your job titled: ${title}. kindly log into to your account to view ${config_1.config.frontendLoginUrl}`;
+        <p>Hi ${emailText(name, "there")},</p>
+        <p>${emailText(user, "An Emilist professional")} applied to your job titled <strong>${emailText(title, "your job")}</strong>.</p>
+        <p>Kindly <a href="${emailText(config_1.config.frontendLoginUrl, "#")}">log in to your account</a> to review the application.</p>`;
     return { html, subject };
 };
 exports.sendJobApplicationMessage = sendJobApplicationMessage;
@@ -112,14 +120,18 @@ exports.counterOfferMessage = counterOfferMessage;
 const acceptJobApplicationMessage = (name, user, title, status) => {
     const subject = "Application Accepted!";
     const html = `
-        Hi ${name}!, ${user} ${status} your job application titled: ${title}. kindly log into to your account to view`;
+        <p>Hi ${emailText(name, "there")},</p>
+        <p>${emailText(user, "The job owner")} ${emailText(status, "updated")} your application for <strong>${emailText(title, "the job")}</strong>.</p>
+        <p>Kindly <a href="${emailText(config_1.config.frontendLoginUrl, "#")}">log in to your account</a> to view the update.</p>`;
     return { html, subject };
 };
 exports.acceptJobApplicationMessage = acceptJobApplicationMessage;
 const acceptDirectJobApplicationMessage = (creatorName, name, id) => {
     const subject = "Direct Job Accepted";
     const html = `
-        Hi ${creatorName}!, ${name} accepted your direct job with ID: ${id}. kindly log into to your account to view.`;
+        <p>Hi ${emailText(creatorName, "there")},</p>
+        <p>${emailText(name, "The assigned professional")} accepted your direct job with ID: ${emailText(id, "unavailable")}.</p>
+        <p>Kindly <a href="${emailText(config_1.config.frontendLoginUrl, "#")}">log in to your account</a> to view it.</p>`;
     return { html, subject };
 };
 exports.acceptDirectJobApplicationMessage = acceptDirectJobApplicationMessage;

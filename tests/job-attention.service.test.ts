@@ -8,6 +8,7 @@ import {
   emptyAttentionSummary,
   getJobAttentionSummaries,
   markAttentionViewed,
+  resolveApplicationAttention,
 } from '../src/services/job-attention.service';
 
 const recipientId = new Types.ObjectId().toString();
@@ -27,13 +28,17 @@ test('empty attention does not require frontend animation', () => {
 test('batched summaries return count, distinct types, latest time, and event IDs', async () => {
   const originalAggregate = JobAttention.aggregate;
   const latestEventAt = new Date('2026-10-23T08:30:00.000Z');
-  (JobAttention as any).aggregate = async () => [{
+  let pipeline: any[] = [];
+  (JobAttention as any).aggregate = async (value: any[]) => {
+    pipeline = value;
+    return [{
     _id: new Types.ObjectId(jobId),
     unviewedCount: 2,
     types: [JobAttentionType.NEW_APPLICATION],
     latestEventAt,
     eventIds: [new Types.ObjectId(eventId)],
-  }];
+    }];
+  };
   try {
     const summaries = await getJobAttentionSummaries(recipientId, [jobId]);
     assert.deepEqual(summaries.get(jobId), {
@@ -43,7 +48,39 @@ test('batched summaries return count, distinct types, latest time, and event IDs
       latestEventAt,
       eventIds: [eventId],
     });
+    assert.equal(pipeline[0].$match.viewedAt, null);
+    assert.equal(pipeline[0].$match.resolvedAt, null);
   } finally {
+    (JobAttention as any).aggregate = originalAggregate;
+  }
+});
+
+test('an owner response resolves new-application attention', async () => {
+  const originalUpdateMany = JobAttention.updateMany;
+  const originalAggregate = JobAttention.aggregate;
+  const applicationId = new Types.ObjectId().toString();
+  let updateFilter: any;
+  let update: any;
+  (JobAttention as any).updateMany = async (filter: any, value: any) => {
+    updateFilter = filter;
+    update = value;
+    return { modifiedCount: 1 };
+  };
+  (JobAttention as any).aggregate = async () => [];
+  try {
+    const summary = await resolveApplicationAttention({
+      recipientId,
+      applicationId,
+      type: JobAttentionType.NEW_APPLICATION,
+    });
+    assert.equal(updateFilter.recipientId, recipientId);
+    assert.equal(updateFilter.applicationId, applicationId);
+    assert.equal(updateFilter.type, JobAttentionType.NEW_APPLICATION);
+    assert.equal(updateFilter.resolvedAt, null);
+    assert.ok(update.$set.resolvedAt instanceof Date);
+    assert.equal(summary.requiresAttention, false);
+  } finally {
+    (JobAttention as any).updateMany = originalUpdateMany;
     (JobAttention as any).aggregate = originalAggregate;
   }
 });

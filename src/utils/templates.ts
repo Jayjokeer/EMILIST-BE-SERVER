@@ -64,6 +64,11 @@ const escapeHtml = (value: string) => value
   .replace(/"/g, "&quot;")
   .replace(/'/g, "&#039;");
 
+const emailText = (value: unknown, fallback: string) => {
+  const text = typeof value === "string" ? value.trim() : "";
+  return escapeHtml(text && text !== "undefined" && text !== "null" ? text : fallback);
+};
+
 export const adminCustomerMessage = (name: string, subject: string, message: string) => ({
   subject,
   html: `<p>Hi ${escapeHtml(name)},</p><p>${escapeHtml(message).replace(/\n/g, "<br/>")}</p><p>— Emilist Admin</p>`,
@@ -72,7 +77,9 @@ export const adminCustomerMessage = (name: string, subject: string, message: str
 export const directJobApplicationMessage = (name: string, creatorName: string, id: string) => {
   const subject = "Job Assigned to you";
   const html = `
-        Hi ${name}!, ${creatorName} created and assigned a job to you with ID: ${id}. kindly log into to your account to view and accept the job.`;
+        <p>Hi ${emailText(name, "there")},</p>
+        <p>${emailText(creatorName, "An Emilist customer")} created and assigned a job to you with ID: ${emailText(id, "unavailable")}.</p>
+        <p>Kindly <a href="${emailText(config.frontendLoginUrl, "#")}">log in to your account</a> to view and accept the job.</p>`;
 
   return { html, subject };
 };
@@ -103,7 +110,9 @@ export const sendMessage = (name: string, posterName: string,) => {
 export const sendJobApplicationMessage = (name: string, user: string,title: string,) => {
   const subject = "New Job Application";
   const html = `
-        Hi ${name}!, ${user} applied to your job titled: ${title}. kindly log into to your account to view ${config.frontendLoginUrl}`;
+        <p>Hi ${emailText(name, "there")},</p>
+        <p>${emailText(user, "An Emilist professional")} applied to your job titled <strong>${emailText(title, "your job")}</strong>.</p>
+        <p>Kindly <a href="${emailText(config.frontendLoginUrl, "#")}">log in to your account</a> to review the application.</p>`;
 
   return { html, subject };
 };
@@ -125,7 +134,9 @@ export const counterOfferMessage = (
 export const acceptJobApplicationMessage = (name: string, user: string,title: string, status: string) => {
   const subject = "Application Accepted!";
   const html = `
-        Hi ${name}!, ${user} ${status} your job application titled: ${title}. kindly log into to your account to view`;
+        <p>Hi ${emailText(name, "there")},</p>
+        <p>${emailText(user, "The job owner")} ${emailText(status, "updated")} your application for <strong>${emailText(title, "the job")}</strong>.</p>
+        <p>Kindly <a href="${emailText(config.frontendLoginUrl, "#")}">log in to your account</a> to view the update.</p>`;
 
   return { html, subject };
 };
@@ -133,7 +144,9 @@ export const acceptJobApplicationMessage = (name: string, user: string,title: st
 export const acceptDirectJobApplicationMessage = (creatorName: string, name: string,  id: string) => {
   const subject = "Direct Job Accepted";
   const html = `
-        Hi ${creatorName}!, ${name} accepted your direct job with ID: ${id}. kindly log into to your account to view.`;
+        <p>Hi ${emailText(creatorName, "there")},</p>
+        <p>${emailText(name, "The assigned professional")} accepted your direct job with ID: ${emailText(id, "unavailable")}.</p>
+        <p>Kindly <a href="${emailText(config.frontendLoginUrl, "#")}">log in to your account</a> to view it.</p>`;
 
   return { html, subject };
 };

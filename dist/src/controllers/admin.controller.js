@@ -453,7 +453,9 @@ exports.createJobAdminController = (0, error_handler_1.catchAsync)(async (req, r
         data.applications.push(String(project._id));
         data.acceptedApplicationId = String(project._id);
         data.save();
-        const { html, subject } = (0, templates_1.directJobApplicationMessage)(user.userName, req.user.userName, String(data._id));
+        const recipientName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.userName || user.email?.split("@")[0] || "there";
+        const creatorName = req.user.fullName || req.user.email?.split("@")[0] || "An Emilist administrator";
+        const { html, subject } = (0, templates_1.directJobApplicationMessage)(recipientName, creatorName, String(data._id));
         await (0, send_email_1.sendEmail)(user.email, subject, html);
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }

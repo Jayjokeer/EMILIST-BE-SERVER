@@ -505,7 +505,9 @@ if(!user) throw new NotFoundError("User not found!");
        data.applications!.push(String(project._id));
        data.acceptedApplicationId = String(project._id);
        data.save();
-       const { html, subject } = directJobApplicationMessage(user.userName, req.user.userName, String(data._id));
+       const recipientName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.userName || user.email?.split("@")[0] || "there";
+       const creatorName = req.user.fullName || req.user.email?.split("@")[0] || "An Emilist administrator";
+       const { html, subject } = directJobApplicationMessage(recipientName, creatorName, String(data._id));
        await sendEmail(user.email, subject, html); 
     return  successResponse(res,StatusCodes.CREATED, data);
 

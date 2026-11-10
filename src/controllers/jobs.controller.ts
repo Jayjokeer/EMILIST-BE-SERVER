@@ -172,7 +172,11 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
       data.applications!.push(String(project._id));
       data.acceptedApplicationId = String(project._id);
       data.save();
-      const { html, subject } = directJobApplicationMessage(artisanUser.userName, req.user.userName, String(data._id));
+      const { html, subject } = directJobApplicationMessage(
+        jobEmailDisplayName(artisanUser, "there"),
+        jobEmailDisplayName(req.user, "An Emilist customer"),
+        String(data._id),
+      );
       await sendEmail(artisanUser.email, subject, html); 
       return successResponse(res, StatusCodes.CREATED, data);
     }
@@ -198,7 +202,11 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
       data.applications!.push(String(project._id));
       data.acceptedApplicationId = String(project._id);
       data.save();
-      const { html, subject } = directJobApplicationMessage(user.userName, req.user.userName, String(data._id));
+      const { html, subject } = directJobApplicationMessage(
+        jobEmailDisplayName(user, "there"),
+        jobEmailDisplayName(req.user, "An Emilist customer"),
+        String(data._id),
+      );
       await sendEmail(user.email, subject, html); 
       return successResponse(res, StatusCodes.CREATED, data);
     }
@@ -238,6 +246,11 @@ function parseListParam(value: unknown): string[] | undefined {
   const cleaned = list.map((v) => String(v).trim()).filter(Boolean);
   return cleaned.length > 0 ? cleaned : undefined;
 }
+
+const jobEmailDisplayName = (user: any, fallback: string) => {
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
+  return fullName || user?.fullName || user?.userName || user?.email?.split("@")[0] || fallback;
+};
 
 export const allJobsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const { page = 1, limit = 10, title, location, category, service } = req.query;
@@ -381,15 +394,22 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     });
     emitJobAttention(String(job.userId), attentionEvent);
   
+    const applicantName = jobEmailDisplayName(req.user, "An Emilist professional");
     const notificationPayload = {
       userId: job.userId,
       title: "Job Application",
-      message: `${req.user.userName} applied to your job titled: ${job.title}`,
+      message: `${applicantName} applied to your job titled: ${job.title || "your job"}`,
       type: NotificationTypeEnum.info
     }
     const user = await userService.findUserById(job.userId);
-    const {html, subject} = sendJobApplicationMessage(user!.userName, req.user.userName, job.title);
-    sendEmail(user!.email, subject,html); 
+    if (!user) throw new NotFoundError("Job owner not found!");
+    const recipientName = jobEmailDisplayName(user, "there");
+    const {html, subject} = sendJobApplicationMessage(recipientName, applicantName, job.title || "your job");
+    try {
+      await sendEmail(user.email, subject, html);
+    } catch (error) {
+      console.error(`Failed to send job application email for job ${job._id}:`, error);
+    }
     await notificationService.createNotification(notificationPayload);
     successResponse(res, StatusCodes.CREATED, projectData);
   });
@@ -589,6 +609,14 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     project.biddableDetails = { maximumPrice, milestones: normalizedMilestones };
     await project.save();
 
+    if (isOwner) {
+      await jobAttentionService.resolveApplicationAttention({
+        recipientId: userId,
+        applicationId: String(project._id),
+        type: JobAttentionType.NEW_APPLICATION,
+      });
+    }
+
     const recipientId = isOwner ? String(project.user) : String(project.creator);
     if (isOwner) {
       const createdCounterOffer = project.counterOffers[project.counterOffers.length - 1];
@@ -685,6 +713,14 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       await projectService.updateRejectProject(projectId, String(job._id));
       await project.save();
       await job.save();
+    }
+
+    if (isOwner) {
+      await jobAttentionService.resolveApplicationAttention({
+        recipientId: userId,
+        applicationId: String(project._id),
+        type: JobAttentionType.NEW_APPLICATION,
+      });
     }
 
     await notificationService.createNotification({
@@ -824,16 +860,19 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const {projectId} = req.params;
     const {status} = req.body;
     const project = await projectService.fetchProjectById(projectId);
-    const user = await userService.findUserById(project!.user);
-
     if(!project){
       throw new NotFoundError("Application not found!");
     }
+    const user = await userService.findUserById(project.user);
+    if (!user) throw new NotFoundError("Applicant not found!");
     if(project.creator != userId){
       throw new UnauthorizedError("UnAuthorized!")
     }
     const job = await jobService.fetchJobById(String(project.job));
     if(!job) throw new NotFoundError("Job not found!");
+    const applicantName = jobEmailDisplayName(user, "there");
+    const jobOwnerName = jobEmailDisplayName(req.user, "The job owner");
+    const emailJobTitle = job.title || "the job";
 
 
     if (status == ProjectStatusEnum.pending || (status as any) == "applied" || status == ProjectStatusEnum.applied){
@@ -874,11 +913,11 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const notificationPayload = {
       userId: project.user,
       title: `Job application ${applicationStatus }`,
-      message: `${req.user.userName} ${applicationStatus } your job application titled: ${job.title}`,
+      message: `${jobOwnerName} ${applicationStatus} your job application titled: ${emailJobTitle}`,
       type: NotificationTypeEnum.info
     }
-    const {html, subject} = acceptJobApplicationMessage(user!.userName, req.user.userName, job.title, applicationStatus);
-    await sendEmail(user!.email, subject,html); 
+    const {html, subject} = acceptJobApplicationMessage(applicantName, jobOwnerName, emailJobTitle, applicationStatus);
+    await sendEmail(user.email, subject, html);
     await notificationService.createNotification(notificationPayload);
 
     }else if(status == ProjectStatusEnum.rejected){
@@ -890,11 +929,11 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const notificationPayload = {
       userId: project.user,
       title: `Job application ${applicationStatus }`,
-      message: `${req.user.userName} ${applicationStatus } your job application titled: ${job.title}`,
+      message: `${jobOwnerName} ${applicationStatus} your job application titled: ${emailJobTitle}`,
       type: NotificationTypeEnum.info
     }
-    const {html, subject} = acceptJobApplicationMessage(user!.userName, req.user.userName, job.title, applicationStatus);
-    await sendEmail(user!.email, subject,html); 
+    const {html, subject} = acceptJobApplicationMessage(applicantName, jobOwnerName, emailJobTitle, applicationStatus);
+    await sendEmail(user.email, subject, html);
     await notificationService.createNotification(notificationPayload);
 
     }else if(status == ProjectStatusEnum.pause){
@@ -911,11 +950,11 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       const notificationPayload = {
         userId: project.user,
         title: `Job ${applicationStatus }`,
-        message: `${req.user.userName} ${applicationStatus } your job application titled: ${job.title}`,
+        message: `${jobOwnerName} ${applicationStatus} your job application titled: ${emailJobTitle}`,
         type: NotificationTypeEnum.info
       }
-      const {html, subject} = acceptJobApplicationMessage(user!.userName, req.user.userName, job.title, applicationStatus);
-      await sendEmail(user!.email, subject,html); 
+      const {html, subject} = acceptJobApplicationMessage(applicantName, jobOwnerName, emailJobTitle, applicationStatus);
+      await sendEmail(user.email, subject, html);
       await notificationService.createNotification(notificationPayload);
 
     } else if (status == ProjectStatusEnum.unpause){
@@ -930,15 +969,22 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       const notificationPayload = {
         userId: project.user,
         title: `Job application ${applicationStatus }`,
-        message: `${req.user.userName} ${applicationStatus } your job application titled: ${job.title}`,
+        message: `${jobOwnerName} ${applicationStatus} your job application titled: ${emailJobTitle}`,
         type: NotificationTypeEnum.info
       }
-      const {html, subject} = acceptJobApplicationMessage(user!.userName, req.user.userName, job.title, applicationStatus);
-      await sendEmail(user!.email, subject,html); 
+      const {html, subject} = acceptJobApplicationMessage(applicantName, jobOwnerName, emailJobTitle, applicationStatus);
+      await sendEmail(user.email, subject, html);
       await notificationService.createNotification(notificationPayload);
     }
 
     await project.save();
+    if ([ProjectStatusEnum.accepted, ProjectStatusEnum.rejected, ProjectStatusEnum.pause, ProjectStatusEnum.unpause].includes(status)) {
+      await jobAttentionService.resolveApplicationAttention({
+        recipientId: String(userId),
+        applicationId: String(project._id),
+        type: JobAttentionType.NEW_APPLICATION,
+      });
+    }
     // If every application is now rejected/cancelled and none accepted, revert job to listed.
     try {
       if (status == ProjectStatusEnum.rejected) {
@@ -1606,7 +1652,11 @@ export const createRecurringJobController = catchAsync( async (req: JwtPayload, 
      data.applications!.push(String(project._id));
      data.acceptedApplicationId = String(project._id);
      data.save();
-     const { html, subject } = directJobApplicationMessage(user.userName, req.user.userName, String(data._id));
+     const { html, subject } = directJobApplicationMessage(
+       jobEmailDisplayName(user, "there"),
+       jobEmailDisplayName(req.user, "An Emilist customer"),
+       String(data._id),
+     );
      await sendEmail(user.email, subject, html); 
 
   const nextMaintenanceDate = calculateNextMaintenanceDate(new Date(startDate), frequency);

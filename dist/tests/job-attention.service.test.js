@@ -24,13 +24,17 @@ const eventId = new mongoose_1.Types.ObjectId().toString();
 (0, node_test_1.default)('batched summaries return count, distinct types, latest time, and event IDs', async () => {
     const originalAggregate = job_attention_model_1.default.aggregate;
     const latestEventAt = new Date('2026-10-23T08:30:00.000Z');
-    job_attention_model_1.default.aggregate = async () => [{
-            _id: new mongoose_1.Types.ObjectId(jobId),
-            unviewedCount: 2,
-            types: [job_attention_enum_1.JobAttentionType.NEW_APPLICATION],
-            latestEventAt,
-            eventIds: [new mongoose_1.Types.ObjectId(eventId)],
-        }];
+    let pipeline = [];
+    job_attention_model_1.default.aggregate = async (value) => {
+        pipeline = value;
+        return [{
+                _id: new mongoose_1.Types.ObjectId(jobId),
+                unviewedCount: 2,
+                types: [job_attention_enum_1.JobAttentionType.NEW_APPLICATION],
+                latestEventAt,
+                eventIds: [new mongoose_1.Types.ObjectId(eventId)],
+            }];
+    };
     try {
         const summaries = await (0, job_attention_service_1.getJobAttentionSummaries)(recipientId, [jobId]);
         strict_1.default.deepEqual(summaries.get(jobId), {
@@ -40,8 +44,40 @@ const eventId = new mongoose_1.Types.ObjectId().toString();
             latestEventAt,
             eventIds: [eventId],
         });
+        strict_1.default.equal(pipeline[0].$match.viewedAt, null);
+        strict_1.default.equal(pipeline[0].$match.resolvedAt, null);
     }
     finally {
+        job_attention_model_1.default.aggregate = originalAggregate;
+    }
+});
+(0, node_test_1.default)('an owner response resolves new-application attention', async () => {
+    const originalUpdateMany = job_attention_model_1.default.updateMany;
+    const originalAggregate = job_attention_model_1.default.aggregate;
+    const applicationId = new mongoose_1.Types.ObjectId().toString();
+    let updateFilter;
+    let update;
+    job_attention_model_1.default.updateMany = async (filter, value) => {
+        updateFilter = filter;
+        update = value;
+        return { modifiedCount: 1 };
+    };
+    job_attention_model_1.default.aggregate = async () => [];
+    try {
+        const summary = await (0, job_attention_service_1.resolveApplicationAttention)({
+            recipientId,
+            applicationId,
+            type: job_attention_enum_1.JobAttentionType.NEW_APPLICATION,
+        });
+        strict_1.default.equal(updateFilter.recipientId, recipientId);
+        strict_1.default.equal(updateFilter.applicationId, applicationId);
+        strict_1.default.equal(updateFilter.type, job_attention_enum_1.JobAttentionType.NEW_APPLICATION);
+        strict_1.default.equal(updateFilter.resolvedAt, null);
+        strict_1.default.ok(update.$set.resolvedAt instanceof Date);
+        strict_1.default.equal(summary.requiresAttention, false);
+    }
+    finally {
+        job_attention_model_1.default.updateMany = originalUpdateMany;
         job_attention_model_1.default.aggregate = originalAggregate;
     }
 });

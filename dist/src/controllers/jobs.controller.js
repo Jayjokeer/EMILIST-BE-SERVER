@@ -192,7 +192,7 @@ exports.createJobController = (0, error_handler_1.catchAsync)(async (req, res) =
         data.applications.push(String(project._id));
         data.acceptedApplicationId = String(project._id);
         data.save();
-        const { html, subject } = (0, templates_1.directJobApplicationMessage)(artisanUser.userName, req.user.userName, String(data._id));
+        const { html, subject } = (0, templates_1.directJobApplicationMessage)(jobEmailDisplayName(artisanUser, "there"), jobEmailDisplayName(req.user, "An Emilist customer"), String(data._id));
         await (0, send_email_1.sendEmail)(artisanUser.email, subject, html);
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
@@ -215,7 +215,7 @@ exports.createJobController = (0, error_handler_1.catchAsync)(async (req, res) =
         data.applications.push(String(project._id));
         data.acceptedApplicationId = String(project._id);
         data.save();
-        const { html, subject } = (0, templates_1.directJobApplicationMessage)(user.userName, req.user.userName, String(data._id));
+        const { html, subject } = (0, templates_1.directJobApplicationMessage)(jobEmailDisplayName(user, "there"), jobEmailDisplayName(req.user, "An Emilist customer"), String(data._id));
         await (0, send_email_1.sendEmail)(user.email, subject, html);
         return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
     }
@@ -245,6 +245,10 @@ function parseListParam(value) {
     const cleaned = list.map((v) => String(v).trim()).filter(Boolean);
     return cleaned.length > 0 ? cleaned : undefined;
 }
+const jobEmailDisplayName = (user, fallback) => {
+    const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
+    return fullName || user?.fullName || user?.userName || user?.email?.split("@")[0] || fallback;
+};
 exports.allJobsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page = 1, limit = 10, title, location, category, service } = req.query;
     const userId = req.user?.id ?? req.user?._id ?? null;
@@ -353,15 +357,24 @@ exports.applyForJobController = (0, error_handler_1.catchAsync)(async (req, res)
         sourceId: String(projectData._id),
     });
     emitJobAttention(String(job.userId), attentionEvent);
+    const applicantName = jobEmailDisplayName(req.user, "An Emilist professional");
     const notificationPayload = {
         userId: job.userId,
         title: "Job Application",
-        message: `${req.user.userName} applied to your job titled: ${job.title}`,
+        message: `${applicantName} applied to your job titled: ${job.title || "your job"}`,
         type: notification_enum_1.NotificationTypeEnum.info
     };
     const user = await userService.findUserById(job.userId);
-    const { html, subject } = (0, templates_1.sendJobApplicationMessage)(user.userName, req.user.userName, job.title);
-    (0, send_email_1.sendEmail)(user.email, subject, html);
+    if (!user)
+        throw new error_1.NotFoundError("Job owner not found!");
+    const recipientName = jobEmailDisplayName(user, "there");
+    const { html, subject } = (0, templates_1.sendJobApplicationMessage)(recipientName, applicantName, job.title || "your job");
+    try {
+        await (0, send_email_1.sendEmail)(user.email, subject, html);
+    }
+    catch (error) {
+        console.error(`Failed to send job application email for job ${job._id}:`, error);
+    }
     await notificationService.createNotification(notificationPayload);
     (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, projectData);
 });
@@ -548,6 +561,13 @@ exports.counterBidController = (0, error_handler_1.catchAsync)(async (req, res) 
     });
     project.biddableDetails = { maximumPrice, milestones: normalizedMilestones };
     await project.save();
+    if (isOwner) {
+        await jobAttentionService.resolveApplicationAttention({
+            recipientId: userId,
+            applicationId: String(project._id),
+            type: job_attention_enum_1.JobAttentionType.NEW_APPLICATION,
+        });
+    }
     const recipientId = isOwner ? String(project.user) : String(project.creator);
     if (isOwner) {
         const createdCounterOffer = project.counterOffers[project.counterOffers.length - 1];
@@ -643,6 +663,13 @@ exports.respondToCounterBidController = (0, error_handler_1.catchAsync)(async (r
         await projectService.updateRejectProject(projectId, String(job._id));
         await project.save();
         await job.save();
+    }
+    if (isOwner) {
+        await jobAttentionService.resolveApplicationAttention({
+            recipientId: userId,
+            applicationId: String(project._id),
+            type: job_attention_enum_1.JobAttentionType.NEW_APPLICATION,
+        });
     }
     await notificationService.createNotification({
         userId: String(latest.madeBy),
@@ -775,16 +802,21 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
     const { projectId } = req.params;
     const { status } = req.body;
     const project = await projectService.fetchProjectById(projectId);
-    const user = await userService.findUserById(project.user);
     if (!project) {
         throw new error_1.NotFoundError("Application not found!");
     }
+    const user = await userService.findUserById(project.user);
+    if (!user)
+        throw new error_1.NotFoundError("Applicant not found!");
     if (project.creator != userId) {
         throw new error_1.UnauthorizedError("UnAuthorized!");
     }
     const job = await jobService.fetchJobById(String(project.job));
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
+    const applicantName = jobEmailDisplayName(user, "there");
+    const jobOwnerName = jobEmailDisplayName(req.user, "The job owner");
+    const emailJobTitle = job.title || "the job";
     if (status == project_enum_1.ProjectStatusEnum.pending || status == "applied" || status == project_enum_1.ProjectStatusEnum.applied) {
         job.status = jobs_enum_1.JobStatusEnum.listed;
         project.status = project_enum_1.ProjectStatusEnum.applied;
@@ -816,10 +848,10 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
         const notificationPayload = {
             userId: project.user,
             title: `Job application ${applicationStatus}`,
-            message: `${req.user.userName} ${applicationStatus} your job application titled: ${job.title}`,
+            message: `${jobOwnerName} ${applicationStatus} your job application titled: ${emailJobTitle}`,
             type: notification_enum_1.NotificationTypeEnum.info
         };
-        const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(user.userName, req.user.userName, job.title, applicationStatus);
+        const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(applicantName, jobOwnerName, emailJobTitle, applicationStatus);
         await (0, send_email_1.sendEmail)(user.email, subject, html);
         await notificationService.createNotification(notificationPayload);
     }
@@ -830,10 +862,10 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
         const notificationPayload = {
             userId: project.user,
             title: `Job application ${applicationStatus}`,
-            message: `${req.user.userName} ${applicationStatus} your job application titled: ${job.title}`,
+            message: `${jobOwnerName} ${applicationStatus} your job application titled: ${emailJobTitle}`,
             type: notification_enum_1.NotificationTypeEnum.info
         };
-        const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(user.userName, req.user.userName, job.title, applicationStatus);
+        const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(applicantName, jobOwnerName, emailJobTitle, applicationStatus);
         await (0, send_email_1.sendEmail)(user.email, subject, html);
         await notificationService.createNotification(notificationPayload);
     }
@@ -849,10 +881,10 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
         const notificationPayload = {
             userId: project.user,
             title: `Job ${applicationStatus}`,
-            message: `${req.user.userName} ${applicationStatus} your job application titled: ${job.title}`,
+            message: `${jobOwnerName} ${applicationStatus} your job application titled: ${emailJobTitle}`,
             type: notification_enum_1.NotificationTypeEnum.info
         };
-        const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(user.userName, req.user.userName, job.title, applicationStatus);
+        const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(applicantName, jobOwnerName, emailJobTitle, applicationStatus);
         await (0, send_email_1.sendEmail)(user.email, subject, html);
         await notificationService.createNotification(notificationPayload);
     }
@@ -867,14 +899,21 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
         const notificationPayload = {
             userId: project.user,
             title: `Job application ${applicationStatus}`,
-            message: `${req.user.userName} ${applicationStatus} your job application titled: ${job.title}`,
+            message: `${jobOwnerName} ${applicationStatus} your job application titled: ${emailJobTitle}`,
             type: notification_enum_1.NotificationTypeEnum.info
         };
-        const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(user.userName, req.user.userName, job.title, applicationStatus);
+        const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(applicantName, jobOwnerName, emailJobTitle, applicationStatus);
         await (0, send_email_1.sendEmail)(user.email, subject, html);
         await notificationService.createNotification(notificationPayload);
     }
     await project.save();
+    if ([project_enum_1.ProjectStatusEnum.accepted, project_enum_1.ProjectStatusEnum.rejected, project_enum_1.ProjectStatusEnum.pause, project_enum_1.ProjectStatusEnum.unpause].includes(status)) {
+        await jobAttentionService.resolveApplicationAttention({
+            recipientId: String(userId),
+            applicationId: String(project._id),
+            type: job_attention_enum_1.JobAttentionType.NEW_APPLICATION,
+        });
+    }
     // If every application is now rejected/cancelled and none accepted, revert job to listed.
     try {
         if (status == project_enum_1.ProjectStatusEnum.rejected) {
@@ -1459,7 +1498,7 @@ exports.createRecurringJobController = (0, error_handler_1.catchAsync)(async (re
     data.applications.push(String(project._id));
     data.acceptedApplicationId = String(project._id);
     data.save();
-    const { html, subject } = (0, templates_1.directJobApplicationMessage)(user.userName, req.user.userName, String(data._id));
+    const { html, subject } = (0, templates_1.directJobApplicationMessage)(jobEmailDisplayName(user, "there"), jobEmailDisplayName(req.user, "An Emilist customer"), String(data._id));
     await (0, send_email_1.sendEmail)(user.email, subject, html);
     const nextMaintenanceDate = (0, utility_1.calculateNextMaintenanceDate)(new Date(startDate), frequency);
     const recurringPayload = {

@@ -45,6 +45,7 @@ const buildSummaryMap = async (
       $match: {
         recipientId: new Types.ObjectId(recipientId),
         viewedAt: null,
+        resolvedAt: null,
         [field]: { $in: uniqueIds.map(id => new Types.ObjectId(id)) },
       },
     },
@@ -77,6 +78,26 @@ export const getJobAttentionSummaries = (recipientId: string, jobIds: string[]) 
 
 export const getApplicationAttentionSummaries = (recipientId: string, applicationIds: string[]) =>
   buildSummaryMap(recipientId, 'applicationId', applicationIds);
+
+export const resolveApplicationAttention = async (data: {
+  recipientId: string;
+  applicationId: string;
+  type?: JobAttentionType;
+}) => {
+  const resolvedAt = new Date();
+  await JobAttention.updateMany(
+    {
+      recipientId: data.recipientId,
+      applicationId: data.applicationId,
+      type: data.type || JobAttentionType.NEW_APPLICATION,
+      resolvedAt: null,
+    },
+    { $set: { resolvedAt } },
+  );
+
+  const map = await getApplicationAttentionSummaries(data.recipientId, [data.applicationId]);
+  return map.get(data.applicationId) || emptyAttentionSummary();
+};
 
 const validateViewSelection = async (
   recipientId: string,
