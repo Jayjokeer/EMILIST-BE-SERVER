@@ -68,6 +68,19 @@ export const serializeMilestoneWithInvoiceDate = (milestone: any) => {
   return plain;
 };
 
+export const milestonePaymentBreakdown = (milestone: any, includeAdditionalAmount = false) => {
+  const originalAmount = Number(milestone?.amount || 0);
+  const requestedAdditionalAmount = Math.max(0, Number(milestone?.invoice?.additionalAmount || 0));
+  const additionalAmount = includeAdditionalAmount ? requestedAdditionalAmount : 0;
+  return {
+    originalAmount,
+    requestedAdditionalAmount,
+    additionalAmount,
+    includesAdditionalAmount: includeAdditionalAmount && requestedAdditionalAmount > 0,
+    totalAmount: originalAmount + additionalAmount,
+  };
+};
+
 // Display status depends on who is viewing the job:
 // - applicant (non-owner) sees their own application's lens. Once accepted,
 //   the job itself is active; the applicationStatus remains accepted.

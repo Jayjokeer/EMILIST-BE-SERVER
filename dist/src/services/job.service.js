@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsByUserId = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
+exports.fetchJobsByUserId = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -100,6 +100,19 @@ const serializeMilestoneWithInvoiceDate = (milestone) => {
     return plain;
 };
 exports.serializeMilestoneWithInvoiceDate = serializeMilestoneWithInvoiceDate;
+const milestonePaymentBreakdown = (milestone, includeAdditionalAmount = false) => {
+    const originalAmount = Number(milestone?.amount || 0);
+    const requestedAdditionalAmount = Math.max(0, Number(milestone?.invoice?.additionalAmount || 0));
+    const additionalAmount = includeAdditionalAmount ? requestedAdditionalAmount : 0;
+    return {
+        originalAmount,
+        requestedAdditionalAmount,
+        additionalAmount,
+        includesAdditionalAmount: includeAdditionalAmount && requestedAdditionalAmount > 0,
+        totalAmount: originalAmount + additionalAmount,
+    };
+};
+exports.milestonePaymentBreakdown = milestonePaymentBreakdown;
 // Display status depends on who is viewing the job:
 // - applicant (non-owner) sees their own application's lens. Once accepted,
 //   the job itself is active; the applicationStatus remains accepted.

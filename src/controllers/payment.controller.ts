@@ -137,6 +137,9 @@ const job = await jobService.fetchJobById(jobId);
 if(!job){
   throw new NotFoundError("Job Not found");
 }
+if(String(job.userId) !== String(userId)){
+  throw new UnauthorizedError("Only the job owner can pay this invoice");
+}
 const milestone = job.milestones.find((milestone: any)=> milestone._id.toString()  === milestoneId);
 if(!milestone){
   throw new NotFoundError("No milestone");
@@ -144,17 +147,15 @@ if(!milestone){
 if(milestone.paymentStatus !== MilestonePaymentStatus.unpaid){
   throw new BadRequestError("Job has been paid")
 }
+if(!milestone.invoice?.invoiceRaised){
+  throw new BadRequestError("An invoice must be generated before this milestone can be paid");
+}
 if(note){
   milestone.paymentInfo.note = note;
   await job.save();
 }
-let jobAmount = milestone.amount;
-
-if(isAdditionalAmount){
-  if(milestone.invoice.additionalAmount > 0){
-    jobAmount+= milestone.invoice.additionalAmount;
-  }
-};
+const paymentBreakdown = jobService.milestonePaymentBreakdown(milestone, isAdditionalAmount === true);
+const jobAmount = paymentBreakdown.totalAmount;
 const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
 if(!project){
   throw new NotFoundError("Application not found");
@@ -165,7 +166,7 @@ if(!project){
       const userWallet = await walletService.findUserWalletByCurrency(userId, currency);
       console.log(userWallet)
 
-      if (!userWallet || userWallet.balance < milestone.amount) {
+      if (!userWallet || userWallet.balance < jobAmount) {
          throw new BadRequestError("Insufficient wallet balance" );
       }
       const transactionPayload = {

@@ -8,6 +8,17 @@ const strict_1 = __importDefault(require("node:assert/strict"));
 const jobs_enum_1 = require("../src/enums/jobs.enum");
 const project_enum_1 = require("../src/enums/project.enum");
 const job_service_1 = require("../src/services/job.service");
+(0, node_test_1.default)('job owner can omit an artisan additional cost and pay the original invoice amount', () => {
+    const milestone = { amount: 50000, invoice: { additionalAmount: 7500, invoiceRaised: true } };
+    strict_1.default.deepEqual((0, job_service_1.milestonePaymentBreakdown)(milestone, false), {
+        originalAmount: 50000,
+        requestedAdditionalAmount: 7500,
+        additionalAmount: 0,
+        includesAdditionalAmount: false,
+        totalAmount: 50000,
+    });
+    strict_1.default.equal((0, job_service_1.milestonePaymentBreakdown)(milestone, true).totalAmount, 57500);
+});
 (0, node_test_1.default)('listed jobs exclude active, paused, completed, overdue, and cancelled lifecycle states', () => {
     strict_1.default.deepEqual((0, job_service_1.buildListedLifecycleScope)(), {
         status: { $in: [jobs_enum_1.JobStatusEnum.listed, jobs_enum_1.JobStatusEnum.pending, jobs_enum_1.JobStatusEnum.in_review] },

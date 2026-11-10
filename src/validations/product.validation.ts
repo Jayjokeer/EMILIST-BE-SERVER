@@ -248,17 +248,21 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
           'any.only': 'Currency must be one of the allowed values',
           'string.empty': 'Currency is required',
         }),
-        isAdditionalAmount: Joi.boolean().optional().messages({
+        isAdditionalAmount: Joi.boolean().default(false).messages({
           'boolean.base': 'isAdditionalAmount must be a boolean',
         }),
-        redirectUrl: Joi.string().uri().required().messages({
+        redirectUrl: Joi.string().uri().when('paymentMethod', {
+          is: PaymentMethodEnum.card,
+          then: Joi.required(),
+          otherwise: Joi.optional(),
+        }).messages({
           'string.base': 'Redirect URL must be a string',
           'string.uri': 'Redirect URL must be a valid URL',
           'string.empty': 'Redirect URL is required',
         }),
     });
   
-    const { error } = jobValidationSchema.validate(req.body, { abortEarly: false });
+    const { error, value } = jobValidationSchema.validate(req.body, { abortEarly: false });
   
     if (error) {
       const errorMessages = error.details.map((detail) => detail.message);
@@ -266,6 +270,7 @@ export const validateUpdateProduct = (req: Request, res: Response, next: NextFun
        return;
     }
   
+    req.body = value;
     next();
   };
 

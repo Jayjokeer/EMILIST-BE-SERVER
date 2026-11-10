@@ -2199,7 +2199,10 @@ Leaves a review on the business that completed the job.`,
         description: `Initiates payment for a job milestone.
 
 - \`paymentMethod\`: \`Card\`, \`BankTransfer\` or \`Wallet\`
-- \`currency\`: \`NGN\`, \`USD\`, \`GBP\`, \`EUR\``,
+- \`currency\`: \`NGN\`, \`USD\`, \`GBP\`, \`EUR\`
+- Set \`isAdditionalAmount\` to \`true\` to pay the artisan's requested additional cost.
+- Set it to \`false\` or omit it to pay only the milestone's original amount.
+- \`redirectUrl\` is required for card payments and optional for wallet payments.`,
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,

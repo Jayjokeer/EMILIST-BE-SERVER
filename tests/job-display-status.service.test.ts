@@ -2,7 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JobStatusEnum, MilestoneEnum, MilestonePaymentStatus } from '../src/enums/jobs.enum';
 import { ProjectStatusEnum } from '../src/enums/project.enum';
-import { areAllMilestonesCompletedAndPaid, buildListedLifecycleScope, buildVisibleJobsQuery, raiseMilestoneInvoice, rejectCompletedMilestone, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate } from '../src/services/job.service';
+import { areAllMilestonesCompletedAndPaid, buildListedLifecycleScope, buildVisibleJobsQuery, milestonePaymentBreakdown, raiseMilestoneInvoice, rejectCompletedMilestone, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate } from '../src/services/job.service';
+
+test('job owner can omit an artisan additional cost and pay the original invoice amount', () => {
+  const milestone = { amount: 50000, invoice: { additionalAmount: 7500, invoiceRaised: true } };
+  assert.deepEqual(milestonePaymentBreakdown(milestone, false), {
+    originalAmount: 50000,
+    requestedAdditionalAmount: 7500,
+    additionalAmount: 0,
+    includesAdditionalAmount: false,
+    totalAmount: 50000,
+  });
+  assert.equal(milestonePaymentBreakdown(milestone, true).totalAmount, 57500);
+});
 
 test('listed jobs exclude active, paused, completed, overdue, and cancelled lifecycle states', () => {
   assert.deepEqual(buildListedLifecycleScope(), {

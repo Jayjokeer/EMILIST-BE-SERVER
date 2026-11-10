@@ -164,6 +164,9 @@ exports.payforJobController = (0, error_handler_1.catchAsync)(async (req, res) =
     if (!job) {
         throw new error_1.NotFoundError("Job Not found");
     }
+    if (String(job.userId) !== String(userId)) {
+        throw new error_1.UnauthorizedError("Only the job owner can pay this invoice");
+    }
     const milestone = job.milestones.find((milestone) => milestone._id.toString() === milestoneId);
     if (!milestone) {
         throw new error_1.NotFoundError("No milestone");
@@ -171,17 +174,15 @@ exports.payforJobController = (0, error_handler_1.catchAsync)(async (req, res) =
     if (milestone.paymentStatus !== jobs_enum_1.MilestonePaymentStatus.unpaid) {
         throw new error_1.BadRequestError("Job has been paid");
     }
+    if (!milestone.invoice?.invoiceRaised) {
+        throw new error_1.BadRequestError("An invoice must be generated before this milestone can be paid");
+    }
     if (note) {
         milestone.paymentInfo.note = note;
         await job.save();
     }
-    let jobAmount = milestone.amount;
-    if (isAdditionalAmount) {
-        if (milestone.invoice.additionalAmount > 0) {
-            jobAmount += milestone.invoice.additionalAmount;
-        }
-    }
-    ;
+    const paymentBreakdown = jobService.milestonePaymentBreakdown(milestone, isAdditionalAmount === true);
+    const jobAmount = paymentBreakdown.totalAmount;
     const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
     if (!project) {
         throw new error_1.NotFoundError("Application not found");
@@ -190,7 +191,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)(async (req, res) =
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
         const userWallet = await walletService.findUserWalletByCurrency(userId, currency);
         console.log(userWallet);
-        if (!userWallet || userWallet.balance < milestone.amount) {
+        if (!userWallet || userWallet.balance < jobAmount) {
             throw new error_1.BadRequestError("Insufficient wallet balance");
         }
         const transactionPayload = {
