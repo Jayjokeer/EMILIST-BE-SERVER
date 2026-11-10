@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsByUserId = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
+exports.fetchJobsByUserId = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -158,11 +158,25 @@ const withJobDisplayStatus = (job, viewerUserId) => {
 exports.withJobDisplayStatus = withJobDisplayStatus;
 const withJobsDisplayStatus = (jobs, viewerUserId) => jobs.map((job) => (0, exports.withJobDisplayStatus)(job, viewerUserId));
 exports.withJobsDisplayStatus = withJobsDisplayStatus;
+const buildListedLifecycleScope = () => ({
+    status: { $in: [jobs_enum_1.JobStatusEnum.listed, jobs_enum_1.JobStatusEnum.pending, jobs_enum_1.JobStatusEnum.in_review] },
+});
+exports.buildListedLifecycleScope = buildListedLifecycleScope;
 const withJobAttention = async (jobs, userId) => {
     const plainJobs = jobs.map(job => typeof job?.toObject === 'function' ? job.toObject() : { ...job });
     if (!userId) {
         return plainJobs.map(job => ({ ...job, attention: jobAttentionService.emptyAttentionSummary() }));
     }
+    const respondedApplicationIds = plainJobs.flatMap(job => {
+        const isOwner = String(job.userId?._id || job.userId || '') === String(userId);
+        if (!isOwner || !Array.isArray(job.applications))
+            return [];
+        return job.applications
+            .filter(jobAttentionService.ownerHasRespondedToApplication)
+            .map((application) => String(application?._id || ''))
+            .filter(Boolean);
+    });
+    await jobAttentionService.resolveRespondedApplicationAttention(userId, respondedApplicationIds);
     const summaries = await jobAttentionService.getJobAttentionSummaries(userId, plainJobs.map(job => String(job._id)));
     return plainJobs.map(job => ({
         ...job,
@@ -243,7 +257,8 @@ const fetchAllUserJobs = async (userId, page, limit, search = null, filters = {}
             { _id: { $in: appliedJobIds } },
         ],
     };
-    const searchCriteria = { $and: [relationshipScope] };
+    const listedLifecycleScope = (0, exports.buildListedLifecycleScope)();
+    const searchCriteria = { $and: [relationshipScope, listedLifecycleScope] };
     if (search) {
         const searchRegex = new RegExp(search, 'i');
         const jobSchemaPaths = jobs_model_1.default.schema.paths;
@@ -263,7 +278,7 @@ const fetchAllUserJobs = async (userId, page, limit, search = null, filters = {}
             searchCriteria.service = { $regex: new RegExp(filters.service, 'i') };
     }
     const jobs = await jobs_model_1.default.find(searchCriteria)
-        .populate('applications', 'status user')
+        .populate('applications', 'status user counterOffers.madeByRole')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
@@ -1287,7 +1302,7 @@ const fetchJobsByUserId = async (userId) => {
     const userProjects = await project_model_1.default.find({ user: userId }).select('_id');
     const userProjectIds = userProjects.map(project => project._id);
     const jobs = await jobs_model_1.default.find((0, exports.buildVisibleJobsQuery)(userId, userProjectIds))
-        .populate('applications', 'status user');
+        .populate('applications', 'status user counterOffers.madeByRole');
     return await withJobAttention((0, exports.withJobsDisplayStatus)(jobs, userId), userId);
 };
 exports.fetchJobsByUserId = fetchJobsByUserId;

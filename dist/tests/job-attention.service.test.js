@@ -90,6 +90,26 @@ const eventId = new mongoose_1.Types.ObjectId().toString();
         job_attention_model_1.default.aggregate = originalAggregate;
     }
 });
+(0, node_test_1.default)('fetch reconciliation resolves legacy and current responded-application events', async () => {
+    const originalUpdateMany = job_attention_model_1.default.updateMany;
+    const applicationId = new mongoose_1.Types.ObjectId().toString();
+    let updateFilter;
+    job_attention_model_1.default.updateMany = async (filter) => {
+        updateFilter = filter;
+        return { modifiedCount: 2 };
+    };
+    try {
+        await (0, job_attention_service_1.resolveRespondedApplicationAttention)(recipientId, [applicationId]);
+        strict_1.default.equal(updateFilter.recipientId, recipientId);
+        strict_1.default.equal(updateFilter.type, job_attention_enum_1.JobAttentionType.NEW_APPLICATION);
+        strict_1.default.equal(updateFilter.resolvedAt, null);
+        strict_1.default.equal(String(updateFilter.$or[0].applicationId.$in[0]), applicationId);
+        strict_1.default.equal(String(updateFilter.$or[1].sourceId.$in[0]), applicationId);
+    }
+    finally {
+        job_attention_model_1.default.updateMany = originalUpdateMany;
+    }
+});
 (0, node_test_1.default)('event creation is an idempotent upsert keyed by source and recipient', async () => {
     const originalFindOneAndUpdate = job_attention_model_1.default.findOneAndUpdate;
     let captured = [];

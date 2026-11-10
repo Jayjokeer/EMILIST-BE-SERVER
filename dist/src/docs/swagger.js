@@ -1008,9 +1008,10 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
         "/jobs/fetch-listed-jobs": {
             get: {
                 tags: ["Jobs"],
-                summary: "Fetch jobs posted by or applied to by the current user",
-                description: `Returns one paginated feed containing jobs created by the authenticated user and
-jobs the user applied to. Status is viewer-specific: an owner sees \`in review\` when their job has an
+                summary: "Fetch open/listed jobs posted by or applied to by the current user",
+                description: `Returns one paginated feed containing only open jobs created by the authenticated user and
+open jobs the user applied to. Active, paused, completed, cancelled, and overdue jobs are excluded.
+Status is viewer-specific: an owner sees \`in review\` when their job has an
 active application, while an applicant sees their application status such as \`applied\`.
 Each job includes a recipient-scoped \`attention\` summary. Applied jobs also include the viewer's
 \`applicationId\` and \`applicationStatus\`.`,

@@ -8,6 +8,11 @@ const strict_1 = __importDefault(require("node:assert/strict"));
 const jobs_enum_1 = require("../src/enums/jobs.enum");
 const project_enum_1 = require("../src/enums/project.enum");
 const job_service_1 = require("../src/services/job.service");
+(0, node_test_1.default)('listed jobs exclude active, paused, completed, overdue, and cancelled lifecycle states', () => {
+    strict_1.default.deepEqual((0, job_service_1.buildListedLifecycleScope)(), {
+        status: { $in: [jobs_enum_1.JobStatusEnum.listed, jobs_enum_1.JobStatusEnum.pending, jobs_enum_1.JobStatusEnum.in_review] },
+    });
+});
 (0, node_test_1.default)('invoice issue date is recorded once and preserved', () => {
     const firstIssueDate = new Date('2026-10-29T10:00:00.000Z');
     const firstInvoiceId = 'invoice-1';

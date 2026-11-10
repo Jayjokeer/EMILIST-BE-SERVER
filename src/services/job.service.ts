@@ -124,11 +124,24 @@ export const withJobDisplayStatus = (job: any, viewerUserId?: string | null) => 
 export const withJobsDisplayStatus = (jobs: any[], viewerUserId?: string | null) =>
   jobs.map((job) => withJobDisplayStatus(job, viewerUserId));
 
+export const buildListedLifecycleScope = () => ({
+  status: { $in: [JobStatusEnum.listed, JobStatusEnum.pending, JobStatusEnum.in_review] },
+});
+
 const withJobAttention = async (jobs: any[], userId?: string | null) => {
   const plainJobs = jobs.map(job => typeof job?.toObject === 'function' ? job.toObject() : { ...job });
   if (!userId) {
     return plainJobs.map(job => ({ ...job, attention: jobAttentionService.emptyAttentionSummary() }));
   }
+  const respondedApplicationIds = plainJobs.flatMap(job => {
+    const isOwner = String((job.userId as any)?._id || job.userId || '') === String(userId);
+    if (!isOwner || !Array.isArray(job.applications)) return [];
+    return job.applications
+      .filter(jobAttentionService.ownerHasRespondedToApplication)
+      .map((application: any) => String(application?._id || ''))
+      .filter(Boolean);
+  });
+  await jobAttentionService.resolveRespondedApplicationAttention(userId, respondedApplicationIds);
   const summaries = await jobAttentionService.getJobAttentionSummaries(
     userId,
     plainJobs.map(job => String(job._id)),
@@ -221,7 +234,8 @@ export const fetchAllUserJobs = async (
       { _id: { $in: appliedJobIds } },
     ],
   };
-  const searchCriteria: any = { $and: [relationshipScope] };
+  const listedLifecycleScope = buildListedLifecycleScope();
+  const searchCriteria: any = { $and: [relationshipScope, listedLifecycleScope] };
 
   if (search) {
     const searchRegex = new RegExp(search, 'i');
@@ -240,7 +254,7 @@ export const fetchAllUserJobs = async (
     if (filters.service) searchCriteria.service = { $regex: new RegExp(filters.service, 'i') };
   }
   const jobs = await Jobs.find(searchCriteria)
-    .populate('applications', 'status user')
+    .populate('applications', 'status user counterOffers.madeByRole')
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
@@ -1436,6 +1450,6 @@ export const fetchJobsByUserId = async(userId: string)=>{
   const userProjects = await Project.find({ user: userId }).select('_id');
   const userProjectIds = userProjects.map(project => project._id);
   const jobs = await Jobs.find(buildVisibleJobsQuery(userId, userProjectIds))
-    .populate('applications', 'status user');
+    .populate('applications', 'status user counterOffers.madeByRole');
   return await withJobAttention(withJobsDisplayStatus(jobs, userId), userId);
 }

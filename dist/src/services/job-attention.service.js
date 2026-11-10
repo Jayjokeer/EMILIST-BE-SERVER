@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.markAttentionViewed = exports.resolveApplicationAttention = exports.getApplicationAttentionSummaries = exports.getJobAttentionSummaries = exports.createAttentionEvent = exports.ownerHasRespondedToApplication = exports.emptyAttentionSummary = void 0;
+exports.markAttentionViewed = exports.resolveRespondedApplicationAttention = exports.resolveApplicationAttention = exports.getApplicationAttentionSummaries = exports.getJobAttentionSummaries = exports.createAttentionEvent = exports.ownerHasRespondedToApplication = exports.emptyAttentionSummary = void 0;
 const mongoose_1 = require("mongoose");
 const job_attention_enum_1 = require("../enums/job-attention.enum");
 const error_1 = require("../errors/error");
@@ -80,6 +80,22 @@ const resolveApplicationAttention = async (data) => {
     return map.get(data.applicationId) || (0, exports.emptyAttentionSummary)();
 };
 exports.resolveApplicationAttention = resolveApplicationAttention;
+const resolveRespondedApplicationAttention = async (recipientId, applicationIds) => {
+    const ids = [...new Set(applicationIds.filter(id => mongoose_1.Types.ObjectId.isValid(id)))];
+    if (!ids.length)
+        return;
+    const objectIds = ids.map(id => new mongoose_1.Types.ObjectId(id));
+    await job_attention_model_1.default.updateMany({
+        recipientId,
+        type: job_attention_enum_1.JobAttentionType.NEW_APPLICATION,
+        resolvedAt: null,
+        $or: [
+            { applicationId: { $in: objectIds } },
+            { sourceId: { $in: objectIds } },
+        ],
+    }, { $set: { resolvedAt: new Date() } });
+};
+exports.resolveRespondedApplicationAttention = resolveRespondedApplicationAttention;
 const validateViewSelection = async (recipientId, context, eventIds) => {
     if (!eventIds?.length)
         return;

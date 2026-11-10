@@ -109,6 +109,27 @@ export const resolveApplicationAttention = async (data: {
   return map.get(data.applicationId) || emptyAttentionSummary();
 };
 
+export const resolveRespondedApplicationAttention = async (
+  recipientId: string,
+  applicationIds: string[],
+) => {
+  const ids = [...new Set(applicationIds.filter(id => Types.ObjectId.isValid(id)))];
+  if (!ids.length) return;
+  const objectIds = ids.map(id => new Types.ObjectId(id));
+  await JobAttention.updateMany(
+    {
+      recipientId,
+      type: JobAttentionType.NEW_APPLICATION,
+      resolvedAt: null,
+      $or: [
+        { applicationId: { $in: objectIds } },
+        { sourceId: { $in: objectIds } },
+      ],
+    },
+    { $set: { resolvedAt: new Date() } },
+  );
+};
+
 const validateViewSelection = async (
   recipientId: string,
   context: { jobId?: string; applicationId?: string; type: JobAttentionType },

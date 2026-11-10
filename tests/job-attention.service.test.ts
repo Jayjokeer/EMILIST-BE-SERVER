@@ -10,6 +10,7 @@ import {
   markAttentionViewed,
   ownerHasRespondedToApplication,
   resolveApplicationAttention,
+  resolveRespondedApplicationAttention,
 } from '../src/services/job-attention.service';
 
 const recipientId = new Types.ObjectId().toString();
@@ -93,6 +94,26 @@ test('an owner response resolves new-application attention', async () => {
   } finally {
     (JobAttention as any).updateMany = originalUpdateMany;
     (JobAttention as any).aggregate = originalAggregate;
+  }
+});
+
+test('fetch reconciliation resolves legacy and current responded-application events', async () => {
+  const originalUpdateMany = JobAttention.updateMany;
+  const applicationId = new Types.ObjectId().toString();
+  let updateFilter: any;
+  (JobAttention as any).updateMany = async (filter: any) => {
+    updateFilter = filter;
+    return { modifiedCount: 2 };
+  };
+  try {
+    await resolveRespondedApplicationAttention(recipientId, [applicationId]);
+    assert.equal(updateFilter.recipientId, recipientId);
+    assert.equal(updateFilter.type, JobAttentionType.NEW_APPLICATION);
+    assert.equal(updateFilter.resolvedAt, null);
+    assert.equal(String(updateFilter.$or[0].applicationId.$in[0]), applicationId);
+    assert.equal(String(updateFilter.$or[1].sourceId.$in[0]), applicationId);
+  } finally {
+    (JobAttention as any).updateMany = originalUpdateMany;
   }
 });
 

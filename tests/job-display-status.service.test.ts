@@ -2,7 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JobStatusEnum, MilestoneEnum, MilestonePaymentStatus } from '../src/enums/jobs.enum';
 import { ProjectStatusEnum } from '../src/enums/project.enum';
-import { areAllMilestonesCompletedAndPaid, buildVisibleJobsQuery, raiseMilestoneInvoice, rejectCompletedMilestone, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate } from '../src/services/job.service';
+import { areAllMilestonesCompletedAndPaid, buildListedLifecycleScope, buildVisibleJobsQuery, raiseMilestoneInvoice, rejectCompletedMilestone, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate } from '../src/services/job.service';
+
+test('listed jobs exclude active, paused, completed, overdue, and cancelled lifecycle states', () => {
+  assert.deepEqual(buildListedLifecycleScope(), {
+    status: { $in: [JobStatusEnum.listed, JobStatusEnum.pending, JobStatusEnum.in_review] },
+  });
+});
 
 test('invoice issue date is recorded once and preserved', () => {
   const firstIssueDate = new Date('2026-10-29T10:00:00.000Z');
