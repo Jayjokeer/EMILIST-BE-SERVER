@@ -141,7 +141,16 @@ const withJobAttention = async (jobs: any[], userId?: string | null) => {
         : undefined;
       return application ? { applicationId: application._id, applicationStatus: application.status } : {};
     })(),
-    attention: summaries.get(String(job._id)) || jobAttentionService.emptyAttentionSummary(),
+    attention: (() => {
+      const summary = summaries.get(String(job._id)) || jobAttentionService.emptyAttentionSummary();
+      const isOwner = String((job.userId as any)?._id || job.userId || '') === String(userId);
+      const applications = Array.isArray(job.applications) ? job.applications : [];
+      const allApplicationsAnswered = applications.length > 0
+        && applications.every(jobAttentionService.ownerHasRespondedToApplication);
+      return isOwner && allApplicationsAnswered
+        ? jobAttentionService.emptyAttentionSummary()
+        : summary;
+    })(),
   }));
 };
 
@@ -668,7 +677,9 @@ export const fetchJobApplicants = async (
     limit: Number(limit),
     applicants: applicants.map((application: any) => {
       const plain = application.toObject();
-      plain.attention = applicantAttention.get(String(plain._id)) || jobAttentionService.emptyAttentionSummary();
+      plain.attention = jobAttentionService.ownerHasRespondedToApplication(plain)
+        ? jobAttentionService.emptyAttentionSummary()
+        : applicantAttention.get(String(plain._id)) || jobAttentionService.emptyAttentionSummary();
       const businessDetails: any = businessDetailsById.get(String(plain.businessId));
       const levelMap: Record<string, string> = {
         one: 'apprentice',

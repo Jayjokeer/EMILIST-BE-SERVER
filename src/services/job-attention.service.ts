@@ -19,6 +19,13 @@ export const emptyAttentionSummary = (): AttentionSummary => ({
   eventIds: [],
 });
 
+export const ownerHasRespondedToApplication = (application: any) => {
+  const status = String(application?.status || '').toLowerCase().trim();
+  if (['accepted', 'rejected', 'completed', 'cancelled'].includes(status)) return true;
+  return Array.isArray(application?.counterOffers)
+    && application.counterOffers.some((offer: any) => offer?.madeByRole === 'job_owner');
+};
+
 export const createAttentionEvent = async (data: {
   jobId: string;
   applicationId?: string;
@@ -88,7 +95,10 @@ export const resolveApplicationAttention = async (data: {
   await JobAttention.updateMany(
     {
       recipientId: data.recipientId,
-      applicationId: data.applicationId,
+      $or: [
+        { applicationId: data.applicationId },
+        { sourceId: data.applicationId },
+      ],
       type: data.type || JobAttentionType.NEW_APPLICATION,
       resolvedAt: null,
     },

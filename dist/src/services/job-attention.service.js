@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.markAttentionViewed = exports.resolveApplicationAttention = exports.getApplicationAttentionSummaries = exports.getJobAttentionSummaries = exports.createAttentionEvent = exports.emptyAttentionSummary = void 0;
+exports.markAttentionViewed = exports.resolveApplicationAttention = exports.getApplicationAttentionSummaries = exports.getJobAttentionSummaries = exports.createAttentionEvent = exports.ownerHasRespondedToApplication = exports.emptyAttentionSummary = void 0;
 const mongoose_1 = require("mongoose");
 const job_attention_enum_1 = require("../enums/job-attention.enum");
 const error_1 = require("../errors/error");
@@ -16,6 +16,14 @@ const emptyAttentionSummary = () => ({
     eventIds: [],
 });
 exports.emptyAttentionSummary = emptyAttentionSummary;
+const ownerHasRespondedToApplication = (application) => {
+    const status = String(application?.status || '').toLowerCase().trim();
+    if (['accepted', 'rejected', 'completed', 'cancelled'].includes(status))
+        return true;
+    return Array.isArray(application?.counterOffers)
+        && application.counterOffers.some((offer) => offer?.madeByRole === 'job_owner');
+};
+exports.ownerHasRespondedToApplication = ownerHasRespondedToApplication;
 const createAttentionEvent = async (data) => job_attention_model_1.default.findOneAndUpdate({ type: data.type, sourceId: data.sourceId, recipientId: data.recipientId }, { $setOnInsert: data }, { upsert: true, new: true, setDefaultsOnInsert: true });
 exports.createAttentionEvent = createAttentionEvent;
 const buildSummaryMap = async (recipientId, field, ids) => {
@@ -61,7 +69,10 @@ const resolveApplicationAttention = async (data) => {
     const resolvedAt = new Date();
     await job_attention_model_1.default.updateMany({
         recipientId: data.recipientId,
-        applicationId: data.applicationId,
+        $or: [
+            { applicationId: data.applicationId },
+            { sourceId: data.applicationId },
+        ],
         type: data.type || job_attention_enum_1.JobAttentionType.NEW_APPLICATION,
         resolvedAt: null,
     }, { $set: { resolvedAt } });

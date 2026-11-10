@@ -21,6 +21,12 @@ const eventId = new mongoose_1.Types.ObjectId().toString();
         eventIds: [],
     });
 });
+(0, node_test_1.default)('persisted owner responses override stale attention rows', () => {
+    strict_1.default.equal((0, job_attention_service_1.ownerHasRespondedToApplication)({ status: 'accepted' }), true);
+    strict_1.default.equal((0, job_attention_service_1.ownerHasRespondedToApplication)({ status: 'rejected' }), true);
+    strict_1.default.equal((0, job_attention_service_1.ownerHasRespondedToApplication)({ status: 'applied', counterOffers: [{ madeByRole: 'job_owner' }] }), true);
+    strict_1.default.equal((0, job_attention_service_1.ownerHasRespondedToApplication)({ status: 'applied', counterOffers: [] }), false);
+});
 (0, node_test_1.default)('batched summaries return count, distinct types, latest time, and event IDs', async () => {
     const originalAggregate = job_attention_model_1.default.aggregate;
     const latestEventAt = new Date('2026-10-23T08:30:00.000Z');
@@ -70,7 +76,10 @@ const eventId = new mongoose_1.Types.ObjectId().toString();
             type: job_attention_enum_1.JobAttentionType.NEW_APPLICATION,
         });
         strict_1.default.equal(updateFilter.recipientId, recipientId);
-        strict_1.default.equal(updateFilter.applicationId, applicationId);
+        strict_1.default.deepEqual(updateFilter.$or, [
+            { applicationId },
+            { sourceId: applicationId },
+        ]);
         strict_1.default.equal(updateFilter.type, job_attention_enum_1.JobAttentionType.NEW_APPLICATION);
         strict_1.default.equal(updateFilter.resolvedAt, null);
         strict_1.default.ok(update.$set.resolvedAt instanceof Date);

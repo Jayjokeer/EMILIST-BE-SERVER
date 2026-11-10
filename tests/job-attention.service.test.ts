@@ -8,6 +8,7 @@ import {
   emptyAttentionSummary,
   getJobAttentionSummaries,
   markAttentionViewed,
+  ownerHasRespondedToApplication,
   resolveApplicationAttention,
 } from '../src/services/job-attention.service';
 
@@ -23,6 +24,13 @@ test('empty attention does not require frontend animation', () => {
     latestEventAt: null,
     eventIds: [],
   });
+});
+
+test('persisted owner responses override stale attention rows', () => {
+  assert.equal(ownerHasRespondedToApplication({ status: 'accepted' }), true);
+  assert.equal(ownerHasRespondedToApplication({ status: 'rejected' }), true);
+  assert.equal(ownerHasRespondedToApplication({ status: 'applied', counterOffers: [{ madeByRole: 'job_owner' }] }), true);
+  assert.equal(ownerHasRespondedToApplication({ status: 'applied', counterOffers: [] }), false);
 });
 
 test('batched summaries return count, distinct types, latest time, and event IDs', async () => {
@@ -74,7 +82,10 @@ test('an owner response resolves new-application attention', async () => {
       type: JobAttentionType.NEW_APPLICATION,
     });
     assert.equal(updateFilter.recipientId, recipientId);
-    assert.equal(updateFilter.applicationId, applicationId);
+    assert.deepEqual(updateFilter.$or, [
+      { applicationId },
+      { sourceId: applicationId },
+    ]);
     assert.equal(updateFilter.type, JobAttentionType.NEW_APPLICATION);
     assert.equal(updateFilter.resolvedAt, null);
     assert.ok(update.$set.resolvedAt instanceof Date);

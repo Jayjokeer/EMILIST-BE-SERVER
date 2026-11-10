@@ -172,7 +172,16 @@ const withJobAttention = async (jobs, userId) => {
                 : undefined;
             return application ? { applicationId: application._id, applicationStatus: application.status } : {};
         })(),
-        attention: summaries.get(String(job._id)) || jobAttentionService.emptyAttentionSummary(),
+        attention: (() => {
+            const summary = summaries.get(String(job._id)) || jobAttentionService.emptyAttentionSummary();
+            const isOwner = String(job.userId?._id || job.userId || '') === String(userId);
+            const applications = Array.isArray(job.applications) ? job.applications : [];
+            const allApplicationsAnswered = applications.length > 0
+                && applications.every(jobAttentionService.ownerHasRespondedToApplication);
+            return isOwner && allApplicationsAnswered
+                ? jobAttentionService.emptyAttentionSummary()
+                : summary;
+        })(),
     }));
 };
 const withApplicationAttention = async (jobs, userId) => {
@@ -603,7 +612,9 @@ const fetchJobApplicants = async (userId, jobId, status, page = 1, limit = 10) =
         limit: Number(limit),
         applicants: applicants.map((application) => {
             const plain = application.toObject();
-            plain.attention = applicantAttention.get(String(plain._id)) || jobAttentionService.emptyAttentionSummary();
+            plain.attention = jobAttentionService.ownerHasRespondedToApplication(plain)
+                ? jobAttentionService.emptyAttentionSummary()
+                : applicantAttention.get(String(plain._id)) || jobAttentionService.emptyAttentionSummary();
             const businessDetails = businessDetailsById.get(String(plain.businessId));
             const levelMap = {
                 one: 'apprentice',
