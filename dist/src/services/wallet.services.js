@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.declineWithdrawal = exports.approveWithdrawal = exports.refundFailedWithdrawalByReference = exports.debitWalletForWithdrawal = exports.fetchWalletOverview = exports.fetchWalletDetail = exports.fetchUserWallets = exports.payWithWallet = exports.setDefaultWallet = exports.createNewWallet = exports.fundWallet = exports.findWallet = exports.findUserWalletByCurrency = exports.findUserWallet = exports.findWalletById = exports.createWallet = void 0;
+exports.declineWithdrawal = exports.approveWithdrawal = exports.refundFailedWithdrawalByReference = exports.debitWalletForWithdrawal = exports.fetchWalletOverview = exports.fetchWalletDetail = exports.fetchUserWallets = exports.payWithWallet = exports.setDefaultWallet = exports.createNewWallet = exports.creditWalletFunding = exports.fundWallet = exports.findWallet = exports.findUserWalletByCurrency = exports.findUserWallet = exports.findWalletById = exports.createWallet = void 0;
 const transaction_enum_1 = require("../enums/transaction.enum");
 const error_1 = require("../errors/error");
 const wallet_model_1 = __importDefault(require("../models/wallet.model"));
@@ -78,6 +78,22 @@ const fundWallet = async (walletId, amount) => {
     ;
 };
 exports.fundWallet = fundWallet;
+// Credits a wallet once for a funding reference. The condition, balance
+// increment, and reference record are applied in one MongoDB update so a
+// webhook retry or concurrent browser verification cannot double-credit it.
+const creditWalletFunding = async (walletId, amount, reference) => {
+    if (!reference)
+        throw new error_1.BadRequestError("Funding reference is required");
+    await wallet_model_1.default.updateOne({ _id: walletId, appliedAdjustments: { $ne: reference } }, {
+        $inc: { balance: amount },
+        $addToSet: { appliedAdjustments: reference },
+    });
+    const wallet = await wallet_model_1.default.findById(walletId);
+    if (!wallet)
+        throw new error_1.NotFoundError("Wallet not found");
+    return wallet;
+};
+exports.creditWalletFunding = creditWalletFunding;
 const createNewWallet = async (userId, currency, isDefault = false) => {
     const existingWallet = await wallet_model_1.default.findOne({ userId, currency });
     if (existingWallet)

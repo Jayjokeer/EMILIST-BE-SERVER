@@ -28,6 +28,12 @@ export const initiateWalletFunding =  catchAsync(async (req: JwtPayload, res: Re
   const wallet = await walletService.findWallet(userId, currency, walletId);
 
   if (!wallet) throw new NotFoundError('Wallet not found');
+  if (paymentMethod === PaymentMethodEnum.card && currency !== WalletEnum.NGN) {
+    throw new BadRequestError("Card funding currently supports NGN only");
+  }
+  if (paymentMethod === PaymentMethodEnum.card && !redirectUrl) {
+    throw new BadRequestError("redirectUrl is required for card payments");
+  }
   const transactionPayload = {
     userId,
     type: TransactionType.CREDIT,
@@ -43,9 +49,6 @@ export const initiateWalletFunding =  catchAsync(async (req: JwtPayload, res: Re
   };
 const transaction = await transactionService.createTransaction(transactionPayload);
   if (paymentMethod === PaymentMethodEnum.card && currency === WalletEnum.NGN ) {
-    if(!redirectUrl){
-      throw new BadRequestError("redirectUrl is required for card payments");
-    }
     transaction.paymentService = PaymentServiceEnum.paystack;
     const paymentLink = await generatePaystackPaymentLink(transaction.reference, amount, req.user.email, redirectUrl);
     await transaction.save();
@@ -68,35 +71,52 @@ const transaction = await transactionService.createTransaction(transactionPayloa
   });
 
   export const verifyBankTransferWalletFunding =  catchAsync(async (req: JwtPayload, res: Response) => {
-    const userId = req.user._id;
     const {transactionId, status} = req.body;
-    let message;
+    if (!transactionId) throw new BadRequestError("transactionId is required");
+    if (!["Approved", "Declined"].includes(status)) {
+      throw new BadRequestError("status must be Approved or Declined");
+    }
+
     const transaction = await transactionService.fetchSingleTransaction(transactionId);
      if (!transaction || transaction.paymentMethod !== PaymentMethodEnum.bankTransfer) {
-      throw new Error('Transaction not found or not a bank transfer');
+      throw new NotFoundError('Transaction not found or not a bank transfer');
     }
     const wallet = await walletService.findWallet(String(transaction.userId), transaction.currency, transaction.walletId);
     if(!wallet){
       throw new NotFoundError("Wallet not found!")
     };
     if (transaction.status === TransactionEnum.completed) {
-      throw new Error('Transaction is already completed');
+      throw new BadRequestError('Transaction is already completed');
+    }
+    if (transaction.status === TransactionEnum.declined) {
+      throw new BadRequestError('Transaction is already declined');
     }
   
     transaction.adminApproval = true;
   
     if(status === "Approved"){
+      const creditedWallet = await walletService.creditWalletFunding(
+        String(transaction.walletId),
+        transaction.amount,
+        String(transaction.reference)
+      );
       transaction.status = TransactionEnum.completed;
       transaction.adminApproval = true;
-      transaction.balanceAfter = wallet.balance + transaction.amount;
-
-      await Promise.all([ transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
+      transaction.balanceAfter = creditedWallet.balance;
+      await transaction.save();
     }else if (status === "Declined"){
       transaction.status = TransactionEnum.declined;
       await transaction.save();
     }
 
-    return successResponse(res, StatusCodes.OK, message);
+    return successResponse(res, StatusCodes.OK, {
+      transactionId: transaction._id,
+      status: transaction.status,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      walletId: transaction.walletId,
+      balance: status === "Approved" ? transaction.balanceAfter : wallet.balance,
+    });
   });
 
 // === Wallet management ===

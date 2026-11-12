@@ -40,7 +40,11 @@ export const validateInitiateWalletFunding = (req: Request, res: Response, next:
         "any.only": "Payment method must be Card or BankTransfer",
         "any.required": "Payment method is required",
       }),
-    walletId: Joi.string().hex().length(24).optional(),
+    walletId: Joi.string().hex().length(24).required().messages({
+      "string.hex": "walletId must be a valid id",
+      "string.length": "walletId must be a valid id",
+      "any.required": "walletId is required",
+    }),
     redirectUrl: Joi.string().uri().optional().messages({
       "string.uri": "redirectUrl must be a valid URL",
     }),

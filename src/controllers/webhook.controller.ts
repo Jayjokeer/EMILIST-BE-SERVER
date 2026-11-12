@@ -3,7 +3,6 @@ import { verifyPaystackWebhookSignature } from "../utils/paystack";
 import * as transactionService from "../services/transaction.service";
 import * as walletService from "../services/wallet.services";
 import { ServiceEnum, TransactionType } from "../enums/transaction.enum";
-import Wallet from "../models/wallet.model";
 
 // Handles Paystack events:
 // - charge.success / charge.failed                          -> wallet funding
@@ -34,12 +33,12 @@ export const paystackWebhookController = async (req: Request, res: Response) => 
           // Only wallet funding credits a wallet here; other flows (orders,
           // subscriptions) keep their own verification paths.
           if (transaction.type === TransactionType.CREDIT && transaction.serviceType === ServiceEnum.walletFunding) {
-            const wallet = await Wallet.findById(transaction.walletId);
-            if (wallet) {
-              wallet.balance += transaction.amount;
-              await wallet.save();
-              transaction.balanceAfter = wallet.balance;
-            }
+            const wallet = await walletService.creditWalletFunding(
+              String(transaction.walletId),
+              transaction.amount,
+              String(transaction.reference)
+            );
+            transaction.balanceAfter = wallet.balance;
             await transaction.save();
           }
         }
@@ -65,8 +64,10 @@ export const paystackWebhookController = async (req: Request, res: Response) => 
         break;
     }
   } catch (error) {
-    // Never fail after auth - Paystack retries non-2xx responses
     console.error("Paystack webhook processing error:", error);
+    // A non-2xx response tells Paystack to retry a transient processing
+    // failure instead of silently losing a successful wallet credit.
+    return res.status(500).json({ status: false, message: "Webhook processing failed" });
   }
 
   return res.status(200).json({ status: true });

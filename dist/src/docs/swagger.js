@@ -690,13 +690,26 @@ the "Product Reviews" row), and a static \`disclaimer\` string.`,
             post: {
                 tags: ["Wallet"],
                 summary: "Fund a wallet (Paystack card flow)",
-                description: `Creates a pending CREDIT transaction and, for \`Card\` + NGN, initializes a Paystack transaction. Redirect the user to \`authorizationUrl\`; the wallet is credited by the Paystack webhook (or the legacy verify endpoint) keyed by \`reference\`.`,
+                description: `Creates a pending CREDIT transaction and, for \`Card\` + NGN, initializes a Paystack transaction. \`walletId\` and \`redirectUrl\` must be provided for card funding. Redirect the user to \`authorizationUrl\`; the signature-verified Paystack webhook credits the wallet once, keyed by \`reference\`. For \`BankTransfer\`, send multipart/form-data and attach the receipt using the \`image\` field; an admin must approve the transaction before the wallet is credited.`,
                 security: [{ bearerAuth: [] }],
                 requestBody: {
                     required: true,
                     content: {
                         "application/json": {
                             example: { currency: "NGN", amount: 5000, paymentMethod: "Card", walletId: "64f1a2b3c4d5e6f7a8b9c0ab", redirectUrl: "https://app.emilist.com/wallet" },
+                        },
+                        "multipart/form-data": {
+                            schema: {
+                                type: "object",
+                                required: ["currency", "amount", "paymentMethod", "walletId"],
+                                properties: {
+                                    currency: { type: "string", enum: ["NGN", "USD", "GBP", "EUR"], example: "NGN" },
+                                    amount: { type: "number", example: 5000 },
+                                    paymentMethod: { type: "string", enum: ["BankTransfer"], example: "BankTransfer" },
+                                    walletId: { type: "string", example: "64f1a2b3c4d5e6f7a8b9c0ab" },
+                                    image: { type: "string", format: "binary", description: "Bank-transfer receipt" },
+                                },
+                            },
                         },
                     },
                 },
@@ -1086,7 +1099,7 @@ Each job includes a recipient-scoped \`attention\` summary. Applied jobs also in
             post: {
                 tags: ["Webhooks"],
                 summary: "Paystack webhook receiver",
-                description: `Signature-verified (HMAC-SHA512 over the raw body via the \`x-paystack-signature\` header) - no bearer auth. Handles \`charge.success\` (credits the wallet, idempotent by reference), \`charge.failed\`, \`transfer.success\` and \`transfer.failed\`/\`transfer.reversed\` (refunds the withdrawal hold). Always acknowledges with 200 once the signature is valid.`,
+                description: `Signature-verified (HMAC-SHA512 over the raw request body via the \`x-paystack-signature\` header) - no bearer auth. Paystack must be configured to call \`https://be.emilist.com/api/v1/webhooks/paystack\`. Handles \`charge.success\` (credits the wallet, idempotent by reference), \`charge.failed\`, \`transfer.success\` and \`transfer.failed\`/\`transfer.reversed\` (refunds the withdrawal hold). Returns 500 when processing fails so Paystack can retry the event.`,
                 security: [],
                 parameters: [
                     { name: "x-paystack-signature", in: "header", required: true, schema: { type: "string" }, description: "Paystack HMAC-SHA512 signature of the raw body" },
@@ -1098,6 +1111,7 @@ Each job includes a recipient-scoped \`attention\` summary. Applied jobs also in
                 responses: {
                     "200": { description: "Acknowledged", content: { "application/json": { example: { status: true } } } },
                     "401": { description: "Invalid signature" },
+                    "500": { description: "Processing failed; Paystack should retry the webhook" },
                 },
             },
         },

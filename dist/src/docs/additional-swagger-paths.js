@@ -143,7 +143,7 @@ const routes = [
     { path: '/admin/fetch-transaction/{transactionId}', method: 'get', tag: 'Admin', summary: 'Fetch a transaction' },
     { path: '/admin/fetch-all-subscriptions', method: 'get', tag: 'Admin', summary: 'Fetch all subscriptions', queryParams: ['page', 'limit'] },
     { path: '/admin/update-vat', method: 'patch', tag: 'Admin', summary: 'Update VAT', bodyExample: { vat: 7.5 } },
-    { path: '/admin/verify-bank-transfer', method: 'post', tag: 'Admin', summary: 'Verify bank-transfer wallet funding', bodyExample: { reference: 'PAYSTACK_REFERENCE' }, successStatus: '200' },
+    { path: '/admin/verify-bank-transfer', method: 'post', tag: 'Admin', summary: 'Approve or decline bank-transfer wallet funding', bodyExample: { transactionId: id, status: 'Approved' }, successStatus: '200' },
     { path: '/admin/fetch-private-experts', method: 'get', tag: 'Admin', summary: 'Fetch private experts', queryParams: ['page', 'limit', 'search'] },
     { path: '/admin/fetch-private-expert/{id}', method: 'get', tag: 'Admin', summary: 'Fetch a private expert' },
     { path: '/admin/update-job-payment/{jobId}', method: 'patch', tag: 'Admin', summary: 'Update job payment status', bodyExample: { paymentStatus: 'paid' } },

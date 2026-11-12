@@ -59,6 +59,12 @@ exports.initiateWalletFunding = (0, error_handler_1.catchAsync)(async (req, res)
     const wallet = await walletService.findWallet(userId, currency, walletId);
     if (!wallet)
         throw new error_1.NotFoundError('Wallet not found');
+    if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency !== transaction_enum_1.WalletEnum.NGN) {
+        throw new error_1.BadRequestError("Card funding currently supports NGN only");
+    }
+    if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && !redirectUrl) {
+        throw new error_1.BadRequestError("redirectUrl is required for card payments");
+    }
     const transactionPayload = {
         userId,
         type: transaction_enum_1.TransactionType.CREDIT,
@@ -74,9 +80,6 @@ exports.initiateWalletFunding = (0, error_handler_1.catchAsync)(async (req, res)
     };
     const transaction = await transactionService.createTransaction(transactionPayload);
     if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency === transaction_enum_1.WalletEnum.NGN) {
-        if (!redirectUrl) {
-            throw new error_1.BadRequestError("redirectUrl is required for card payments");
-        }
         transaction.paymentService = transaction_enum_1.PaymentServiceEnum.paystack;
         const paymentLink = await (0, paystack_1.generatePaystackPaymentLink)(transaction.reference, amount, req.user.email, redirectUrl);
         await transaction.save();
@@ -100,12 +103,15 @@ exports.initiateWalletFunding = (0, error_handler_1.catchAsync)(async (req, res)
     }
 });
 exports.verifyBankTransferWalletFunding = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const userId = req.user._id;
     const { transactionId, status } = req.body;
-    let message;
+    if (!transactionId)
+        throw new error_1.BadRequestError("transactionId is required");
+    if (!["Approved", "Declined"].includes(status)) {
+        throw new error_1.BadRequestError("status must be Approved or Declined");
+    }
     const transaction = await transactionService.fetchSingleTransaction(transactionId);
     if (!transaction || transaction.paymentMethod !== transaction_enum_1.PaymentMethodEnum.bankTransfer) {
-        throw new Error('Transaction not found or not a bank transfer');
+        throw new error_1.NotFoundError('Transaction not found or not a bank transfer');
     }
     const wallet = await walletService.findWallet(String(transaction.userId), transaction.currency, transaction.walletId);
     if (!wallet) {
@@ -113,20 +119,31 @@ exports.verifyBankTransferWalletFunding = (0, error_handler_1.catchAsync)(async 
     }
     ;
     if (transaction.status === transaction_enum_1.TransactionEnum.completed) {
-        throw new Error('Transaction is already completed');
+        throw new error_1.BadRequestError('Transaction is already completed');
+    }
+    if (transaction.status === transaction_enum_1.TransactionEnum.declined) {
+        throw new error_1.BadRequestError('Transaction is already declined');
     }
     transaction.adminApproval = true;
     if (status === "Approved") {
+        const creditedWallet = await walletService.creditWalletFunding(String(transaction.walletId), transaction.amount, String(transaction.reference));
         transaction.status = transaction_enum_1.TransactionEnum.completed;
         transaction.adminApproval = true;
-        transaction.balanceAfter = wallet.balance + transaction.amount;
-        await Promise.all([transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
+        transaction.balanceAfter = creditedWallet.balance;
+        await transaction.save();
     }
     else if (status === "Declined") {
         transaction.status = transaction_enum_1.TransactionEnum.declined;
         await transaction.save();
     }
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, message);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        transactionId: transaction._id,
+        status: transaction.status,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        walletId: transaction.walletId,
+        balance: status === "Approved" ? transaction.balanceAfter : wallet.balance,
+    });
 });
 // === Wallet management ===
 exports.fetchWalletsController = (0, error_handler_1.catchAsync)(async (req, res) => {

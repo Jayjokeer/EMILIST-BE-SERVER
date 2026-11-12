@@ -406,6 +406,11 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)(async 
         }
     }
     else if (transaction.serviceType === transaction_enum_1.ServiceEnum.walletFunding) {
+        // Paystack may redirect the browser after its webhook has already credited
+        // the wallet. Do not credit a completed funding transaction a second time.
+        if (transaction.status === transaction_enum_1.TransactionEnum.completed) {
+            return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Wallet funding already completed");
+        }
         const wallet = await walletService.findWallet(String(transaction.userId), transaction.currency, transaction.walletId);
         if (!wallet) {
             throw new error_1.NotFoundError("Wallet not found!");
@@ -414,10 +419,11 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)(async 
         let message;
         const verifyPayment = await (0, paystack_1.verifyPaystackPayment)(reference);
         if (verifyPayment == "success") {
+            const creditedWallet = await walletService.creditWalletFunding(String(transaction.walletId), transaction.amount, String(transaction.reference));
             transaction.dateCompleted = new Date();
             transaction.status = transaction_enum_1.TransactionEnum.completed;
-            transaction.balanceAfter = wallet.balance + transaction.amount;
-            await Promise.all([transaction.save(), walletService.fundWallet(String(transaction.walletId), transaction.amount)]);
+            transaction.balanceAfter = creditedWallet.balance;
+            await transaction.save();
             message = "Wallet funded successfully";
         }
         else {

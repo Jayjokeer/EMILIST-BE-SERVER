@@ -34,6 +34,29 @@ export const fundWallet = async (walletId: string, amount: number) => {
   };
 }
 
+// Credits a wallet once for a funding reference. The condition, balance
+// increment, and reference record are applied in one MongoDB update so a
+// webhook retry or concurrent browser verification cannot double-credit it.
+export const creditWalletFunding = async (
+  walletId: string,
+  amount: number,
+  reference: string
+) => {
+  if (!reference) throw new BadRequestError("Funding reference is required");
+
+  await Wallet.updateOne(
+    { _id: walletId, appliedAdjustments: { $ne: reference } },
+    {
+      $inc: { balance: amount },
+      $addToSet: { appliedAdjustments: reference },
+    }
+  );
+
+  const wallet = await Wallet.findById(walletId);
+  if (!wallet) throw new NotFoundError("Wallet not found");
+  return wallet;
+};
+
 export const createNewWallet = async (userId: string, currency: WalletEnum, isDefault = false) => {
     const existingWallet = await Wallet.findOne({ userId, currency });
     if (existingWallet) throw new BadRequestError(`Wallet for ${currency} already exists`);

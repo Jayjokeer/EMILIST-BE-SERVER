@@ -30,7 +30,11 @@ const server = http.createServer(app);
 app.use(cookieParser());
 // Paystack webhook must receive the exact raw request body for HMAC-SHA512
 // signature verification, so it is mounted BEFORE express.json.
-app.use("/api/v1/webhooks", webhookRouter);
+app.use(
+  "/api/v1/webhooks",
+  express.raw({ type: "application/json" }),
+  webhookRouter
+);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(helmet());
