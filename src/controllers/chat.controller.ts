@@ -50,15 +50,17 @@ export const sendMessageController = catchAsync(async (req: JwtPayload, res: Res
     const receiver = await userService.findUserById(receiverId);
 
     if (receiver) {
+      const senderName = [req.user?.firstName, req.user?.lastName].filter(Boolean).join(" ") || req.user?.userName || "An Emilist user";
+      const receiverName = [receiver.firstName, receiver.lastName].filter(Boolean).join(" ") || receiver.userName || "there";
       const notificationPayload = {
         userId: receiverId,
         title: "You have a new message",
-        message: `${req.user.userName} sent you a message!`,
+        message: `${senderName} sent you a message!`,
         type: NotificationTypeEnum.info,
       };
       await notificationService.createNotification(notificationPayload);
 
-      const { html, subject } = sendMessage(receiver.userName, req.user.userName);
+      const { html, subject } = sendMessage(receiverName, senderName);
       await sendEmail(receiver.email, subject, html);
     }
   };

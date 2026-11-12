@@ -5,8 +5,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteNotification = exports.markNotificationAsRead = exports.fetchUserNotifications = exports.findNotificationById = exports.createNotification = void 0;
 const notification_model_1 = __importDefault(require("../models/notification.model"));
+const safeNotificationText = (value, fallback) => {
+    const text = value === undefined || value === null ? "" : String(value).trim();
+    if (!text)
+        return fallback;
+    return text.replace(/\b(?:undefined|null|NaN)\b/gi, "unavailable");
+};
 const createNotification = async (data) => {
-    return await notification_model_1.default.create(data);
+    return await notification_model_1.default.create({
+        ...data,
+        title: safeNotificationText(data?.title, "Emilist notification"),
+        message: safeNotificationText(data?.message, "You have a new update on Emilist."),
+    });
 };
 exports.createNotification = createNotification;
 const findNotificationById = async (id) => {

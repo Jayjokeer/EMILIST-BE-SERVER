@@ -633,7 +633,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     await notificationService.createNotification({
       userId: recipientId,
       title: "New counteroffer",
-      message: `${req.user.userName} sent a counteroffer for ${job.title}`,
+      message: `${jobEmailDisplayName(req.user, "An Emilist user")} sent a counteroffer for ${job.title || "your job"}`,
       type: NotificationTypeEnum.info,
     });
     const recipient = await userService.findUserById(recipientId);
@@ -726,7 +726,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     await notificationService.createNotification({
       userId: String(latest.madeBy),
       title: `Counteroffer ${action}ed`,
-      message: `${req.user.userName} ${action}ed your counteroffer for ${job.title}`,
+      message: `${jobEmailDisplayName(req.user, "An Emilist user")} ${action}ed your counteroffer for ${job.title || "your job"}`,
       type: NotificationTypeEnum.info,
     });
 
@@ -1189,11 +1189,15 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
     const notificationPayload = {
       userId: job.userId,
       title: `Direct job ${applicationStatus }`,
-      message: `${req.user.userName} ${applicationStatus } your direct job  with ID: ${job._id}`,
+      message: `${jobEmailDisplayName(req.user, "The assigned professional")} ${applicationStatus} your direct job with ID: ${job._id}`,
       type: NotificationTypeEnum.info
     }
 
-    const {html, subject} = acceptDirectJobApplicationMessage(user!.userName, jobOwner!.userName, String(job._id));
+    const {html, subject} = acceptDirectJobApplicationMessage(
+      jobEmailDisplayName(jobOwner, "there"),
+      jobEmailDisplayName(user, "The assigned professional"),
+      String(job._id),
+    );
     await sendEmail(jobOwner!.email, subject,html); 
     await notificationService.createNotification(notificationPayload);
     return  successResponse(res, StatusCodes.OK, "Status changed successfully");
@@ -1341,7 +1345,11 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
     if(!user) throw new NotFoundError("user not found!");
     job.save();
 
-    const { html, subject } = requestForQuoteMessage(user.userName, req.user.userName, String(job._id));
+    const { html, subject } = requestForQuoteMessage(
+      jobEmailDisplayName(user, "there"),
+      jobEmailDisplayName(req.user, "The job owner"),
+      String(job._id),
+    );
     await sendEmail(user.email, subject, html); 
 
     return  successResponse(res, StatusCodes.OK, 'Request for quote sent successfully');
@@ -1382,7 +1390,11 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
     if(!user) throw new NotFoundError("user not found!");
    await job.save();
 
-    const { html, subject } = postQuoteMessage(user.userName, req.user.userName, String(job._id));
+    const { html, subject } = postQuoteMessage(
+      jobEmailDisplayName(user, "there"),
+      jobEmailDisplayName(req.user, "The assigned professional"),
+      String(job._id),
+    );
     await sendEmail(user.email, subject, html); 
 
     return  successResponse(res, StatusCodes.OK, 'Quote sent successfully');

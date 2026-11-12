@@ -1,7 +1,17 @@
 import Notification from "../models/notification.model";
 
+const safeNotificationText = (value: unknown, fallback: string) => {
+  const text = value === undefined || value === null ? "" : String(value).trim();
+  if (!text) return fallback;
+  return text.replace(/\b(?:undefined|null|NaN)\b/gi, "unavailable");
+};
+
 export const createNotification = async(data: any)=>{
-    return await Notification.create(data);
+    return await Notification.create({
+      ...data,
+      title: safeNotificationText(data?.title, "Emilist notification"),
+      message: safeNotificationText(data?.message, "You have a new update on Emilist."),
+    });
 };
 export const findNotificationById = async(id: string)=>{
     return await Notification.findById(id);

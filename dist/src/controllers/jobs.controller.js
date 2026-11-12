@@ -584,7 +584,7 @@ exports.counterBidController = (0, error_handler_1.catchAsync)(async (req, res) 
     await notificationService.createNotification({
         userId: recipientId,
         title: "New counteroffer",
-        message: `${req.user.userName} sent a counteroffer for ${job.title}`,
+        message: `${jobEmailDisplayName(req.user, "An Emilist user")} sent a counteroffer for ${job.title || "your job"}`,
         type: notification_enum_1.NotificationTypeEnum.info,
     });
     const recipient = await userService.findUserById(recipientId);
@@ -674,7 +674,7 @@ exports.respondToCounterBidController = (0, error_handler_1.catchAsync)(async (r
     await notificationService.createNotification({
         userId: String(latest.madeBy),
         title: `Counteroffer ${action}ed`,
-        message: `${req.user.userName} ${action}ed your counteroffer for ${job.title}`,
+        message: `${jobEmailDisplayName(req.user, "An Emilist user")} ${action}ed your counteroffer for ${job.title || "your job"}`,
         type: notification_enum_1.NotificationTypeEnum.info,
     });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
@@ -1089,10 +1089,10 @@ exports.acceptDirectJobController = (0, error_handler_1.catchAsync)(async (req, 
     const notificationPayload = {
         userId: job.userId,
         title: `Direct job ${applicationStatus}`,
-        message: `${req.user.userName} ${applicationStatus} your direct job  with ID: ${job._id}`,
+        message: `${jobEmailDisplayName(req.user, "The assigned professional")} ${applicationStatus} your direct job with ID: ${job._id}`,
         type: notification_enum_1.NotificationTypeEnum.info
     };
-    const { html, subject } = (0, templates_1.acceptDirectJobApplicationMessage)(user.userName, jobOwner.userName, String(job._id));
+    const { html, subject } = (0, templates_1.acceptDirectJobApplicationMessage)(jobEmailDisplayName(jobOwner, "there"), jobEmailDisplayName(user, "The assigned professional"), String(job._id));
     await (0, send_email_1.sendEmail)(jobOwner.email, subject, html);
     await notificationService.createNotification(notificationPayload);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Status changed successfully");
@@ -1220,7 +1220,7 @@ exports.requestForQuoteController = (0, error_handler_1.catchAsync)(async (req, 
     if (!user)
         throw new error_1.NotFoundError("user not found!");
     job.save();
-    const { html, subject } = (0, templates_1.requestForQuoteMessage)(user.userName, req.user.userName, String(job._id));
+    const { html, subject } = (0, templates_1.requestForQuoteMessage)(jobEmailDisplayName(user, "there"), jobEmailDisplayName(req.user, "The job owner"), String(job._id));
     await (0, send_email_1.sendEmail)(user.email, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, 'Request for quote sent successfully');
 });
@@ -1258,7 +1258,7 @@ exports.postQuoteController = (0, error_handler_1.catchAsync)(async (req, res) =
     if (!user)
         throw new error_1.NotFoundError("user not found!");
     await job.save();
-    const { html, subject } = (0, templates_1.postQuoteMessage)(user.userName, req.user.userName, String(job._id));
+    const { html, subject } = (0, templates_1.postQuoteMessage)(jobEmailDisplayName(user, "there"), jobEmailDisplayName(req.user, "The assigned professional"), String(job._id));
     await (0, send_email_1.sendEmail)(user.email, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, 'Quote sent successfully');
 });

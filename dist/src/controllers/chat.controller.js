@@ -77,14 +77,16 @@ exports.sendMessageController = (0, error_handler_1.catchAsync)(async (req, res)
     else {
         const receiver = await userService.findUserById(receiverId);
         if (receiver) {
+            const senderName = [req.user?.firstName, req.user?.lastName].filter(Boolean).join(" ") || req.user?.userName || "An Emilist user";
+            const receiverName = [receiver.firstName, receiver.lastName].filter(Boolean).join(" ") || receiver.userName || "there";
             const notificationPayload = {
                 userId: receiverId,
                 title: "You have a new message",
-                message: `${req.user.userName} sent you a message!`,
+                message: `${senderName} sent you a message!`,
                 type: notification_enum_1.NotificationTypeEnum.info,
             };
             await notificationService.createNotification(notificationPayload);
-            const { html, subject } = (0, templates_1.sendMessage)(receiver.userName, req.user.userName);
+            const { html, subject } = (0, templates_1.sendMessage)(receiverName, senderName);
             await (0, send_email_1.sendEmail)(receiver.email, subject, html);
         }
     }
