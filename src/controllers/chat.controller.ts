@@ -56,7 +56,14 @@ export const sendMessageController = catchAsync(async (req: JwtPayload, res: Res
         userId: receiverId,
         title: "You have a new message",
         message: `${senderName} sent you a message!`,
-        type: NotificationTypeEnum.info,
+        type: NotificationTypeEnum.message,
+        resourceId: String(chat._id),
+        action: "new_message",
+        metadata: {
+          chatId: String(chat._id),
+          messageId: String(newMessage._id),
+          senderId: String(userId),
+        },
       };
       await notificationService.createNotification(notificationPayload);
 

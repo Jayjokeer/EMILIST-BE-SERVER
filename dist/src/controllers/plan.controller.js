@@ -33,37 +33,38 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPlansController = exports.createPlanController = void 0;
+exports.getPlansController = exports.serializePlanForDuration = exports.createPlanController = void 0;
 const planService = __importStar(require("../services/plan.service"));
 const error_handler_1 = require("../errors/error-handler");
 const http_status_codes_1 = require("http-status-codes");
 const success_response_1 = require("../helpers/success-response");
 const plan_enum_1 = require("../enums/plan.enum");
 const error_1 = require("../errors/error");
+const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 exports.createPlanController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { name, price, duration, perks, offers } = req.body;
     const data = await planService.createPlan({ name, price, duration, perks, offers });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 });
+const serializePlanForDuration = (plan, duration) => {
+    const serialized = typeof plan.toObject === 'function' ? plan.toObject() : { ...plan };
+    const monthlyPrice = Number(serialized.price);
+    return {
+        ...serialized,
+        price: duration === suscribtion_enum_1.SubscriptionPeriodEnum.yearly && serialized.name !== plan_enum_1.PlanEnum.basic
+            ? monthlyPrice * 12
+            : monthlyPrice,
+        monthlyPrice,
+        billingPeriod: duration,
+    };
+};
+exports.serializePlanForDuration = serializePlanForDuration;
 exports.getPlansController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { duration } = req.query;
-    if (!duration) {
-        throw new error_1.BadRequestError('Duration is required');
+    const duration = String(req.query.duration || suscribtion_enum_1.SubscriptionPeriodEnum.monthly).toLowerCase();
+    if (!Object.values(suscribtion_enum_1.SubscriptionPeriodEnum).includes(duration)) {
+        throw new error_1.BadRequestError('Duration must be monthly or yearly');
     }
-    let data;
     const plans = await planService.getPlans();
-    if (duration === 'yearly') {
-        const data = plans.map((plan) => {
-            if (plan.name === plan_enum_1.PlanEnum.basic) {
-                return plan;
-            }
-            else {
-                plan.price = plan.price * 12;
-                return plan;
-            }
-        });
-        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
-    }
-    data = plans;
+    const data = plans.map((plan) => (0, exports.serializePlanForDuration)(plan, duration));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });

@@ -48,7 +48,20 @@ const notificationSchema = new mongoose_1.default.Schema({
     type: {
         type: String,
         enum: notification_enum_1.NotificationTypeEnum,
-        default: notification_enum_1.NotificationTypeEnum.info,
+        default: notification_enum_1.NotificationTypeEnum.system,
+    },
+    level: {
+        type: String,
+        enum: notification_enum_1.NotificationLevelEnum,
+        default: notification_enum_1.NotificationLevelEnum.info,
+    },
+    resourceId: {
+        type: String,
+        default: null,
+    },
+    action: {
+        type: String,
+        default: null,
     },
     isRead: {
         type: Boolean,
@@ -56,6 +69,7 @@ const notificationSchema = new mongoose_1.default.Schema({
     },
     metadata: {
         type: mongoose_1.Schema.Types.Mixed,
+        default: {},
     },
 }, {
     timestamps: true,

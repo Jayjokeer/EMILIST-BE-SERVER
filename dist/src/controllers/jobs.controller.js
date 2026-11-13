@@ -362,7 +362,14 @@ exports.applyForJobController = (0, error_handler_1.catchAsync)(async (req, res)
         userId: job.userId,
         title: "Job Application",
         message: `${applicantName} applied to your job titled: ${job.title || "your job"}`,
-        type: notification_enum_1.NotificationTypeEnum.info
+        type: notification_enum_1.NotificationTypeEnum.job,
+        resourceId: String(job._id),
+        action: "application_received",
+        metadata: {
+            jobId: String(job._id),
+            applicationId: String(projectData._id),
+            applicantId: String(userId),
+        },
     };
     const user = await userService.findUserById(job.userId);
     if (!user)
@@ -585,7 +592,13 @@ exports.counterBidController = (0, error_handler_1.catchAsync)(async (req, res) 
         userId: recipientId,
         title: "New counteroffer",
         message: `${jobEmailDisplayName(req.user, "An Emilist user")} sent a counteroffer for ${job.title || "your job"}`,
-        type: notification_enum_1.NotificationTypeEnum.info,
+        type: notification_enum_1.NotificationTypeEnum.job,
+        resourceId: String(job._id),
+        action: "counteroffer_received",
+        metadata: {
+            jobId: String(job._id),
+            applicationId: String(project._id),
+        },
     });
     const recipient = await userService.findUserById(recipientId);
     if (recipient?.email) {
@@ -675,7 +688,13 @@ exports.respondToCounterBidController = (0, error_handler_1.catchAsync)(async (r
         userId: String(latest.madeBy),
         title: `Counteroffer ${action}ed`,
         message: `${jobEmailDisplayName(req.user, "An Emilist user")} ${action}ed your counteroffer for ${job.title || "your job"}`,
-        type: notification_enum_1.NotificationTypeEnum.info,
+        type: notification_enum_1.NotificationTypeEnum.job,
+        resourceId: String(job._id),
+        action: `counteroffer_${action}ed`,
+        metadata: {
+            jobId: String(job._id),
+            applicationId: String(project._id),
+        },
     });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
         application: project,
@@ -849,7 +868,10 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
             userId: project.user,
             title: `Job application ${applicationStatus}`,
             message: `${jobOwnerName} ${applicationStatus} your job application titled: ${emailJobTitle}`,
-            type: notification_enum_1.NotificationTypeEnum.info
+            type: notification_enum_1.NotificationTypeEnum.job,
+            resourceId: String(job._id),
+            action: "application_accepted",
+            metadata: { jobId: String(job._id), applicationId: String(project._id) },
         };
         const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(applicantName, jobOwnerName, emailJobTitle, applicationStatus);
         await (0, send_email_1.sendEmail)(user.email, subject, html);
@@ -863,7 +885,10 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
             userId: project.user,
             title: `Job application ${applicationStatus}`,
             message: `${jobOwnerName} ${applicationStatus} your job application titled: ${emailJobTitle}`,
-            type: notification_enum_1.NotificationTypeEnum.info
+            type: notification_enum_1.NotificationTypeEnum.job,
+            resourceId: String(job._id),
+            action: "application_rejected",
+            metadata: { jobId: String(job._id), applicationId: String(project._id) },
         };
         const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(applicantName, jobOwnerName, emailJobTitle, applicationStatus);
         await (0, send_email_1.sendEmail)(user.email, subject, html);
@@ -882,7 +907,10 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
             userId: project.user,
             title: `Job ${applicationStatus}`,
             message: `${jobOwnerName} ${applicationStatus} your job application titled: ${emailJobTitle}`,
-            type: notification_enum_1.NotificationTypeEnum.info
+            type: notification_enum_1.NotificationTypeEnum.job,
+            resourceId: String(job._id),
+            action: "job_paused",
+            metadata: { jobId: String(job._id), applicationId: String(project._id) },
         };
         const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(applicantName, jobOwnerName, emailJobTitle, applicationStatus);
         await (0, send_email_1.sendEmail)(user.email, subject, html);
@@ -900,7 +928,10 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
             userId: project.user,
             title: `Job application ${applicationStatus}`,
             message: `${jobOwnerName} ${applicationStatus} your job application titled: ${emailJobTitle}`,
-            type: notification_enum_1.NotificationTypeEnum.info
+            type: notification_enum_1.NotificationTypeEnum.job,
+            resourceId: String(job._id),
+            action: "job_unpaused",
+            metadata: { jobId: String(job._id), applicationId: String(project._id) },
         };
         const { html, subject } = (0, templates_1.acceptJobApplicationMessage)(applicantName, jobOwnerName, emailJobTitle, applicationStatus);
         await (0, send_email_1.sendEmail)(user.email, subject, html);
@@ -1090,7 +1121,10 @@ exports.acceptDirectJobController = (0, error_handler_1.catchAsync)(async (req, 
         userId: job.userId,
         title: `Direct job ${applicationStatus}`,
         message: `${jobEmailDisplayName(req.user, "The assigned professional")} ${applicationStatus} your direct job with ID: ${job._id}`,
-        type: notification_enum_1.NotificationTypeEnum.info
+        type: notification_enum_1.NotificationTypeEnum.job,
+        resourceId: String(job._id),
+        action: `direct_job_${applicationStatus}`,
+        metadata: { jobId: String(job._id), applicationId: String(project._id) },
     };
     const { html, subject } = (0, templates_1.acceptDirectJobApplicationMessage)(jobEmailDisplayName(jobOwner, "there"), jobEmailDisplayName(user, "The assigned professional"), String(job._id));
     await (0, send_email_1.sendEmail)(jobOwner.email, subject, html);

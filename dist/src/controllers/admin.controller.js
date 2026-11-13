@@ -155,7 +155,13 @@ exports.replyToSupportRequestController = (0, error_handler_1.catchAsync)(async 
         userId: ticket.requesterId?._id || ticket.requesterId,
         title: `Support update${ticket.ticketCode ? ` ${ticket.ticketCode}` : ""}`,
         message: req.body.message.slice(0, 240),
-        type: notification_enum_1.NotificationTypeEnum.info,
+        type: notification_enum_1.NotificationTypeEnum.support,
+        resourceId: String(ticket._id),
+        action: "support_reply",
+        metadata: {
+            supportRequestId: String(ticket._id),
+            ticketCode: ticket.ticketCode || null,
+        },
     });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, ticket);
 });
@@ -1098,7 +1104,10 @@ exports.sendCustomerMessageController = (0, error_handler_1.catchAsync)(async (r
         userId: user._id,
         title: req.body.subject,
         message: req.body.message,
-        type: notification_enum_1.NotificationTypeEnum.info,
+        type: notification_enum_1.NotificationTypeEnum.message,
+        resourceId: String(user._id),
+        action: "admin_message",
+        metadata: { userId: String(user._id) },
     });
     const { html, subject } = (0, templates_1.adminCustomerMessage)([user.firstName, user.lastName].filter(Boolean).join(" ") || "there", req.body.subject, req.body.message);
     let emailSent = true;

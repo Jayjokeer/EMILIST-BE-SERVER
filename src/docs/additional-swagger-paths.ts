@@ -10,6 +10,7 @@ interface RouteDoc {
   bodyExample?: Record<string, unknown>;
   queryParams?: string[];
   successStatus?: string;
+  responseExample?: unknown;
 }
 
 const id = '64e1a2b3c4d5e6f7a8b9c0d1';
@@ -86,7 +87,7 @@ const routes: RouteDoc[] = [
   { path: '/chat/send-message/{receiverId}', method: 'post', tag: 'Chat', summary: 'Send a message', bodyExample: { message: 'Hello, are you available?' } },
   { path: '/chat/fetch-message/{userId}', method: 'get', tag: 'Chat', summary: 'Fetch messages with a user', queryParams: ['page', 'limit'] },
   { path: '/chat/fetch-all-chat', method: 'get', tag: 'Chat', summary: 'Fetch all conversations', queryParams: ['page', 'limit'] },
-  { path: '/notification/fetch-user-notification', method: 'get', tag: 'Notifications', summary: 'Fetch user notifications', queryParams: ['page', 'limit'] },
+  { path: '/notification/fetch-user-notification', method: 'get', tag: 'Notifications', summary: 'Fetch navigable user notifications', queryParams: ['page', 'limit'], responseExample: { message: 'success', data: { notifications: [{ _id: id, title: 'Job Application', message: 'Jane Doe applied to your job', type: 'job', level: 'info', resourceId: id, action: 'application_received', metadata: { jobId: id, applicationId: id }, target: { type: 'job', id, action: 'application_received' }, isRead: false }], unreadCount: 1, totalPages: 1, currentPage: 1, totalNotifications: 1 } } },
   { path: '/notification/mark-as-read/{notificationId}', method: 'patch', tag: 'Notifications', summary: 'Mark a notification as read' },
   { path: '/notification/clear-notification/{notificationId}', method: 'delete', tag: 'Notifications', summary: 'Delete a notification' },
 
@@ -126,7 +127,7 @@ const routes: RouteDoc[] = [
   { path: '/subscription/get-all-user-subscriptions', method: 'get', tag: 'Subscriptions', summary: 'Fetch user subscription history' },
   { path: '/subscription/subscribe-plan', method: 'post', tag: 'Subscriptions', summary: 'Subscribe to a plan', bodyExample: { planId: id, paymentMethod: 'Card', currency: 'NGN', redirectUrl: 'https://example.com/payment/callback' } },
   { path: '/subscription/create-plan', method: 'post', tag: 'Subscriptions', summary: 'Create a subscription plan (admin)', bodyExample: { name: 'Premium', price: 10000, currency: 'NGN' } },
-  { path: '/subscription/get-plans', method: 'get', tag: 'Subscriptions', summary: 'Fetch subscription plans', auth: false },
+  { path: '/subscription/get-plans', method: 'get', tag: 'Subscriptions', summary: 'Fetch monthly or yearly subscription plans (defaults to monthly)', auth: false, queryParams: ['duration'] },
   { path: '/subscription/promote/{id}', method: 'post', tag: 'Subscriptions', summary: 'Promote a job or business', bodyExample: { type: 'job', duration: 7 } },
 
   // Orders
@@ -267,7 +268,10 @@ const operationFor = (route: RouteDoc): Record<string, unknown> => {
     security: route.auth === false ? [] : [{ bearerAuth: [] }],
     ...(parameters.length > 0 ? { parameters } : {}),
     responses: {
-      [route.successStatus ?? (route.method === 'post' ? '201' : '200')]: { description: 'Successful response' },
+      [route.successStatus ?? (route.method === 'post' ? '201' : '200')]: {
+        description: 'Successful response',
+        ...(route.responseExample ? { content: { 'application/json': { example: route.responseExample } } } : {}),
+      },
       ...(route.auth === false ? {} : { '401': { description: 'Unauthorized' } }),
     },
   };

@@ -219,7 +219,10 @@ exports.resetPasswordController = (0, error_handler_1.catchAsync)(async (req, re
         userId: foundUser._id,
         title: " Password Reset",
         message: "You just reset your password",
-        type: notification_enum_1.NotificationTypeEnum.info
+        type: notification_enum_1.NotificationTypeEnum.account,
+        resourceId: String(foundUser._id),
+        action: "password_reset",
+        metadata: { userId: String(foundUser._id) },
     };
     await notificationService.createNotification(notificationPayload);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Password reset successfully!");
@@ -236,7 +239,10 @@ exports.adminTriggeredPasswordResetController = (0, error_handler_1.catchAsync)(
         userId: user._id,
         title: "Password Reset",
         message: "Your password was reset using an administrator-issued secure link",
-        type: notification_enum_1.NotificationTypeEnum.info,
+        type: notification_enum_1.NotificationTypeEnum.account,
+        resourceId: String(user._id),
+        action: "password_reset",
+        metadata: { userId: String(user._id) },
     });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Password reset successfully");
 });

@@ -5,6 +5,7 @@ import { StatusCodes } from 'http-status-codes';
 import { successResponse } from '../helpers/success-response';
 import { PlanEnum } from '../enums/plan.enum';
 import { BadRequestError } from '../errors/error';
+import { SubscriptionPeriodEnum } from '../enums/suscribtion.enum';
 
 export const createPlanController = catchAsync(async (req: Request, res: Response) => {
     const { name, price, duration, perks, offers } = req.body;
@@ -13,26 +14,27 @@ export const createPlanController = catchAsync(async (req: Request, res: Respons
 
 });
 
+export const serializePlanForDuration = (plan: any, duration: SubscriptionPeriodEnum) => {
+    const serialized = typeof plan.toObject === 'function' ? plan.toObject() : { ...plan };
+    const monthlyPrice = Number(serialized.price);
+    return {
+        ...serialized,
+        price: duration === SubscriptionPeriodEnum.yearly && serialized.name !== PlanEnum.basic
+            ? monthlyPrice * 12
+            : monthlyPrice,
+        monthlyPrice,
+        billingPeriod: duration,
+    };
+};
+
 export const getPlansController = catchAsync(async (req: Request, res: Response) => {
-    const {duration} = req.query;
-    if(!duration){
-        throw new BadRequestError('Duration is required');
+    const duration = String(req.query.duration || SubscriptionPeriodEnum.monthly).toLowerCase();
+    if (!Object.values(SubscriptionPeriodEnum).includes(duration as SubscriptionPeriodEnum)) {
+        throw new BadRequestError('Duration must be monthly or yearly');
     }
-    let data; 
+
     const plans = await planService.getPlans();
-    if (duration === 'yearly') {
-        const data = plans.map((plan) => {
+    const data = plans.map((plan: any) => serializePlanForDuration(plan, duration as SubscriptionPeriodEnum));
 
-            if (plan.name === PlanEnum.basic){
-                return plan;
-            }else {
-                plan.price = plan.price * 12; 
-                return plan;
-            }
-        });
-
-        return successResponse(res, StatusCodes.OK, data);
-    }
-    data = plans;
     return successResponse(res,StatusCodes.OK, data);
 });

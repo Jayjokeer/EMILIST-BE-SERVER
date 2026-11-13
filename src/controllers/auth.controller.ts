@@ -204,7 +204,10 @@ export const resetPasswordController = catchAsync(async (req: Request, res: Resp
     userId: foundUser._id,
     title: " Password Reset",
     message: "You just reset your password",
-    type: NotificationTypeEnum.info
+    type: NotificationTypeEnum.account,
+    resourceId: String(foundUser._id),
+    action: "password_reset",
+    metadata: { userId: String(foundUser._id) },
   }
   await notificationService.createNotification(notificationPayload);
   return successResponse(res, StatusCodes.OK, "Password reset successfully!");
@@ -222,7 +225,10 @@ export const adminTriggeredPasswordResetController = catchAsync(async (req: Requ
     userId: user._id,
     title: "Password Reset",
     message: "Your password was reset using an administrator-issued secure link",
-    type: NotificationTypeEnum.info,
+    type: NotificationTypeEnum.account,
+    resourceId: String(user._id),
+    action: "password_reset",
+    metadata: { userId: String(user._id) },
   });
   return successResponse(res, StatusCodes.OK, "Password reset successfully");
 });

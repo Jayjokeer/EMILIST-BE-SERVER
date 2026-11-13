@@ -83,7 +83,14 @@ exports.sendMessageController = (0, error_handler_1.catchAsync)(async (req, res)
                 userId: receiverId,
                 title: "You have a new message",
                 message: `${senderName} sent you a message!`,
-                type: notification_enum_1.NotificationTypeEnum.info,
+                type: notification_enum_1.NotificationTypeEnum.message,
+                resourceId: String(chat._id),
+                action: "new_message",
+                metadata: {
+                    chatId: String(chat._id),
+                    messageId: String(newMessage._id),
+                    senderId: String(userId),
+                },
             };
             await notificationService.createNotification(notificationPayload);
             const { html, subject } = (0, templates_1.sendMessage)(receiverName, senderName);

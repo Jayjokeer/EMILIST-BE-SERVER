@@ -1,6 +1,6 @@
 import mongoose, { Schema, model, Document } from 'mongoose';
 import { INotification } from '../interfaces/notification.interface';
-import { NotificationTypeEnum } from '../enums/notification.enum';
+import { NotificationLevelEnum, NotificationTypeEnum } from '../enums/notification.enum';
 
 
 const notificationSchema = new mongoose.Schema(
@@ -17,7 +17,20 @@ const notificationSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: NotificationTypeEnum,
-      default: NotificationTypeEnum.info,
+      default: NotificationTypeEnum.system,
+    },
+    level: {
+      type: String,
+      enum: NotificationLevelEnum,
+      default: NotificationLevelEnum.info,
+    },
+    resourceId: {
+      type: String,
+      default: null,
+    },
+    action: {
+      type: String,
+      default: null,
     },
     isRead: {
       type: Boolean,
@@ -25,6 +38,7 @@ const notificationSchema = new mongoose.Schema(
     },
     metadata: {
       type: Schema.Types.Mixed,
+      default: {},
     },
   },
   {

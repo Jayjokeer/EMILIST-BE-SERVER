@@ -158,7 +158,13 @@ export const replyToSupportRequestController = catchAsync(async (req: Request, r
     userId: ticket.requesterId?._id || ticket.requesterId,
     title: `Support update${ticket.ticketCode ? ` ${ticket.ticketCode}` : ""}`,
     message: req.body.message.slice(0, 240),
-    type: NotificationTypeEnum.info,
+    type: NotificationTypeEnum.support,
+    resourceId: String(ticket._id),
+    action: "support_reply",
+    metadata: {
+      supportRequestId: String(ticket._id),
+      ticketCode: ticket.ticketCode || null,
+    },
   });
   return successResponse(res, StatusCodes.CREATED, ticket);
 });
@@ -1280,7 +1286,10 @@ export const sendCustomerMessageController = catchAsync(async (req: Request, res
     userId: user._id,
     title: req.body.subject,
     message: req.body.message,
-    type: NotificationTypeEnum.info,
+    type: NotificationTypeEnum.message,
+    resourceId: String(user._id),
+    action: "admin_message",
+    metadata: { userId: String(user._id) },
   });
   const { html, subject } = adminCustomerMessage(
     [user.firstName, user.lastName].filter(Boolean).join(" ") || "there",
