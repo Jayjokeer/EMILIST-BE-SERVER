@@ -65,6 +65,31 @@ const inferResourceId = (notification) => {
     const directId = String(notification?.message || "").match(/\bID:\s*([a-f\d]{24})\b/i)?.[1];
     return directId || null;
 };
+const attachDomainResourceId = (notification) => {
+    const metadata = notification.metadata || {};
+    const resourceId = notification.resourceId || null;
+    const explicitIds = {
+        [notification_enum_1.NotificationTypeEnum.job]: { field: "jobId", value: metadata.jobId || resourceId },
+        [notification_enum_1.NotificationTypeEnum.message]: {
+            field: "chatId",
+            value: metadata.chatId || (notification.action === "new_message" ? resourceId : null),
+        },
+        [notification_enum_1.NotificationTypeEnum.material]: { field: "materialId", value: metadata.materialId || resourceId },
+        [notification_enum_1.NotificationTypeEnum.expert]: { field: "expertId", value: metadata.expertId || resourceId },
+        [notification_enum_1.NotificationTypeEnum.support]: { field: "supportRequestId", value: metadata.supportRequestId || resourceId },
+        [notification_enum_1.NotificationTypeEnum.account]: { field: "userId", value: metadata.userId || resourceId },
+        [notification_enum_1.NotificationTypeEnum.wallet]: { field: "walletId", value: metadata.walletId || resourceId },
+        [notification_enum_1.NotificationTypeEnum.payment]: { field: "paymentId", value: metadata.paymentId || resourceId },
+        [notification_enum_1.NotificationTypeEnum.order]: { field: "orderId", value: metadata.orderId || resourceId },
+        [notification_enum_1.NotificationTypeEnum.subscription]: { field: "subscriptionId", value: metadata.subscriptionId || resourceId },
+    };
+    const mapping = explicitIds[notification.type];
+    if (!mapping)
+        return { id: resourceId, field: null };
+    const id = mapping.value ? String(mapping.value) : null;
+    notification[mapping.field] = id;
+    return { id, field: mapping.field };
+};
 const normalizeNotification = (notification) => {
     const normalized = typeof notification?.toObject === "function"
         ? notification.toObject()
@@ -81,9 +106,11 @@ const normalizeNotification = (notification) => {
     normalized.resourceId = inferResourceId(normalized);
     normalized.action = normalized.action || null;
     normalized.metadata = normalized.metadata || {};
+    const domainResource = attachDomainResourceId(normalized);
     normalized.target = {
         type: normalized.type,
-        id: normalized.resourceId,
+        id: domainResource.id,
+        idField: domainResource.field,
         action: normalized.action,
     };
     return normalized;

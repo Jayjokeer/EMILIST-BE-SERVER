@@ -55,6 +55,33 @@ const inferResourceId = (notification: any) => {
   return directId || null;
 };
 
+const attachDomainResourceId = (notification: any) => {
+  const metadata = notification.metadata || {};
+  const resourceId = notification.resourceId || null;
+  const explicitIds: Partial<Record<NotificationTypeEnum, { field: string; value: unknown }>> = {
+    [NotificationTypeEnum.job]: { field: "jobId", value: metadata.jobId || resourceId },
+    [NotificationTypeEnum.message]: {
+      field: "chatId",
+      value: metadata.chatId || (notification.action === "new_message" ? resourceId : null),
+    },
+    [NotificationTypeEnum.material]: { field: "materialId", value: metadata.materialId || resourceId },
+    [NotificationTypeEnum.expert]: { field: "expertId", value: metadata.expertId || resourceId },
+    [NotificationTypeEnum.support]: { field: "supportRequestId", value: metadata.supportRequestId || resourceId },
+    [NotificationTypeEnum.account]: { field: "userId", value: metadata.userId || resourceId },
+    [NotificationTypeEnum.wallet]: { field: "walletId", value: metadata.walletId || resourceId },
+    [NotificationTypeEnum.payment]: { field: "paymentId", value: metadata.paymentId || resourceId },
+    [NotificationTypeEnum.order]: { field: "orderId", value: metadata.orderId || resourceId },
+    [NotificationTypeEnum.subscription]: { field: "subscriptionId", value: metadata.subscriptionId || resourceId },
+  };
+
+  const mapping = explicitIds[notification.type as NotificationTypeEnum];
+  if (!mapping) return { id: resourceId, field: null };
+
+  const id = mapping.value ? String(mapping.value) : null;
+  notification[mapping.field] = id;
+  return { id, field: mapping.field };
+};
+
 export const normalizeNotification = (notification: any) => {
   const normalized = typeof notification?.toObject === "function"
     ? notification.toObject()
@@ -72,9 +99,11 @@ export const normalizeNotification = (notification: any) => {
   normalized.resourceId = inferResourceId(normalized);
   normalized.action = normalized.action || null;
   normalized.metadata = normalized.metadata || {};
+  const domainResource = attachDomainResourceId(normalized);
   normalized.target = {
     type: normalized.type,
-    id: normalized.resourceId,
+    id: domainResource.id,
+    idField: domainResource.field,
     action: normalized.action,
   };
   return normalized;

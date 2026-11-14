@@ -38,7 +38,8 @@ test("legacy severity types are converted to navigable notification targets", ()
 
   assert.equal(notification.type, "job");
   assert.equal(notification.level, "info");
-  assert.deepEqual(notification.target, { type: "job", id: null, action: null });
+  assert.equal(notification.jobId, null);
+  assert.deepEqual(notification.target, { type: "job", id: null, idField: "jobId", action: null });
 });
 
 test("new notifications expose their resource and action as a target", () => {
@@ -54,6 +55,27 @@ test("new notifications expose their resource and action as a target", () => {
   assert.deepEqual(notification.target, {
     type: "job",
     id: "6af4d581420372f785c021c5",
+    idField: "jobId",
     action: "application_received",
+  });
+  assert.equal(notification.jobId, "6af4d581420372f785c021c5");
+});
+
+test("message notifications expose chatId directly", () => {
+  const notification = normalizeNotification({
+    title: "New message",
+    message: "A user sent you a message",
+    type: "message",
+    resourceId: "6af4d581420372f785c021d1",
+    action: "new_message",
+    metadata: { chatId: "6af4d581420372f785c021d1", messageId: "6af4d581420372f785c021d2" },
+  });
+
+  assert.equal(notification.chatId, "6af4d581420372f785c021d1");
+  assert.deepEqual(notification.target, {
+    type: "message",
+    id: "6af4d581420372f785c021d1",
+    idField: "chatId",
+    action: "new_message",
   });
 });
