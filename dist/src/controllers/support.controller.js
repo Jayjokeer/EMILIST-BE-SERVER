@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.customerReplyToSupportRequestController = exports.createSupportRequestController = void 0;
+exports.customerReplyToSupportRequestController = exports.fetchMySupportRequestController = exports.fetchMySupportRequestsController = exports.createInvoiceDisputeController = exports.createSupportRequestController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -42,6 +42,16 @@ const error_1 = require("../errors/error");
 exports.createSupportRequestController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const request = await supportService.createSupportRequest(String(req.user._id), req.body);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, request);
+});
+exports.createInvoiceDisputeController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const request = await supportService.createInvoiceDispute(String(req.user._id), req.body);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, request);
+});
+exports.fetchMySupportRequestsController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await supportService.fetchUserSupportRequests(String(req.user._id), req.query));
+});
+exports.fetchMySupportRequestController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await supportService.fetchUserSupportRequest(String(req.user._id), String(req.params.requestId)));
 });
 exports.customerReplyToSupportRequestController = (0, error_handler_1.catchAsync)(async (req, res) => {
     if (!req.params.requestId)

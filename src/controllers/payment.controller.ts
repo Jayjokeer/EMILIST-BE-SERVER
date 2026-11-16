@@ -169,6 +169,9 @@ if(milestone.paymentStatus === MilestonePaymentStatus.processing){
 if(!milestone.invoice?.invoiceRaised){
   throw new BadRequestError("An invoice must be generated before this milestone can be paid");
 }
+if(milestone.invoice?.disputeStatus === "open"){
+  throw new BadRequestError("This invoice is under support review and cannot be paid yet");
+}
 if(note){
   milestone.paymentInfo.note = note;
   await job.save();

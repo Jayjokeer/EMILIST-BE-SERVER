@@ -78,6 +78,8 @@ const MilestoneSchema = new mongoose_1.Schema({
         issuedAt: { type: Date },
         paymentReminderLastSentAt: { type: Date },
         paymentReminderCount: { type: Number, default: 0 },
+        disputeTicketId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'SupportRequest' },
+        disputeStatus: { type: String, enum: ['open', 'resolved'] },
         reviewStatus: { type: String, enum: ['pending', 'rejected', 'paid'] },
         rejectedAt: { type: Date },
         rejectionReason: { type: String }

@@ -45,6 +45,8 @@ const MilestoneSchema = new Schema<IMilestone>({
       issuedAt: {type: Date},
       paymentReminderLastSentAt: {type: Date},
       paymentReminderCount: {type: Number, default: 0},
+      disputeTicketId: {type: Schema.Types.ObjectId, ref: 'SupportRequest'},
+      disputeStatus: {type: String, enum: ['open', 'resolved']},
       reviewStatus: {type: String, enum: ['pending', 'rejected', 'paid']},
       rejectedAt: {type: Date},
       rejectionReason: {type: String}

@@ -1,9 +1,11 @@
 import { Types } from "mongoose";
-import { BadRequestError, NotFoundError } from "../errors/error";
-import { SupportRequestPriority, SupportRequestStatus } from "../enums/support.enum";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../errors/error";
+import { SupportRequestCategory, SupportRequestPriority, SupportRequestStatus } from "../enums/support.enum";
 import SupportRequest from "../models/support-request.model";
 import Admin from "../models/admin.model";
 import Users from "../models/users.model";
+import Jobs from "../models/jobs.model";
+import { MilestonePaymentStatus } from "../enums/jobs.enum";
 
 export const supportPagination = (pageValue: unknown, limitValue: unknown) => {
   const page = Math.max(1, Number(pageValue) || 1);
@@ -26,6 +28,108 @@ export const createSupportRequest = async (requesterId: string, body: any) => {
   request.history.push({ action: "created", note: "Support ticket created" });
   await request.save();
   return fetchSupportRequest(String(request._id));
+};
+
+export const invoiceDisputeMilestone = (
+  job: any,
+  requesterId: string,
+  milestoneId: string,
+  invoiceId?: string,
+) => {
+  if (String(job.userId?._id || job.userId) !== String(requesterId)) {
+    throw new ForbiddenError("Only the job owner can dispute this invoice");
+  }
+  const milestone = (job.milestones || []).find((item: any) => String(item._id) === String(milestoneId));
+  if (!milestone) throw new NotFoundError("Milestone not found");
+  if (!milestone.invoice?.invoiceRaised || !milestone.invoice?.invoiceId) {
+    throw new BadRequestError("No invoice has been raised for this milestone");
+  }
+  if (milestone.paymentStatus === MilestonePaymentStatus.paid) {
+    throw new BadRequestError("A paid invoice cannot be disputed through this unpaid-invoice flow");
+  }
+  if (milestone.paymentStatus === MilestonePaymentStatus.processing) {
+    throw new BadRequestError("The invoice payment is currently being processed");
+  }
+  if (invoiceId && String(milestone.invoice.invoiceId) !== String(invoiceId)) {
+    throw new BadRequestError("Invoice does not belong to this milestone");
+  }
+  return milestone;
+};
+
+export const createInvoiceDispute = async (requesterId: string, body: any) => {
+  assertId(requesterId, "requester id");
+  assertId(body.jobId, "job id");
+  assertId(body.milestoneId, "milestone id");
+  const job: any = await Jobs.findById(body.jobId);
+  if (!job) throw new NotFoundError("Job not found");
+  const milestone = invoiceDisputeMilestone(job, requesterId, body.milestoneId, body.invoiceId);
+
+  const existing: any = await SupportRequest.findOne({
+    requesterId,
+    jobId: job._id,
+    milestoneId: milestone._id,
+    category: SupportRequestCategory.dispute,
+    status: { $ne: SupportRequestStatus.resolved },
+  });
+  if (existing) {
+    throw new BadRequestError(`An open dispute already exists for this invoice (${existing.ticketCode || existing._id})`);
+  }
+
+  const request: any = await SupportRequest.create({
+    requesterId,
+    subject: body.subject || `Invoice dispute: ${job.title || "Job invoice"}`,
+    description: body.reason,
+    category: SupportRequestCategory.dispute,
+    priority: SupportRequestPriority.high,
+    status: SupportRequestStatus.open,
+    linkedType: "job",
+    linkedRecordId: job._id,
+    jobId: job._id,
+    milestoneId: milestone._id,
+    invoiceId: milestone.invoice.invoiceId,
+    lastMessageAt: new Date(),
+    messages: [{
+      senderType: "customer",
+      senderUserId: requesterId,
+      content: body.reason,
+      attachments: body.attachments || [],
+    }],
+  });
+  request.history.push({ action: "invoice_disputed", note: "Job owner disputed the invoice" });
+  await request.save();
+
+  milestone.invoice.disputeTicketId = request._id;
+  milestone.invoice.disputeStatus = "open";
+  milestone.invoice.reviewStatus = "rejected";
+  milestone.invoice.rejectedAt = new Date();
+  milestone.invoice.rejectionReason = body.reason;
+  job.markModified("milestones");
+  await job.save();
+  return fetchSupportRequest(String(request._id));
+};
+
+export const fetchUserSupportRequests = async (requesterId: string, query: any) => {
+  assertId(requesterId, "requester id");
+  const { page, limit, skip } = supportPagination(query.page, query.limit);
+  const filter: any = { requesterId };
+  if (query.status) filter.status = query.status;
+  if (query.category) filter.category = query.category;
+  const [requests, total] = await Promise.all([
+    SupportRequest.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
+    SupportRequest.countDocuments(filter),
+  ]);
+  return { requests: requests.map((request: any) => displayRequest(request)), pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
+};
+
+export const fetchUserSupportRequest = async (requesterId: string, requestId: string) => {
+  assertId(requesterId, "requester id");
+  assertId(requestId, "support request id");
+  const request: any = await SupportRequest.findOne({ _id: requestId, requesterId })
+    .populate("messages.senderAdminId", "fullName department profileImage")
+    .populate("messages.senderUserId", "firstName lastName userName displayImage")
+    .lean();
+  if (!request) throw new NotFoundError("Support request not found");
+  return displayRequest(request);
 };
 
 const SLA_HOURS = 24;
@@ -119,6 +223,7 @@ export const fetchSupportRequests = async (query: any) => {
     SupportRequest.find(filter)
       .populate("requesterId", "firstName lastName userName email uniqueId displayImage")
       .populate("assignedAdminId", "fullName email department")
+      .populate("jobId", "title status userId")
       .sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
     SupportRequest.countDocuments(filter),
     SupportRequest.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
@@ -143,6 +248,7 @@ export const fetchSupportRequest = async (requestId: string) => {
   const request = await SupportRequest.findById(requestId)
     .populate("requesterId", "firstName lastName userName email uniqueId displayImage status")
     .populate("assignedAdminId", "fullName email department")
+    .populate("jobId", "title status userId")
     .populate("history.adminId", "fullName email department")
     .populate("messages.senderAdminId", "fullName email department profileImage")
     .populate("messages.senderUserId", "firstName lastName userName email displayImage")
@@ -170,6 +276,15 @@ export const updateSupportRequest = async (requestId: string, adminId: string, b
   if (request.status === SupportRequestStatus.resolved) {
     if (!body.resolution && !request.resolution) throw new BadRequestError("A resolution is required to resolve a request");
     request.resolvedAt = new Date();
+    if (request.jobId && request.milestoneId) {
+      const job: any = await Jobs.findById(request.jobId);
+      const milestone = job?.milestones?.find((item: any) => String(item._id) === String(request.milestoneId));
+      if (milestone?.invoice) {
+        milestone.invoice.disputeStatus = "resolved";
+        job.markModified("milestones");
+        await job.save();
+      }
+    }
   } else if (previousStatus === SupportRequestStatus.resolved) {
     request.resolvedAt = undefined;
   }

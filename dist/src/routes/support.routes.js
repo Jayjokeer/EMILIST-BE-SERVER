@@ -8,4 +8,7 @@ const admin_validation_1 = require("../validations/admin.validation");
 const router = (0, express_1.Router)();
 exports.SupportRoute = router;
 router.post("/requests", current_user_1.userAuth, admin_validation_1.validateCreateSupportRequest, support_controller_1.createSupportRequestController);
+router.get("/requests", current_user_1.userAuth, support_controller_1.fetchMySupportRequestsController);
+router.get("/requests/:requestId", current_user_1.userAuth, support_controller_1.fetchMySupportRequestController);
 router.post("/requests/:requestId/replies", current_user_1.userAuth, admin_validation_1.validateSupportReply, support_controller_1.customerReplyToSupportRequestController);
+router.post("/job-invoice-disputes", current_user_1.userAuth, admin_validation_1.validateCreateInvoiceDispute, support_controller_1.createInvoiceDisputeController);

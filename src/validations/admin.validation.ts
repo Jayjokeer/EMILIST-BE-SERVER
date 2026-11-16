@@ -179,6 +179,15 @@ export const validateCreateSupportRequest = validate(Joi.object({
   attachments: Joi.array().items(Joi.string().uri()).max(10).default([]),
 }));
 
+export const validateCreateInvoiceDispute = validate(Joi.object({
+  jobId: Joi.string().hex().length(24).required(),
+  milestoneId: Joi.string().hex().length(24).required(),
+  invoiceId: Joi.string().hex().length(24),
+  reason: Joi.string().trim().min(10).max(5000).required(),
+  subject: Joi.string().trim().min(3).max(150),
+  attachments: Joi.array().items(Joi.string().uri()).max(10).default([]),
+}));
+
 export const validateUpdateSupportRequest = validate(Joi.object({
   status: Joi.string().valid(...Object.values(SupportRequestStatus)),
   priority: Joi.string().valid(...Object.values(SupportRequestPriority)),

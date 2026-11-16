@@ -2220,6 +2220,7 @@ Leaves a review on the business that completed the job.`,
 - \`currency\`: \`NGN\`, \`USD\`, \`GBP\`, \`EUR\`
 - Set \`isAdditionalAmount\` to \`true\` to pay the artisan's requested additional cost.
 - Set it to \`false\` or omit it to pay only the milestone's original amount.
+- An invoice with \`disputeStatus: "open"\` cannot be paid until its linked support ticket is resolved.
 - \`redirectUrl\` is required for card payments and optional for wallet payments.
 - Wallet payment completes immediately and marks the transaction completed and the milestone/invoice paid.
 - Card payment creates a pending transaction and returns \`data.paymentLink\`. After Paystack succeeds, the signed webhook automatically completes the transaction and marks the milestone/invoice paid.

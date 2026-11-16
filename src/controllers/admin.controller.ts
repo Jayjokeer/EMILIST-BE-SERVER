@@ -176,9 +176,24 @@ export const addSupportAdminNoteController = catchAsync(async (req: Request, res
 });
 
 export const resolveSupportRequestController = catchAsync(async (req: Request, res: Response) => {
-  return successResponse(res, StatusCodes.OK, await supportRequestService.resolveSupportRequest(
+  const ticket: any = await supportRequestService.resolveSupportRequest(
     String(req.params.requestId), requestingAdminId(req), req.body.resolution,
-  ));
+  );
+  await notificationService.createNotification({
+    userId: ticket.requesterId?._id || ticket.requesterId,
+    title: `Support ticket resolved${ticket.ticketCode ? ` ${ticket.ticketCode}` : ""}`,
+    message: req.body.resolution.slice(0, 240),
+    type: NotificationTypeEnum.support,
+    resourceId: String(ticket._id),
+    action: "support_resolved",
+    metadata: {
+      supportRequestId: String(ticket._id),
+      jobId: ticket.jobId?._id ? String(ticket.jobId._id) : ticket.jobId ? String(ticket.jobId) : null,
+      milestoneId: ticket.milestoneId ? String(ticket.milestoneId) : null,
+      invoiceId: ticket.invoiceId ? String(ticket.invoiceId) : null,
+    },
+  });
+  return successResponse(res, StatusCodes.OK, ticket);
 });
 
 export const adminMaterialSummaryController = catchAsync(async (req: Request, res: Response) => {

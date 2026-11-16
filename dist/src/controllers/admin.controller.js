@@ -169,7 +169,22 @@ exports.addSupportAdminNoteController = (0, error_handler_1.catchAsync)(async (r
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, await supportRequestService.addSupportAdminNote(String(req.params.requestId), requestingAdminId(req), req.body.content));
 });
 exports.resolveSupportRequestController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await supportRequestService.resolveSupportRequest(String(req.params.requestId), requestingAdminId(req), req.body.resolution));
+    const ticket = await supportRequestService.resolveSupportRequest(String(req.params.requestId), requestingAdminId(req), req.body.resolution);
+    await notificationService.createNotification({
+        userId: ticket.requesterId?._id || ticket.requesterId,
+        title: `Support ticket resolved${ticket.ticketCode ? ` ${ticket.ticketCode}` : ""}`,
+        message: req.body.resolution.slice(0, 240),
+        type: notification_enum_1.NotificationTypeEnum.support,
+        resourceId: String(ticket._id),
+        action: "support_resolved",
+        metadata: {
+            supportRequestId: String(ticket._id),
+            jobId: ticket.jobId?._id ? String(ticket.jobId._id) : ticket.jobId ? String(ticket.jobId) : null,
+            milestoneId: ticket.milestoneId ? String(ticket.milestoneId) : null,
+            invoiceId: ticket.invoiceId ? String(ticket.invoiceId) : null,
+        },
+    });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, ticket);
 });
 exports.adminMaterialSummaryController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const range = typeof req.query.range === "string" ? req.query.range : undefined;

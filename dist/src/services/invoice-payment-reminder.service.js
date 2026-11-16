@@ -49,6 +49,8 @@ const isInvoicePaymentReminderDue = (milestone, now = new Date()) => {
         return false;
     if (milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.paid)
         return false;
+    if (milestone.invoice.disputeStatus === "open")
+        return false;
     const previous = milestone.invoice.paymentReminderLastSentAt || milestone.invoice.issuedAt;
     if (!previous)
         return true;
@@ -91,6 +93,7 @@ const sendDueInvoicePaymentReminders = async (now = new Date()) => {
         milestones: {
             $elemMatch: {
                 "invoice.invoiceRaised": true,
+                "invoice.disputeStatus": { $ne: "open" },
                 paymentStatus: { $ne: jobs_enum_1.MilestonePaymentStatus.paid },
                 $or: [
                     { "invoice.paymentReminderLastSentAt": { $lte: cutoff } },
@@ -119,6 +122,7 @@ const sendDueInvoicePaymentReminders = async (now = new Date()) => {
                     $elemMatch: {
                         _id: milestone._id,
                         "invoice.invoiceRaised": true,
+                        "invoice.disputeStatus": { $ne: "open" },
                         paymentStatus: { $ne: jobs_enum_1.MilestonePaymentStatus.paid },
                         $or: [
                             { "invoice.paymentReminderLastSentAt": { $lte: cutoff } },

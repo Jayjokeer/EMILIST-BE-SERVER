@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateJobPaymentAdmin = exports.validateAddUserAdmin = exports.validateAdminWithdrawalDecision = exports.validateAdminOrderReturn = exports.validateAdminMaterialDelist = exports.validateAdminJobAction = exports.validateAssignSupportRequest = exports.validateResolveSupportRequest = exports.validateSupportNote = exports.validateSupportReply = exports.validateUpdateSupportRequest = exports.validateCreateSupportRequest = exports.validateAdminCustomerMessage = exports.validateCustomerWalletAdjustment = exports.validateCustomerReactivation = exports.validateCustomerSuspension = exports.validateUpdateCustomerProfile = exports.validateCreateCustomer = exports.validateAdminPasswordResetComplete = exports.validateAdminPasswordResetMfa = exports.validateAdminPasswordResetRequest = exports.validateAdminMfaEnrollment = exports.validateAdminMfaLogin = exports.validateAdminLogin = exports.validateAdminInvitationToken = exports.validateAdminAuthenticator = exports.validateAdminPasswordSetup = exports.validateAdminProfileUpdate = exports.validateSpotlightSettings = exports.validateSubscriptionPrices = exports.validatePlatformSettings = exports.validateAdminReportExport = exports.validateCreateAdminInvitation = void 0;
+exports.validateJobPaymentAdmin = exports.validateAddUserAdmin = exports.validateAdminWithdrawalDecision = exports.validateAdminOrderReturn = exports.validateAdminMaterialDelist = exports.validateAdminJobAction = exports.validateAssignSupportRequest = exports.validateResolveSupportRequest = exports.validateSupportNote = exports.validateSupportReply = exports.validateUpdateSupportRequest = exports.validateCreateInvoiceDispute = exports.validateCreateSupportRequest = exports.validateAdminCustomerMessage = exports.validateCustomerWalletAdjustment = exports.validateCustomerReactivation = exports.validateCustomerSuspension = exports.validateUpdateCustomerProfile = exports.validateCreateCustomer = exports.validateAdminPasswordResetComplete = exports.validateAdminPasswordResetMfa = exports.validateAdminPasswordResetRequest = exports.validateAdminMfaEnrollment = exports.validateAdminMfaLogin = exports.validateAdminLogin = exports.validateAdminInvitationToken = exports.validateAdminAuthenticator = exports.validateAdminPasswordSetup = exports.validateAdminProfileUpdate = exports.validateSpotlightSettings = exports.validateSubscriptionPrices = exports.validatePlatformSettings = exports.validateAdminReportExport = exports.validateCreateAdminInvitation = void 0;
 const joi_1 = __importDefault(require("joi"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 const user_enums_1 = require("../enums/user.enums");
@@ -157,6 +157,14 @@ exports.validateCreateSupportRequest = validate(joi_1.default.object({
     priority: joi_1.default.string().valid(...Object.values(support_enum_1.SupportRequestPriority)).default(support_enum_1.SupportRequestPriority.normal),
     linkedType: joi_1.default.string().valid("job", "customer", "listing", "payment", "order"),
     linkedRecordId: joi_1.default.string().hex().length(24).when("linkedType", { is: joi_1.default.exist(), then: joi_1.default.required() }),
+    attachments: joi_1.default.array().items(joi_1.default.string().uri()).max(10).default([]),
+}));
+exports.validateCreateInvoiceDispute = validate(joi_1.default.object({
+    jobId: joi_1.default.string().hex().length(24).required(),
+    milestoneId: joi_1.default.string().hex().length(24).required(),
+    invoiceId: joi_1.default.string().hex().length(24),
+    reason: joi_1.default.string().trim().min(10).max(5000).required(),
+    subject: joi_1.default.string().trim().min(3).max(150),
     attachments: joi_1.default.array().items(joi_1.default.string().uri()).max(10).default([]),
 }));
 exports.validateUpdateSupportRequest = validate(joi_1.default.object({

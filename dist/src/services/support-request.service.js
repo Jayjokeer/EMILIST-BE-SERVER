@@ -3,13 +3,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.countUnresolvedSupportRequests = exports.fetchSupportAssignees = exports.addSupportAdminNote = exports.customerReplyToSupportRequest = exports.replyToSupportRequest = exports.assignSupportRequest = exports.resolveSupportRequest = exports.updateSupportRequest = exports.fetchSupportRequest = exports.fetchSupportRequests = exports.fetchSupportSummary = exports.createSupportRequest = exports.supportPagination = void 0;
+exports.countUnresolvedSupportRequests = exports.fetchSupportAssignees = exports.addSupportAdminNote = exports.customerReplyToSupportRequest = exports.replyToSupportRequest = exports.assignSupportRequest = exports.resolveSupportRequest = exports.updateSupportRequest = exports.fetchSupportRequest = exports.fetchSupportRequests = exports.fetchSupportSummary = exports.fetchUserSupportRequest = exports.fetchUserSupportRequests = exports.createInvoiceDispute = exports.invoiceDisputeMilestone = exports.createSupportRequest = exports.supportPagination = void 0;
 const mongoose_1 = require("mongoose");
 const error_1 = require("../errors/error");
 const support_enum_1 = require("../enums/support.enum");
 const support_request_model_1 = __importDefault(require("../models/support-request.model"));
 const admin_model_1 = __importDefault(require("../models/admin.model"));
 const users_model_1 = __importDefault(require("../models/users.model"));
+const jobs_model_1 = __importDefault(require("../models/jobs.model"));
+const jobs_enum_1 = require("../enums/jobs.enum");
 const supportPagination = (pageValue, limitValue) => {
     const page = Math.max(1, Number(pageValue) || 1);
     const limit = Math.min(100, Math.max(1, Number(limitValue) || 10));
@@ -33,6 +35,105 @@ const createSupportRequest = async (requesterId, body) => {
     return (0, exports.fetchSupportRequest)(String(request._id));
 };
 exports.createSupportRequest = createSupportRequest;
+const invoiceDisputeMilestone = (job, requesterId, milestoneId, invoiceId) => {
+    if (String(job.userId?._id || job.userId) !== String(requesterId)) {
+        throw new error_1.ForbiddenError("Only the job owner can dispute this invoice");
+    }
+    const milestone = (job.milestones || []).find((item) => String(item._id) === String(milestoneId));
+    if (!milestone)
+        throw new error_1.NotFoundError("Milestone not found");
+    if (!milestone.invoice?.invoiceRaised || !milestone.invoice?.invoiceId) {
+        throw new error_1.BadRequestError("No invoice has been raised for this milestone");
+    }
+    if (milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.paid) {
+        throw new error_1.BadRequestError("A paid invoice cannot be disputed through this unpaid-invoice flow");
+    }
+    if (milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.processing) {
+        throw new error_1.BadRequestError("The invoice payment is currently being processed");
+    }
+    if (invoiceId && String(milestone.invoice.invoiceId) !== String(invoiceId)) {
+        throw new error_1.BadRequestError("Invoice does not belong to this milestone");
+    }
+    return milestone;
+};
+exports.invoiceDisputeMilestone = invoiceDisputeMilestone;
+const createInvoiceDispute = async (requesterId, body) => {
+    assertId(requesterId, "requester id");
+    assertId(body.jobId, "job id");
+    assertId(body.milestoneId, "milestone id");
+    const job = await jobs_model_1.default.findById(body.jobId);
+    if (!job)
+        throw new error_1.NotFoundError("Job not found");
+    const milestone = (0, exports.invoiceDisputeMilestone)(job, requesterId, body.milestoneId, body.invoiceId);
+    const existing = await support_request_model_1.default.findOne({
+        requesterId,
+        jobId: job._id,
+        milestoneId: milestone._id,
+        category: support_enum_1.SupportRequestCategory.dispute,
+        status: { $ne: support_enum_1.SupportRequestStatus.resolved },
+    });
+    if (existing) {
+        throw new error_1.BadRequestError(`An open dispute already exists for this invoice (${existing.ticketCode || existing._id})`);
+    }
+    const request = await support_request_model_1.default.create({
+        requesterId,
+        subject: body.subject || `Invoice dispute: ${job.title || "Job invoice"}`,
+        description: body.reason,
+        category: support_enum_1.SupportRequestCategory.dispute,
+        priority: support_enum_1.SupportRequestPriority.high,
+        status: support_enum_1.SupportRequestStatus.open,
+        linkedType: "job",
+        linkedRecordId: job._id,
+        jobId: job._id,
+        milestoneId: milestone._id,
+        invoiceId: milestone.invoice.invoiceId,
+        lastMessageAt: new Date(),
+        messages: [{
+                senderType: "customer",
+                senderUserId: requesterId,
+                content: body.reason,
+                attachments: body.attachments || [],
+            }],
+    });
+    request.history.push({ action: "invoice_disputed", note: "Job owner disputed the invoice" });
+    await request.save();
+    milestone.invoice.disputeTicketId = request._id;
+    milestone.invoice.disputeStatus = "open";
+    milestone.invoice.reviewStatus = "rejected";
+    milestone.invoice.rejectedAt = new Date();
+    milestone.invoice.rejectionReason = body.reason;
+    job.markModified("milestones");
+    await job.save();
+    return (0, exports.fetchSupportRequest)(String(request._id));
+};
+exports.createInvoiceDispute = createInvoiceDispute;
+const fetchUserSupportRequests = async (requesterId, query) => {
+    assertId(requesterId, "requester id");
+    const { page, limit, skip } = (0, exports.supportPagination)(query.page, query.limit);
+    const filter = { requesterId };
+    if (query.status)
+        filter.status = query.status;
+    if (query.category)
+        filter.category = query.category;
+    const [requests, total] = await Promise.all([
+        support_request_model_1.default.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
+        support_request_model_1.default.countDocuments(filter),
+    ]);
+    return { requests: requests.map((request) => displayRequest(request)), pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
+};
+exports.fetchUserSupportRequests = fetchUserSupportRequests;
+const fetchUserSupportRequest = async (requesterId, requestId) => {
+    assertId(requesterId, "requester id");
+    assertId(requestId, "support request id");
+    const request = await support_request_model_1.default.findOne({ _id: requestId, requesterId })
+        .populate("messages.senderAdminId", "fullName department profileImage")
+        .populate("messages.senderUserId", "firstName lastName userName displayImage")
+        .lean();
+    if (!request)
+        throw new error_1.NotFoundError("Support request not found");
+    return displayRequest(request);
+};
+exports.fetchUserSupportRequest = fetchUserSupportRequest;
 const SLA_HOURS = 24;
 const overdueCutoff = (now = new Date()) => new Date(now.getTime() - SLA_HOURS * 60 * 60 * 1000);
 const isResolved = (status) => status === support_enum_1.SupportRequestStatus.resolved;
@@ -131,6 +232,7 @@ const fetchSupportRequests = async (query) => {
         support_request_model_1.default.find(filter)
             .populate("requesterId", "firstName lastName userName email uniqueId displayImage")
             .populate("assignedAdminId", "fullName email department")
+            .populate("jobId", "title status userId")
             .sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
         support_request_model_1.default.countDocuments(filter),
         support_request_model_1.default.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
@@ -155,6 +257,7 @@ const fetchSupportRequest = async (requestId) => {
     const request = await support_request_model_1.default.findById(requestId)
         .populate("requesterId", "firstName lastName userName email uniqueId displayImage status")
         .populate("assignedAdminId", "fullName email department")
+        .populate("jobId", "title status userId")
         .populate("history.adminId", "fullName email department")
         .populate("messages.senderAdminId", "fullName email department profileImage")
         .populate("messages.senderUserId", "firstName lastName userName email displayImage")
@@ -192,6 +295,15 @@ const updateSupportRequest = async (requestId, adminId, body) => {
         if (!body.resolution && !request.resolution)
             throw new error_1.BadRequestError("A resolution is required to resolve a request");
         request.resolvedAt = new Date();
+        if (request.jobId && request.milestoneId) {
+            const job = await jobs_model_1.default.findById(request.jobId);
+            const milestone = job?.milestones?.find((item) => String(item._id) === String(request.milestoneId));
+            if (milestone?.invoice) {
+                milestone.invoice.disputeStatus = "resolved";
+                job.markModified("milestones");
+                await job.save();
+            }
+        }
     }
     else if (previousStatus === support_enum_1.SupportRequestStatus.resolved) {
         request.resolvedAt = undefined;

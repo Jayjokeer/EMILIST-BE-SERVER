@@ -192,6 +192,9 @@ exports.payforJobController = (0, error_handler_1.catchAsync)(async (req, res) =
     if (!milestone.invoice?.invoiceRaised) {
         throw new error_1.BadRequestError("An invoice must be generated before this milestone can be paid");
     }
+    if (milestone.invoice?.disputeStatus === "open") {
+        throw new error_1.BadRequestError("This invoice is under support review and cannot be paid yet");
+    }
     if (note) {
         milestone.paymentInfo.note = note;
         await job.save();

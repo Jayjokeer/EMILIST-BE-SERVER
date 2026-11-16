@@ -10,6 +10,7 @@ const REMINDER_INTERVAL_MS = 24 * 60 * 60 * 1000;
 export const isInvoicePaymentReminderDue = (milestone: any, now = new Date()) => {
   if (!milestone?.invoice?.invoiceRaised) return false;
   if (milestone.paymentStatus === MilestonePaymentStatus.paid) return false;
+  if (milestone.invoice.disputeStatus === "open") return false;
   const previous = milestone.invoice.paymentReminderLastSentAt || milestone.invoice.issuedAt;
   if (!previous) return true;
   return now.getTime() - new Date(previous).getTime() >= REMINDER_INTERVAL_MS;
@@ -61,6 +62,7 @@ export const sendDueInvoicePaymentReminders = async (now = new Date()) => {
     milestones: {
       $elemMatch: {
         "invoice.invoiceRaised": true,
+        "invoice.disputeStatus": { $ne: "open" },
         paymentStatus: { $ne: MilestonePaymentStatus.paid },
         $or: [
           { "invoice.paymentReminderLastSentAt": { $lte: cutoff } },
@@ -90,6 +92,7 @@ export const sendDueInvoicePaymentReminders = async (now = new Date()) => {
             $elemMatch: {
               _id: milestone._id,
               "invoice.invoiceRaised": true,
+              "invoice.disputeStatus": { $ne: "open" },
               paymentStatus: { $ne: MilestonePaymentStatus.paid },
               $or: [
                 { "invoice.paymentReminderLastSentAt": { $lte: cutoff } },

@@ -56,7 +56,10 @@ const routes: RouteDoc[] = [
   { path: '/auth/get-profile-context', method: 'get', tag: 'Auth', summary: 'Get profile onboarding context', queryParams: ['newBusiness'] },
   { path: '/auth/add-profile', method: 'post', tag: 'Auth', summary: 'Create or edit a user profile', multipart: true, bodyExample: { firstName: 'Jane', lastName: 'Doe', countryCode: '+234', mobile: '8012345678', languages: ['English', 'Yoruba'], houseAddress: '12 Admiralty Way', city: 'Lagos', state: 'Lagos', country: 'Nigeria', bio: 'Experienced professional' }, successStatus: '200' },
   { path: '/support/requests', method: 'post', tag: 'new-admin', summary: 'Submit a customer support request for the admin support workflow', bodyExample: { subject: 'Payment not reflected', description: 'My completed job payment is not visible in my wallet.', category: 'payment', priority: 'normal', linkedType: 'payment', linkedRecordId: id } },
+  { path: '/support/requests', method: 'get', tag: 'Support', summary: 'List the authenticated user support tickets', queryParams: ['page', 'limit', 'status', 'category'] },
+  { path: '/support/requests/{requestId}', method: 'get', tag: 'Support', summary: 'Fetch an owned support ticket and its conversation' },
   { path: '/support/requests/{requestId}/replies', method: 'post', tag: 'new-admin', summary: 'Reply to an owned support ticket with optional attachments', bodyExample: { message: 'The transfer reference is 123456.', attachments: [] } },
+  { path: '/support/job-invoice-disputes', method: 'post', tag: 'Support', summary: 'Raise a support dispute for a job milestone invoice', bodyExample: { jobId: id, milestoneId: id, invoiceId: id, reason: 'The completed work does not match the agreed milestone requirements.', attachments: ['https://example.com/evidence.jpg'] } },
 
   // Business/expert profiles
   { path: '/business/register-business', method: 'post', tag: 'Business', summary: 'Register a business/expert profile', multipart: true },
