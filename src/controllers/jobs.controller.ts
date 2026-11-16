@@ -28,6 +28,7 @@ import { JobAttentionType } from "../enums/job-attention.enum";
 import * as jobAttentionService from "../services/job-attention.service";
 import { getUserRoom } from "../socket";
 import { io } from "../server";
+import * as invoicePaymentReminderService from "../services/invoice-payment-reminder.service";
 
 // ===================== HELPER: Map new fields to old for backward compat =====================
 function mapJobBodyToLegacy(body: any): any {
@@ -1294,6 +1295,8 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
     
     milestone.status = status as MilestoneEnum;
   
+    const invoiceWasAlreadyRaised = Boolean(milestone.invoice?.invoiceRaised);
+    let invoiceRaisedNow = false;
     if (status === MilestoneEnum.completed) {
       const nextMilestone = job.milestones[milestoneIndex + 1];
       if (nextMilestone && nextMilestone.status === MilestoneEnum.pending) {
@@ -1307,11 +1310,26 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
       milestone.invoice.additionalAmount = additionalAmount;
       }
       jobService.raiseMilestoneInvoice(milestone.invoice);
+      invoiceRaisedNow = !invoiceWasAlreadyRaised;
+      if (invoiceRaisedNow) {
+        milestone.invoice.paymentReminderLastSentAt = milestone.invoice.issuedAt || new Date();
+        milestone.invoice.paymentReminderCount = 1;
+      }
     }
     
     if(!milestone) throw new NotFoundError("Milestone not found");
     milestone.status = status as  MilestoneEnum;
     await job.save();
+    if (invoiceRaisedNow) {
+      const owner = await authService.findUserWithoutDetailsById(String(job.userId));
+      if (owner) {
+        try {
+          await invoicePaymentReminderService.sendInvoicePaymentReminder(job, milestone, owner, true);
+        } catch (error) {
+          console.error("Could not create invoice payment reminder:", error);
+        }
+      }
+    }
     const data = await jobService.fetchJobById(String(jobId));
 
     return  successResponse(res, StatusCodes.OK, data);

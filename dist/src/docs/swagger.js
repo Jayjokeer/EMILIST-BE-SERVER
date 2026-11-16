@@ -1923,6 +1923,7 @@ Allowed \`status\` values: \`applied\`, \`accepted\`, \`rejected\`, \`pause\`, \
                 description: `The assigned expert (project.user) updates the status of a milestone.
 
 - \`completed\` records finished work, raises the invoice, and activates the next milestone. The job remains \`active\` while any completed milestone is unpaid.
+- When the invoice is first raised, the owner receives an in-app notification and email containing the job and milestone context. While it remains unpaid, the backend sends at most one follow-up reminder every 24 hours; reminders stop when payment is completed.
 - \`note\` / \`additionalAmount\` can be attached to the milestone invoice when completing.`,
                 security: [{ bearerAuth: [] }],
                 parameters: [

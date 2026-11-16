@@ -62,6 +62,7 @@ const job_attention_enum_1 = require("../enums/job-attention.enum");
 const jobAttentionService = __importStar(require("../services/job-attention.service"));
 const socket_1 = require("../socket");
 const server_1 = require("../server");
+const invoicePaymentReminderService = __importStar(require("../services/invoice-payment-reminder.service"));
 // ===================== HELPER: Map new fields to old for backward compat =====================
 function mapJobBodyToLegacy(body) {
     const mapped = { ...body };
@@ -1180,6 +1181,8 @@ exports.updateMilestoneStatusController = (0, error_handler_1.catchAsync)(async 
     }
     const milestone = job.milestones[milestoneIndex];
     milestone.status = status;
+    const invoiceWasAlreadyRaised = Boolean(milestone.invoice?.invoiceRaised);
+    let invoiceRaisedNow = false;
     if (status === jobs_enum_1.MilestoneEnum.completed) {
         const nextMilestone = job.milestones[milestoneIndex + 1];
         if (nextMilestone && nextMilestone.status === jobs_enum_1.MilestoneEnum.pending) {
@@ -1192,11 +1195,27 @@ exports.updateMilestoneStatusController = (0, error_handler_1.catchAsync)(async 
             milestone.invoice.additionalAmount = additionalAmount;
         }
         jobService.raiseMilestoneInvoice(milestone.invoice);
+        invoiceRaisedNow = !invoiceWasAlreadyRaised;
+        if (invoiceRaisedNow) {
+            milestone.invoice.paymentReminderLastSentAt = milestone.invoice.issuedAt || new Date();
+            milestone.invoice.paymentReminderCount = 1;
+        }
     }
     if (!milestone)
         throw new error_1.NotFoundError("Milestone not found");
     milestone.status = status;
     await job.save();
+    if (invoiceRaisedNow) {
+        const owner = await authService.findUserWithoutDetailsById(String(job.userId));
+        if (owner) {
+            try {
+                await invoicePaymentReminderService.sendInvoicePaymentReminder(job, milestone, owner, true);
+            }
+            catch (error) {
+                console.error("Could not create invoice payment reminder:", error);
+            }
+        }
+    }
     const data = await jobService.fetchJobById(String(jobId));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });

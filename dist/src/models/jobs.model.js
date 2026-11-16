@@ -76,6 +76,8 @@ const MilestoneSchema = new mongoose_1.Schema({
         invoiceRaised: { type: Boolean, default: false },
         invoiceId: { type: mongoose_1.Schema.Types.ObjectId },
         issuedAt: { type: Date },
+        paymentReminderLastSentAt: { type: Date },
+        paymentReminderCount: { type: Number, default: 0 },
         reviewStatus: { type: String, enum: ['pending', 'rejected', 'paid'] },
         rejectedAt: { type: Date },
         rejectionReason: { type: String }

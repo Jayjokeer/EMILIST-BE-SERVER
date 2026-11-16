@@ -21,6 +21,7 @@ import "../src/utils/passport";
 import chatSocket from "./socket";
 import "./jobs/subscription.job";
 import "./jobs/planned-maintenance.job";
+import "./jobs/invoice-payment-reminder.job";
 
 const PORT = config.port || 7000;
 const app: Application = express();

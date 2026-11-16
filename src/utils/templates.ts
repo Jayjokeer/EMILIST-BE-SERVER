@@ -188,3 +188,17 @@ export const generateReminderEmail = (userName: string, date: string) => {
     html: `<p>Hello ${emailText(userName, "there")},</p><p>Your recurring job is scheduled for ${emailText(date, "the scheduled date")}. Please review and ensure everything is ready.</p>`,
   };
 };
+
+export const invoicePaymentReminderEmail = (
+  userName: string,
+  jobTitle: string,
+  initial = false,
+) => ({
+  subject: initial
+    ? `Invoice ready for ${subjectText(jobTitle, "your job")}`
+    : `Payment reminder for ${subjectText(jobTitle, "your job")}`,
+  html: `
+    <p>Hello ${emailText(userName, "there")},</p>
+    <p>${initial ? "An invoice has been raised" : "This is a reminder that an invoice is still awaiting payment"} for <strong>${emailText(jobTitle, "your job")}</strong>.</p>
+    <p>Please open the job on Emilist to review the invoice and complete payment.</p>`,
+});

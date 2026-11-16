@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateReminderEmail = exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.counterOfferMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.adminCustomerMessage = exports.adminCreatedCustomerMessage = exports.customerPasswordResetMessage = exports.passwordResetMessage = exports.adminInvitationMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
+exports.invoicePaymentReminderEmail = exports.generateReminderEmail = exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.counterOfferMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.adminCustomerMessage = exports.adminCreatedCustomerMessage = exports.customerPasswordResetMessage = exports.passwordResetMessage = exports.adminInvitationMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
 const config_1 = require("./config");
 const rawText = (value) => {
     if (value === undefined || value === null)
@@ -169,3 +169,13 @@ const generateReminderEmail = (userName, date) => {
     };
 };
 exports.generateReminderEmail = generateReminderEmail;
+const invoicePaymentReminderEmail = (userName, jobTitle, initial = false) => ({
+    subject: initial
+        ? `Invoice ready for ${subjectText(jobTitle, "your job")}`
+        : `Payment reminder for ${subjectText(jobTitle, "your job")}`,
+    html: `
+    <p>Hello ${emailText(userName, "there")},</p>
+    <p>${initial ? "An invoice has been raised" : "This is a reminder that an invoice is still awaiting payment"} for <strong>${emailText(jobTitle, "your job")}</strong>.</p>
+    <p>Please open the job on Emilist to review the invoice and complete payment.</p>`,
+});
+exports.invoicePaymentReminderEmail = invoicePaymentReminderEmail;

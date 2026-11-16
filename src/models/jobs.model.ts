@@ -43,6 +43,8 @@ const MilestoneSchema = new Schema<IMilestone>({
       invoiceRaised: {type: Boolean, default: false},
       invoiceId: {type: Schema.Types.ObjectId},
       issuedAt: {type: Date},
+      paymentReminderLastSentAt: {type: Date},
+      paymentReminderCount: {type: Number, default: 0},
       reviewStatus: {type: String, enum: ['pending', 'rejected', 'paid']},
       rejectedAt: {type: Date},
       rejectionReason: {type: String}
