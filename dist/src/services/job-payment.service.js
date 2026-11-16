@@ -33,10 +33,11 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.completeJobPayment = exports.applySuccessfulJobPayment = void 0;
+exports.reconcileProcessingJobPayment = exports.completeJobPayment = exports.applySuccessfulJobPayment = void 0;
 const error_1 = require("../errors/error");
 const jobs_enum_1 = require("../enums/jobs.enum");
 const transaction_enum_1 = require("../enums/transaction.enum");
+const paystack_1 = require("../utils/paystack");
 const jobService = __importStar(require("./job.service"));
 const applySuccessfulJobPayment = (job, transaction, completedAt = new Date()) => {
     const milestone = (job.milestones || []).find((item) => String(item._id) === String(transaction.milestoneId));
@@ -72,3 +73,37 @@ const completeJobPayment = async (transaction) => {
     return { job, transaction };
 };
 exports.completeJobPayment = completeJobPayment;
+// Repairs milestones left in `processing` by the legacy payment flow. A
+// successful charge is finalized; an unsuccessful/abandoned card attempt is
+// failed and the milestone is released so the owner can initialize a new one.
+const reconcileProcessingJobPayment = async (job, milestone, transaction, verifyPayment = paystack_1.verifyPaystackPayment) => {
+    const finalizeExistingPayment = async () => {
+        (0, exports.applySuccessfulJobPayment)(job, transaction);
+        await Promise.all([job.save(), transaction.save()]);
+    };
+    if (!transaction) {
+        milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.unpaid;
+        job.markModified?.("milestones");
+        await job.save();
+        return { outcome: "retry", transaction: null };
+    }
+    if (transaction.status === transaction_enum_1.TransactionEnum.completed ||
+        transaction.paymentMethod === transaction_enum_1.PaymentMethodEnum.wallet) {
+        await finalizeExistingPayment();
+        return { outcome: "completed", transaction };
+    }
+    if (transaction.reference) {
+        const paystackStatus = await verifyPayment(String(transaction.reference));
+        if (paystackStatus === "success") {
+            await finalizeExistingPayment();
+            return { outcome: "completed", transaction };
+        }
+    }
+    transaction.status = transaction_enum_1.TransactionEnum.failed;
+    transaction.dateCompleted = new Date();
+    milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.unpaid;
+    job.markModified?.("milestones");
+    await Promise.all([job.save(), transaction.save()]);
+    return { outcome: "retry", transaction };
+};
+exports.reconcileProcessingJobPayment = reconcileProcessingJobPayment;

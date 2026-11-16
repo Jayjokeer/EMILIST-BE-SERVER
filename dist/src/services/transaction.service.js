@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.markTransactionFailedByReference = exports.markTransactionCompletedByReference = exports.fetchTransactionsForStatement = exports.fetchUserTransactionById = exports.fetchTransactionSummary = exports.fetchUserTransactionsFiltered = exports.fetchPriceForVerification = exports.fetchSingleTransactionByMilestoneId = exports.getVat = exports.changeVatServiceAdmin = exports.fetchTransactionAdmin = exports.fetchAllTransactionsAdmin = exports.fetchUserEarnings = exports.fetchTransactionsByService = exports.fetchAllUserEarningsAdmin = exports.fetchTransactionChartAdminDashboard = exports.totalAmountByTransaction = exports.totalCompletedJobsByTransaction = exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
+exports.markTransactionFailedByReference = exports.markTransactionCompletedByReference = exports.fetchTransactionsForStatement = exports.fetchUserTransactionById = exports.fetchTransactionSummary = exports.fetchUserTransactionsFiltered = exports.fetchPriceForVerification = exports.fetchSingleTransactionByMilestoneId = exports.getVat = exports.changeVatServiceAdmin = exports.fetchTransactionAdmin = exports.fetchAllTransactionsAdmin = exports.fetchUserEarnings = exports.fetchTransactionsByService = exports.fetchAllUserEarningsAdmin = exports.fetchTransactionChartAdminDashboard = exports.totalAmountByTransaction = exports.totalCompletedJobsByTransaction = exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchLatestJobMilestonePayment = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const transaction_model_1 = __importDefault(require("../models/transaction.model"));
@@ -31,6 +31,14 @@ const fetchTransactionByReference = async (reference) => {
     return await transaction_model_1.default.findOne({ reference });
 };
 exports.fetchTransactionByReference = fetchTransactionByReference;
+const fetchLatestJobMilestonePayment = async (jobId, milestoneId) => {
+    return await transaction_model_1.default.findOne({
+        jobId,
+        milestoneId,
+        serviceType: transaction_enum_1.ServiceEnum.job,
+    }).sort({ createdAt: -1 });
+};
+exports.fetchLatestJobMilestonePayment = fetchLatestJobMilestonePayment;
 const adminFetchAllTransactionsByStatus = async (status, page, limit, serviceType) => {
     const skip = (page - 1) * limit;
     const query = { status };

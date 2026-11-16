@@ -2220,6 +2220,7 @@ Leaves a review on the business that completed the job.`,
 - \`redirectUrl\` is required for card payments and optional for wallet payments.
 - Wallet payment completes immediately and marks the transaction completed and the milestone/invoice paid.
 - Card payment creates a pending transaction and returns \`data.paymentLink\`. After Paystack succeeds, the signed webhook automatically completes the transaction and marks the milestone/invoice paid.
+- A legacy milestone stuck in \`processing\` is reconciled automatically: a successful Paystack charge is completed, while an unsuccessful attempt is released back to \`unpaid\` and a new payment can be initialized.
 - After the Paystack redirect, the client may call \`GET /transaction/verify-paystack-payment/{reference}\` as an idempotent reconciliation fallback before refreshing the job and payment table.`,
         security: [{ bearerAuth: [] }],
         requestBody: {
@@ -2240,6 +2241,9 @@ Leaves a review on the business that completed the job.`,
           },
         },
         responses: {
+          "200": {
+            description: "An existing processing payment was verified and completed",
+          },
           "201": {
             description: "Payment completed immediately for Wallet, or initialized for Card",
             content: {
@@ -2261,7 +2265,7 @@ Leaves a review on the business that completed the job.`,
               },
             },
           },
-          "400": { description: "Validation error, milestone already paid, or payment already processing" },
+          "400": { description: "Validation error or milestone already paid" },
           "401": { description: "Unauthorized" },
           "404": { description: "Job or milestone not found" },
         },

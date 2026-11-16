@@ -1,6 +1,7 @@
 import { BadRequestError, NotFoundError } from "../errors/error";
 import { MilestonePaymentStatus } from "../enums/jobs.enum";
-import { ServiceEnum, TransactionEnum } from "../enums/transaction.enum";
+import { PaymentMethodEnum, ServiceEnum, TransactionEnum } from "../enums/transaction.enum";
+import { verifyPaystackPayment } from "../utils/paystack";
 import * as jobService from "./job.service";
 
 export const applySuccessfulJobPayment = (
@@ -42,4 +43,49 @@ export const completeJobPayment = async (transaction: any) => {
   applySuccessfulJobPayment(job, transaction);
   await Promise.all([job.save(), transaction.save()]);
   return { job, transaction };
+};
+
+// Repairs milestones left in `processing` by the legacy payment flow. A
+// successful charge is finalized; an unsuccessful/abandoned card attempt is
+// failed and the milestone is released so the owner can initialize a new one.
+export const reconcileProcessingJobPayment = async (
+  job: any,
+  milestone: any,
+  transaction: any,
+  verifyPayment: (reference: string) => Promise<string> = verifyPaystackPayment,
+) => {
+  const finalizeExistingPayment = async () => {
+    applySuccessfulJobPayment(job, transaction);
+    await Promise.all([job.save(), transaction.save()]);
+  };
+
+  if (!transaction) {
+    milestone.paymentStatus = MilestonePaymentStatus.unpaid;
+    job.markModified?.("milestones");
+    await job.save();
+    return { outcome: "retry" as const, transaction: null };
+  }
+
+  if (
+    transaction.status === TransactionEnum.completed ||
+    transaction.paymentMethod === PaymentMethodEnum.wallet
+  ) {
+    await finalizeExistingPayment();
+    return { outcome: "completed" as const, transaction };
+  }
+
+  if (transaction.reference) {
+    const paystackStatus = await verifyPayment(String(transaction.reference));
+    if (paystackStatus === "success") {
+      await finalizeExistingPayment();
+      return { outcome: "completed" as const, transaction };
+    }
+  }
+
+  transaction.status = TransactionEnum.failed;
+  transaction.dateCompleted = new Date();
+  milestone.paymentStatus = MilestonePaymentStatus.unpaid;
+  job.markModified?.("milestones");
+  await Promise.all([job.save(), transaction.save()]);
+  return { outcome: "retry" as const, transaction };
 };

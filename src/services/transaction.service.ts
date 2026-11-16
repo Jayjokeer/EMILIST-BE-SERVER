@@ -25,6 +25,14 @@ export const fetchTransactionByReference = async (reference: string)=>{
     return await Transaction.findOne({reference});
 };
 
+export const fetchLatestJobMilestonePayment = async (jobId: string, milestoneId: string) => {
+  return await Transaction.findOne({
+    jobId,
+    milestoneId,
+    serviceType: ServiceEnum.job,
+  }).sort({ createdAt: -1 });
+};
+
 export const adminFetchAllTransactionsByStatus = async(status: TransactionEnum ,page: number, limit: number, serviceType?: ServiceEnum)=>{
     const skip = (page - 1) * limit;
     const query: any = { status };

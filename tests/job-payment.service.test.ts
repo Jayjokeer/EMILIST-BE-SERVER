@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applySuccessfulJobPayment } from "../src/services/job-payment.service";
+import { applySuccessfulJobPayment, reconcileProcessingJobPayment } from "../src/services/job-payment.service";
 
 test("successful job payment completes the transaction and marks the invoice paid", () => {
   const milestoneId = "6ab584cbcff7d52841928b9a";
@@ -53,4 +53,65 @@ test("successful job payment is idempotent for already-paid milestones", () => {
 
   assert.equal(job.milestones[0].datePaid, paidAt);
   assert.equal(transaction.dateCompleted, paidAt);
+});
+
+test("reconciles a successful legacy processing payment", async () => {
+  const milestone: any = {
+    _id: "milestone-1",
+    paymentStatus: "processing",
+    paymentInfo: {},
+    invoice: { invoiceRaised: true, reviewStatus: "pending" },
+  };
+  const job: any = {
+    milestones: [milestone],
+    markModified() {},
+    async save() { return this; },
+  };
+  const transaction: any = {
+    milestoneId: milestone._id,
+    jobId: "job-1",
+    serviceType: "Job",
+    paymentMethod: "Card",
+    reference: "PS-SUCCESS",
+    amount: 40_000,
+    status: "processing",
+    async save() { return this; },
+  };
+
+  const result = await reconcileProcessingJobPayment(job, milestone, transaction, async () => "success");
+
+  assert.equal(result.outcome, "completed");
+  assert.equal(transaction.status, "completed");
+  assert.equal(milestone.paymentStatus, "paid");
+  assert.equal(milestone.invoice.reviewStatus, "paid");
+});
+
+test("releases an unsuccessful legacy processing payment for retry", async () => {
+  const milestone: any = {
+    _id: "milestone-1",
+    paymentStatus: "processing",
+    paymentInfo: {},
+    invoice: { invoiceRaised: true, reviewStatus: "pending" },
+  };
+  const job: any = {
+    milestones: [milestone],
+    markModified() {},
+    async save() { return this; },
+  };
+  const transaction: any = {
+    milestoneId: milestone._id,
+    jobId: "job-1",
+    serviceType: "Job",
+    paymentMethod: "Card",
+    reference: "PS-FAILED",
+    amount: 40_000,
+    status: "processing",
+    async save() { return this; },
+  };
+
+  const result = await reconcileProcessingJobPayment(job, milestone, transaction, async () => "failed");
+
+  assert.equal(result.outcome, "retry");
+  assert.equal(transaction.status, "failed");
+  assert.equal(milestone.paymentStatus, "unpaid");
 });

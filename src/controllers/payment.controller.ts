@@ -149,7 +149,22 @@ if(milestone.paymentStatus === MilestonePaymentStatus.paid){
   throw new BadRequestError("Job milestone has already been paid")
 }
 if(milestone.paymentStatus === MilestonePaymentStatus.processing){
-  throw new BadRequestError("A payment for this job milestone is already being processed")
+  const existingTransaction = await transactionService.fetchLatestJobMilestonePayment(jobId, milestoneId);
+  const reconciliation = await jobPaymentService.reconcileProcessingJobPayment(
+    job,
+    milestone,
+    existingTransaction,
+  );
+  if (reconciliation.outcome === "completed") {
+    return successResponse(res, StatusCodes.OK, {
+      message: "Existing payment verified and completed",
+      reconciled: true,
+      transactionId: reconciliation.transaction._id,
+      status: reconciliation.transaction.status,
+      jobId,
+      milestoneId,
+    });
+  }
 }
 if(!milestone.invoice?.invoiceRaised){
   throw new BadRequestError("An invoice must be generated before this milestone can be paid");
