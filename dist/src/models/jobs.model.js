@@ -66,6 +66,7 @@ const MilestoneSchema = new mongoose_1.Schema({
         date: { type: Date },
         paymentReciept: { type: String },
         note: { type: String },
+        referenceId: { type: String },
     },
     datePaid: {
         type: Date

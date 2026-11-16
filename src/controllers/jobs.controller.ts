@@ -1036,11 +1036,14 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
 
 export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user.id;
-  const { status } = req.query;
+  const { status, orderBy = "newest" } = req.query;
   const now = new Date();
   let data: any = [];
 
-  const jobs = await jobService.fetchJobsByUserId(userId);
+  const jobs = await jobService.fetchJobsByUserId(
+    userId,
+    String(orderBy).toLowerCase() as jobService.JobOrderBy,
+  );
 
   const processedJobs = jobs.map((job: any) => {
     const totalMilestones = job.milestones?.length || 0;

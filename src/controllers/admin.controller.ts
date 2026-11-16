@@ -11,6 +11,7 @@ import * as subscriptionService from "../services/subscription.service";
 import { SubscriptionPerksEnum } from "../enums/suscribtion.enum";
 import * as userService from "../services/auth.service";
 import * as jobService from "../services/job.service";
+import * as jobPaymentService from "../services/job-payment.service";
 import * as privateExpertService from "../services/private-expert.service";
 import * as transactionService from "../services/transaction.service";
 import { ServiceEnum, TransactionEnum, WalletEnum } from "../enums/transaction.enum";
@@ -691,17 +692,16 @@ export const updateJobPaymentStatusController = catchAsync( async (req: Request,
     if (!milestone) {
         throw new NotFoundError("Milestone not found within this job!");
     }    
-    milestone.paymentStatus = status;
     if(status === MilestonePaymentStatus.paid){
-        milestone.datePaid =new Date();
-        milestone.paymentStatus = MilestonePaymentStatus.paid
         const transaction = await transactionService.fetchSingleTransactionByMilestoneId(String(milestone._id));
         if(!transaction){
             throw new NotFoundError('Transaction not found!');
         }
-        transaction.status = TransactionEnum.completed;
-        transaction.isSettled = true;
-        await transaction.save();
+        await jobPaymentService.settleJobPaymentToArtisan(transaction);
+        milestone.datePaid = milestone.datePaid || new Date();
+        milestone.paymentStatus = MilestonePaymentStatus.paid;
+    } else {
+        milestone.paymentStatus = status;
     }
     
     await job.save();

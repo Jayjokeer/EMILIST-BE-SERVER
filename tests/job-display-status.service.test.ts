@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JobStatusEnum, MilestoneEnum, MilestonePaymentStatus } from '../src/enums/jobs.enum';
 import { ProjectStatusEnum } from '../src/enums/project.enum';
-import { areAllMilestonesCompletedAndPaid, buildListedLifecycleScope, buildVisibleJobsQuery, milestonePaymentBreakdown, raiseMilestoneInvoice, rejectCompletedMilestone, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate } from '../src/services/job.service';
+import { areAllMilestonesCompletedAndPaid, attachMilestonePaymentReferences, buildListedLifecycleScope, buildVisibleJobsQuery, jobCreatedAtSort, milestonePaymentBreakdown, raiseMilestoneInvoice, rejectCompletedMilestone, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate } from '../src/services/job.service';
 
 test('job owner can omit an artisan additional cost and pay the original invoice amount', () => {
   const milestone = { amount: 50000, invoice: { additionalAmount: 7500, invoiceRaised: true } };
@@ -46,6 +46,16 @@ test('legacy invoices expose a null issue date in job details', () => {
   });
 });
 
+test('job details expose the latest card reference inside milestone paymentInfo', () => {
+  const milestones = [{ _id: 'milestone-1', paymentInfo: { amountPaid: 5000 } }];
+  const transactions = [
+    { milestoneId: 'milestone-1', reference: 'PS-NEWEST' },
+    { milestoneId: 'milestone-1', reference: 'PS-OLDER' },
+  ];
+
+  assert.equal(attachMilestonePaymentReferences(milestones, transactions)[0].paymentInfo.referenceId, 'PS-NEWEST');
+});
+
 test('owner rejection reactivates completed work and records the reason', () => {
   const rejectedAt = new Date('2026-10-30T09:00:00.000Z');
   const milestone: any = {
@@ -83,6 +93,12 @@ test('status endpoint includes jobs owned by or assigned to the artisan', () => 
       { acceptedApplicationId: { $in: ['application-1'] } },
     ],
   });
+});
+
+test('status endpoint orders jobs newest first by default and supports oldest first', () => {
+  assert.deepEqual(jobCreatedAtSort(), { createdAt: -1 });
+  assert.deepEqual(jobCreatedAtSort('newest'), { createdAt: -1 });
+  assert.deepEqual(jobCreatedAtSort('oldest'), { createdAt: 1 });
 });
 
 test('an accepted job is active from the artisan perspective', () => {

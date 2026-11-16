@@ -223,13 +223,13 @@ GET /transaction/fetch-all-user-transactions?page=1&limit=20
 Example with filters:
 
 ```http
-GET /transaction/fetch-all-user-transactions?page=1&limit=20&status=successful&type=inflow&currency=NGN&walletId=WALLET_ID&paymentMethod=Card&sortBy=date&sortOrder=desc&search=REFERENCE
+GET /transaction/fetch-all-user-transactions?page=1&limit=20&status=successful&type=inflow&currency=NGN&walletId=WALLET_ID&includeExternalPayments=true&paymentMethod=Card&sortBy=date&sortOrder=desc&search=REFERENCE
 ```
 
 Available filters:
 
 ```text
-status: all | pending | failed | successful
+status: all | pending | processing | failed | successful
 type: inflow | outflow
 paymentMethod: Card | BankTransfer | Wallet
 currency: NGN | USD | GBP | EUR
@@ -238,8 +238,17 @@ sortOrder: asc | desc
 page: minimum 1
 limit: minimum 1, maximum 100
 walletId: wallet ID
+includeExternalPayments: true | false (defaults to true; includes same-currency Paystack/Stripe payments without a walletId)
 search: transaction reference, ID, description, or counterparty
 ```
+
+For a payment page that must show both wallet and Paystack payments, either omit
+`walletId` or leave `includeExternalPayments=true`. Use
+`includeExternalPayments=false` only for a strict wallet-ledger view.
+
+For an artisan, an incoming job payment is shown as `pending` when initialized,
+`processing` after the charge is confirmed and held in Emilist escrow, and
+`successful` after settlement credits the artisan wallet.
 
 ### 14. Fetch one transaction
 

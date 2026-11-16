@@ -13,6 +13,8 @@ import Business from "../models/business.model";
 import RecurringJob from "../models/recurring-job.model";
 import * as reviewService from './review.service';
 import * as jobAttentionService from './job-attention.service';
+import Transaction from "../models/transaction.model";
+import { PaymentMethodEnum, ServiceEnum, TransactionEnum } from "../enums/transaction.enum";
 
 export const normalizeJobStatus = (status?: string | null): string | null => {
   if (!status) return null;
@@ -66,6 +68,26 @@ export const serializeMilestoneWithInvoiceDate = (milestone: any) => {
     issuedAt: plain.invoice?.issuedAt ?? null,
   };
   return plain;
+};
+
+export const attachMilestonePaymentReferences = (milestones: any[], transactions: any[]) => {
+  const latestByMilestone = new Map<string, any>();
+  for (const transaction of transactions) {
+    const milestoneId = String(transaction.milestoneId || "");
+    if (milestoneId && !latestByMilestone.has(milestoneId)) latestByMilestone.set(milestoneId, transaction);
+  }
+
+  return milestones.map((milestone: any) => {
+    const payment = latestByMilestone.get(String(milestone._id || ""));
+    if (!payment?.reference) return milestone;
+    return {
+      ...milestone,
+      paymentInfo: {
+        ...(milestone.paymentInfo || {}),
+        referenceId: payment.reference,
+      },
+    };
+  });
 };
 
 export const milestonePaymentBreakdown = (milestone: any, includeAdditionalAmount = false) => {
@@ -524,6 +546,16 @@ export const fetchJobByIdWithDetails = async (
   } else {
     milestones = job.milestones.map(serializeMilestoneWithInvoiceDate);
   }
+
+  const cardPayments = await Transaction.find({
+    jobId: job._id,
+    milestoneId: { $in: milestones.map((milestone: any) => milestone._id) },
+    serviceType: ServiceEnum.job,
+    paymentMethod: PaymentMethodEnum.card,
+    reference: { $exists: true, $ne: null },
+    status: { $in: [TransactionEnum.pending, TransactionEnum.processing, TransactionEnum.completed] },
+  }).select("milestoneId reference createdAt").sort({ createdAt: -1 }).lean();
+  milestones = attachMilestonePaymentReferences(milestones, cardPayments);
 
   const displayJob = withJobDisplayStatus(job, viewerUserId);
   const [jobWithAttention] = await withJobAttention([displayJob], viewerUserId);
@@ -1459,10 +1491,17 @@ export const buildVisibleJobsQuery = (userId: string, userProjectIds: any[]) => 
   ],
 });
 
-export const fetchJobsByUserId = async(userId: string)=>{
+export type JobOrderBy = "newest" | "oldest";
+
+export const jobCreatedAtSort = (orderBy: JobOrderBy = "newest"): { createdAt: 1 | -1 } => ({
+  createdAt: orderBy === "oldest" ? 1 : -1,
+});
+
+export const fetchJobsByUserId = async(userId: string, orderBy: JobOrderBy = "newest")=>{
   const userProjects = await Project.find({ user: userId }).select('_id');
   const userProjectIds = userProjects.map(project => project._id);
   const jobs = await Jobs.find(buildVisibleJobsQuery(userId, userProjectIds))
-    .populate('applications', 'status user counterOffers.madeByRole');
+    .populate('applications', 'status user counterOffers.madeByRole')
+    .sort(jobCreatedAtSort(orderBy));
   return await withJobAttention(withJobsDisplayStatus(jobs, userId), userId);
 }

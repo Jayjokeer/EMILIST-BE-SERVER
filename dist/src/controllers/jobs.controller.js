@@ -966,10 +966,10 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
 });
 exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
-    const { status } = req.query;
+    const { status, orderBy = "newest" } = req.query;
     const now = new Date();
     let data = [];
-    const jobs = await jobService.fetchJobsByUserId(userId);
+    const jobs = await jobService.fetchJobsByUserId(userId, String(orderBy).toLowerCase());
     const processedJobs = jobs.map((job) => {
         const totalMilestones = job.milestones?.length || 0;
         const progressMilestones = job.milestones?.filter((m) => m.status === jobs_enum_1.MilestoneEnum.completed ||

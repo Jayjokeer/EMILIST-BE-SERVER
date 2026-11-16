@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneRejection = exports.validateMilestoneStatusUpdate = exports.validateAttentionViewed = exports.validateApplicationStatusUpdate = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = void 0;
+exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneRejection = exports.validateMilestoneStatusUpdate = exports.validateAttentionViewed = exports.validateApplicationStatusUpdate = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = exports.validateFetchJobsByStatus = void 0;
 const joi_1 = __importDefault(require("joi"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 const project_enum_1 = require("../enums/project.enum");
@@ -64,6 +64,21 @@ const jobDurationSchema = joi_1.default.object({
 const forbiddenString = joi_1.default.any().forbidden().messages({ 'any.unknown': 'This field is not allowed for the selected job urgency' });
 const forbiddenObject = joi_1.default.any().forbidden().messages({ 'any.unknown': 'This field is not allowed for the selected job urgency' });
 const forbiddenArray = joi_1.default.array().forbidden().messages({ 'any.unknown': 'This field is not allowed for the selected job urgency' });
+const validateFetchJobsByStatus = (req, res, next) => {
+    const schema = joi_1.default.object({
+        status: joi_1.default.string()
+            .valid(jobs_enum_1.JobStatusEnum.listed, jobs_enum_1.JobStatusEnum.pending, jobs_enum_1.JobStatusEnum.in_review, "in_review", jobs_enum_1.JobStatusEnum.complete, jobs_enum_1.JobStatusEnum.active, jobs_enum_1.JobStatusEnum.paused, jobs_enum_1.JobStatusEnum.overdue)
+            .required(),
+        orderBy: joi_1.default.string().valid("newest", "oldest").default("newest"),
+    });
+    const { error } = schema.validate(req.query, { abortEarly: false });
+    if (error) {
+        res.status(400).json({ errors: error.details.map((detail) => detail.message) });
+        return;
+    }
+    next();
+};
+exports.validateFetchJobsByStatus = validateFetchJobsByStatus;
 // ===================== CREATE JOB VALIDATION =====================
 const validateJob = (req, res, next) => {
     const jobValidation = joi_1.default.object({

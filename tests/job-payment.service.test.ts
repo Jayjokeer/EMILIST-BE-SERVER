@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applySuccessfulJobPayment, reconcileProcessingJobPayment } from "../src/services/job-payment.service";
+import { applySuccessfulJobPayment, reconcileProcessingJobPayment, settleJobPaymentToArtisan } from "../src/services/job-payment.service";
+import * as walletService from "../src/services/wallet.services";
 
 test("successful job payment completes the transaction and marks the invoice paid", () => {
   const milestoneId = "6ab584cbcff7d52841928b9a";
@@ -17,6 +18,7 @@ test("successful job payment completes the transaction and marks the invoice pai
     milestoneId,
     amount: 25000,
     paymentMethod: "Card",
+    reference: "PS-JOB-001",
     status: "processing",
   };
 
@@ -25,6 +27,7 @@ test("successful job payment completes the transaction and marks the invoice pai
   assert.equal(result.milestone.paymentStatus, "paid");
   assert.equal(result.milestone.invoice.reviewStatus, "paid");
   assert.equal(result.milestone.paymentInfo.amountPaid, 25000);
+  assert.equal(result.milestone.paymentInfo.referenceId, "PS-JOB-001");
   assert.equal(result.transaction.status, "completed");
   assert.equal(result.transaction.dateCompleted, completedAt);
 });
@@ -114,4 +117,32 @@ test("releases an unsuccessful legacy processing payment for retry", async () =>
   assert.equal(result.outcome, "retry");
   assert.equal(transaction.status, "failed");
   assert.equal(milestone.paymentStatus, "unpaid");
+});
+
+test("settlement credits the artisan wallet and marks the payment successful", async (t) => {
+  const originalCredit = walletService.creditJobPaymentSettlement;
+  let credited: any = null;
+  (walletService as any).creditJobPaymentSettlement = async (...args: any[]) => {
+    credited = args;
+    return { _id: "artisan-wallet", balance: 5000 };
+  };
+  t.after(() => { (walletService as any).creditJobPaymentSettlement = originalCredit; });
+
+  const transaction: any = {
+    _id: "transaction-1",
+    userId: "owner-1",
+    recieverId: "artisan-1",
+    serviceType: "Job",
+    currency: "NGN",
+    amount: 5000,
+    status: "completed",
+    isSettled: false,
+    async save() { return this; },
+  };
+
+  const result = await settleJobPaymentToArtisan(transaction);
+
+  assert.deepEqual(credited, ["artisan-1", "NGN", 5000, "transaction-1"]);
+  assert.equal(transaction.isSettled, true);
+  assert.equal(result.alreadySettled, false);
 });

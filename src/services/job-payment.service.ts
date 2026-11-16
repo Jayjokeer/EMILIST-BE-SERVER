@@ -3,6 +3,7 @@ import { MilestonePaymentStatus } from "../enums/jobs.enum";
 import { PaymentMethodEnum, ServiceEnum, TransactionEnum } from "../enums/transaction.enum";
 import { verifyPaystackPayment } from "../utils/paystack";
 import * as jobService from "./job.service";
+import * as walletService from "./wallet.services";
 
 export const applySuccessfulJobPayment = (
   job: any,
@@ -21,6 +22,9 @@ export const applySuccessfulJobPayment = (
     amountPaid: transaction.amount,
     paymentMethod: transaction.paymentMethod,
     date: completedAt,
+    ...(transaction.paymentMethod === PaymentMethodEnum.card && transaction.reference
+      ? { referenceId: transaction.reference }
+      : {}),
   };
   if (milestone.invoice) milestone.invoice.reviewStatus = "paid";
 
@@ -43,6 +47,29 @@ export const completeJobPayment = async (transaction: any) => {
   applySuccessfulJobPayment(job, transaction);
   await Promise.all([job.save(), transaction.save()]);
   return { job, transaction };
+};
+
+export const settleJobPaymentToArtisan = async (transaction: any) => {
+  if (!transaction || transaction.serviceType !== ServiceEnum.job) {
+    throw new BadRequestError("This is not a job payment transaction");
+  }
+  if (transaction.status !== TransactionEnum.completed) {
+    throw new BadRequestError("Job payment must be confirmed before it can be settled");
+  }
+  if (!transaction.recieverId) throw new BadRequestError("Job payment receiver is missing");
+  if (!transaction.currency) throw new BadRequestError("Job payment currency is missing");
+
+  if (transaction.isSettled) return { transaction, wallet: null, alreadySettled: true };
+
+  const wallet = await walletService.creditJobPaymentSettlement(
+    String(transaction.recieverId?._id || transaction.recieverId),
+    transaction.currency,
+    Number(transaction.amount),
+    String(transaction._id),
+  );
+  transaction.isSettled = true;
+  await transaction.save();
+  return { transaction, wallet, alreadySettled: false };
 };
 
 // Repairs milestones left in `processing` by the legacy payment flow. A

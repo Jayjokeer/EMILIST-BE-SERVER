@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsByUserId = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
+exports.fetchJobsByUserId = exports.jobCreatedAtSort = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.attachMilestonePaymentReferences = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -51,6 +51,8 @@ const business_model_1 = __importDefault(require("../models/business.model"));
 const recurring_job_model_1 = __importDefault(require("../models/recurring-job.model"));
 const reviewService = __importStar(require("./review.service"));
 const jobAttentionService = __importStar(require("./job-attention.service"));
+const transaction_model_1 = __importDefault(require("../models/transaction.model"));
+const transaction_enum_1 = require("../enums/transaction.enum");
 const normalizeJobStatus = (status) => {
     if (!status)
         return null;
@@ -100,6 +102,27 @@ const serializeMilestoneWithInvoiceDate = (milestone) => {
     return plain;
 };
 exports.serializeMilestoneWithInvoiceDate = serializeMilestoneWithInvoiceDate;
+const attachMilestonePaymentReferences = (milestones, transactions) => {
+    const latestByMilestone = new Map();
+    for (const transaction of transactions) {
+        const milestoneId = String(transaction.milestoneId || "");
+        if (milestoneId && !latestByMilestone.has(milestoneId))
+            latestByMilestone.set(milestoneId, transaction);
+    }
+    return milestones.map((milestone) => {
+        const payment = latestByMilestone.get(String(milestone._id || ""));
+        if (!payment?.reference)
+            return milestone;
+        return {
+            ...milestone,
+            paymentInfo: {
+                ...(milestone.paymentInfo || {}),
+                referenceId: payment.reference,
+            },
+        };
+    });
+};
+exports.attachMilestonePaymentReferences = attachMilestonePaymentReferences;
 const milestonePaymentBreakdown = (milestone, includeAdditionalAmount = false) => {
     const originalAmount = Number(milestone?.amount || 0);
     const requestedAdditionalAmount = Math.max(0, Number(milestone?.invoice?.additionalAmount || 0));
@@ -491,6 +514,15 @@ const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5,
     else {
         milestones = job.milestones.map(exports.serializeMilestoneWithInvoiceDate);
     }
+    const cardPayments = await transaction_model_1.default.find({
+        jobId: job._id,
+        milestoneId: { $in: milestones.map((milestone) => milestone._id) },
+        serviceType: transaction_enum_1.ServiceEnum.job,
+        paymentMethod: transaction_enum_1.PaymentMethodEnum.card,
+        reference: { $exists: true, $ne: null },
+        status: { $in: [transaction_enum_1.TransactionEnum.pending, transaction_enum_1.TransactionEnum.processing, transaction_enum_1.TransactionEnum.completed] },
+    }).select("milestoneId reference createdAt").sort({ createdAt: -1 }).lean();
+    milestones = (0, exports.attachMilestonePaymentReferences)(milestones, cardPayments);
     const displayJob = (0, exports.withJobDisplayStatus)(job, viewerUserId);
     const [jobWithAttention] = await withJobAttention([displayJob], viewerUserId);
     const publicJob = {
@@ -1311,11 +1343,16 @@ const buildVisibleJobsQuery = (userId, userProjectIds) => ({
     ],
 });
 exports.buildVisibleJobsQuery = buildVisibleJobsQuery;
-const fetchJobsByUserId = async (userId) => {
+const jobCreatedAtSort = (orderBy = "newest") => ({
+    createdAt: orderBy === "oldest" ? 1 : -1,
+});
+exports.jobCreatedAtSort = jobCreatedAtSort;
+const fetchJobsByUserId = async (userId, orderBy = "newest") => {
     const userProjects = await project_model_1.default.find({ user: userId }).select('_id');
     const userProjectIds = userProjects.map(project => project._id);
     const jobs = await jobs_model_1.default.find((0, exports.buildVisibleJobsQuery)(userId, userProjectIds))
-        .populate('applications', 'status user counterOffers.madeByRole');
+        .populate('applications', 'status user counterOffers.madeByRole')
+        .sort((0, exports.jobCreatedAtSort)(orderBy));
     return await withJobAttention((0, exports.withJobsDisplayStatus)(jobs, userId), userId);
 };
 exports.fetchJobsByUserId = fetchJobsByUserId;

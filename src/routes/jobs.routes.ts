@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as jobController from "../controllers/jobs.controller";
-import { validateApplicationStatusUpdate, validateAttentionViewed, validateCounterBid, validateCounterBidResponse, validateJob, validateMilestoneRejection, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateRecurringJob, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
+import { validateApplicationStatusUpdate, validateAttentionViewed, validateCounterBid, validateCounterBidResponse, validateFetchJobsByStatus, validateJob, validateMilestoneRejection, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateRecurringJob, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
 import { optionalUserAuth, userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload, parseJobBody } from "../utils/image-upload";
 import * as paymentController from "../controllers/payment.controller";
@@ -28,7 +28,7 @@ router.route("/applications/:applicationId/attention/viewed").patch(userAuth, va
 router.route("/list-job/:jobId").patch(userAuth, jobController.listJobController);
 router.route("/delist-job/:jobId").patch(userAuth, jobController.delistJobController);
 router.route("/update-application-status/:projectId").patch(userAuth, validateApplicationStatusUpdate, jobController.jobStatusController);
-router.route("/fetch-jobs-by-status").get(userAuth, jobController.fetchJobByStatusController);
+router.route("/fetch-jobs-by-status").get(userAuth, validateFetchJobsByStatus, jobController.fetchJobByStatusController);
 router.route("/remove-job/:jobId/file/:fileId").delete(userAuth, jobController.deleteFileController);
 router.route("/accept-direct-job/:projectId").patch(userAuth, jobController.acceptDirectJobController);
 router.route("/fetch-applied-jobs-by-status").get(userAuth, jobController.fetchUserAppliedJobsController);

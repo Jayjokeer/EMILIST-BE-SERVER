@@ -3,11 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.markTransactionFailedByReference = exports.markTransactionCompletedByReference = exports.fetchTransactionsForStatement = exports.fetchUserTransactionById = exports.fetchTransactionSummary = exports.fetchUserTransactionsFiltered = exports.fetchPriceForVerification = exports.fetchSingleTransactionByMilestoneId = exports.getVat = exports.changeVatServiceAdmin = exports.fetchTransactionAdmin = exports.fetchAllTransactionsAdmin = exports.fetchUserEarnings = exports.fetchTransactionsByService = exports.fetchAllUserEarningsAdmin = exports.fetchTransactionChartAdminDashboard = exports.totalAmountByTransaction = exports.totalCompletedJobsByTransaction = exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchLatestJobMilestonePayment = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
+exports.markTransactionFailedByReference = exports.markTransactionCompletedByReference = exports.fetchTransactionsForStatement = exports.fetchUserTransactionById = exports.fetchTransactionSummary = exports.fetchUserTransactionsFiltered = exports.userTransactionDisplayType = exports.userTransactionDisplayStatus = exports.isTransactionRecipient = exports.buildWalletTransactionScopeCondition = exports.fetchPriceForVerification = exports.fetchSingleTransactionByMilestoneId = exports.getVat = exports.changeVatServiceAdmin = exports.fetchTransactionAdmin = exports.fetchAllTransactionsAdmin = exports.fetchUserEarnings = exports.fetchTransactionsByService = exports.fetchAllUserEarningsAdmin = exports.fetchTransactionChartAdminDashboard = exports.totalAmountByTransaction = exports.totalCompletedJobsByTransaction = exports.fetchAllTransactionsByUser = exports.adminFetchAllTransactionsByStatus = exports.fetchLatestJobMilestonePayment = exports.fetchTransactionByReference = exports.fetchUserTransactions = exports.fetchSingleTransaction = exports.fetchSingleTransactionWithDetails = exports.createTransaction = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const transaction_enum_1 = require("../enums/transaction.enum");
 const transaction_model_1 = __importDefault(require("../models/transaction.model"));
 const app_config_model_1 = __importDefault(require("../models/app-config.model"));
+const wallet_model_1 = __importDefault(require("../models/wallet.model"));
 const createTransaction = async (data) => {
     return await transaction_model_1.default.create(data);
 };
@@ -287,8 +288,9 @@ exports.getVat = getVat;
 const fetchSingleTransactionByMilestoneId = async (milestoneId) => {
     return await transaction_model_1.default.findOne({
         milestoneId: milestoneId,
-        status: transaction_enum_1.TransactionEnum.processing
-    });
+        serviceType: transaction_enum_1.ServiceEnum.job,
+        status: { $in: [transaction_enum_1.TransactionEnum.completed, transaction_enum_1.TransactionEnum.processing] },
+    }).sort({ createdAt: -1 });
 };
 exports.fetchSingleTransactionByMilestoneId = fetchSingleTransactionByMilestoneId;
 const fetchPriceForVerification = async () => {
@@ -308,22 +310,113 @@ const statusCondition = (status) => {
         return { status: { $in: [transaction_enum_1.TransactionEnum.pending, transaction_enum_1.TransactionEnum.processing] } };
     return null;
 };
+const userStatusCondition = (status, userId) => {
+    if (!status || status === "all")
+        return null;
+    const recipientId = new mongoose_1.default.Types.ObjectId(userId);
+    if (status === "successful") {
+        return {
+            $or: [
+                { userId, status: transaction_enum_1.TransactionEnum.completed },
+                { recieverId: recipientId, status: transaction_enum_1.TransactionEnum.completed, isSettled: true },
+            ],
+        };
+    }
+    if (status === "pending") {
+        return {
+            $or: [
+                { status: { $in: [transaction_enum_1.TransactionEnum.pending, transaction_enum_1.TransactionEnum.processing] } },
+                { recieverId: recipientId, status: transaction_enum_1.TransactionEnum.completed, isSettled: false },
+            ],
+        };
+    }
+    if (status === "processing") {
+        return {
+            $or: [
+                { status: transaction_enum_1.TransactionEnum.processing },
+                { recieverId: recipientId, status: transaction_enum_1.TransactionEnum.completed, isSettled: false },
+            ],
+        };
+    }
+    return statusCondition(status);
+};
+const buildWalletTransactionScopeCondition = (walletId, currency, includeExternalPayments = true, recipientId) => {
+    const walletObjectId = new mongoose_1.default.Types.ObjectId(walletId);
+    if (!includeExternalPayments || !currency)
+        return { walletId: walletObjectId };
+    const conditions = [
+        { walletId: walletObjectId },
+        {
+            walletId: null,
+            currency: String(currency).toUpperCase(),
+            paymentService: { $in: Object.values(transaction_enum_1.PaymentServiceEnum) },
+        },
+    ];
+    if (recipientId && mongoose_1.default.Types.ObjectId.isValid(recipientId)) {
+        conditions.push({
+            recieverId: new mongoose_1.default.Types.ObjectId(recipientId),
+            currency: String(currency).toUpperCase(),
+        });
+    }
+    return {
+        $or: conditions,
+    };
+};
+exports.buildWalletTransactionScopeCondition = buildWalletTransactionScopeCondition;
+const isTransactionRecipient = (transaction, userId) => Boolean(transaction?.recieverId)
+    && String(transaction.recieverId?._id || transaction.recieverId) === String(userId)
+    && String(transaction.userId?._id || transaction.userId) !== String(userId);
+exports.isTransactionRecipient = isTransactionRecipient;
+const userTransactionDisplayStatus = (transaction, userId) => {
+    if (transaction?.serviceType === transaction_enum_1.ServiceEnum.job && (0, exports.isTransactionRecipient)(transaction, userId)) {
+        if (transaction.status === transaction_enum_1.TransactionEnum.completed) {
+            return transaction.isSettled ? "successful" : "processing";
+        }
+        if (transaction.status === transaction_enum_1.TransactionEnum.processing)
+            return "processing";
+    }
+    if (transaction?.status === transaction_enum_1.TransactionEnum.completed)
+        return "successful";
+    if (transaction?.status === transaction_enum_1.TransactionEnum.declined)
+        return "failed";
+    if (transaction?.status === transaction_enum_1.TransactionEnum.processing)
+        return "processing";
+    return transaction?.status || null;
+};
+exports.userTransactionDisplayStatus = userTransactionDisplayStatus;
+const userTransactionDisplayType = (transaction, userId) => (0, exports.isTransactionRecipient)(transaction, userId)
+    ? "inflow"
+    : transaction?.type === transaction_enum_1.TransactionType.CREDIT ? "inflow" : "outflow";
+exports.userTransactionDisplayType = userTransactionDisplayType;
 const fetchUserTransactionsFiltered = async (userId, filters) => {
     const page = Math.max(1, Number(filters.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(filters.limit) || 10));
     const skip = (page - 1) * limit;
     const andConditions = [{ $or: [{ userId: userId }, { recieverId: userId }] }];
-    const statusCond = statusCondition(filters.status);
+    const statusCond = userStatusCondition(filters.status, userId);
     if (statusCond)
         andConditions.push(statusCond);
-    if (filters.type === "inflow")
-        andConditions.push({ type: transaction_enum_1.TransactionType.CREDIT });
+    if (filters.type === "inflow") {
+        andConditions.push({
+            $or: [
+                { userId, type: transaction_enum_1.TransactionType.CREDIT },
+                { recieverId: new mongoose_1.default.Types.ObjectId(userId) },
+            ],
+        });
+    }
     if (filters.type === "outflow")
-        andConditions.push({ type: transaction_enum_1.TransactionType.DEBIT });
+        andConditions.push({ userId, type: transaction_enum_1.TransactionType.DEBIT });
     if (filters.paymentMethod)
         andConditions.push({ paymentMethod: filters.paymentMethod });
-    if (filters.walletId)
-        andConditions.push({ walletId: new mongoose_1.default.Types.ObjectId(filters.walletId) });
+    if (filters.walletId) {
+        const includeExternalPayments = filters.includeExternalPayments !== false;
+        let walletCurrency = filters.currency;
+        if (includeExternalPayments && !walletCurrency) {
+            const wallet = await wallet_model_1.default.findOne({ _id: filters.walletId, userId }).select("currency").lean();
+            walletCurrency = wallet?.currency;
+        }
+        andConditions.push((0, exports.buildWalletTransactionScopeCondition)(filters.walletId, walletCurrency, includeExternalPayments, userId));
+    }
     if (filters.currency)
         andConditions.push({ currency: String(filters.currency).toUpperCase() });
     // Search by transaction reference/id or counterparty (falls back to description)

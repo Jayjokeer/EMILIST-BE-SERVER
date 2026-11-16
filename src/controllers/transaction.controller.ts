@@ -53,15 +53,15 @@ const formatTransactionId = (transactionId: any) => {
   return raw ? `#${raw.slice(-4).toUpperCase()}` : null;
 };
 
-const serializeTransaction = (transaction: any) => ({
+const serializeTransaction = (transaction: any, userId: string) => ({
   transactionId: transaction._id,
   shortTransactionId: formatTransactionId(transaction._id),
   walletId: transaction.walletId?._id || transaction.walletId || null,
   currency: transaction.currency || null,
   amount: transaction.amount,
   formattedAmount: formatMoney(transaction.amount, transaction.currency),
-  transactionType: transaction.type === TransactionType.CREDIT ? "inflow" : "outflow",
-  status: mapTransactionStatus(transaction.status),
+  transactionType: transactionService.userTransactionDisplayType(transaction, userId),
+  status: transactionService.userTransactionDisplayStatus(transaction, userId),
   counterparty: transaction.counterparty || transaction.description || null,
   date: transaction.dateCompleted || transaction.createdAt,
   balance: transaction.balanceAfter ?? transaction.balanceBefore ?? null,
@@ -69,6 +69,7 @@ const serializeTransaction = (transaction: any) => ({
   description: transaction.description || null,
   paymentMethod: transaction.paymentMethod || null,
   paymentService: transaction.paymentService || null,
+  isSettled: Boolean(transaction.isSettled),
   serviceType: transaction.serviceType || null,
   jobId: transaction.jobId?._id || transaction.jobId || null,
   milestoneId: transaction.milestoneId || null,
@@ -76,7 +77,7 @@ const serializeTransaction = (transaction: any) => ({
 });
 
 export const fetchAllTransactionsByUsersController =  catchAsync(async (req: JwtPayload, res: Response) => {
-    const { page, limit, paymentMethod, status, type, search, walletId, currency, sortBy, sortOrder } = req.query;
+    const { page, limit, paymentMethod, status, type, search, walletId, includeExternalPayments, currency, sortBy, sortOrder } = req.query;
     const userId = req.user._id;
 
     const data = await transactionService.fetchUserTransactionsFiltered(userId, {
@@ -85,6 +86,9 @@ export const fetchAllTransactionsByUsersController =  catchAsync(async (req: Jwt
       search: search as string | undefined,
       paymentMethod: paymentMethod as string | undefined,
       walletId: walletId as string | undefined,
+      includeExternalPayments: includeExternalPayments === undefined
+        ? true
+        : String(includeExternalPayments).toLowerCase() === "true",
       currency: currency as string | undefined,
       sortBy: sortBy as string | undefined,
       sortOrder: sortOrder as string | undefined,
@@ -92,7 +96,7 @@ export const fetchAllTransactionsByUsersController =  catchAsync(async (req: Jwt
       limit: limit ? Number(limit) : undefined,
     });
     return successResponse(res, StatusCodes.OK, {
-      transactions: data.transactions.map((transaction: any) => serializeTransaction(transaction)),
+      transactions: data.transactions.map((transaction: any) => serializeTransaction(transaction, String(userId))),
       totalTransactions: data.totalTransactions,
       totalPages: data.totalPages,
       page: data.page,
@@ -223,7 +227,7 @@ export const fetchTransactionSummaryController = catchAsync(async (req: JwtPaylo
 export const fetchMyTransactionController = catchAsync(async (req: JwtPayload, res: Response) => {
   const transaction = await transactionService.fetchUserTransactionById(req.user._id, req.params.transactionId);
   if (!transaction) throw new NotFoundError("Transaction not found");
-  return successResponse(res, StatusCodes.OK, serializeTransaction(transaction));
+  return successResponse(res, StatusCodes.OK, serializeTransaction(transaction, String(req.user._id)));
 });
 
 const csvEscape = (value: any) => {
@@ -231,10 +235,10 @@ const csvEscape = (value: any) => {
   return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 };
 
-const buildStatementCsv = (transactions: any[]) => {
+const buildStatementCsv = (transactions: any[], userId: string) => {
   const header = ["Transaction ID", "Date", "Type", "Status", "Amount", "Currency", "Balance", "Counterparty", "Reference", "Description"];
   const rows = transactions.map((transaction: any) => {
-    const s = serializeTransaction(transaction);
+    const s = serializeTransaction(transaction, userId);
     return [s.transactionId, s.date, s.transactionType, s.status, s.amount, s.currency, s.balance, s.counterparty, s.reference, s.description];
   });
   // BOM so Excel opens the UTF-8 file correctly
@@ -259,7 +263,7 @@ const buildStatementPdf = (transactions: any[], user: any, periodLabel: string):
       doc.moveDown(1).fillColor("#000000");
 
       transactions.forEach((transaction: any, index: number) => {
-        const s = serializeTransaction(transaction);
+        const s = serializeTransaction(transaction, String(user._id));
         doc.fontSize(9).font("Helvetica-Bold").text(`${index + 1}. ${String(s.transactionType).toUpperCase()} - ${s.currency || ""} ${s.amount} (${s.status})`);
         doc.fontSize(8).font("Helvetica").fillColor("#444444");
         doc.text(`Date: ${s.date}   Balance: ${s.balance ?? "-"}`);
@@ -296,7 +300,7 @@ export const downloadStatementController = catchAsync(async (req: JwtPayload, re
   if (String(format) === "csv") {
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    return res.status(StatusCodes.OK).send(buildStatementCsv(transactions));
+    return res.status(StatusCodes.OK).send(buildStatementCsv(transactions, String(req.user._id)));
   }
 
   const periodLabel = `${startDate || "all"} to ${endDate || "all"}`;
@@ -313,13 +317,13 @@ export const downloadTransactionReceiptController = catchAsync(async (req: JwtPa
   const transaction = await transactionService.fetchUserTransactionById(req.user._id, req.params.transactionId);
   if (!transaction) throw new NotFoundError("Transaction not found");
 
-  const receipt = serializeTransaction(transaction);
+  const receipt = serializeTransaction(transaction, String(req.user._id));
   const filename = `receipt-${receipt.shortTransactionId || receipt.transactionId}.${format}`;
 
   if (String(format) === "csv") {
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    return res.status(StatusCodes.OK).send(buildStatementCsv([transaction]));
+    return res.status(StatusCodes.OK).send(buildStatementCsv([transaction], String(req.user._id)));
   }
 
   const pdfBuffer = await buildStatementPdf([transaction], req.user, `Receipt ${receipt.shortTransactionId || receipt.transactionId}`);

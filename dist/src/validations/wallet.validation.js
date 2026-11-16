@@ -124,7 +124,7 @@ const validateWalletOverview = (req, res, next) => {
 exports.validateWalletOverview = validateWalletOverview;
 const validateTransactionFilters = (req, res, next) => {
     const schema = joi_1.default.object({
-        status: joi_1.default.string().valid("all", "pending", "failed", "successful").optional(),
+        status: joi_1.default.string().valid("all", "pending", "processing", "failed", "successful").optional(),
         type: joi_1.default.string().valid("inflow", "outflow").optional(),
         search: joi_1.default.string().trim().max(100).optional(),
         paymentMethod: joi_1.default.string()
@@ -134,6 +134,7 @@ const validateTransactionFilters = (req, res, next) => {
             "string.hex": "walletId must be a valid id",
             "string.length": "walletId must be a valid id",
         }),
+        includeExternalPayments: joi_1.default.boolean().truthy("true").falsy("false").optional(),
         currency: joi_1.default.string()
             .valid(...Object.values(transaction_enum_1.WalletEnum))
             .optional()

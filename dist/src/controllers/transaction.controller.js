@@ -86,15 +86,15 @@ const formatTransactionId = (transactionId) => {
     // History table shows short ids like #3066; keep the full id available too.
     return raw ? `#${raw.slice(-4).toUpperCase()}` : null;
 };
-const serializeTransaction = (transaction) => ({
+const serializeTransaction = (transaction, userId) => ({
     transactionId: transaction._id,
     shortTransactionId: formatTransactionId(transaction._id),
     walletId: transaction.walletId?._id || transaction.walletId || null,
     currency: transaction.currency || null,
     amount: transaction.amount,
     formattedAmount: formatMoney(transaction.amount, transaction.currency),
-    transactionType: transaction.type === transaction_enum_1.TransactionType.CREDIT ? "inflow" : "outflow",
-    status: mapTransactionStatus(transaction.status),
+    transactionType: transactionService.userTransactionDisplayType(transaction, userId),
+    status: transactionService.userTransactionDisplayStatus(transaction, userId),
     counterparty: transaction.counterparty || transaction.description || null,
     date: transaction.dateCompleted || transaction.createdAt,
     balance: transaction.balanceAfter ?? transaction.balanceBefore ?? null,
@@ -102,13 +102,14 @@ const serializeTransaction = (transaction) => ({
     description: transaction.description || null,
     paymentMethod: transaction.paymentMethod || null,
     paymentService: transaction.paymentService || null,
+    isSettled: Boolean(transaction.isSettled),
     serviceType: transaction.serviceType || null,
     jobId: transaction.jobId?._id || transaction.jobId || null,
     milestoneId: transaction.milestoneId || null,
     orderId: transaction.orderId?._id || transaction.orderId || null,
 });
 exports.fetchAllTransactionsByUsersController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { page, limit, paymentMethod, status, type, search, walletId, currency, sortBy, sortOrder } = req.query;
+    const { page, limit, paymentMethod, status, type, search, walletId, includeExternalPayments, currency, sortBy, sortOrder } = req.query;
     const userId = req.user._id;
     const data = await transactionService.fetchUserTransactionsFiltered(userId, {
         status: status,
@@ -116,6 +117,9 @@ exports.fetchAllTransactionsByUsersController = (0, error_handler_1.catchAsync)(
         search: search,
         paymentMethod: paymentMethod,
         walletId: walletId,
+        includeExternalPayments: includeExternalPayments === undefined
+            ? true
+            : String(includeExternalPayments).toLowerCase() === "true",
         currency: currency,
         sortBy: sortBy,
         sortOrder: sortOrder,
@@ -123,7 +127,7 @@ exports.fetchAllTransactionsByUsersController = (0, error_handler_1.catchAsync)(
         limit: limit ? Number(limit) : undefined,
     });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
-        transactions: data.transactions.map((transaction) => serializeTransaction(transaction)),
+        transactions: data.transactions.map((transaction) => serializeTransaction(transaction, String(userId))),
         totalTransactions: data.totalTransactions,
         totalPages: data.totalPages,
         page: data.page,
@@ -217,16 +221,16 @@ exports.fetchMyTransactionController = (0, error_handler_1.catchAsync)(async (re
     const transaction = await transactionService.fetchUserTransactionById(req.user._id, req.params.transactionId);
     if (!transaction)
         throw new error_1.NotFoundError("Transaction not found");
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, serializeTransaction(transaction));
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, serializeTransaction(transaction, String(req.user._id)));
 });
 const csvEscape = (value) => {
     const str = value === null || value === undefined ? "" : String(value);
     return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 };
-const buildStatementCsv = (transactions) => {
+const buildStatementCsv = (transactions, userId) => {
     const header = ["Transaction ID", "Date", "Type", "Status", "Amount", "Currency", "Balance", "Counterparty", "Reference", "Description"];
     const rows = transactions.map((transaction) => {
-        const s = serializeTransaction(transaction);
+        const s = serializeTransaction(transaction, userId);
         return [s.transactionId, s.date, s.transactionType, s.status, s.amount, s.currency, s.balance, s.counterparty, s.reference, s.description];
     });
     // BOM so Excel opens the UTF-8 file correctly
@@ -248,7 +252,7 @@ const buildStatementPdf = (transactions, user, periodLabel) => {
             doc.text(`Generated: ${new Date().toISOString()}`);
             doc.moveDown(1).fillColor("#000000");
             transactions.forEach((transaction, index) => {
-                const s = serializeTransaction(transaction);
+                const s = serializeTransaction(transaction, String(user._id));
                 doc.fontSize(9).font("Helvetica-Bold").text(`${index + 1}. ${String(s.transactionType).toUpperCase()} - ${s.currency || ""} ${s.amount} (${s.status})`);
                 doc.fontSize(8).font("Helvetica").fillColor("#444444");
                 doc.text(`Date: ${s.date}   Balance: ${s.balance ?? "-"}`);
@@ -283,7 +287,7 @@ exports.downloadStatementController = (0, error_handler_1.catchAsync)(async (req
     if (String(format) === "csv") {
         res.setHeader("Content-Type", "text/csv; charset=utf-8");
         res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-        return res.status(http_status_codes_1.StatusCodes.OK).send(buildStatementCsv(transactions));
+        return res.status(http_status_codes_1.StatusCodes.OK).send(buildStatementCsv(transactions, String(req.user._id)));
     }
     const periodLabel = `${startDate || "all"} to ${endDate || "all"}`;
     const pdfBuffer = await buildStatementPdf(transactions, req.user, periodLabel);
@@ -298,12 +302,12 @@ exports.downloadTransactionReceiptController = (0, error_handler_1.catchAsync)(a
     const transaction = await transactionService.fetchUserTransactionById(req.user._id, req.params.transactionId);
     if (!transaction)
         throw new error_1.NotFoundError("Transaction not found");
-    const receipt = serializeTransaction(transaction);
+    const receipt = serializeTransaction(transaction, String(req.user._id));
     const filename = `receipt-${receipt.shortTransactionId || receipt.transactionId}.${format}`;
     if (String(format) === "csv") {
         res.setHeader("Content-Type", "text/csv; charset=utf-8");
         res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-        return res.status(http_status_codes_1.StatusCodes.OK).send(buildStatementCsv([transaction]));
+        return res.status(http_status_codes_1.StatusCodes.OK).send(buildStatementCsv([transaction], String(req.user._id)));
     }
     const pdfBuffer = await buildStatementPdf([transaction], req.user, `Receipt ${receipt.shortTransactionId || receipt.transactionId}`);
     res.setHeader("Content-Type", "application/pdf");

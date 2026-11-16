@@ -33,6 +33,7 @@ const MilestoneSchema = new Schema<IMilestone>({
       date: {type: Date},
       paymentReciept: {type: String },
       note: {type: String },
+      referenceId: {type: String },
     },
     datePaid: {
       type: Date

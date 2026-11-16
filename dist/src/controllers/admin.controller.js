@@ -47,6 +47,7 @@ const error_1 = require("../errors/error");
 const subscriptionService = __importStar(require("../services/subscription.service"));
 const userService = __importStar(require("../services/auth.service"));
 const jobService = __importStar(require("../services/job.service"));
+const jobPaymentService = __importStar(require("../services/job-payment.service"));
 const privateExpertService = __importStar(require("../services/private-expert.service"));
 const transactionService = __importStar(require("../services/transaction.service"));
 const transaction_enum_1 = require("../enums/transaction.enum");
@@ -604,17 +605,17 @@ exports.updateJobPaymentStatusController = (0, error_handler_1.catchAsync)(async
     if (!milestone) {
         throw new error_1.NotFoundError("Milestone not found within this job!");
     }
-    milestone.paymentStatus = status;
     if (status === jobs_enum_1.MilestonePaymentStatus.paid) {
-        milestone.datePaid = new Date();
-        milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.paid;
         const transaction = await transactionService.fetchSingleTransactionByMilestoneId(String(milestone._id));
         if (!transaction) {
             throw new error_1.NotFoundError('Transaction not found!');
         }
-        transaction.status = transaction_enum_1.TransactionEnum.completed;
-        transaction.isSettled = true;
-        await transaction.save();
+        await jobPaymentService.settleJobPaymentToArtisan(transaction);
+        milestone.datePaid = milestone.datePaid || new Date();
+        milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.paid;
+    }
+    else {
+        milestone.paymentStatus = status;
     }
     await job.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, job);

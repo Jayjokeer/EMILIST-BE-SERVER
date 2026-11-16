@@ -44,6 +44,14 @@ const job_service_1 = require("../src/services/job.service");
         issuedAt: null,
     });
 });
+(0, node_test_1.default)('job details expose the latest card reference inside milestone paymentInfo', () => {
+    const milestones = [{ _id: 'milestone-1', paymentInfo: { amountPaid: 5000 } }];
+    const transactions = [
+        { milestoneId: 'milestone-1', reference: 'PS-NEWEST' },
+        { milestoneId: 'milestone-1', reference: 'PS-OLDER' },
+    ];
+    strict_1.default.equal((0, job_service_1.attachMilestonePaymentReferences)(milestones, transactions)[0].paymentInfo.referenceId, 'PS-NEWEST');
+});
 (0, node_test_1.default)('owner rejection reactivates completed work and records the reason', () => {
     const rejectedAt = new Date('2026-10-30T09:00:00.000Z');
     const milestone = {
@@ -76,6 +84,11 @@ const job_service_1 = require("../src/services/job.service");
             { acceptedApplicationId: { $in: ['application-1'] } },
         ],
     });
+});
+(0, node_test_1.default)('status endpoint orders jobs newest first by default and supports oldest first', () => {
+    strict_1.default.deepEqual((0, job_service_1.jobCreatedAtSort)(), { createdAt: -1 });
+    strict_1.default.deepEqual((0, job_service_1.jobCreatedAtSort)('newest'), { createdAt: -1 });
+    strict_1.default.deepEqual((0, job_service_1.jobCreatedAtSort)('oldest'), { createdAt: 1 });
 });
 (0, node_test_1.default)('an accepted job is active from the artisan perspective', () => {
     const artisanId = 'artisan-1';

@@ -163,7 +163,7 @@ const routes = [
     { path: '/admin/verify-bank-transfer', method: 'post', tag: 'Admin', summary: 'Approve or decline bank-transfer wallet funding', bodyExample: { transactionId: id, status: 'Approved' }, successStatus: '200' },
     { path: '/admin/fetch-private-experts', method: 'get', tag: 'Admin', summary: 'Fetch private experts', queryParams: ['page', 'limit', 'search'] },
     { path: '/admin/fetch-private-expert/{id}', method: 'get', tag: 'Admin', summary: 'Fetch a private expert' },
-    { path: '/admin/update-job-payment/{jobId}', method: 'patch', tag: 'Admin', summary: 'Update job payment status', bodyExample: { paymentStatus: 'paid' } },
+    { path: '/admin/update-job-payment/{jobId}', method: 'patch', tag: 'Admin', summary: 'Settle a confirmed job payment and credit the artisan wallet', bodyExample: { status: 'paid', milestoneId: id } },
     { path: '/admin/add-category', method: 'post', tag: 'Admin', summary: 'Create a category', bodyExample: { name: 'Plumbing' } },
     { path: '/admin/fetch-category/{id}', method: 'get', tag: 'Admin', summary: 'Fetch a category', auth: false },
     { path: '/admin/delete-category/{id}', method: 'delete', tag: 'Admin', summary: 'Delete a category' },

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
-import { FrequencyEnum, JobExpertLevel, JobPeriod, JobType, MilestoneEnum, JobUrgencyEnum, JobFrequencyEnum, DurationUnitEnum, ExperienceLevelEnum } from '../enums/jobs.enum';
+import { FrequencyEnum, JobExpertLevel, JobPeriod, JobType, MilestoneEnum, JobUrgencyEnum, JobFrequencyEnum, DurationUnitEnum, ExperienceLevelEnum, JobStatusEnum } from '../enums/jobs.enum';
 import { ProjectStatusEnum } from '../enums/project.enum';
 
 // ===================== SHARED REUSABLE SCHEMAS =====================
@@ -66,6 +66,30 @@ const jobDurationSchema = Joi.object({
 const forbiddenString = Joi.any().forbidden().messages({ 'any.unknown': 'This field is not allowed for the selected job urgency' });
 const forbiddenObject = Joi.any().forbidden().messages({ 'any.unknown': 'This field is not allowed for the selected job urgency' });
 const forbiddenArray = Joi.array().forbidden().messages({ 'any.unknown': 'This field is not allowed for the selected job urgency' });
+
+export const validateFetchJobsByStatus = (req: Request, res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    status: Joi.string()
+      .valid(
+        JobStatusEnum.listed,
+        JobStatusEnum.pending,
+        JobStatusEnum.in_review,
+        "in_review",
+        JobStatusEnum.complete,
+        JobStatusEnum.active,
+        JobStatusEnum.paused,
+        JobStatusEnum.overdue,
+      )
+      .required(),
+    orderBy: Joi.string().valid("newest", "oldest").default("newest"),
+  });
+  const { error } = schema.validate(req.query, { abortEarly: false });
+  if (error) {
+    res.status(400).json({ errors: error.details.map((detail) => detail.message) });
+    return;
+  }
+  next();
+};
 
 // ===================== CREATE JOB VALIDATION =====================
 

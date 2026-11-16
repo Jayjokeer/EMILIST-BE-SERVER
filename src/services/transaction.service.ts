@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
-import { PaymentMethodEnum, ServiceEnum, TransactionEnum, TransactionType, WalletEnum } from "../enums/transaction.enum";
+import { PaymentMethodEnum, PaymentServiceEnum, ServiceEnum, TransactionEnum, TransactionType, WalletEnum } from "../enums/transaction.enum";
 import Transaction from "../models/transaction.model";
 import AppConfig from "../models/app-config.model";
+import Wallet from "../models/wallet.model";
 
 export const createTransaction = async (data: any)=>{
     return await Transaction.create(data);
@@ -305,8 +306,9 @@ export const getVat = async ()=>{
 export const fetchSingleTransactionByMilestoneId = async (milestoneId: string) =>{
   return await Transaction.findOne({
     milestoneId: milestoneId,
-    status: TransactionEnum.processing
-  });
+    serviceType: ServiceEnum.job,
+    status: { $in: [TransactionEnum.completed, TransactionEnum.processing] },
+  }).sort({ createdAt: -1 });
 };
 
 export const fetchPriceForVerification = async()=>{
@@ -323,6 +325,88 @@ const statusCondition = (status?: string) => {
   return null;
 };
 
+const userStatusCondition = (status: string | undefined, userId: string) => {
+  if (!status || status === "all") return null;
+  const recipientId = new mongoose.Types.ObjectId(userId);
+  if (status === "successful") {
+    return {
+      $or: [
+        { userId, status: TransactionEnum.completed },
+        { recieverId: recipientId, status: TransactionEnum.completed, isSettled: true },
+      ],
+    };
+  }
+  if (status === "pending") {
+    return {
+      $or: [
+        { status: { $in: [TransactionEnum.pending, TransactionEnum.processing] } },
+        { recieverId: recipientId, status: TransactionEnum.completed, isSettled: false },
+      ],
+    };
+  }
+  if (status === "processing") {
+    return {
+      $or: [
+        { status: TransactionEnum.processing },
+        { recieverId: recipientId, status: TransactionEnum.completed, isSettled: false },
+      ],
+    };
+  }
+  return statusCondition(status);
+};
+
+export const buildWalletTransactionScopeCondition = (
+  walletId: string,
+  currency?: string,
+  includeExternalPayments = true,
+  recipientId?: string,
+) => {
+  const walletObjectId = new mongoose.Types.ObjectId(walletId);
+  if (!includeExternalPayments || !currency) return { walletId: walletObjectId };
+
+  const conditions: any[] = [
+      { walletId: walletObjectId },
+      {
+        walletId: null,
+        currency: String(currency).toUpperCase(),
+        paymentService: { $in: Object.values(PaymentServiceEnum) },
+      },
+  ];
+  if (recipientId && mongoose.Types.ObjectId.isValid(recipientId)) {
+    conditions.push({
+      recieverId: new mongoose.Types.ObjectId(recipientId),
+      currency: String(currency).toUpperCase(),
+    });
+  }
+
+  return {
+    $or: conditions,
+  };
+};
+
+export const isTransactionRecipient = (transaction: any, userId: string) =>
+  Boolean(transaction?.recieverId)
+    && String(transaction.recieverId?._id || transaction.recieverId) === String(userId)
+    && String(transaction.userId?._id || transaction.userId) !== String(userId);
+
+export const userTransactionDisplayStatus = (transaction: any, userId: string) => {
+  if (transaction?.serviceType === ServiceEnum.job && isTransactionRecipient(transaction, userId)) {
+    if (transaction.status === TransactionEnum.completed) {
+      return transaction.isSettled ? "successful" : "processing";
+    }
+    if (transaction.status === TransactionEnum.processing) return "processing";
+  }
+  if (transaction?.status === TransactionEnum.completed) return "successful";
+  if (transaction?.status === TransactionEnum.declined) return "failed";
+  if (transaction?.status === TransactionEnum.processing) return "processing";
+  return transaction?.status || null;
+};
+
+export const userTransactionDisplayType = (transaction: any, userId: string) =>
+  isTransactionRecipient(transaction, userId)
+    ? "inflow"
+    : transaction?.type === TransactionType.CREDIT ? "inflow" : "outflow";
+
 export const fetchUserTransactionsFiltered = async (
   userId: string,
   filters: {
@@ -331,6 +415,7 @@ export const fetchUserTransactionsFiltered = async (
     search?: string;
     paymentMethod?: string;
     walletId?: string;
+    includeExternalPayments?: boolean;
     currency?: string;
     sortBy?: string;
     sortOrder?: string;
@@ -344,12 +429,31 @@ export const fetchUserTransactionsFiltered = async (
 
   const andConditions: any[] = [{ $or: [{ userId: userId }, { recieverId: userId }] }];
 
-  const statusCond = statusCondition(filters.status);
+  const statusCond = userStatusCondition(filters.status, userId);
   if (statusCond) andConditions.push(statusCond);
-  if (filters.type === "inflow") andConditions.push({ type: TransactionType.CREDIT });
-  if (filters.type === "outflow") andConditions.push({ type: TransactionType.DEBIT });
+  if (filters.type === "inflow") {
+    andConditions.push({
+      $or: [
+        { userId, type: TransactionType.CREDIT },
+        { recieverId: new mongoose.Types.ObjectId(userId) },
+      ],
+    });
+  }
+  if (filters.type === "outflow") andConditions.push({ userId, type: TransactionType.DEBIT });
   if (filters.paymentMethod) andConditions.push({ paymentMethod: filters.paymentMethod });
-  if (filters.walletId) andConditions.push({ walletId: new mongoose.Types.ObjectId(filters.walletId) });
+  if (filters.walletId) {
+    const includeExternalPayments = filters.includeExternalPayments !== false;
+    let walletCurrency = filters.currency;
+
+    if (includeExternalPayments && !walletCurrency) {
+      const wallet = await Wallet.findOne({ _id: filters.walletId, userId }).select("currency").lean();
+      walletCurrency = wallet?.currency;
+    }
+
+    andConditions.push(
+      buildWalletTransactionScopeCondition(filters.walletId, walletCurrency, includeExternalPayments, userId)
+    );
+  }
   if (filters.currency) andConditions.push({ currency: String(filters.currency).toUpperCase() });
 
   // Search by transaction reference/id or counterparty (falls back to description)

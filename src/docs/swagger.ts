@@ -888,12 +888,13 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
       get: {
         tags: ["Transactions"],
         summary: "List the user's transactions with filters and pagination",
-        description: `Filter by \`status\`, \`type\`, \`walletId\`, \`currency\` and free-text \`search\` (transaction reference/id or counterparty). Sort with \`sortBy=date|amount\` + \`sortOrder=asc|desc\` (Transaction Type column control). Item shape: transactionId, shortTransactionId (#3066 style), walletId, currency, amount, formattedAmount, transactionType, status, counterparty, date, balance, reference, description, paymentMethod, paymentService, serviceType, jobId, milestoneId and orderId. Linked identifiers are returned when applicable so the client can navigate to the underlying job, milestone or order. Mapping: CREDIT->inflow, DEBIT->outflow; completed->successful, declined->failed, processing->pending.`,
+        description: `Filter by \`status\`, \`type\`, \`walletId\`, \`currency\` and free-text \`search\` (transaction reference/id or counterparty). When \`walletId\` is supplied, same-currency external and incoming payments are included by default; pass \`includeExternalPayments=false\` for strict wallet-only history. Artisan job payments follow \`pending\` when initiated, \`processing\` after payment confirmation while funds remain in Emilist escrow, and \`successful\` after settlement credits the artisan wallet. Incoming payments are returned as \`inflow\`. Sort with \`sortBy=date|amount\` + \`sortOrder=asc|desc\`. Item shape includes transactionId, walletId, amount, transactionType, status, reference, paymentMethod, paymentService, isSettled, serviceType, jobId and milestoneId.`,
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: "status", in: "query", schema: { type: "string", enum: ["all", "pending", "failed", "successful"] }, description: "Defaults to all" },
+          { name: "status", in: "query", schema: { type: "string", enum: ["all", "pending", "processing", "failed", "successful"] }, description: "Defaults to all" },
           { name: "type", in: "query", schema: { type: "string", enum: ["inflow", "outflow"] } },
-          { name: "walletId", in: "query", schema: { type: "string" }, description: "Only transactions for this wallet" },
+          { name: "walletId", in: "query", schema: { type: "string" }, description: "Transactions for this wallet plus same-currency external payments by default" },
+          { name: "includeExternalPayments", in: "query", schema: { type: "boolean", default: true }, description: "Include Paystack/Stripe transactions that have no walletId when walletId is supplied" },
           { name: "currency", in: "query", schema: { type: "string", enum: ["NGN", "USD", "GBP", "EUR"] } },
           { name: "sortBy", in: "query", schema: { type: "string", enum: ["date", "amount"] }, description: "Column to sort by (default date)" },
           { name: "sortOrder", in: "query", schema: { type: "string", enum: ["asc", "desc"] }, description: "Sort direction (default desc)" },
@@ -910,7 +911,7 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
                   message: "success",
                   data: {
                     transactions: [
-                      { transactionId: "64f1a2b3c4d5e6f7a8b9c0ad", walletId: null, currency: "NGN", amount: 5000, transactionType: "outflow", status: "successful", counterparty: "Artisan Name", date: "2026-08-31T10:00:00.000Z", balance: null, reference: "PS-1693500000000X8Y2", description: "Job payment via card", paymentMethod: "Card", paymentService: "Paystack", serviceType: "Job", jobId: "64f5c0a1b2c3d4e5f6a7b8c9", milestoneId: "64fb0a1b2c3d4e5f6a7b8c9b", orderId: null },
+                      { transactionId: "64f1a2b3c4d5e6f7a8b9c0ad", walletId: null, currency: "NGN", amount: 5000, transactionType: "inflow", status: "processing", counterparty: "Job payment via card", date: "2026-08-31T10:00:00.000Z", balance: null, reference: "PS-1693500000000X8Y2", description: "Job payment via card", paymentMethod: "Card", paymentService: "Paystack", isSettled: false, serviceType: "Job", jobId: "64f5c0a1b2c3d4e5f6a7b8c9", milestoneId: "64fb0a1b2c3d4e5f6a7b8c9b", orderId: null },
                     ],
                     totalTransactions: 24,
                     totalPages: 3,
@@ -1126,7 +1127,9 @@ review summary and comments (\`reviews\`: average rating, star distribution, and
 of reviews/comments pulled from the poster's Business profile). Authentication is optional. When a
 bearer token is supplied, viewer-specific status is derived automatically: \`in review\` for the
 owner, \`applied\` for an applicant, and \`listed\` for other artisans. \`applicationId\` contains
-the authenticated viewer's application ID or null. The internal \`applications\` array is not exposed.`,
+the authenticated viewer's application ID or null. For card payments, the latest non-failed
+Paystack reference is returned as \`milestones[].paymentInfo.referenceId\`. The internal
+\`applications\` array is not exposed.`,
         security: [{}, { bearerAuth: [] }],
         parameters: [
           { name: "id", in: "query", required: true, schema: { type: "string" }, description: "MongoDB ObjectId of the job", example: "64f5c0a1b2c3d4e5f6a7b8c9" },
@@ -1168,6 +1171,7 @@ the authenticated viewer's application ID or null. The internal \`applications\`
                           currency: "NGN",
                           status: "active",
                           paymentStatus: "unpaid",
+                          paymentInfo: { referenceId: "PS-1693500000000X8Y2" },
                           dueDate: "2025-01-17T09:30:00.000Z",
                         },
                       ],
@@ -1803,10 +1807,11 @@ Allowed \`status\` values: \`applied\`, \`pending\`, \`accepted\`, \`rejected\`,
       get: {
         tags: ["Jobs"],
         summary: "Fetch the user's jobs filtered by status",
-        description: "Returns the current user's jobs filtered by `status`, enriched with milestone progress, due dates and overdue flags.",
+        description: "Returns the current user's jobs filtered by `status`, enriched with milestone progress, due dates and overdue flags. Results are ordered newest first by default.",
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "status", in: "query", required: true, schema: { type: "string", enum: ["listed", "pending", "in review", "completed", "active", "paused", "overdue"] }, description: "Job status to filter by (creator lens: listed = newly posted, in review = has applications; legacy pending maps to listed)", example: "listed" },
+          { name: "orderBy", in: "query", required: false, schema: { type: "string", enum: ["newest", "oldest"], default: "newest" }, description: "Sort by job creation date. Defaults to newest first." },
         ],
         responses: {
           "200": {
@@ -2683,6 +2688,7 @@ required fields for that type. Two media types are supported:
               date: { type: "string", format: "date" },
               paymentReciept: { type: "string" },
               note: { type: "string" },
+              referenceId: { type: "string", description: "Paystack/card transaction reference" },
             },
           },
           datePaid: { type: "string", format: "date" },

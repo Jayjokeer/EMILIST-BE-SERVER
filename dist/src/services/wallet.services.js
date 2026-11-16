@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.declineWithdrawal = exports.approveWithdrawal = exports.refundFailedWithdrawalByReference = exports.debitWalletForWithdrawal = exports.fetchWalletOverview = exports.fetchWalletDetail = exports.fetchUserWallets = exports.payWithWallet = exports.setDefaultWallet = exports.createNewWallet = exports.creditWalletFunding = exports.fundWallet = exports.findWallet = exports.findUserWalletByCurrency = exports.findUserWallet = exports.findWalletById = exports.createWallet = void 0;
+exports.declineWithdrawal = exports.approveWithdrawal = exports.refundFailedWithdrawalByReference = exports.debitWalletForWithdrawal = exports.fetchWalletOverview = exports.fetchWalletDetail = exports.fetchUserWallets = exports.payWithWallet = exports.setDefaultWallet = exports.createNewWallet = exports.creditJobPaymentSettlement = exports.creditWalletFunding = exports.fundWallet = exports.findWallet = exports.findUserWalletByCurrency = exports.findUserWallet = exports.findWalletById = exports.createWallet = void 0;
 const transaction_enum_1 = require("../enums/transaction.enum");
 const error_1 = require("../errors/error");
 const wallet_model_1 = __importDefault(require("../models/wallet.model"));
@@ -94,6 +94,27 @@ const creditWalletFunding = async (walletId, amount, reference) => {
     return wallet;
 };
 exports.creditWalletFunding = creditWalletFunding;
+// Releases a confirmed job payment from escrow into the artisan's wallet once.
+// The adjustment key makes retries safe even if two admin requests overlap.
+const creditJobPaymentSettlement = async (receiverId, currency, amount, transactionId) => {
+    if (!receiverId)
+        throw new error_1.BadRequestError("Job payment receiver is required");
+    if (!transactionId)
+        throw new error_1.BadRequestError("Job payment transaction is required");
+    const wallet = await wallet_model_1.default.findOneAndUpdate({ userId: receiverId, currency }, { $setOnInsert: { userId: receiverId, currency, balance: 0 } }, { upsert: true, new: true });
+    if (!wallet)
+        throw new error_1.NotFoundError("Artisan wallet could not be created");
+    const adjustmentKey = `JOB-SETTLEMENT:${transactionId}`;
+    await wallet_model_1.default.updateOne({ _id: wallet._id, appliedAdjustments: { $ne: adjustmentKey } }, {
+        $inc: { balance: amount },
+        $addToSet: { appliedAdjustments: adjustmentKey },
+    });
+    const creditedWallet = await wallet_model_1.default.findById(wallet._id);
+    if (!creditedWallet)
+        throw new error_1.NotFoundError("Artisan wallet not found");
+    return creditedWallet;
+};
+exports.creditJobPaymentSettlement = creditJobPaymentSettlement;
 const createNewWallet = async (userId, currency, isDefault = false) => {
     const existingWallet = await wallet_model_1.default.findOne({ userId, currency });
     if (existingWallet)

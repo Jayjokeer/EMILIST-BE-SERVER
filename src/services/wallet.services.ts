@@ -57,6 +57,38 @@ export const creditWalletFunding = async (
   return wallet;
 };
 
+// Releases a confirmed job payment from escrow into the artisan's wallet once.
+// The adjustment key makes retries safe even if two admin requests overlap.
+export const creditJobPaymentSettlement = async (
+  receiverId: string,
+  currency: WalletEnum,
+  amount: number,
+  transactionId: string,
+) => {
+  if (!receiverId) throw new BadRequestError("Job payment receiver is required");
+  if (!transactionId) throw new BadRequestError("Job payment transaction is required");
+
+  const wallet = await Wallet.findOneAndUpdate(
+    { userId: receiverId, currency },
+    { $setOnInsert: { userId: receiverId, currency, balance: 0 } },
+    { upsert: true, new: true },
+  );
+  if (!wallet) throw new NotFoundError("Artisan wallet could not be created");
+
+  const adjustmentKey = `JOB-SETTLEMENT:${transactionId}`;
+  await Wallet.updateOne(
+    { _id: wallet._id, appliedAdjustments: { $ne: adjustmentKey } },
+    {
+      $inc: { balance: amount },
+      $addToSet: { appliedAdjustments: adjustmentKey },
+    },
+  );
+
+  const creditedWallet = await Wallet.findById(wallet._id);
+  if (!creditedWallet) throw new NotFoundError("Artisan wallet not found");
+  return creditedWallet;
+};
+
 export const createNewWallet = async (userId: string, currency: WalletEnum, isDefault = false) => {
     const existingWallet = await Wallet.findOne({ userId, currency });
     if (existingWallet) throw new BadRequestError(`Wallet for ${currency} already exists`);
