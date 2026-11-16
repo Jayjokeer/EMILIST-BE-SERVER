@@ -23,7 +23,7 @@ const storage = new CloudinaryStorage({
 
     return {
       folder,
-      allowed_formats: ['jpg', 'png', 'jpeg', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv'],
+      allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv'],
       public_id: publicId,
     };
   },
@@ -31,6 +31,33 @@ const storage = new CloudinaryStorage({
 const singleUpload = multer({ storage }).single('image');
 
 const multipleUpload = multer({ storage }).array('files', 10);
+
+const supportImageUpload = multer({
+  storage,
+  limits: { files: 10, fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    if (["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) {
+      return callback(null, true);
+    }
+    const error = new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname);
+    error.message = "Support attachments must be JPG, PNG, or WEBP images";
+    return callback(error);
+  },
+}).array("attachments", 10);
+
+export const applySupportImageAttachments = (req: Request, res: Response, next: NextFunction) => {
+  if (req.body.attachments !== undefined) {
+    return res.status(400).json({
+      code: 400,
+      status: "fail",
+      message: "attachments must be uploaded image files, not links or text values",
+    });
+  }
+
+  const files = (req.files as Express.Multer.File[] | undefined) || [];
+  req.body.attachments = files.map((file) => file.path);
+  next();
+};
 
 export const normalizeBusinessFileField = (fieldName: string): string | undefined => {
   const trimmedFieldName = fieldName.trim();
@@ -178,4 +205,4 @@ export const parseJobBody = (
   }
 };
 
-export { cloudinary, singleUpload, multipleUpload, uploadBusinessImages };
+export { cloudinary, singleUpload, multipleUpload, supportImageUpload, uploadBusinessImages };

@@ -185,6 +185,12 @@ export const validateCreateInvoiceDispute = validate(Joi.object({
   invoiceId: Joi.string().hex().length(24),
   reason: Joi.string().trim().min(10).max(5000).required(),
   subject: Joi.string().trim().min(3).max(150),
+  disputeType: Joi.string().valid(
+    "owner_unsatisfied_work",
+    "owner_additional_cost_reason",
+    "artisan_additional_cost_unpaid",
+    "artisan_invoice_unpaid_overdue",
+  ).required(),
   attachments: Joi.array().items(Joi.string().uri()).max(10).default([]),
 }));
 

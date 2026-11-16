@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.countUnresolvedSupportRequests = exports.fetchSupportAssignees = exports.addSupportAdminNote = exports.customerReplyToSupportRequest = exports.replyToSupportRequest = exports.assignSupportRequest = exports.resolveSupportRequest = exports.updateSupportRequest = exports.fetchSupportRequest = exports.fetchSupportRequests = exports.fetchSupportSummary = exports.fetchUserSupportRequest = exports.fetchUserSupportRequests = exports.createInvoiceDispute = exports.invoiceDisputeMilestone = exports.createSupportRequest = exports.supportPagination = void 0;
+exports.countUnresolvedSupportRequests = exports.fetchSupportAssignees = exports.addSupportAdminNote = exports.customerReplyToSupportRequest = exports.replyToSupportRequest = exports.assignSupportRequest = exports.resolveSupportRequest = exports.updateSupportRequest = exports.fetchSupportRequest = exports.fetchSupportRequests = exports.fetchSupportSummary = exports.fetchUserSupportRequest = exports.fetchUserSupportRequests = exports.createInvoiceDispute = exports.invoiceDisputeMilestone = exports.INVOICE_NON_PAYMENT_GRACE_DAYS = exports.createSupportRequest = exports.supportPagination = void 0;
 const mongoose_1 = require("mongoose");
 const error_1 = require("../errors/error");
 const support_enum_1 = require("../enums/support.enum");
@@ -12,6 +12,7 @@ const admin_model_1 = __importDefault(require("../models/admin.model"));
 const users_model_1 = __importDefault(require("../models/users.model"));
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const jobs_enum_1 = require("../enums/jobs.enum");
+const project_model_1 = __importDefault(require("../models/project.model"));
 const supportPagination = (pageValue, limitValue) => {
     const page = Math.max(1, Number(pageValue) || 1);
     const limit = Math.min(100, Math.max(1, Number(limitValue) || 10));
@@ -35,18 +36,17 @@ const createSupportRequest = async (requesterId, body) => {
     return (0, exports.fetchSupportRequest)(String(request._id));
 };
 exports.createSupportRequest = createSupportRequest;
-const invoiceDisputeMilestone = (job, requesterId, milestoneId, invoiceId) => {
-    if (String(job.userId?._id || job.userId) !== String(requesterId)) {
-        throw new error_1.ForbiddenError("Only the job owner can dispute this invoice");
-    }
+exports.INVOICE_NON_PAYMENT_GRACE_DAYS = 7;
+const invoiceDisputeMilestone = (job, requesterId, milestoneId, invoiceId, disputeType = support_enum_1.InvoiceDisputeType.ownerUnsatisfiedWork, acceptedArtisanId, now = new Date()) => {
+    const isOwner = String(job.userId?._id || job.userId) === String(requesterId);
+    const isArtisan = Boolean(acceptedArtisanId) && String(acceptedArtisanId) === String(requesterId);
+    if (!isOwner && !isArtisan)
+        throw new error_1.ForbiddenError("Only the job owner or accepted artisan can dispute this invoice");
     const milestone = (job.milestones || []).find((item) => String(item._id) === String(milestoneId));
     if (!milestone)
         throw new error_1.NotFoundError("Milestone not found");
     if (!milestone.invoice?.invoiceRaised || !milestone.invoice?.invoiceId) {
         throw new error_1.BadRequestError("No invoice has been raised for this milestone");
-    }
-    if (milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.paid) {
-        throw new error_1.BadRequestError("A paid invoice cannot be disputed through this unpaid-invoice flow");
     }
     if (milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.processing) {
         throw new error_1.BadRequestError("The invoice payment is currently being processed");
@@ -54,7 +54,38 @@ const invoiceDisputeMilestone = (job, requesterId, milestoneId, invoiceId) => {
     if (invoiceId && String(milestone.invoice.invoiceId) !== String(invoiceId)) {
         throw new error_1.BadRequestError("Invoice does not belong to this milestone");
     }
-    return milestone;
+    const ownerTypes = [support_enum_1.InvoiceDisputeType.ownerUnsatisfiedWork, support_enum_1.InvoiceDisputeType.ownerAdditionalCostReason];
+    const artisanTypes = [support_enum_1.InvoiceDisputeType.artisanAdditionalCostUnpaid, support_enum_1.InvoiceDisputeType.artisanInvoiceUnpaidOverdue];
+    if (isOwner && !ownerTypes.includes(disputeType))
+        throw new error_1.ForbiddenError("This dispute type is only available to the artisan");
+    if (isArtisan && !artisanTypes.includes(disputeType))
+        throw new error_1.ForbiddenError("This dispute type is only available to the job owner");
+    const originalAmount = Number(milestone.amount || 0);
+    const additionalAmount = Math.max(0, Number(milestone.invoice.additionalAmount || 0));
+    const amountPaid = Math.max(0, Number(milestone.paymentInfo?.amountPaid || 0));
+    if (disputeType === support_enum_1.InvoiceDisputeType.ownerAdditionalCostReason && additionalAmount <= 0) {
+        throw new error_1.BadRequestError("This invoice does not contain an additional cost");
+    }
+    if (disputeType === support_enum_1.InvoiceDisputeType.artisanAdditionalCostUnpaid) {
+        if (additionalAmount <= 0)
+            throw new error_1.BadRequestError("This invoice does not contain an additional cost");
+        if (amountPaid <= 0)
+            throw new error_1.BadRequestError("The original invoice payment has not been made yet");
+        if (amountPaid >= originalAmount + additionalAmount)
+            throw new error_1.BadRequestError("The additional cost has already been paid");
+    }
+    if (disputeType === support_enum_1.InvoiceDisputeType.artisanInvoiceUnpaidOverdue) {
+        if (milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.paid)
+            throw new error_1.BadRequestError("This invoice has already been paid");
+        if (!milestone.invoice.issuedAt)
+            throw new error_1.BadRequestError("Invoice issue date is unavailable");
+        const eligibleAt = new Date(milestone.invoice.issuedAt);
+        eligibleAt.setDate(eligibleAt.getDate() + exports.INVOICE_NON_PAYMENT_GRACE_DAYS);
+        if (now < eligibleAt) {
+            throw new error_1.BadRequestError(`The invoice must remain unpaid for ${exports.INVOICE_NON_PAYMENT_GRACE_DAYS} days before a dispute can be raised`);
+        }
+    }
+    return { milestone, raisedByRole: isOwner ? "job_owner" : "artisan" };
 };
 exports.invoiceDisputeMilestone = invoiceDisputeMilestone;
 const createInvoiceDispute = async (requesterId, body) => {
@@ -64,9 +95,11 @@ const createInvoiceDispute = async (requesterId, body) => {
     const job = await jobs_model_1.default.findById(body.jobId);
     if (!job)
         throw new error_1.NotFoundError("Job not found");
-    const milestone = (0, exports.invoiceDisputeMilestone)(job, requesterId, body.milestoneId, body.invoiceId);
+    const acceptedProject = job.acceptedApplicationId
+        ? await project_model_1.default.findById(job.acceptedApplicationId).select("user").lean()
+        : null;
+    const { milestone, raisedByRole } = (0, exports.invoiceDisputeMilestone)(job, requesterId, body.milestoneId, body.invoiceId, body.disputeType, acceptedProject?.user ? String(acceptedProject.user) : undefined);
     const existing = await support_request_model_1.default.findOne({
-        requesterId,
         jobId: job._id,
         milestoneId: milestone._id,
         category: support_enum_1.SupportRequestCategory.dispute,
@@ -87,6 +120,8 @@ const createInvoiceDispute = async (requesterId, body) => {
         jobId: job._id,
         milestoneId: milestone._id,
         invoiceId: milestone.invoice.invoiceId,
+        disputeType: body.disputeType,
+        raisedByRole,
         lastMessageAt: new Date(),
         messages: [{
                 senderType: "customer",
@@ -307,6 +342,15 @@ const updateSupportRequest = async (requestId, adminId, body) => {
     }
     else if (previousStatus === support_enum_1.SupportRequestStatus.resolved) {
         request.resolvedAt = undefined;
+        if (request.jobId && request.milestoneId) {
+            const job = await jobs_model_1.default.findById(request.jobId);
+            const milestone = job?.milestones?.find((item) => String(item._id) === String(request.milestoneId));
+            if (milestone?.invoice) {
+                milestone.invoice.disputeStatus = "open";
+                job.markModified("milestones");
+                await job.save();
+            }
+        }
     }
     request.history.push({
         adminId,

@@ -76,6 +76,7 @@ router.route("/update-quote-status/:projectId").patch(current_user_1.userAuth, j
 router.route("/update-milestone-payment").patch(current_user_1.userAuth, image_upload_1.singleUpload, job_validation_1.validateUpdateMilestonePayment, jobController.updateMilestonePaymentController);
 router.route("/user-job-analytics").get(current_user_1.userAuth, jobController.jobAnalyticsController);
 router.route("/close-contract/:jobId").patch(current_user_1.userAuth, jobController.closeContractController);
+router.route("/:jobId/review-owner").post(current_user_1.userAuth, job_validation_1.validateReviewJobOwner, jobController.reviewJobOwnerController);
 router.route("/fetch-job-count-creator").get(current_user_1.userAuth, jobController.fetchJobCountsController);
 router.route("/fetch-project-count").get(current_user_1.userAuth, jobController.fetchProjectCountsController);
 router.route("/user-project-analytics").get(current_user_1.userAuth, jobController.projectAnalyticsController);

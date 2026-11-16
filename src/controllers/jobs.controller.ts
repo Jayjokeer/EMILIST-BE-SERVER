@@ -1572,6 +1572,9 @@ export const closeContractController = catchAsync( async(req:JwtPayload, res: Re
     throw new UnauthorizedError("Unauthorized!");
   }
   if (job.isClosed) throw new BadRequestError('Contract is already closed!');
+  if (jobService.hasUnresolvedMilestoneDispute(job.milestones)) {
+    throw new BadRequestError('This contract cannot be closed while a milestone dispute is unresolved.');
+  }
 
   const allMilestonesCompletedAndPaid = jobService.areAllMilestonesCompletedAndPaid(job.milestones);
 
@@ -1607,6 +1610,36 @@ const data = await reviewService.addReview(payload);
   await business.save();
   return successResponse(res,StatusCodes.OK, "Job closed successfully");
 
+});
+
+export const reviewJobOwnerController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const reviewerId = String(req.user._id);
+  const job = await jobService.fetchJobById(String(req.params.jobId));
+  if (!job) throw new NotFoundError("Job not found!");
+  if (!job.isClosed) throw new BadRequestError("The contract must be closed before the job owner can be reviewed");
+
+  const project: any = await projectService.fetchProjectById(String(job.acceptedApplicationId));
+  if (!project) throw new NotFoundError("Accepted project not found!");
+  if (String(project.user?._id || project.user) !== reviewerId) {
+    throw new UnauthorizedError("Only the accepted artisan can review the job owner");
+  }
+
+  const ownerId = String((job.userId as any)?._id || job.userId);
+  if (await reviewService.findJobOwnerReview(String(job._id), reviewerId, ownerId)) {
+    throw new BadRequestError("You have already reviewed this job owner for this job");
+  }
+
+  const review = await reviewService.addReview({
+    jobId: job._id,
+    projectId: project._id,
+    userId: reviewerId,
+    reviewedUserId: ownerId,
+    rating: req.body.rating,
+    comment: req.body.comment,
+    rateCommunication: req.body.rateCommunication,
+    isRecommendVendor: req.body.isRecommendOwner,
+  });
+  return successResponse(res, StatusCodes.CREATED, review);
 });
 
 export const fetchJobCountsController = catchAsync( async(req:JwtPayload, res: Response) =>{

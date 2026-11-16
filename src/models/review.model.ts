@@ -10,6 +10,8 @@ import { IReview } from '../interfaces/review.interface';
       comment: { type: String, trim: true },
       businessId: { type: Schema.Types.ObjectId, ref: "Business" },
       projectId: { type: Schema.Types.ObjectId, ref: "Project" },
+      jobId: { type: Schema.Types.ObjectId, ref: "Jobs" },
+      reviewedUserId: { type: Schema.Types.ObjectId, ref: "Users" },
       rateCommunication: { type: Number,  min: 1, max: 5 },
       isRecommendVendor: {type: Boolean},
       helpfulUsers: { type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: [] },
@@ -18,6 +20,11 @@ import { IReview } from '../interfaces/review.interface';
       notHelpfulCount: { type: Number, default: 0 },
     },
     { timestamps: true }
+  );
+
+  reviewSchema.index(
+    { jobId: 1, userId: 1, reviewedUserId: 1 },
+    { unique: true, sparse: true },
   );
   
   export default mongoose.model<IReview>("Review", reviewSchema);

@@ -91,6 +91,21 @@ export const validateFetchJobsByStatus = (req: Request, res: Response, next: Nex
   next();
 };
 
+export const validateReviewJobOwner = (req: Request, res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    rating: Joi.number().integer().min(1).max(5).required(),
+    comment: Joi.string().trim().max(2000).allow(""),
+    rateCommunication: Joi.number().integer().min(1).max(5),
+    isRecommendOwner: Joi.boolean(),
+  });
+  const { error } = schema.validate(req.body, { abortEarly: false });
+  if (error) {
+    res.status(400).json({ errors: error.details.map((detail) => detail.message) });
+    return;
+  }
+  next();
+};
+
 // ===================== CREATE JOB VALIDATION =====================
 
 export const validateJob = (req: Request, res: Response, next: NextFunction) => {

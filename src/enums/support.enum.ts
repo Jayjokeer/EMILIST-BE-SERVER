@@ -28,3 +28,10 @@ export enum SupportRequestCategory {
   report = "report",
   other = "other",
 }
+
+export enum InvoiceDisputeType {
+  ownerUnsatisfiedWork = "owner_unsatisfied_work",
+  ownerAdditionalCostReason = "owner_additional_cost_reason",
+  artisanAdditionalCostUnpaid = "artisan_additional_cost_unpaid",
+  artisanInvoiceUnpaidOverdue = "artisan_invoice_unpaid_overdue",
+}

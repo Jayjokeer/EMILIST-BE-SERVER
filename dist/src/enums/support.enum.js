@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SupportRequestCategory = exports.SupportRequestPriority = exports.SupportRequestStatus = void 0;
+exports.InvoiceDisputeType = exports.SupportRequestCategory = exports.SupportRequestPriority = exports.SupportRequestStatus = void 0;
 var SupportRequestStatus;
 (function (SupportRequestStatus) {
     SupportRequestStatus["open"] = "open";
@@ -32,3 +32,10 @@ var SupportRequestCategory;
     SupportRequestCategory["report"] = "report";
     SupportRequestCategory["other"] = "other";
 })(SupportRequestCategory || (exports.SupportRequestCategory = SupportRequestCategory = {}));
+var InvoiceDisputeType;
+(function (InvoiceDisputeType) {
+    InvoiceDisputeType["ownerUnsatisfiedWork"] = "owner_unsatisfied_work";
+    InvoiceDisputeType["ownerAdditionalCostReason"] = "owner_additional_cost_reason";
+    InvoiceDisputeType["artisanAdditionalCostUnpaid"] = "artisan_additional_cost_unpaid";
+    InvoiceDisputeType["artisanInvoiceUnpaidOverdue"] = "artisan_invoice_unpaid_overdue";
+})(InvoiceDisputeType || (exports.InvoiceDisputeType = InvoiceDisputeType = {}));

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as jobController from "../controllers/jobs.controller";
-import { validateApplicationStatusUpdate, validateAttentionViewed, validateCounterBid, validateCounterBidResponse, validateFetchJobsByStatus, validateJob, validateMilestoneRejection, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateRecurringJob, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
+import { validateApplicationStatusUpdate, validateAttentionViewed, validateCounterBid, validateCounterBidResponse, validateFetchJobsByStatus, validateJob, validateMilestoneRejection, validateMilestoneStatusUpdate, validatePostQuote, validateProjectApplication, validateRecurringJob, validateReviewJobOwner, validateUpdateJob, validateUpdateMilestonePayment } from "../validations/job.validation";
 import { optionalUserAuth, userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload, parseJobBody } from "../utils/image-upload";
 import * as paymentController from "../controllers/payment.controller";
@@ -41,6 +41,7 @@ router.route("/update-quote-status/:projectId").patch(userAuth, jobController.ac
 router.route("/update-milestone-payment").patch(userAuth,singleUpload,validateUpdateMilestonePayment, jobController.updateMilestonePaymentController );
 router.route("/user-job-analytics").get(userAuth, jobController.jobAnalyticsController);
 router.route("/close-contract/:jobId").patch(userAuth, jobController.closeContractController );
+router.route("/:jobId/review-owner").post(userAuth, validateReviewJobOwner, jobController.reviewJobOwnerController);
 router.route("/fetch-job-count-creator").get(userAuth, jobController.fetchJobCountsController);
 router.route("/fetch-project-count").get(userAuth, jobController.fetchProjectCountsController);
 router.route("/user-project-analytics").get(userAuth, jobController.projectAnalyticsController);

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JobStatusEnum, MilestoneEnum, MilestonePaymentStatus } from '../src/enums/jobs.enum';
 import { ProjectStatusEnum } from '../src/enums/project.enum';
-import { areAllMilestonesCompletedAndPaid, attachMilestonePaymentReferences, buildListedLifecycleScope, buildVisibleJobsQuery, jobCreatedAtSort, milestonePaymentBreakdown, raiseMilestoneInvoice, rejectCompletedMilestone, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate } from '../src/services/job.service';
+import { areAllMilestonesCompletedAndPaid, attachMilestonePaymentReferences, buildListedLifecycleScope, buildVisibleJobsQuery, jobCreatedAtSort, jobDisputeSummary, milestonePaymentBreakdown, raiseMilestoneInvoice, rejectCompletedMilestone, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate } from '../src/services/job.service';
 
 test('job owner can omit an artisan additional cost and pay the original invoice amount', () => {
   const milestone = { amount: 50000, invoice: { additionalAmount: 7500, invoiceRaised: true } };
@@ -54,6 +54,17 @@ test('job details expose the latest card reference inside milestone paymentInfo'
   ];
 
   assert.equal(attachMilestonePaymentReferences(milestones, transactions)[0].paymentInfo.referenceId, 'PS-NEWEST');
+});
+
+test('job dispute summary blocks closure while any milestone dispute remains open', () => {
+  const summary = jobDisputeSummary([
+    { _id: 'milestone-1', invoice: { disputeTicketId: 'ticket-1', disputeStatus: 'resolved' } },
+    { _id: 'milestone-2', invoice: { disputeTicketId: 'ticket-2', disputeStatus: 'open' } },
+  ]);
+  assert.equal(summary.hasDispute, true);
+  assert.equal(summary.hasUnresolvedDispute, true);
+  assert.equal(summary.canCloseContract, false);
+  assert.deepEqual(summary.unresolvedMilestoneIds, ['milestone-2']);
 });
 
 test('owner rejection reactivates completed work and records the reason', () => {

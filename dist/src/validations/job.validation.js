@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneRejection = exports.validateMilestoneStatusUpdate = exports.validateAttentionViewed = exports.validateApplicationStatusUpdate = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = exports.validateFetchJobsByStatus = void 0;
+exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneRejection = exports.validateMilestoneStatusUpdate = exports.validateAttentionViewed = exports.validateApplicationStatusUpdate = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = exports.validateReviewJobOwner = exports.validateFetchJobsByStatus = void 0;
 const joi_1 = __importDefault(require("joi"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 const project_enum_1 = require("../enums/project.enum");
@@ -79,6 +79,21 @@ const validateFetchJobsByStatus = (req, res, next) => {
     next();
 };
 exports.validateFetchJobsByStatus = validateFetchJobsByStatus;
+const validateReviewJobOwner = (req, res, next) => {
+    const schema = joi_1.default.object({
+        rating: joi_1.default.number().integer().min(1).max(5).required(),
+        comment: joi_1.default.string().trim().max(2000).allow(""),
+        rateCommunication: joi_1.default.number().integer().min(1).max(5),
+        isRecommendOwner: joi_1.default.boolean(),
+    });
+    const { error } = schema.validate(req.body, { abortEarly: false });
+    if (error) {
+        res.status(400).json({ errors: error.details.map((detail) => detail.message) });
+        return;
+    }
+    next();
+};
+exports.validateReviewJobOwner = validateReviewJobOwner;
 // ===================== CREATE JOB VALIDATION =====================
 const validateJob = (req, res, next) => {
     const jobValidation = joi_1.default.object({

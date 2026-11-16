@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { invoiceDisputeMilestone, supportPagination } from "../src/services/support-request.service";
+import { InvoiceDisputeType } from "../src/enums/support.enum";
 
 test("support request pagination is bounded and deterministic", () => {
   assert.deepEqual(supportPagination(undefined, undefined), { page: 1, limit: 10, skip: 0 });
@@ -16,24 +17,25 @@ test("invoice dispute resolves the exact raised invoice for the job owner", () =
       invoice: { invoiceRaised: true, invoiceId: "6ab584cbcff7d52841928b9b" },
     }],
   };
-  const milestone = invoiceDisputeMilestone(
+  const result = invoiceDisputeMilestone(
     job,
     "6a21f270d23c3015a245cc84",
     "6ab584cbcff7d52841928b9a",
     "6ab584cbcff7d52841928b9b",
   );
-  assert.equal(String(milestone._id), "6ab584cbcff7d52841928b9a");
+  assert.equal(String(result.milestone._id), "6ab584cbcff7d52841928b9a");
+  assert.equal(result.raisedByRole, "job_owner");
 });
 
 test("invoice dispute rejects a requester who is not the job owner", () => {
   const job: any = { userId: "owner", milestones: [] };
   assert.throws(
     () => invoiceDisputeMilestone(job, "another-user", "milestone"),
-    /Only the job owner/,
+    /Only the job owner or accepted artisan/,
   );
 });
 
-test("invoice dispute rejects an invoice that has already been paid", () => {
+test("job owner can dispute unsatisfactory work after an invoice was paid", () => {
   const job: any = {
     userId: "owner",
     milestones: [{
@@ -42,8 +44,43 @@ test("invoice dispute rejects an invoice that has already been paid", () => {
       invoice: { invoiceRaised: true, invoiceId: "invoice" },
     }],
   };
-  assert.throws(
-    () => invoiceDisputeMilestone(job, "owner", "milestone", "invoice"),
-    /paid invoice cannot be disputed/i,
+  const result = invoiceDisputeMilestone(
+    job, "owner", "milestone", "invoice", InvoiceDisputeType.ownerUnsatisfiedWork,
   );
+  assert.equal(result.raisedByRole, "job_owner");
+});
+
+test("artisan can dispute an unpaid additional cost after the original amount was paid", () => {
+  const job: any = {
+    userId: "owner",
+    milestones: [{
+      _id: "milestone",
+      amount: 5000,
+      paymentStatus: "paid",
+      paymentInfo: { amountPaid: 5000 },
+      invoice: { invoiceRaised: true, invoiceId: "invoice", additionalAmount: 1000 },
+    }],
+  };
+  const result = invoiceDisputeMilestone(
+    job, "artisan", "milestone", "invoice",
+    InvoiceDisputeType.artisanAdditionalCostUnpaid, "artisan",
+  );
+  assert.equal(result.raisedByRole, "artisan");
+});
+
+test("artisan can dispute an invoice unpaid beyond the seven-day grace period", () => {
+  const now = new Date("2026-11-17T12:00:00.000Z");
+  const job: any = {
+    userId: "owner",
+    milestones: [{
+      _id: "milestone",
+      paymentStatus: "unpaid",
+      invoice: { invoiceRaised: true, invoiceId: "invoice", issuedAt: "2026-11-09T12:00:00.000Z" },
+    }],
+  };
+  const result = invoiceDisputeMilestone(
+    job, "artisan", "milestone", "invoice",
+    InvoiceDisputeType.artisanInvoiceUnpaidOverdue, "artisan", now,
+  );
+  assert.equal(result.raisedByRole, "artisan");
 });

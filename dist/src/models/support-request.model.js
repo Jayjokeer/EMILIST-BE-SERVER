@@ -69,6 +69,8 @@ const SupportRequestSchema = new mongoose_1.Schema({
     jobId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Jobs", index: true },
     milestoneId: { type: mongoose_1.Schema.Types.ObjectId },
     invoiceId: { type: mongoose_1.Schema.Types.ObjectId },
+    disputeType: { type: String, enum: support_enum_1.InvoiceDisputeType },
+    raisedByRole: { type: String, enum: ["job_owner", "artisan"] },
     assignedAdminId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Admin" },
     assignedTeam: { type: String, trim: true, maxlength: 100 },
     escalatedAt: { type: Date },

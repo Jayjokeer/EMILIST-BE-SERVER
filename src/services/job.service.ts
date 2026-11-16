@@ -36,6 +36,23 @@ export const areAllMilestonesCompletedAndPaid = (milestones: any[] = []) =>
       && milestone.paymentStatus === MilestonePaymentStatus.paid,
   );
 
+export const jobDisputeSummary = (milestones: any[] = []) => {
+  const disputed = milestones.filter((milestone: any) => Boolean(milestone.invoice?.disputeTicketId));
+  const unresolved = disputed.filter((milestone: any) => milestone.invoice?.disputeStatus === "open");
+  return {
+    hasDispute: disputed.length > 0,
+    hasUnresolvedDispute: unresolved.length > 0,
+    disputeCount: disputed.length,
+    unresolvedCount: unresolved.length,
+    disputedMilestoneIds: disputed.map((milestone: any) => String(milestone._id)),
+    unresolvedMilestoneIds: unresolved.map((milestone: any) => String(milestone._id)),
+    canCloseContract: unresolved.length === 0,
+  };
+};
+
+export const hasUnresolvedMilestoneDispute = (milestones: any[] = []) =>
+  jobDisputeSummary(milestones).hasUnresolvedDispute;
+
 export const raiseMilestoneInvoice = (
   invoice: any,
   issuedAt = new Date(),
@@ -153,6 +170,12 @@ export const withJobDisplayStatus = (job: any, viewerUserId?: string | null) => 
   if (plain.status === JobStatusEnum.listed) {
     (plain as any).legacyStatus = 'pending';
   }
+  plain.disputeSummary = jobDisputeSummary(plain.milestones || []);
+  plain.milestones = (plain.milestones || []).map((milestone: any) => ({
+    ...milestone,
+    hasDispute: Boolean(milestone.invoice?.disputeTicketId),
+    hasUnresolvedDispute: milestone.invoice?.disputeStatus === "open",
+  }));
   return plain;
 };
 
@@ -556,6 +579,11 @@ export const fetchJobByIdWithDetails = async (
     status: { $in: [TransactionEnum.pending, TransactionEnum.processing, TransactionEnum.completed] },
   }).select("milestoneId reference createdAt").sort({ createdAt: -1 }).lean();
   milestones = attachMilestonePaymentReferences(milestones, cardPayments);
+  milestones = milestones.map((milestone: any) => ({
+    ...milestone,
+    hasDispute: Boolean(milestone.invoice?.disputeTicketId),
+    hasUnresolvedDispute: milestone.invoice?.disputeStatus === "open",
+  }));
 
   const displayJob = withJobDisplayStatus(job, viewerUserId);
   const [jobWithAttention] = await withJobAttention([displayJob], viewerUserId);

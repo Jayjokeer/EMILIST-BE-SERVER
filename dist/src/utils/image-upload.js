@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadBusinessImages = exports.multipleUpload = exports.singleUpload = exports.cloudinary = exports.parseJobBody = exports.parseBusinessOnboarding = exports.normalizeBusinessFileField = void 0;
+exports.uploadBusinessImages = exports.supportImageUpload = exports.multipleUpload = exports.singleUpload = exports.cloudinary = exports.parseJobBody = exports.parseBusinessOnboarding = exports.normalizeBusinessFileField = exports.applySupportImageAttachments = void 0;
 const cloudinary_1 = require("cloudinary");
 Object.defineProperty(exports, "cloudinary", { enumerable: true, get: function () { return cloudinary_1.v2; } });
 const multer_storage_cloudinary_1 = require("multer-storage-cloudinary");
@@ -25,7 +25,7 @@ const storage = new multer_storage_cloudinary_1.CloudinaryStorage({
         }
         return {
             folder,
-            allowed_formats: ['jpg', 'png', 'jpeg', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv'],
+            allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv'],
             public_id: publicId,
         };
     },
@@ -34,6 +34,32 @@ const singleUpload = (0, multer_1.default)({ storage }).single('image');
 exports.singleUpload = singleUpload;
 const multipleUpload = (0, multer_1.default)({ storage }).array('files', 10);
 exports.multipleUpload = multipleUpload;
+const supportImageUpload = (0, multer_1.default)({
+    storage,
+    limits: { files: 10, fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, callback) => {
+        if (["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) {
+            return callback(null, true);
+        }
+        const error = new multer_1.default.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname);
+        error.message = "Support attachments must be JPG, PNG, or WEBP images";
+        return callback(error);
+    },
+}).array("attachments", 10);
+exports.supportImageUpload = supportImageUpload;
+const applySupportImageAttachments = (req, res, next) => {
+    if (req.body.attachments !== undefined) {
+        return res.status(400).json({
+            code: 400,
+            status: "fail",
+            message: "attachments must be uploaded image files, not links or text values",
+        });
+    }
+    const files = req.files || [];
+    req.body.attachments = files.map((file) => file.path);
+    next();
+};
+exports.applySupportImageAttachments = applySupportImageAttachments;
 const normalizeBusinessFileField = (fieldName) => {
     const trimmedFieldName = fieldName.trim();
     if (trimmedFieldName === 'displayImage' || trimmedFieldName === 'businessImages') {

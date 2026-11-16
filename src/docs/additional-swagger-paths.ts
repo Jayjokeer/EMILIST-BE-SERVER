@@ -5,9 +5,14 @@ interface RouteDoc {
   method: HttpMethod;
   tag: string;
   summary: string;
+  description?: string;
   auth?: boolean;
   multipart?: boolean;
+  multipartFileField?: string;
+  multipartFileMaxCount?: number;
   bodyExample?: Record<string, unknown>;
+  bodyProperties?: Record<string, unknown>;
+  requiredBodyFields?: string[];
   queryParams?: string[];
   successStatus?: string;
   responseExample?: unknown;
@@ -72,8 +77,9 @@ const routes: RouteDoc[] = [
   { path: '/support/requests', method: 'post', tag: 'new-admin', summary: 'Submit a customer support request for the admin support workflow', bodyExample: { subject: 'Payment not reflected', description: 'My completed job payment is not visible in my wallet.', category: 'payment', priority: 'normal', linkedType: 'payment', linkedRecordId: id } },
   { path: '/support/requests', method: 'get', tag: 'Support', summary: 'List the authenticated user support tickets', queryParams: ['page', 'limit', 'status', 'category'] },
   { path: '/support/requests/{requestId}', method: 'get', tag: 'Support', summary: 'Fetch an owned support ticket and its conversation' },
-  { path: '/support/requests/{requestId}/replies', method: 'post', tag: 'new-admin', summary: 'Reply to an owned support ticket with optional attachments', bodyExample: { message: 'The transfer reference is 123456.', attachments: [] } },
-  { path: '/support/job-invoice-disputes', method: 'post', tag: 'Support', summary: 'Raise a support dispute for a job milestone invoice', bodyExample: { jobId: id, milestoneId: id, invoiceId: id, reason: 'The completed work does not match the agreed milestone requirements.', attachments: ['https://example.com/evidence.jpg'] } },
+  { path: '/support/requests/{requestId}/replies', method: 'post', tag: 'new-admin', summary: 'Reply to an owned support ticket with optional uploaded image attachments', multipart: true, multipartFileField: 'attachments', multipartFileMaxCount: 10, requiredBodyFields: ['message'], bodyProperties: { message: { type: 'string', maxLength: 5000 } }, bodyExample: { message: 'Here is another photo showing the unfinished work.' } },
+  { path: '/support/job-invoice-disputes', method: 'post', tag: 'Support', summary: 'Raise a support dispute with uploaded image evidence for a job milestone invoice', description: 'The job owner may use owner_unsatisfied_work or owner_additional_cost_reason. The accepted artisan may use artisan_additional_cost_unpaid after the original amount was paid without the additional amount, or artisan_invoice_unpaid_overdue after the invoice remains unpaid for 7 days. Open disputes prevent contract closure.', multipart: true, multipartFileField: 'attachments', multipartFileMaxCount: 10, requiredBodyFields: ['jobId', 'milestoneId', 'disputeType', 'reason'], bodyProperties: { jobId: { type: 'string' }, milestoneId: { type: 'string' }, invoiceId: { type: 'string' }, subject: { type: 'string', maxLength: 150 }, reason: { type: 'string', minLength: 10, maxLength: 5000 }, disputeType: { type: 'string', enum: ['owner_unsatisfied_work', 'owner_additional_cost_reason', 'artisan_additional_cost_unpaid', 'artisan_invoice_unpaid_overdue'] } }, bodyExample: { jobId: id, milestoneId: id, invoiceId: id, disputeType: 'owner_unsatisfied_work', subject: 'Work does not meet the agreed requirements', reason: 'The completed work does not match the agreed milestone requirements.' } },
+  { path: '/jobs/{jobId}/review-owner', method: 'post', tag: 'Jobs', summary: 'Allow the accepted artisan to review the job owner after contract closure', bodyExample: { rating: 5, comment: 'Clear requirements and prompt communication.', rateCommunication: 5, isRecommendOwner: true } },
 
   // Business/expert profiles
   { path: '/business/register-business', method: 'post', tag: 'Business', summary: 'Register a business/expert profile', multipart: true },
@@ -282,7 +288,7 @@ const operationFor = (route: RouteDoc): Record<string, unknown> => {
   const operation: Record<string, unknown> = {
     tags: [route.tag],
     summary: route.summary,
-    description: route.summary,
+    description: route.description || route.summary,
     operationId: operationIdFor(route),
     security: route.auth === false ? [] : [{ bearerAuth: [] }],
     ...(parameters.length > 0 ? { parameters } : {}),
@@ -301,11 +307,24 @@ const operationFor = (route: RouteDoc): Record<string, unknown> => {
 
   if (acceptsBody) {
     const contentType = route.multipart ? 'multipart/form-data' : 'application/json';
+    const multipartProperties = route.multipartFileField ? {
+      [route.multipartFileField]: {
+        type: 'array',
+        maxItems: route.multipartFileMaxCount ?? 10,
+        items: { type: 'string', format: 'binary' },
+        description: 'Upload image files; URL strings are not accepted.',
+      },
+    } : {};
     operation.requestBody = {
       required: Boolean(route.bodyExample || route.multipart),
       content: {
         [contentType]: {
-          schema: { type: 'object', additionalProperties: true },
+          schema: {
+            type: 'object',
+            additionalProperties: true,
+            ...(route.requiredBodyFields?.length ? { required: route.requiredBodyFields } : {}),
+            properties: { ...(route.bodyProperties || {}), ...multipartProperties },
+          },
           ...(route.bodyExample ? { example: route.bodyExample } : {}),
         },
       },

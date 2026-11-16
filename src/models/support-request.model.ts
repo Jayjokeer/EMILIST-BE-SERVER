@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { SupportRequestCategory, SupportRequestPriority, SupportRequestStatus } from "../enums/support.enum";
+import { InvoiceDisputeType, SupportRequestCategory, SupportRequestPriority, SupportRequestStatus } from "../enums/support.enum";
 
 const SupportHistorySchema = new Schema({
   adminId: { type: Schema.Types.ObjectId, ref: "Admin" },
@@ -38,6 +38,8 @@ const SupportRequestSchema = new Schema({
   jobId: { type: Schema.Types.ObjectId, ref: "Jobs", index: true },
   milestoneId: { type: Schema.Types.ObjectId },
   invoiceId: { type: Schema.Types.ObjectId },
+  disputeType: { type: String, enum: InvoiceDisputeType },
+  raisedByRole: { type: String, enum: ["job_owner", "artisan"] },
   assignedAdminId: { type: Schema.Types.ObjectId, ref: "Admin" },
   assignedTeam: { type: String, trim: true, maxlength: 100 },
   escalatedAt: { type: Date },

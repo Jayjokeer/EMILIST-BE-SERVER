@@ -165,6 +165,7 @@ exports.validateCreateInvoiceDispute = validate(joi_1.default.object({
     invoiceId: joi_1.default.string().hex().length(24),
     reason: joi_1.default.string().trim().min(10).max(5000).required(),
     subject: joi_1.default.string().trim().min(3).max(150),
+    disputeType: joi_1.default.string().valid("owner_unsatisfied_work", "owner_additional_cost_reason", "artisan_additional_cost_unpaid", "artisan_invoice_unpaid_overdue").required(),
     attachments: joi_1.default.array().items(joi_1.default.string().uri()).max(10).default([]),
 }));
 exports.validateUpdateSupportRequest = validate(joi_1.default.object({

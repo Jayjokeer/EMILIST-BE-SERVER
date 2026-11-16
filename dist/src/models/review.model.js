@@ -41,6 +41,8 @@ const reviewSchema = new mongoose_1.default.Schema({
     comment: { type: String, trim: true },
     businessId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Business" },
     projectId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Project" },
+    jobId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Jobs" },
+    reviewedUserId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users" },
     rateCommunication: { type: Number, min: 1, max: 5 },
     isRecommendVendor: { type: Boolean },
     helpfulUsers: { type: [mongoose_1.default.Schema.Types.ObjectId], ref: 'User', default: [] },
@@ -48,4 +50,5 @@ const reviewSchema = new mongoose_1.default.Schema({
     helpfulCount: { type: Number, default: 0 },
     notHelpfulCount: { type: Number, default: 0 },
 }, { timestamps: true });
+reviewSchema.index({ jobId: 1, userId: 1, reviewedUserId: 1 }, { unique: true, sparse: true });
 exports.default = mongoose_1.default.model("Review", reviewSchema);

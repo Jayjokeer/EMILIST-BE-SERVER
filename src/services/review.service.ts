@@ -11,6 +11,8 @@ export const isUserReviewed = async(productId: string, userId: string)=>{
 export const isReviewedbyUser = async(businessId: string, userId: string)=>{
     return await Review.findOne({userId: userId, businessId: businessId});
   };
+export const findJobOwnerReview = async (jobId: string, reviewerId: string, ownerId: string) =>
+  Review.findOne({ jobId, userId: reviewerId, reviewedUserId: ownerId });
 export const fetchReviewsForBusiness = async (
   businessId: string,
   page = 1,

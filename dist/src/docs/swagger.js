@@ -1164,6 +1164,7 @@ Paystack reference is returned as \`milestones[].paymentInfo.referenceId\`. The 
                                             applicantsCount: 13,
                                             milestonesCount: 3,
                                             attention: { requiresAttention: false, unviewedCount: 0, types: [], latestEventAt: null, eventIds: [] },
+                                            disputeSummary: { hasDispute: true, hasUnresolvedDispute: true, disputeCount: 1, unresolvedCount: 1, disputedMilestoneIds: ["64fb0a1b2c3d4e5f6a7b8c9b"], unresolvedMilestoneIds: ["64fb0a1b2c3d4e5f6a7b8c9b"], canCloseContract: false },
                                             milestones: [
                                                 {
                                                     _id: "64fb0a1b2c3d4e5f6a7b8c9b",
@@ -1174,6 +1175,8 @@ Paystack reference is returned as \`milestones[].paymentInfo.referenceId\`. The 
                                                     status: "active",
                                                     paymentStatus: "unpaid",
                                                     paymentInfo: { referenceId: "PS-1693500000000X8Y2" },
+                                                    hasDispute: true,
+                                                    hasUnresolvedDispute: true,
                                                     dueDate: "2025-01-17T09:30:00.000Z",
                                                 },
                                             ],
@@ -2128,7 +2131,7 @@ The milestone returns to \`active\`, its invoice review status becomes \`rejecte
             patch: {
                 tags: ["Jobs"],
                 summary: "Close a completed contract and leave a review",
-                description: `Closes the contract for the job creator. All milestones must be \`completed\` and \`paid\`.
+                description: `Closes the contract for the job creator. All milestones must be \`completed\` and \`paid\`, and no milestone may have an unresolved support dispute.
 
 Leaves a review on the business that completed the job.`,
                 security: [{ bearerAuth: [] }],
@@ -2155,7 +2158,7 @@ Leaves a review on the business that completed the job.`,
                 },
                 responses: {
                     "200": { description: "Contract closed", content: { "application/json": { example: { message: "success", data: "Job closed successfully" } } } },
-                    "400": { description: "All milestones must be completed & paid / contract already closed" },
+                    "400": { description: "All milestones must be completed and paid, a milestone dispute is unresolved, or the contract is already closed" },
                     "401": { description: "Unauthorized (creator only)" },
                     "404": { description: "Job, project or business not found" },
                 },

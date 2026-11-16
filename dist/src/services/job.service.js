@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsByUserId = exports.jobCreatedAtSort = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.attachMilestonePaymentReferences = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
+exports.fetchJobsByUserId = exports.jobCreatedAtSort = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.attachMilestonePaymentReferences = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.hasUnresolvedMilestoneDispute = exports.jobDisputeSummary = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -74,6 +74,22 @@ exports.normalizeProjectStatus = normalizeProjectStatus;
 const areAllMilestonesCompletedAndPaid = (milestones = []) => milestones.length > 0 && milestones.every(milestone => milestone.status === jobs_enum_1.MilestoneEnum.completed
     && milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.paid);
 exports.areAllMilestonesCompletedAndPaid = areAllMilestonesCompletedAndPaid;
+const jobDisputeSummary = (milestones = []) => {
+    const disputed = milestones.filter((milestone) => Boolean(milestone.invoice?.disputeTicketId));
+    const unresolved = disputed.filter((milestone) => milestone.invoice?.disputeStatus === "open");
+    return {
+        hasDispute: disputed.length > 0,
+        hasUnresolvedDispute: unresolved.length > 0,
+        disputeCount: disputed.length,
+        unresolvedCount: unresolved.length,
+        disputedMilestoneIds: disputed.map((milestone) => String(milestone._id)),
+        unresolvedMilestoneIds: unresolved.map((milestone) => String(milestone._id)),
+        canCloseContract: unresolved.length === 0,
+    };
+};
+exports.jobDisputeSummary = jobDisputeSummary;
+const hasUnresolvedMilestoneDispute = (milestones = []) => (0, exports.jobDisputeSummary)(milestones).hasUnresolvedDispute;
+exports.hasUnresolvedMilestoneDispute = hasUnresolvedMilestoneDispute;
 const raiseMilestoneInvoice = (invoice, issuedAt = new Date(), invoiceId = new mongoose_1.Types.ObjectId()) => {
     if (!invoice.invoiceId)
         invoice.invoiceId = invoiceId;
@@ -189,6 +205,12 @@ const withJobDisplayStatus = (job, viewerUserId) => {
     if (plain.status === jobs_enum_1.JobStatusEnum.listed) {
         plain.legacyStatus = 'pending';
     }
+    plain.disputeSummary = (0, exports.jobDisputeSummary)(plain.milestones || []);
+    plain.milestones = (plain.milestones || []).map((milestone) => ({
+        ...milestone,
+        hasDispute: Boolean(milestone.invoice?.disputeTicketId),
+        hasUnresolvedDispute: milestone.invoice?.disputeStatus === "open",
+    }));
     return plain;
 };
 exports.withJobDisplayStatus = withJobDisplayStatus;
@@ -523,6 +545,11 @@ const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5,
         status: { $in: [transaction_enum_1.TransactionEnum.pending, transaction_enum_1.TransactionEnum.processing, transaction_enum_1.TransactionEnum.completed] },
     }).select("milestoneId reference createdAt").sort({ createdAt: -1 }).lean();
     milestones = (0, exports.attachMilestonePaymentReferences)(milestones, cardPayments);
+    milestones = milestones.map((milestone) => ({
+        ...milestone,
+        hasDispute: Boolean(milestone.invoice?.disputeTicketId),
+        hasUnresolvedDispute: milestone.invoice?.disputeStatus === "open",
+    }));
     const displayJob = (0, exports.withJobDisplayStatus)(job, viewerUserId);
     const [jobWithAttention] = await withJobAttention([displayJob], viewerUserId);
     const publicJob = {

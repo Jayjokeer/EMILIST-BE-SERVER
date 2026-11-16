@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.rejectMilestoneController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.delistJobController = exports.listJobController = exports.markApplicationAttentionViewedController = exports.markJobAttentionViewedController = exports.respondToCounterBidController = exports.counterBidController = exports.fetchApplicationByIdController = exports.fetchJobApplicantsController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
+exports.fetchAllRecurringJobsController = exports.createRecurringJobController = exports.jobLeadsController = exports.muteJobController = exports.projectAnalyticsController = exports.fetchProjectCountsController = exports.fetchJobCountsController = exports.reviewJobOwnerController = exports.closeContractController = exports.jobAnalyticsController = exports.updateMilestonePaymentController = exports.acceptQuoteController = exports.postQuoteController = exports.requestForQuoteController = exports.rejectMilestoneController = exports.updateMilestoneStatusController = exports.fetchApplicationByStatusController = exports.fetchUserAppliedJobsController = exports.acceptDirectJobController = exports.deleteFileController = exports.fetchJobByStatusController = exports.jobStatusController = exports.updateJobController = exports.delistJobController = exports.listJobController = exports.markApplicationAttentionViewedController = exports.markJobAttentionViewedController = exports.respondToCounterBidController = exports.counterBidController = exports.fetchApplicationByIdController = exports.fetchJobApplicantsController = exports.deleteJobController = exports.deleteJobApplicationController = exports.applyForJobController = exports.unlikeJobController = exports.fetchLikedJobsController = exports.likeJobController = exports.fetchSingleJobController = exports.allJobsController = exports.allUserJobController = exports.createJobController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -1426,6 +1426,9 @@ exports.closeContractController = (0, error_handler_1.catchAsync)(async (req, re
     }
     if (job.isClosed)
         throw new error_1.BadRequestError('Contract is already closed!');
+    if (jobService.hasUnresolvedMilestoneDispute(job.milestones)) {
+        throw new error_1.BadRequestError('This contract cannot be closed while a milestone dispute is unresolved.');
+    }
     const allMilestonesCompletedAndPaid = jobService.areAllMilestonesCompletedAndPaid(job.milestones);
     if (!allMilestonesCompletedAndPaid) {
         throw new error_1.BadRequestError('All milestones must be completed and paid before closing the contract.');
@@ -1458,6 +1461,35 @@ exports.closeContractController = (0, error_handler_1.catchAsync)(async (req, re
     await business.reviews?.push(data._id);
     await business.save();
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job closed successfully");
+});
+exports.reviewJobOwnerController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const reviewerId = String(req.user._id);
+    const job = await jobService.fetchJobById(String(req.params.jobId));
+    if (!job)
+        throw new error_1.NotFoundError("Job not found!");
+    if (!job.isClosed)
+        throw new error_1.BadRequestError("The contract must be closed before the job owner can be reviewed");
+    const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
+    if (!project)
+        throw new error_1.NotFoundError("Accepted project not found!");
+    if (String(project.user?._id || project.user) !== reviewerId) {
+        throw new error_1.UnauthorizedError("Only the accepted artisan can review the job owner");
+    }
+    const ownerId = String(job.userId?._id || job.userId);
+    if (await reviewService.findJobOwnerReview(String(job._id), reviewerId, ownerId)) {
+        throw new error_1.BadRequestError("You have already reviewed this job owner for this job");
+    }
+    const review = await reviewService.addReview({
+        jobId: job._id,
+        projectId: project._id,
+        userId: reviewerId,
+        reviewedUserId: ownerId,
+        rating: req.body.rating,
+        comment: req.body.comment,
+        rateCommunication: req.body.rateCommunication,
+        isRecommendVendor: req.body.isRecommendOwner,
+    });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, review);
 });
 exports.fetchJobCountsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;

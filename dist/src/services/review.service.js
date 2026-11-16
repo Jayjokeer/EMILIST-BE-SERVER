@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchReviewForProduct = exports.fetchReviewsForBusiness = exports.isReviewedbyUser = exports.isUserReviewed = exports.addReview = void 0;
+exports.fetchReviewForProduct = exports.fetchReviewsForBusiness = exports.findJobOwnerReview = exports.isReviewedbyUser = exports.isUserReviewed = exports.addReview = void 0;
 const review_model_1 = __importDefault(require("../models/review.model"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const addReview = async (payload) => {
@@ -18,6 +18,8 @@ const isReviewedbyUser = async (businessId, userId) => {
     return await review_model_1.default.findOne({ userId: userId, businessId: businessId });
 };
 exports.isReviewedbyUser = isReviewedbyUser;
+const findJobOwnerReview = async (jobId, reviewerId, ownerId) => review_model_1.default.findOne({ jobId, userId: reviewerId, reviewedUserId: ownerId });
+exports.findJobOwnerReview = findJobOwnerReview;
 const fetchReviewsForBusiness = async (businessId, page = 1, limit = 4) => {
     const skip = (page - 1) * limit;
     const matchStage = { businessId: new mongoose_1.default.Types.ObjectId(businessId) };

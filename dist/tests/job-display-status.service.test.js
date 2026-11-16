@@ -52,6 +52,16 @@ const job_service_1 = require("../src/services/job.service");
     ];
     strict_1.default.equal((0, job_service_1.attachMilestonePaymentReferences)(milestones, transactions)[0].paymentInfo.referenceId, 'PS-NEWEST');
 });
+(0, node_test_1.default)('job dispute summary blocks closure while any milestone dispute remains open', () => {
+    const summary = (0, job_service_1.jobDisputeSummary)([
+        { _id: 'milestone-1', invoice: { disputeTicketId: 'ticket-1', disputeStatus: 'resolved' } },
+        { _id: 'milestone-2', invoice: { disputeTicketId: 'ticket-2', disputeStatus: 'open' } },
+    ]);
+    strict_1.default.equal(summary.hasDispute, true);
+    strict_1.default.equal(summary.hasUnresolvedDispute, true);
+    strict_1.default.equal(summary.canCloseContract, false);
+    strict_1.default.deepEqual(summary.unresolvedMilestoneIds, ['milestone-2']);
+});
 (0, node_test_1.default)('owner rejection reactivates completed work and records the reason', () => {
     const rejectedAt = new Date('2026-10-30T09:00:00.000Z');
     const milestone = {
