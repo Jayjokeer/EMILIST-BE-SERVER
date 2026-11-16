@@ -62,7 +62,7 @@ router.route("/:jobId/attention/viewed").patch(current_user_1.userAuth, job_vali
 router.route("/applications/:applicationId/attention/viewed").patch(current_user_1.userAuth, job_validation_1.validateAttentionViewed, jobController.markApplicationAttentionViewedController);
 router.route("/list-job/:jobId").patch(current_user_1.userAuth, jobController.listJobController);
 router.route("/delist-job/:jobId").patch(current_user_1.userAuth, jobController.delistJobController);
-router.route("/update-application-status/:projectId").patch(current_user_1.userAuth, jobController.jobStatusController);
+router.route("/update-application-status/:projectId").patch(current_user_1.userAuth, job_validation_1.validateApplicationStatusUpdate, jobController.jobStatusController);
 router.route("/fetch-jobs-by-status").get(current_user_1.userAuth, jobController.fetchJobByStatusController);
 router.route("/remove-job/:jobId/file/:fileId").delete(current_user_1.userAuth, jobController.deleteFileController);
 router.route("/accept-direct-job/:projectId").patch(current_user_1.userAuth, jobController.acceptDirectJobController);

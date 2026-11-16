@@ -3,9 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneRejection = exports.validateMilestoneStatusUpdate = exports.validateAttentionViewed = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = void 0;
+exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneRejection = exports.validateMilestoneStatusUpdate = exports.validateAttentionViewed = exports.validateApplicationStatusUpdate = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = void 0;
 const joi_1 = __importDefault(require("joi"));
 const jobs_enum_1 = require("../enums/jobs.enum");
+const project_enum_1 = require("../enums/project.enum");
 // ===================== SHARED REUSABLE SCHEMAS =====================
 const locationSchema = joi_1.default.object({
     address: joi_1.default.string().required().messages({
@@ -457,6 +458,19 @@ const validateCounterBidResponse = (req, res, next) => {
     next();
 };
 exports.validateCounterBidResponse = validateCounterBidResponse;
+const validateApplicationStatusUpdate = (req, res, next) => {
+    const validation = joi_1.default.object({
+        status: joi_1.default.string().valid(project_enum_1.ProjectStatusEnum.applied, project_enum_1.ProjectStatusEnum.pending, project_enum_1.ProjectStatusEnum.accepted, project_enum_1.ProjectStatusEnum.rejected, project_enum_1.ProjectStatusEnum.pause, project_enum_1.ProjectStatusEnum.unpause).required(),
+    });
+    const { error, value } = validation.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) {
+        res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+        return;
+    }
+    req.body = value;
+    next();
+};
+exports.validateApplicationStatusUpdate = validateApplicationStatusUpdate;
 const validateAttentionViewed = (req, res, next) => {
     const validation = joi_1.default.object({
         eventIds: joi_1.default.array().items(joi_1.default.string().required()).min(1),

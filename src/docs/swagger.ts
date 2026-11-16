@@ -30,6 +30,7 @@ Endpoints marked as \`multipart/form-data\` expect the file(s) under the field
 `,
   },
   servers: [
+    { url: "https://be.emilist.com/api/v1", description: "Production server" },
     { url: "http://localhost:7000/api/v1", description: "Local development server" },
   ],
   tags: [
@@ -71,6 +72,7 @@ Endpoints marked as \`multipart/form-data\` expect the file(s) under the field
     { name: "Cart", description: "Shopping cart and checkout operations." },
     { name: "Chat", description: "Direct messages and conversation lists." },
     { name: "Notifications", description: "User notification management." },
+    { name: "Support", description: "Customer support tickets, invoice disputes, conversations, and resolution tracking." },
     { name: "Orders", description: "Order history, cancellation, returns, ratings, and tracking." },
     { name: "Subscriptions", description: "Plans, subscriptions, and promoted listings." },
     { name: "Targets", description: "User targets and performance metrics." },
@@ -1770,10 +1772,12 @@ summary's \`latestEventAt\` as \`viewedThrough\`; events created after that snap
     "/jobs/update-application-status/{projectId}": {
       patch: {
         tags: ["Jobs"],
-        summary: "Update a job application status",
-        description: `Allows the job creator to accept, reject, pause or unpause an application.
+        summary: "Accept or update a regular job application",
+        description: `This is the endpoint the **job owner uses to accept a regular job application**. Pass the application/project id in the path—not the job id—and send \`{ "status": "accepted" }\`.
 
-Allowed \`status\` values: \`applied\`, \`accepted\`, \`rejected\`, \`pause\`, \`unpause\` (legacy \`pending\` is accepted as \`applied\`).`,
+On acceptance the job becomes \`active\`, \`acceptedApplicationId\` is set, the first milestone becomes \`active\`, competing applications are rejected, and the applicant receives an email and navigable notification.
+
+Allowed \`status\` values: \`applied\`, \`pending\`, \`accepted\`, \`rejected\`, \`pause\`, \`unpause\`. If the application has counteroffers, accept it through \`PATCH /jobs/respond-counter-bid/{projectId}\` instead.`,
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "projectId", in: "path", required: true, schema: { type: "string" }, description: "MongoDB ObjectId of the application/project", example: "64fc0a1b2c3d4e5f6a7b8c9a" },
@@ -1782,13 +1786,14 @@ Allowed \`status\` values: \`applied\`, \`accepted\`, \`rejected\`, \`pause\`, \
           required: true,
           content: {
             "application/json": {
-              schema: { type: "object", required: ["status"], properties: { status: { type: "string", enum: ["applied", "pending", "accepted", "rejected", "pause", "unpause", "cancelled"] } } },
+              schema: { type: "object", additionalProperties: false, required: ["status"], properties: { status: { type: "string", enum: ["applied", "pending", "accepted", "rejected", "pause", "unpause"] } } },
               example: { status: "accepted" },
             },
           },
         },
         responses: {
           "200": { description: "Application status updated", content: { "application/json": { example: { message: "success", data: { _id: "64f5c0a1b2c3d4e5f6a7b8c9", status: "active", acceptedApplicationId: "64fc0a1b2c3d4e5f6a7b8c9a" } } } } },
+          "400": { description: "Invalid status or negotiated application must be accepted through the counteroffer endpoint" },
           "401": { description: "Unauthorized" },
           "404": { description: "Application or job not found" },
         },

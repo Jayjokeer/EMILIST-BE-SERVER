@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { FrequencyEnum, JobExpertLevel, JobPeriod, JobType, MilestoneEnum, JobUrgencyEnum, JobFrequencyEnum, DurationUnitEnum, ExperienceLevelEnum } from '../enums/jobs.enum';
+import { ProjectStatusEnum } from '../enums/project.enum';
 
 // ===================== SHARED REUSABLE SCHEMAS =====================
 
@@ -482,6 +483,26 @@ export const validateCounterBidResponse = (req: Request, res: Response, next: Ne
     res.status(400).json({ message: error.details[0].message });
     return;
   }
+  next();
+};
+
+export const validateApplicationStatusUpdate = (req: Request, res: Response, next: NextFunction) => {
+  const validation = Joi.object({
+    status: Joi.string().valid(
+      ProjectStatusEnum.applied,
+      ProjectStatusEnum.pending,
+      ProjectStatusEnum.accepted,
+      ProjectStatusEnum.rejected,
+      ProjectStatusEnum.pause,
+      ProjectStatusEnum.unpause,
+    ).required(),
+  });
+  const { error, value } = validation.validate(req.body, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+    return;
+  }
+  req.body = value;
   next();
 };
 

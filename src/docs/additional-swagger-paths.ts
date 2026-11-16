@@ -17,6 +17,20 @@ const id = '64e1a2b3c4d5e6f7a8b9c0d1';
 const businessId = '64aa1b2c3d4e5f6a7b8c9ab';
 const productId = '64bb1b2c3d4e5f6a7b8c9cd';
 
+const querySchema = (name: string) => {
+  if (['page', 'limit', 'hours', 'year', 'month'].includes(name)) {
+    return { type: 'integer', minimum: name === 'page' || name === 'limit' ? 1 : undefined };
+  }
+  if (/^(?:startDate|endDate|date)$/i.test(name)) return { type: 'string', format: 'date' };
+  if (/Id$/.test(name)) return { type: 'string', pattern: '^[a-fA-F0-9]{24}$' };
+  return { type: 'string' };
+};
+
+const operationIdFor = (route: RouteDoc) => `${route.method}_${route.path}`
+  .replace(/[{}]/g, '')
+  .replace(/[^a-zA-Z0-9]+/g, '_')
+  .replace(/^_|_$/g, '');
+
 /**
  * Routes that were historically missing from the hand-written Swagger spec.
  * Keep this list in sync with src/routes. The larger Jobs/Wallet/Promo sections
@@ -261,13 +275,15 @@ const operationFor = (route: RouteDoc): Record<string, unknown> => {
     });
   }
   for (const name of route.queryParams ?? []) {
-    parameters.push({ name, in: 'query', required: false, schema: { type: 'string' } });
+    parameters.push({ name, in: 'query', required: false, schema: querySchema(name) });
   }
 
   const acceptsBody = route.method === 'post' || route.method === 'patch' || route.method === 'put';
   const operation: Record<string, unknown> = {
     tags: [route.tag],
     summary: route.summary,
+    description: route.summary,
+    operationId: operationIdFor(route),
     security: route.auth === false ? [] : [{ bearerAuth: [] }],
     ...(parameters.length > 0 ? { parameters } : {}),
     responses: {
@@ -276,13 +292,17 @@ const operationFor = (route: RouteDoc): Record<string, unknown> => {
         ...(route.responseExample ? { content: { 'application/json': { example: route.responseExample } } } : {}),
       },
       ...(route.auth === false ? {} : { '401': { description: 'Unauthorized' } }),
+      '400': { description: 'Invalid request parameters or payload' },
+      ...(route.auth === false ? {} : { '403': { description: 'Authenticated but not permitted to perform this action' } }),
+      '404': { description: 'Requested resource was not found' },
+      '500': { description: 'Unexpected server error' },
     },
   };
 
   if (acceptsBody) {
     const contentType = route.multipart ? 'multipart/form-data' : 'application/json';
     operation.requestBody = {
-      required: false,
+      required: Boolean(route.bodyExample || route.multipart),
       content: {
         [contentType]: {
           schema: { type: 'object', additionalProperties: true },
