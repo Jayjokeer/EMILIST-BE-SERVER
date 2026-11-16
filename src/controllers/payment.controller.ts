@@ -23,6 +23,7 @@ import { SubscriptionPeriodEnum, SubscriptionStatusEnum } from "../enums/suscrib
 import { calculateVat } from "../utils/utility";
 import * as verificationService from "../services/verification.service";
 import { VerificationEnum } from "../enums/user.enums";
+import * as jobPaymentService from "../services/job-payment.service";
 
 const consumeCartStock = async (cart: any) => {
   for (const item of cart.products || []) {
@@ -144,8 +145,11 @@ const milestone = job.milestones.find((milestone: any)=> milestone._id.toString(
 if(!milestone){
   throw new NotFoundError("No milestone");
 }
-if(milestone.paymentStatus !== MilestonePaymentStatus.unpaid){
-  throw new BadRequestError("Job has been paid")
+if(milestone.paymentStatus === MilestonePaymentStatus.paid){
+  throw new BadRequestError("Job milestone has already been paid")
+}
+if(milestone.paymentStatus === MilestonePaymentStatus.processing){
+  throw new BadRequestError("A payment for this job milestone is already being processed")
 }
 if(!milestone.invoice?.invoiceRaised){
   throw new BadRequestError("An invoice must be generated before this milestone can be paid");
@@ -178,7 +182,7 @@ if(!project){
           balanceBefore: userWallet.balance,
           walletId: userWallet._id,
           currency: userWallet.currency,
-          status: TransactionEnum.processing,
+          status: TransactionEnum.pending,
           jobId,
           milestoneId,
           recieverId: project.user, 
@@ -189,21 +193,14 @@ if(!project){
       userWallet.balance -= Math.ceil(jobAmount);
       await userWallet.save();
       transaction.balanceAfter = userWallet.balance;
-      await jobService.updateMilestone(
-        transaction.jobId!,
-        transaction.milestoneId!,
-        {
-          paymentStatus: MilestonePaymentStatus.processing,
-          paymentInfo: {
-            amountPaid: transaction.amount,
-            paymentMethod: PaymentMethodEnum.wallet,
-            date: new Date(),
-          },
-        }
-      );
-      // job.markModified('milestones');
-      await job.save();
-       data = "Payment successful";
+      await jobPaymentService.completeJobPayment(transaction);
+      data = {
+        message: "Payment successful",
+        transactionId: transaction._id,
+        status: transaction.status,
+        jobId: transaction.jobId,
+        milestoneId: transaction.milestoneId,
+      };
     } else if (paymentMethod === PaymentMethodEnum.card) {
       if (paymentMethod === PaymentMethodEnum.card && currency === WalletEnum.NGN ) {
           if(!redirectUrl){
@@ -328,35 +325,10 @@ export const verifyPaystackPaymentController=  catchAsync(async (req: JwtPayload
     throw new NotFoundError("Transaction not found!");
   };
   if(transaction.serviceType === ServiceEnum.job){
-    const job = await jobService.fetchJobById(transaction.jobId!);
-    if(!job){
-      throw new NotFoundError("Job Not found");
-    }
-    const milestone = job.milestones.find((milestone: any)=> milestone._id.toString()  === transaction.milestoneId.toString());
-    if(!milestone){
-      throw new NotFoundError("No milestone");
-    }
-  
     const verifyPayment = await  verifyPaystackPayment(reference);
     if(verifyPayment === "success"){
-   await jobService.updateMilestone(
-        transaction.jobId!,
-        transaction.milestoneId!,
-        {
-          paymentStatus: MilestonePaymentStatus.processing,
-          paymentInfo: {
-            amountPaid: transaction.amount,
-            paymentMethod: PaymentMethodEnum.card,
-            date: new Date(),
-          },
-        }
-      );
-      transaction.status = TransactionEnum.processing;
-      transaction.dateCompleted = new Date();
-      await transaction.save();
-      // job.markModified('milestones');
-      await job.save();
-      message = "Payment successfully";
+      await jobPaymentService.completeJobPayment(transaction);
+      message = "Job payment completed successfully";
     }else {
       transaction.status = TransactionEnum.failed;
       message = "Payment failed";

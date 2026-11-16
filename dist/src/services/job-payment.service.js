@@ -1,0 +1,74 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.completeJobPayment = exports.applySuccessfulJobPayment = void 0;
+const error_1 = require("../errors/error");
+const jobs_enum_1 = require("../enums/jobs.enum");
+const transaction_enum_1 = require("../enums/transaction.enum");
+const jobService = __importStar(require("./job.service"));
+const applySuccessfulJobPayment = (job, transaction, completedAt = new Date()) => {
+    const milestone = (job.milestones || []).find((item) => String(item._id) === String(transaction.milestoneId));
+    if (!milestone)
+        throw new error_1.NotFoundError("Milestone not found for this payment");
+    milestone.paymentStatus = jobs_enum_1.MilestonePaymentStatus.paid;
+    milestone.datePaid = milestone.datePaid || completedAt;
+    milestone.paymentInfo = {
+        ...(milestone.paymentInfo?.toObject?.() || milestone.paymentInfo || {}),
+        amountPaid: transaction.amount,
+        paymentMethod: transaction.paymentMethod,
+        date: completedAt,
+    };
+    if (milestone.invoice)
+        milestone.invoice.reviewStatus = "paid";
+    transaction.status = transaction_enum_1.TransactionEnum.completed;
+    transaction.dateCompleted = transaction.dateCompleted || completedAt;
+    return { job, milestone, transaction };
+};
+exports.applySuccessfulJobPayment = applySuccessfulJobPayment;
+const completeJobPayment = async (transaction) => {
+    if (!transaction || transaction.serviceType !== transaction_enum_1.ServiceEnum.job) {
+        throw new error_1.BadRequestError("This is not a job payment transaction");
+    }
+    if (!transaction.jobId || !transaction.milestoneId) {
+        throw new error_1.BadRequestError("Job payment transaction is missing its job or milestone ID");
+    }
+    const job = await jobService.fetchJobById(String(transaction.jobId));
+    if (!job)
+        throw new error_1.NotFoundError("Job not found");
+    (0, exports.applySuccessfulJobPayment)(job, transaction);
+    await Promise.all([job.save(), transaction.save()]);
+    return { job, transaction };
+};
+exports.completeJobPayment = completeJobPayment;

@@ -101,6 +101,11 @@ const serializeTransaction = (transaction) => ({
     reference: transaction.reference || null,
     description: transaction.description || null,
     paymentMethod: transaction.paymentMethod || null,
+    paymentService: transaction.paymentService || null,
+    serviceType: transaction.serviceType || null,
+    jobId: transaction.jobId?._id || transaction.jobId || null,
+    milestoneId: transaction.milestoneId || null,
+    orderId: transaction.orderId?._id || transaction.orderId || null,
 });
 exports.fetchAllTransactionsByUsersController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { page, limit, paymentMethod, status, type, search, walletId, currency, sortBy, sortOrder } = req.query;

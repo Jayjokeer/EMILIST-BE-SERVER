@@ -3,6 +3,7 @@ import { verifyPaystackWebhookSignature } from "../utils/paystack";
 import * as transactionService from "../services/transaction.service";
 import * as walletService from "../services/wallet.services";
 import { ServiceEnum, TransactionType } from "../enums/transaction.enum";
+import * as jobPaymentService from "../services/job-payment.service";
 
 // Handles Paystack events:
 // - charge.success / charge.failed                          -> wallet funding
@@ -40,6 +41,8 @@ export const paystackWebhookController = async (req: Request, res: Response) => 
             );
             transaction.balanceAfter = wallet.balance;
             await transaction.save();
+          } else if (transaction.serviceType === ServiceEnum.job) {
+            await jobPaymentService.completeJobPayment(transaction);
           }
         }
         break;

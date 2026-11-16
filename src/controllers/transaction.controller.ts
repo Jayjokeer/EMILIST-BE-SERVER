@@ -68,6 +68,11 @@ const serializeTransaction = (transaction: any) => ({
   reference: transaction.reference || null,
   description: transaction.description || null,
   paymentMethod: transaction.paymentMethod || null,
+  paymentService: transaction.paymentService || null,
+  serviceType: transaction.serviceType || null,
+  jobId: transaction.jobId?._id || transaction.jobId || null,
+  milestoneId: transaction.milestoneId || null,
+  orderId: transaction.orderId?._id || transaction.orderId || null,
 });
 
 export const fetchAllTransactionsByUsersController =  catchAsync(async (req: JwtPayload, res: Response) => {

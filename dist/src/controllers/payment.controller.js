@@ -56,6 +56,7 @@ const userService = __importStar(require("../services/auth.service"));
 const suscribtion_enum_1 = require("../enums/suscribtion.enum");
 const verificationService = __importStar(require("../services/verification.service"));
 const user_enums_1 = require("../enums/user.enums");
+const jobPaymentService = __importStar(require("../services/job-payment.service"));
 const consumeCartStock = async (cart) => {
     for (const item of cart.products || []) {
         const product = await productService.fetchProductById(String(item.productId._id || item.productId));
@@ -171,8 +172,11 @@ exports.payforJobController = (0, error_handler_1.catchAsync)(async (req, res) =
     if (!milestone) {
         throw new error_1.NotFoundError("No milestone");
     }
-    if (milestone.paymentStatus !== jobs_enum_1.MilestonePaymentStatus.unpaid) {
-        throw new error_1.BadRequestError("Job has been paid");
+    if (milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.paid) {
+        throw new error_1.BadRequestError("Job milestone has already been paid");
+    }
+    if (milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.processing) {
+        throw new error_1.BadRequestError("A payment for this job milestone is already being processed");
     }
     if (!milestone.invoice?.invoiceRaised) {
         throw new error_1.BadRequestError("An invoice must be generated before this milestone can be paid");
@@ -203,7 +207,7 @@ exports.payforJobController = (0, error_handler_1.catchAsync)(async (req, res) =
             balanceBefore: userWallet.balance,
             walletId: userWallet._id,
             currency: userWallet.currency,
-            status: transaction_enum_1.TransactionEnum.processing,
+            status: transaction_enum_1.TransactionEnum.pending,
             jobId,
             milestoneId,
             recieverId: project.user,
@@ -214,17 +218,14 @@ exports.payforJobController = (0, error_handler_1.catchAsync)(async (req, res) =
         userWallet.balance -= Math.ceil(jobAmount);
         await userWallet.save();
         transaction.balanceAfter = userWallet.balance;
-        await jobService.updateMilestone(transaction.jobId, transaction.milestoneId, {
-            paymentStatus: jobs_enum_1.MilestonePaymentStatus.processing,
-            paymentInfo: {
-                amountPaid: transaction.amount,
-                paymentMethod: transaction_enum_1.PaymentMethodEnum.wallet,
-                date: new Date(),
-            },
-        });
-        // job.markModified('milestones');
-        await job.save();
-        data = "Payment successful";
+        await jobPaymentService.completeJobPayment(transaction);
+        data = {
+            message: "Payment successful",
+            transactionId: transaction._id,
+            status: transaction.status,
+            jobId: transaction.jobId,
+            milestoneId: transaction.milestoneId,
+        };
     }
     else if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card) {
         if (paymentMethod === transaction_enum_1.PaymentMethodEnum.card && currency === transaction_enum_1.WalletEnum.NGN) {
@@ -342,30 +343,10 @@ exports.verifyPaystackPaymentController = (0, error_handler_1.catchAsync)(async 
     }
     ;
     if (transaction.serviceType === transaction_enum_1.ServiceEnum.job) {
-        const job = await jobService.fetchJobById(transaction.jobId);
-        if (!job) {
-            throw new error_1.NotFoundError("Job Not found");
-        }
-        const milestone = job.milestones.find((milestone) => milestone._id.toString() === transaction.milestoneId.toString());
-        if (!milestone) {
-            throw new error_1.NotFoundError("No milestone");
-        }
         const verifyPayment = await (0, paystack_1.verifyPaystackPayment)(reference);
         if (verifyPayment === "success") {
-            await jobService.updateMilestone(transaction.jobId, transaction.milestoneId, {
-                paymentStatus: jobs_enum_1.MilestonePaymentStatus.processing,
-                paymentInfo: {
-                    amountPaid: transaction.amount,
-                    paymentMethod: transaction_enum_1.PaymentMethodEnum.card,
-                    date: new Date(),
-                },
-            });
-            transaction.status = transaction_enum_1.TransactionEnum.processing;
-            transaction.dateCompleted = new Date();
-            await transaction.save();
-            // job.markModified('milestones');
-            await job.save();
-            message = "Payment successfully";
+            await jobPaymentService.completeJobPayment(transaction);
+            message = "Job payment completed successfully";
         }
         else {
             transaction.status = transaction_enum_1.TransactionEnum.failed;

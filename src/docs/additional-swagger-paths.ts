@@ -115,7 +115,7 @@ const routes: RouteDoc[] = [
   // Transactions not covered by the detailed transaction section
   { path: '/transaction/fetch-single-transaction/{transactionId}', method: 'get', tag: 'Transactions', summary: 'Fetch a transaction (admin)' },
   { path: '/transaction/fetch-all-transactions-by-status', method: 'get', tag: 'Transactions', summary: 'Fetch transactions by status (admin)', queryParams: ['status', 'page', 'limit'] },
-  { path: '/transaction/verify-paystack-payment/{reference}', method: 'get', tag: 'Transactions', summary: 'Verify a Paystack payment', auth: false },
+  { path: '/transaction/verify-paystack-payment/{reference}', method: 'get', tag: 'Transactions', summary: 'Verify or reconcile a Paystack payment after redirect', auth: false },
   { path: '/transaction/fetch-user-earning', method: 'get', tag: 'Transactions', summary: 'Fetch user earnings' },
   { path: '/transaction/fetch-vat', method: 'get', tag: 'Transactions', summary: 'Fetch the current VAT rate', auth: false },
 

@@ -38,6 +38,7 @@ const paystack_1 = require("../utils/paystack");
 const transactionService = __importStar(require("../services/transaction.service"));
 const walletService = __importStar(require("../services/wallet.services"));
 const transaction_enum_1 = require("../enums/transaction.enum");
+const jobPaymentService = __importStar(require("../services/job-payment.service"));
 // Handles Paystack events:
 // - charge.success / charge.failed                          -> wallet funding
 // - transfer.success / transfer.failed / transfer.reversed  -> withdrawals
@@ -68,6 +69,9 @@ const paystackWebhookController = async (req, res) => {
                         const wallet = await walletService.creditWalletFunding(String(transaction.walletId), transaction.amount, String(transaction.reference));
                         transaction.balanceAfter = wallet.balance;
                         await transaction.save();
+                    }
+                    else if (transaction.serviceType === transaction_enum_1.ServiceEnum.job) {
+                        await jobPaymentService.completeJobPayment(transaction);
                     }
                 }
                 break;

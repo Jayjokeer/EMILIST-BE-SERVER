@@ -888,7 +888,7 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
             get: {
                 tags: ["Transactions"],
                 summary: "List the user's transactions with filters and pagination",
-                description: `Filter by \`status\`, \`type\`, \`walletId\`, \`currency\` and free-text \`search\` (transaction reference/id or counterparty). Sort with \`sortBy=date|amount\` + \`sortOrder=asc|desc\` (Transaction Type column control). Item shape: transactionId, shortTransactionId (#3066 style), walletId, currency, amount, formattedAmount (₦150,000 style), transactionType, status, counterparty, date, balance, reference, description, paymentMethod. Mapping: CREDIT->inflow, DEBIT->outflow; completed->successful, declined->failed, processing->pending.`,
+                description: `Filter by \`status\`, \`type\`, \`walletId\`, \`currency\` and free-text \`search\` (transaction reference/id or counterparty). Sort with \`sortBy=date|amount\` + \`sortOrder=asc|desc\` (Transaction Type column control). Item shape: transactionId, shortTransactionId (#3066 style), walletId, currency, amount, formattedAmount, transactionType, status, counterparty, date, balance, reference, description, paymentMethod, paymentService, serviceType, jobId, milestoneId and orderId. Linked identifiers are returned when applicable so the client can navigate to the underlying job, milestone or order. Mapping: CREDIT->inflow, DEBIT->outflow; completed->successful, declined->failed, processing->pending.`,
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     { name: "status", in: "query", schema: { type: "string", enum: ["all", "pending", "failed", "successful"] }, description: "Defaults to all" },
@@ -910,7 +910,7 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
                                     message: "success",
                                     data: {
                                         transactions: [
-                                            { transactionId: "64f1a2b3c4d5e6f7a8b9c0ad", walletId: "64f1a2b3c4d5e6f7a8b9c0ab", currency: "NGN", amount: 5000, transactionType: "inflow", status: "successful", counterparty: "Wallet funding via Card", date: "2026-08-31T10:00:00.000Z", balance: 15000, reference: "PS-1693500000000X8Y2", description: "Wallet funding via Card", paymentMethod: "Card" },
+                                            { transactionId: "64f1a2b3c4d5e6f7a8b9c0ad", walletId: null, currency: "NGN", amount: 5000, transactionType: "outflow", status: "successful", counterparty: "Artisan Name", date: "2026-08-31T10:00:00.000Z", balance: null, reference: "PS-1693500000000X8Y2", description: "Job payment via card", paymentMethod: "Card", paymentService: "Paystack", serviceType: "Job", jobId: "64f5c0a1b2c3d4e5f6a7b8c9", milestoneId: "64fb0a1b2c3d4e5f6a7b8c9b", orderId: null },
                                         ],
                                         totalTransactions: 24,
                                         totalPages: 3,
@@ -958,6 +958,7 @@ Only **listed** jobs appear here — jobs delisted by the poster (\`isListed = f
             get: {
                 tags: ["Transactions"],
                 summary: "Get single transaction detail (owner only)",
+                description: "Returns the same normalized transaction item used by the transaction list, including serviceType and any applicable jobId, milestoneId or orderId.",
                 security: [{ bearerAuth: [] }],
                 parameters: [{ name: "transactionId", in: "path", required: true, schema: { type: "string" } }],
                 responses: {
@@ -2218,7 +2219,10 @@ Leaves a review on the business that completed the job.`,
 - \`currency\`: \`NGN\`, \`USD\`, \`GBP\`, \`EUR\`
 - Set \`isAdditionalAmount\` to \`true\` to pay the artisan's requested additional cost.
 - Set it to \`false\` or omit it to pay only the milestone's original amount.
-- \`redirectUrl\` is required for card payments and optional for wallet payments.`,
+- \`redirectUrl\` is required for card payments and optional for wallet payments.
+- Wallet payment completes immediately and marks the transaction completed and the milestone/invoice paid.
+- Card payment creates a pending transaction and returns \`data.paymentLink\`. After Paystack succeeds, the signed webhook automatically completes the transaction and marks the milestone/invoice paid.
+- After the Paystack redirect, the client may call \`GET /transaction/verify-paystack-payment/{reference}\` as an idempotent reconciliation fallback before refreshing the job and payment table.`,
                 security: [{ bearerAuth: [] }],
                 requestBody: {
                     required: true,
@@ -2238,23 +2242,28 @@ Leaves a review on the business that completed the job.`,
                     },
                 },
                 responses: {
-                    "200": {
-                        description: "Payment initialized (returns payment link / authorization URL)",
+                    "201": {
+                        description: "Payment completed immediately for Wallet, or initialized for Card",
                         content: {
                             "application/json": {
                                 example: {
                                     message: "success",
                                     data: {
-                                        authorization_url: "https://checkout.paystack.com/xyz123",
-                                        reference: "c0a1b2c3d4e5f6a7b8c9",
-                                        access_code: "access_code_here",
-                                        message: "Payment initialized",
+                                        paymentLink: "https://checkout.paystack.com/xyz123",
+                                        transaction: {
+                                            _id: "64f1a2b3c4d5e6f7a8b9c0ad",
+                                            reference: "PS-1693500000000",
+                                            status: "pending",
+                                            serviceType: "Job",
+                                            jobId: "64f5c0a1b2c3d4e5f6a7b8c9",
+                                            milestoneId: "64fb0a1b2c3d4e5f6a7b8c9b",
+                                        },
                                     },
                                 },
                             },
                         },
                     },
-                    "400": { description: "Validation error" },
+                    "400": { description: "Validation error, milestone already paid, or payment already processing" },
                     "401": { description: "Unauthorized" },
                     "404": { description: "Job or milestone not found" },
                 },
