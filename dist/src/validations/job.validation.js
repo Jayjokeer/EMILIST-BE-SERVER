@@ -70,12 +70,15 @@ const validateFetchJobsByStatus = (req, res, next) => {
             .valid(jobs_enum_1.JobStatusEnum.listed, jobs_enum_1.JobStatusEnum.pending, jobs_enum_1.JobStatusEnum.in_review, "in_review", jobs_enum_1.JobStatusEnum.complete, jobs_enum_1.JobStatusEnum.active, jobs_enum_1.JobStatusEnum.paused, jobs_enum_1.JobStatusEnum.overdue)
             .required(),
         orderBy: joi_1.default.string().valid("newest", "oldest").default("newest"),
+        page: joi_1.default.number().integer().min(1).default(1),
+        limit: joi_1.default.number().integer().min(1).max(100).default(10),
     });
-    const { error } = schema.validate(req.query, { abortEarly: false });
+    const { error, value } = schema.validate(req.query, { abortEarly: false });
     if (error) {
         res.status(400).json({ errors: error.details.map((detail) => detail.message) });
         return;
     }
+    req.query = value;
     next();
 };
 exports.validateFetchJobsByStatus = validateFetchJobsByStatus;

@@ -1811,11 +1811,13 @@ Allowed \`status\` values: \`applied\`, \`pending\`, \`accepted\`, \`rejected\`,
       get: {
         tags: ["Jobs"],
         summary: "Fetch the user's jobs filtered by status",
-        description: "Returns the current user's jobs filtered by `status`, enriched with milestone progress, due dates and overdue flags. Results are ordered newest first by default.",
+        description: "Returns a paginated list of the current user's jobs filtered by `status`, enriched with milestone progress, due dates and overdue flags. Results are ordered newest first by default.",
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "status", in: "query", required: true, schema: { type: "string", enum: ["listed", "pending", "in review", "completed", "active", "paused", "overdue"] }, description: "Job status to filter by (creator lens: listed = newly posted, in review = has applications; legacy pending maps to listed)", example: "listed" },
           { name: "orderBy", in: "query", required: false, schema: { type: "string", enum: ["newest", "oldest"], default: "newest" }, description: "Sort by job creation date. Defaults to newest first." },
+          { name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, default: 1 }, description: "Page number." },
+          { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 100, default: 10 }, description: "Number of jobs per page." },
         ],
         responses: {
           "200": {
@@ -1824,17 +1826,23 @@ Allowed \`status\` values: \`applied\`, \`pending\`, \`accepted\`, \`rejected\`,
               "application/json": {
                 example: {
                   message: "success",
-                  data: [
-                    {
-                      _id: "64f5c0a1b2c3d4e5f6a7b8c9",
-                      title: "Fix leaking kitchen sink",
-                      status: "active",
-                      milestoneProgress: "1/3",
-                      overallDueDate: "2025-01-20T09:30:00.000Z",
-                      currentMilestoneDueDate: "2025-01-13T09:30:00.000Z",
-                      isOverdue: false,
-                    },
-                  ],
+                  data: {
+                    jobs: [
+                      {
+                        _id: "64f5c0a1b2c3d4e5f6a7b8c9",
+                        title: "Fix leaking kitchen sink",
+                        status: "active",
+                        milestoneProgress: "1/3",
+                        overallDueDate: "2025-01-20T09:30:00.000Z",
+                        currentMilestoneDueDate: "2025-01-13T09:30:00.000Z",
+                        isOverdue: false,
+                      },
+                    ],
+                    totalJobs: 1,
+                    totalPages: 1,
+                    currentPage: 1,
+                    limit: 10,
+                  },
                 },
               },
             },

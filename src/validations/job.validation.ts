@@ -82,12 +82,15 @@ export const validateFetchJobsByStatus = (req: Request, res: Response, next: Nex
       )
       .required(),
     orderBy: Joi.string().valid("newest", "oldest").default("newest"),
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(10),
   });
-  const { error } = schema.validate(req.query, { abortEarly: false });
+  const { error, value } = schema.validate(req.query, { abortEarly: false });
   if (error) {
     res.status(400).json({ errors: error.details.map((detail) => detail.message) });
     return;
   }
+  req.query = value;
   next();
 };
 

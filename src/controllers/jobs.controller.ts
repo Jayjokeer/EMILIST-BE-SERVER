@@ -1036,7 +1036,9 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
 
 export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user.id;
-  const { status, orderBy = "newest" } = req.query;
+  const { status, orderBy = "newest", page = 1, limit = 10 } = req.query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
   const now = new Date();
   let data: any = [];
 
@@ -1152,7 +1154,18 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
     );
   }
 
-  return successResponse(res, StatusCodes.OK, data);
+  const totalJobs = data.length;
+  const totalPages = Math.ceil(totalJobs / limitNumber);
+  const startIndex = (pageNumber - 1) * limitNumber;
+  const paginatedJobs = data.slice(startIndex, startIndex + limitNumber);
+
+  return successResponse(res, StatusCodes.OK, {
+    jobs: paginatedJobs,
+    totalJobs,
+    totalPages,
+    currentPage: pageNumber,
+    limit: limitNumber,
+  });
 });
 
 

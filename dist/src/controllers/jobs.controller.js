@@ -966,7 +966,9 @@ exports.jobStatusController = (0, error_handler_1.catchAsync)(async (req, res) =
 });
 exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user.id;
-    const { status, orderBy = "newest" } = req.query;
+    const { status, orderBy = "newest", page = 1, limit = 10 } = req.query;
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
     const now = new Date();
     let data = [];
     const jobs = await jobService.fetchJobsByUserId(userId, String(orderBy).toLowerCase());
@@ -1056,7 +1058,17 @@ exports.fetchJobByStatusController = (0, error_handler_1.catchAsync)(async (req,
             job.overallDueDate &&
             job.overallDueDate < now);
     }
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    const totalJobs = data.length;
+    const totalPages = Math.ceil(totalJobs / limitNumber);
+    const startIndex = (pageNumber - 1) * limitNumber;
+    const paginatedJobs = data.slice(startIndex, startIndex + limitNumber);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        jobs: paginatedJobs,
+        totalJobs,
+        totalPages,
+        currentPage: pageNumber,
+        limit: limitNumber,
+    });
 });
 exports.deleteFileController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { jobId, fileId } = req.params;
