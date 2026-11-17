@@ -26,7 +26,7 @@ const welcomeMessageAdmin = (name) => ({
     subject: "Welcome to Emilist",
     html: `
     <p><strong>Hi ${emailText(name, "there")}, welcome to Emilist.</strong></p>
-    <p>Go to <a href="${emailUrl(config_1.config.frontendLoginUrl)}">the Emilist platform</a> and use Forgot Password to create your password and log in.</p>`,
+    <p>Go to <a href="${emailUrl(config_1.config.adminFrontendUrl)}">the Emilist Admin platform</a> and use Forgot Password to create your password and log in.</p>`,
 });
 exports.welcomeMessageAdmin = welcomeMessageAdmin;
 const adminInvitationMessage = (name, invitationUrl) => ({

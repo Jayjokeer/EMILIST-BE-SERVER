@@ -9,6 +9,7 @@ const otplib_1 = require("otplib");
 const hashing_1 = require("../src/utils/hashing");
 const admin_service_1 = require("../src/services/admin.service");
 const admin_onboarding_service_1 = require("../src/services/admin-onboarding.service");
+const frontend_url_1 = require("../src/utils/frontend-url");
 (0, node_test_1.default)('admin passwords must satisfy every rule shown by onboarding', () => {
     strict_1.default.throws(() => (0, admin_onboarding_service_1.assertStrongAdminPassword)('short'), /at least 12 characters/);
     strict_1.default.throws(() => (0, admin_onboarding_service_1.assertStrongAdminPassword)('alllowercase1!'), /mixed case/);
@@ -56,4 +57,19 @@ const admin_onboarding_service_1 = require("../src/services/admin-onboarding.ser
     strict_1.default.notEqual(reset.token, reset.tokenHash);
     strict_1.default.equal((0, admin_service_1.hashInvitationToken)(reset.token), reset.tokenHash);
     strict_1.default.equal(reset.tokenHash.length, 64);
+});
+(0, node_test_1.default)('admin invitation links use the configured frontend and safely encode the token', () => {
+    strict_1.default.equal((0, frontend_url_1.buildFrontendUrl)('https://emilist-v2.vercel.app/', {
+        query: { invite: 'token with + and /' },
+    }), 'https://emilist-v2.vercel.app/?invite=token+with+%2B+and+%2F');
+});
+(0, node_test_1.default)('frontend links preserve existing queries and append the requested path', () => {
+    strict_1.default.equal((0, frontend_url_1.buildFrontendUrl)('https://emilist-v2.vercel.app/admin?source=email', {
+        path: '/reset-password',
+        query: { token: 'abc' },
+    }), 'https://emilist-v2.vercel.app/admin/reset-password?source=email&token=abc');
+});
+(0, node_test_1.default)('frontend link generation rejects missing or unsafe configuration', () => {
+    strict_1.default.throws(() => (0, frontend_url_1.buildFrontendUrl)(undefined), /FRONTEND_ADMIN_URL/);
+    strict_1.default.throws(() => (0, frontend_url_1.buildFrontendUrl)('javascript:alert(1)'), /must use http or https/);
 });

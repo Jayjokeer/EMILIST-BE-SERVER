@@ -59,6 +59,7 @@ import * as adminPaymentDocumentService from "../services/admin-payment-document
 import * as adminReportService from "../services/admin-report.service";
 import * as adminSettingsService from "../services/admin-settings.service";
 import * as adminProfileService from "../services/admin-profile.service";
+import { buildFrontendUrl } from "../utils/frontend-url";
 
 export const adminDashboardController = catchAsync(async (req: JwtPayload, res: Response) => {
 const {currency, year}= req.query; 
@@ -812,6 +813,9 @@ export const createAdminController = catchAsync(async(req: JwtPayload, res: Resp
 
   const { token, tokenHash } = adminService.createInvitationToken();
   const invitationExpiresAt = new Date(Date.now() + ADMIN_INVITATION_TTL_MS);
+  const invitationUrl = buildFrontendUrl(config.adminFrontendUrl, {
+    query: { invite: token },
+  });
   const admin = await adminService.createAdmin({
     fullName,
     mobile,
@@ -824,9 +828,6 @@ export const createAdminController = catchAsync(async(req: JwtPayload, res: Resp
     invitationExpiresAt,
   });
 
-  const adminFrontendUrl = config.adminFrontendUrl || config.frontendLoginUrl || "";
-  const separator = adminFrontendUrl.includes("?") ? "&" : "?";
-  const invitationUrl = `${adminFrontendUrl}${separator}invite=${encodeURIComponent(token)}`;
   const { html, subject } = adminInvitationMessage(fullName, invitationUrl);
   await sendEmail(normalizedEmail, subject, html);
 
@@ -1035,8 +1036,10 @@ export const forgetPasswordController = catchAsync(async (req: Request, res: Res
     admin.otpExpiresAt = undefined;
     await admin.save();
 
-    const adminFrontendUrl = config.adminFrontendUrl || config.frontendLoginUrl || "";
-    const resetUrl = `${adminFrontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
+    const resetUrl = buildFrontendUrl(config.adminFrontendUrl, {
+      path: "/reset-password",
+      query: { token },
+    });
     const { html, subject } = passwordResetMessage(String(admin.fullName || "Admin"), resetUrl);
     try {
       await sendEmail(normalizedEmail, subject, html);
@@ -1182,8 +1185,10 @@ export const updateAdminProfileController = catchAsync(async (req: Request, res:
 
 const requestingAdminId = (req: Request) => String((req as any).user?._id || (req as any).user?.id);
 const customerResetUrl = (token: string) => {
-  const frontendUrl = config.customerFrontendUrl || config.frontendLoginUrl || "";
-  return `${frontendUrl.replace(/\/$/, "")}/reset-password?adminToken=${encodeURIComponent(token)}`;
+  return buildFrontendUrl(config.customerFrontendUrl, {
+    path: "/reset-password",
+    query: { adminToken: token },
+  });
 };
 
 export const customerSummaryController = catchAsync(async (_req: Request, res: Response) => {

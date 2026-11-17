@@ -84,6 +84,7 @@ const adminPaymentDocumentService = __importStar(require("../services/admin-paym
 const adminReportService = __importStar(require("../services/admin-report.service"));
 const adminSettingsService = __importStar(require("../services/admin-settings.service"));
 const adminProfileService = __importStar(require("../services/admin-profile.service"));
+const frontend_url_1 = require("../utils/frontend-url");
 exports.adminDashboardController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { currency, year } = req.query;
     const data = {
@@ -704,6 +705,9 @@ exports.createAdminController = (0, error_handler_1.catchAsync)(async (req, res)
         throw new error_1.BadRequestError("An admin with this email already exists");
     const { token, tokenHash } = adminService.createInvitationToken();
     const invitationExpiresAt = new Date(Date.now() + admin_onboarding_service_1.ADMIN_INVITATION_TTL_MS);
+    const invitationUrl = (0, frontend_url_1.buildFrontendUrl)(config_1.config.adminFrontendUrl, {
+        query: { invite: token },
+    });
     const admin = await adminService.createAdmin({
         fullName,
         mobile,
@@ -715,9 +719,6 @@ exports.createAdminController = (0, error_handler_1.catchAsync)(async (req, res)
         invitationTokenHash: tokenHash,
         invitationExpiresAt,
     });
-    const adminFrontendUrl = config_1.config.adminFrontendUrl || config_1.config.frontendLoginUrl || "";
-    const separator = adminFrontendUrl.includes("?") ? "&" : "?";
-    const invitationUrl = `${adminFrontendUrl}${separator}invite=${encodeURIComponent(token)}`;
     const { html, subject } = (0, templates_1.adminInvitationMessage)(fullName, invitationUrl);
     await (0, send_email_1.sendEmail)(normalizedEmail, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, {
@@ -898,8 +899,10 @@ exports.forgetPasswordController = (0, error_handler_1.catchAsync)(async (req, r
         admin.passwordResetOtp = undefined;
         admin.otpExpiresAt = undefined;
         await admin.save();
-        const adminFrontendUrl = config_1.config.adminFrontendUrl || config_1.config.frontendLoginUrl || "";
-        const resetUrl = `${adminFrontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
+        const resetUrl = (0, frontend_url_1.buildFrontendUrl)(config_1.config.adminFrontendUrl, {
+            path: "/reset-password",
+            query: { token },
+        });
         const { html, subject } = (0, templates_1.passwordResetMessage)(String(admin.fullName || "Admin"), resetUrl);
         try {
             await (0, send_email_1.sendEmail)(normalizedEmail, subject, html);
@@ -1024,8 +1027,10 @@ exports.updateAdminProfileController = (0, error_handler_1.catchAsync)(async (re
 });
 const requestingAdminId = (req) => String(req.user?._id || req.user?.id);
 const customerResetUrl = (token) => {
-    const frontendUrl = config_1.config.customerFrontendUrl || config_1.config.frontendLoginUrl || "";
-    return `${frontendUrl.replace(/\/$/, "")}/reset-password?adminToken=${encodeURIComponent(token)}`;
+    return (0, frontend_url_1.buildFrontendUrl)(config_1.config.customerFrontendUrl, {
+        path: "/reset-password",
+        query: { adminToken: token },
+    });
 };
 exports.customerSummaryController = (0, error_handler_1.catchAsync)(async (_req, res) => {
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, await adminCustomerService.fetchCustomerSummary());

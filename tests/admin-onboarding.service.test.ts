@@ -11,6 +11,7 @@ import {
   encryptMfaSecret,
   verifyAuthenticatorCode,
 } from '../src/services/admin-onboarding.service';
+import { buildFrontendUrl } from '../src/utils/frontend-url';
 
 test('admin passwords must satisfy every rule shown by onboarding', () => {
   assert.throws(() => assertStrongAdminPassword('short'), /at least 12 characters/);
@@ -65,4 +66,28 @@ test('password reset links store only a deterministic hash of an opaque token', 
   assert.notEqual(reset.token, reset.tokenHash);
   assert.equal(hashInvitationToken(reset.token), reset.tokenHash);
   assert.equal(reset.tokenHash.length, 64);
+});
+
+test('admin invitation links use the configured frontend and safely encode the token', () => {
+  assert.equal(
+    buildFrontendUrl('https://emilist-v2.vercel.app/', {
+      query: { invite: 'token with + and /' },
+    }),
+    'https://emilist-v2.vercel.app/?invite=token+with+%2B+and+%2F',
+  );
+});
+
+test('frontend links preserve existing queries and append the requested path', () => {
+  assert.equal(
+    buildFrontendUrl('https://emilist-v2.vercel.app/admin?source=email', {
+      path: '/reset-password',
+      query: { token: 'abc' },
+    }),
+    'https://emilist-v2.vercel.app/admin/reset-password?source=email&token=abc',
+  );
+});
+
+test('frontend link generation rejects missing or unsafe configuration', () => {
+  assert.throws(() => buildFrontendUrl(undefined), /FRONTEND_ADMIN_URL/);
+  assert.throws(() => buildFrontendUrl('javascript:alert(1)'), /must use http or https/);
 });
