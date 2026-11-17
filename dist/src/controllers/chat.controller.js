@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getChatsController = exports.getMessagesController = exports.sendMessageController = void 0;
+exports.markChatAsReadController = exports.getChatsController = exports.getMessagesController = exports.sendMessageController = void 0;
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
 const http_status_codes_1 = require("http-status-codes");
@@ -46,37 +46,54 @@ const notificationService = __importStar(require("../services/notification.servi
 const userService = __importStar(require("../services/auth.service"));
 const send_email_1 = require("../utils/send_email");
 const templates_1 = require("../utils/templates");
+const error_1 = require("../errors/error");
 exports.sendMessageController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { receiverId } = req.params;
-    const { content } = req.body;
-    const userId = req.user._id;
-    let isNewChat = false;
-    let chat = await chatService.findChat(receiverId, userId);
+    const content = typeof req.body.content === "string" ? req.body.content.trim() : "";
+    const userId = String(req.user._id);
+    const files = req.files || [];
+    const attachments = files.map(file => ({
+        url: file.path,
+        name: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        type: messageService.getMessageAttachmentType(file.mimetype),
+    }));
+    if (String(receiverId) === userId)
+        throw new error_1.BadRequestError("You cannot message yourself");
+    if (!content && attachments.length === 0)
+        throw new error_1.BadRequestError("Message content or an attachment is required");
+    if (content.length > 5000)
+        throw new error_1.BadRequestError("Message content cannot exceed 5000 characters");
+    const receiver = await userService.findUserById(String(receiverId));
+    if (!receiver)
+        throw new error_1.NotFoundError("Receiver not found");
+    let chat = await chatService.findChat(String(receiverId), userId);
     if (!chat) {
         const payload = {
             participants: [receiverId, userId],
             messages: [],
         };
         chat = await chatService.createChat(payload);
-        isNewChat = true;
     }
     const msgPayload = {
         receiverId,
         senderId: userId,
         content,
         chatId: chat._id,
+        attachments,
+        readAt: null,
     };
     const newMessage = await messageService.createMessage(msgPayload);
     chat.messages.push(newMessage._id);
-    await Promise.all([chat.save(), newMessage.save()]);
-    const data = newMessage;
+    await chat.save();
+    const data = newMessage.toObject();
     const receiverSocketId = (0, socket_1.getReceiverId)(receiverId);
     if (receiverSocketId && server_1.io) {
-        server_1.io.to(receiverSocketId).emit("newMessage", data);
+        server_1.io.to((0, socket_1.getUserRoom)(String(receiverId))).emit("newMessage", data);
     }
     else {
-        const receiver = await userService.findUserById(receiverId);
-        if (receiver) {
+        try {
             const senderName = [req.user?.firstName, req.user?.lastName].filter(Boolean).join(" ") || req.user?.userName || "An Emilist user";
             const receiverName = [receiver.firstName, receiver.lastName].filter(Boolean).join(" ") || receiver.userName || "there";
             const notificationPayload = {
@@ -96,32 +113,43 @@ exports.sendMessageController = (0, error_handler_1.catchAsync)(async (req, res)
             const { html, subject } = (0, templates_1.sendMessage)(receiverName, senderName);
             await (0, send_email_1.sendEmail)(receiver.email, subject, html);
         }
+        catch (error) {
+            console.error("Unable to deliver offline message notification:", error);
+        }
     }
-    ;
-    // if(!receiverSocketId){
-    // }
-    // if(isNewChat){
-    //   const user = await userService.findUserById(receiverId);
-    //   const notificationPayload = {
-    //     userId: receiverId,
-    //     title: "You have a new message",
-    //     message: `${req.user.userName} sent you a message!`,
-    //     type: NotificationTypeEnum.info
-    //   }
-    //   const {html, subject} = sendMessage(user!.userName, req.user.userName);
-    //  await sendEmail(user!.email, subject,html); 
-    //   await notificationService.createNotification(notificationPayload);
-    // }
+    server_1.io.to((0, socket_1.getUserRoom)(userId)).emit("messageSent", data);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 });
 exports.getMessagesController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { userId } = req.params;
-    const loggedInUserId = req.user._id;
-    const data = await chatService.findChatWithMessages(loggedInUserId, userId);
+    const loggedInUserId = String(req.user._id);
+    const { page, limit } = req.query;
+    const data = await chatService.findChatWithMessages(loggedInUserId, String(userId), {
+        page: page,
+        limit: limit,
+    });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });
 exports.getChatsController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const loggedInUserId = req.user._id;
-    const data = await chatService.getChatsWithLastMessages(loggedInUserId);
+    const loggedInUserId = String(req.user._id);
+    const { page, limit, search } = req.query;
+    const data = await chatService.getChatsWithLastMessages(loggedInUserId, { page: page, limit: limit }, typeof search === "string" ? search : "");
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+exports.markChatAsReadController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const data = await chatService.markChatAsRead(String(req.params.chatId), String(req.user._id));
+    if (data.senderId && data.markedCount > 0) {
+        server_1.io.to((0, socket_1.getUserRoom)(data.senderId)).emit("messagesRead", {
+            chatId: String(data.chatId),
+            readerId: String(req.user._id),
+            messageIds: data.messageIds,
+            readAt: data.readAt,
+        });
+    }
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
+        chatId: data.chatId,
+        markedCount: data.markedCount,
+        messageIds: data.messageIds,
+        readAt: data.readAt,
+    });
 });

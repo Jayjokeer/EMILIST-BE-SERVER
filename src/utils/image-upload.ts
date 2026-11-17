@@ -23,7 +23,8 @@ const storage = new CloudinaryStorage({
 
     return {
       folder,
-      allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv'],
+      allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv', 'mp3', 'm4a', 'wav', 'webm', 'ogg'],
+      resource_type: 'auto',
       public_id: publicId,
     };
   },
@@ -44,6 +45,40 @@ const supportImageUpload = multer({
     return callback(error);
   },
 }).array("attachments", 10);
+
+const chatAttachmentMimeTypes = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain', 'text/csv',
+  'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a', 'audio/wav',
+  'audio/x-wav', 'audio/webm', 'audio/ogg', 'video/webm',
+]);
+
+const chatAttachmentUpload = multer({
+  storage,
+  limits: { files: 10, fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    if (chatAttachmentMimeTypes.has(file.mimetype)) return callback(null, true);
+    const error = new multer.MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname);
+    error.message = 'Chat attachments must be an image, PDF, document, spreadsheet, text file, or audio recording';
+    return callback(error);
+  },
+}).array('attachments', 10);
+
+export const rejectChatAttachmentLinks = (req: Request, res: Response, next: NextFunction) => {
+  if (req.body.attachments !== undefined) {
+    return res.status(400).json({
+      code: 400,
+      status: 'fail',
+      message: 'attachments must be uploaded files, not links or text values',
+    });
+  }
+  next();
+};
 
 export const applySupportImageAttachments = (req: Request, res: Response, next: NextFunction) => {
   if (req.body.attachments !== undefined) {
@@ -205,4 +240,4 @@ export const parseJobBody = (
   }
 };
 
-export { cloudinary, singleUpload, multipleUpload, supportImageUpload, uploadBusinessImages };
+export { cloudinary, singleUpload, multipleUpload, supportImageUpload, chatAttachmentUpload, uploadBusinessImages };

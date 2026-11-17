@@ -38,6 +38,19 @@ const chatSocket = (serverInstance:any) => {
     userSocketMap[userId].add(socket.id);
     socket.join(getUserRoom(userId));
 
+    const forwardChatActivity = (event: "typing" | "stopTyping", payload: unknown) => {
+      if (!payload || typeof payload !== "object") return;
+      const receiverId = String((payload as any).receiverId || "");
+      if (!receiverId || receiverId === userId) return;
+      io.to(getUserRoom(receiverId)).emit(event, {
+        senderId: userId,
+        chatId: (payload as any).chatId ? String((payload as any).chatId) : null,
+      });
+    };
+
+    socket.on("typing", payload => forwardChatActivity("typing", payload));
+    socket.on("stopTyping", payload => forwardChatActivity("stopTyping", payload));
+
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
     socket.on("connect_error", (err) => console.error("Connection error:", err));
 

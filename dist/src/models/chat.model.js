@@ -43,4 +43,5 @@ const chatSchema = new mongoose_1.Schema({
         },
     ],
 }, { timestamps: true });
+chatSchema.index({ participants: 1, updatedAt: -1 });
 exports.default = mongoose_1.default.model('Chat', chatSchema);

@@ -41,6 +41,19 @@ const chatSocket = (serverInstance) => {
             userSocketMap[userId] = new Set();
         userSocketMap[userId].add(socket.id);
         socket.join((0, exports.getUserRoom)(userId));
+        const forwardChatActivity = (event, payload) => {
+            if (!payload || typeof payload !== "object")
+                return;
+            const receiverId = String(payload.receiverId || "");
+            if (!receiverId || receiverId === userId)
+                return;
+            server_1.io.to((0, exports.getUserRoom)(receiverId)).emit(event, {
+                senderId: userId,
+                chatId: payload.chatId ? String(payload.chatId) : null,
+            });
+        };
+        socket.on("typing", payload => forwardChatActivity("typing", payload));
+        socket.on("stopTyping", payload => forwardChatActivity("stopTyping", payload));
         server_1.io.emit("getOnlineUsers", Object.keys(userSocketMap));
         socket.on("connect_error", (err) => console.error("Connection error:", err));
         socket.on("disconnect", () => {

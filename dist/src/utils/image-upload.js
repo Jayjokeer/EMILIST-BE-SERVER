@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadBusinessImages = exports.supportImageUpload = exports.multipleUpload = exports.singleUpload = exports.cloudinary = exports.parseJobBody = exports.parseBusinessOnboarding = exports.normalizeBusinessFileField = exports.applySupportImageAttachments = void 0;
+exports.uploadBusinessImages = exports.chatAttachmentUpload = exports.supportImageUpload = exports.multipleUpload = exports.singleUpload = exports.cloudinary = exports.parseJobBody = exports.parseBusinessOnboarding = exports.normalizeBusinessFileField = exports.applySupportImageAttachments = exports.rejectChatAttachmentLinks = void 0;
 const cloudinary_1 = require("cloudinary");
 Object.defineProperty(exports, "cloudinary", { enumerable: true, get: function () { return cloudinary_1.v2; } });
 const multer_storage_cloudinary_1 = require("multer-storage-cloudinary");
@@ -25,7 +25,8 @@ const storage = new multer_storage_cloudinary_1.CloudinaryStorage({
         }
         return {
             folder,
-            allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv'],
+            allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv', 'mp3', 'm4a', 'wav', 'webm', 'ogg'],
+            resource_type: 'auto',
             public_id: publicId,
         };
     },
@@ -47,6 +48,40 @@ const supportImageUpload = (0, multer_1.default)({
     },
 }).array("attachments", 10);
 exports.supportImageUpload = supportImageUpload;
+const chatAttachmentMimeTypes = new Set([
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain', 'text/csv',
+    'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a', 'audio/wav',
+    'audio/x-wav', 'audio/webm', 'audio/ogg', 'video/webm',
+]);
+const chatAttachmentUpload = (0, multer_1.default)({
+    storage,
+    limits: { files: 10, fileSize: 15 * 1024 * 1024 },
+    fileFilter: (_req, file, callback) => {
+        if (chatAttachmentMimeTypes.has(file.mimetype))
+            return callback(null, true);
+        const error = new multer_1.default.MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname);
+        error.message = 'Chat attachments must be an image, PDF, document, spreadsheet, text file, or audio recording';
+        return callback(error);
+    },
+}).array('attachments', 10);
+exports.chatAttachmentUpload = chatAttachmentUpload;
+const rejectChatAttachmentLinks = (req, res, next) => {
+    if (req.body.attachments !== undefined) {
+        return res.status(400).json({
+            code: 400,
+            status: 'fail',
+            message: 'attachments must be uploaded files, not links or text values',
+        });
+    }
+    next();
+};
+exports.rejectChatAttachmentLinks = rejectChatAttachmentLinks;
 const applySupportImageAttachments = (req, res, next) => {
     if (req.body.attachments !== undefined) {
         return res.status(400).json({

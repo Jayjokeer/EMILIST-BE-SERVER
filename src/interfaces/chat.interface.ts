@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
 export interface IChat {
-    participants: string[];
+    participants: Array<string | mongoose.Types.ObjectId>;
     messages: mongoose.Types.ObjectId[]; 
 }

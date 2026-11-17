@@ -34,10 +34,21 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
+const messageAttachmentSchema = new mongoose_1.Schema({
+    url: { type: String, required: true },
+    name: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    size: { type: Number, required: true, min: 0 },
+    type: { type: String, enum: ['image', 'file', 'audio'], required: true },
+}, { _id: false });
 const messageSchema = new mongoose_1.Schema({
     senderId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users", required: true },
     receiverId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users", required: true },
-    content: { type: String, required: true },
+    content: { type: String, trim: true, default: '' },
     chatId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Chat', required: true },
+    attachments: { type: [messageAttachmentSchema], default: [] },
+    readAt: { type: Date, default: null },
 }, { timestamps: true });
+messageSchema.index({ chatId: 1, createdAt: -1 });
+messageSchema.index({ receiverId: 1, readAt: 1, createdAt: -1 });
 exports.default = mongoose_1.default.model('Message', messageSchema);
