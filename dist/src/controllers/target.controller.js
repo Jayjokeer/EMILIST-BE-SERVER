@@ -37,10 +37,8 @@ exports.fetchDynamicTargetMetrics = exports.createTargetController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
-const userService = __importStar(require("../services/auth.service"));
 const targetService = __importStar(require("../services/target.service"));
-const transactionService = __importStar(require("../services/transaction.service"));
-const utility_1 = require("../utils/utility");
+const userReportService = __importStar(require("../services/user-report.service"));
 exports.createTargetController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const targetData = req.body;
     const userId = req.user._id;
@@ -49,36 +47,6 @@ exports.createTargetController = (0, error_handler_1.catchAsync)(async (req, res
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 });
 exports.fetchDynamicTargetMetrics = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const userId = req.user._id;
-    const user = await userService.findUserById(userId);
-    const target = await targetService.findUserTarget(userId);
-    if (!target) {
-        return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "No target set!");
-    }
-    const targetGoals = {
-        jobs: target.job || 0,
-        amount: target.amount || 0,
-        referrals: target.referrals || 0,
-        invites: target.invites || 0,
-    };
-    const completedJobs = await transactionService.totalCompletedJobsByTransaction(userId);
-    const totalAmount = await transactionService.totalAmountByTransaction(userId);
-    const currentAmount = totalAmount.length > 0 ? totalAmount[0].total : 0;
-    const totalReferrals = 0;
-    const totalInvites = user?.invitedUsers?.length;
-    const jobPercentage = (0, utility_1.calculatePercentage)(completedJobs, targetGoals.jobs);
-    const amountPercentage = (0, utility_1.calculatePercentage)(currentAmount, targetGoals.amount);
-    const referralPercentage = (0, utility_1.calculatePercentage)(totalReferrals, targetGoals.referrals);
-    const invitePercentage = (0, utility_1.calculatePercentage)(totalInvites, targetGoals.invites);
-    const totalTargetPercentage = Math.floor((jobPercentage + amountPercentage + referralPercentage + invitePercentage) / 4);
-    const data = {
-        jobs: { current: completedJobs, target: targetGoals.jobs, percentage: jobPercentage },
-        amount: { current: currentAmount, target: targetGoals.amount, percentage: amountPercentage },
-        referrals: { current: totalReferrals, target: targetGoals.referrals, percentage: referralPercentage },
-        invites: { current: totalInvites, target: targetGoals.invites, percentage: invitePercentage },
-        totalTargetPercentage,
-        currency: target.currency,
-        duration: target.duration
-    };
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+    const report = await userReportService.fetchUserReport(String(req.user._id), req.query);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, report.insights.targets);
 });

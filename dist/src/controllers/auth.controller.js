@@ -63,6 +63,8 @@ const newsLetterService = __importStar(require("../services/newsletter.service")
 const verificationService = __importStar(require("../services/verification.service"));
 const validation_helper_1 = require("../helpers/validation.helper");
 const adminCustomerService = __importStar(require("../services/admin-customer.service"));
+const reportEventService = __importStar(require("../services/report-event.service"));
+const report_event_model_1 = require("../models/report-event.model");
 exports.registerUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { email, password, } = req.body;
     const isEmailExists = await authService.findUserByEmail(email.toLowerCase());
@@ -430,6 +432,13 @@ exports.inviteUserController = (0, error_handler_1.catchAsync)(async (req, res) 
     await loggedInUser.save();
     const { html, subject } = (0, templates_1.sendInviteMessage)(req.user.userName, config_1.config.frontendSignUpUrl);
     await (0, send_email_1.sendEmail)(email, subject, html);
+    await reportEventService.recordReportEvent({
+        subjectUserId: String(userId),
+        actorUserId: String(userId),
+        type: report_event_model_1.ReportEventType.invite,
+        resourceType: "profile",
+        metadata: { invitedEmail: String(email).toLowerCase() },
+    });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Invite sent successfully");
 });
 exports.requestVerificationController = (0, error_handler_1.catchAsync)(async (req, res) => {
@@ -571,6 +580,7 @@ exports.insightsController = (0, error_handler_1.catchAsync)(async (req, res) =>
 });
 exports.countClicksController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { service, serviceId, userId } = req.query;
+    const actorUserId = req.user?._id ? String(req.user._id) : null;
     if (!service) {
         throw new error_1.BadRequestError('Service is required!');
     }
@@ -583,6 +593,9 @@ exports.countClicksController = (0, error_handler_1.catchAsync)(async (req, res)
         if (!user) {
             throw new error_1.NotFoundError("User not found!");
         }
+    }
+    if (service === 'shared' && !user) {
+        throw new error_1.BadRequestError('userId is required when recording a share');
     }
     let data;
     if (service === 'job') {
@@ -599,7 +612,7 @@ exports.countClicksController = (0, error_handler_1.catchAsync)(async (req, res)
             throw new error_1.NotFoundError("Business not found");
         }
     }
-    else if (service === 'materials') {
+    else if (service === 'material') {
         data = await productService.fetchProductById(serviceId);
         if (!data) {
             throw new error_1.NotFoundError("Material not found");
@@ -608,15 +621,28 @@ exports.countClicksController = (0, error_handler_1.catchAsync)(async (req, res)
     else if (service === 'shared') {
         user.sharedCount += 1;
         await user?.save();
+        await reportEventService.recordReportEvent({
+            subjectUserId: String(userId),
+            actorUserId,
+            type: report_event_model_1.ReportEventType.share,
+            resourceType: "profile",
+        });
     }
     if (service !== 'shared') {
-        if (userId) {
-            if (!data.clicks.users.includes(userId)) {
-                data.clicks.users.push(userId);
+        if (actorUserId) {
+            if (!data.clicks.users.some((id) => String(id) === actorUserId)) {
+                data.clicks.users.push(actorUserId);
             }
         }
         data.clicks.clickCount = (data.clicks.clickCount || 0) + 1;
         await data.save();
+        await reportEventService.recordReportEvent({
+            subjectUserId: String(data.userId),
+            actorUserId,
+            type: report_event_model_1.ReportEventType.click,
+            resourceType: service,
+            resourceId: String(data._id),
+        });
     }
     ;
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Successful");

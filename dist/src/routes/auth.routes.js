@@ -75,7 +75,7 @@ router.get('/google/callback', (req, res, next) => {
         next();
     })(req, res, next);
 }, authController.googleRedirectController);
-router.route("/add-click").patch(authController.countClicksController);
+router.route("/add-click").patch(current_user_1.optionalUserAuth, authController.countClicksController);
 router.route("/subscribe-newsletter").post(authController.subscribeNewsLetterController);
 router.route("/user-details/:userId").get(authController.getUserDetailsController);
 //Protected routes

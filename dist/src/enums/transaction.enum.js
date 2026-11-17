@@ -13,6 +13,7 @@ var WalletEnum;
     WalletEnum["USD"] = "USD";
     WalletEnum["GBP"] = "GBP";
     WalletEnum["EUR"] = "EUR";
+    WalletEnum["CAD"] = "CAD";
 })(WalletEnum || (exports.WalletEnum = WalletEnum = {}));
 ;
 var TransactionEnum;

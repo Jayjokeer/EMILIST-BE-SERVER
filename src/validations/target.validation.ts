@@ -7,7 +7,7 @@ import { NextFunction, Request, Response } from "express";
 export const validateTarget = (req: Request, res: Response, next: NextFunction) => {
   const targetValidationSchema = Joi.object({
     duration: Joi.string()
-      .valid(...Object.values(TargetEnum))
+      .valid(...Object.values(TargetEnum), 'annual')
       .required()
       .messages({
         'string.base': 'Duration must be a string',
@@ -45,6 +45,8 @@ export const validateTarget = (req: Request, res: Response, next: NextFunction) 
         'string.base': 'Currency must be a string',
         'any.only': 'Currency must be one of the allowed values',
       }),
+    year: Joi.number().integer().min(2000).max(2100).optional(),
+    month: Joi.number().integer().min(1).max(12).optional(),
   });
 
   const { error } = targetValidationSchema.validate(req.body, { abortEarly: false });

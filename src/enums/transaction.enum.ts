@@ -9,6 +9,7 @@ export enum WalletEnum{
     USD = 'USD',
     GBP = 'GBP',
     EUR = 'EUR',
+    CAD = 'CAD',
 };
 
 export enum TransactionEnum {

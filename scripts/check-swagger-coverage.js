@@ -19,6 +19,7 @@ const routePrefixes = {
   'support.routes.ts': '/support',
   'order.routes.ts': '/orders',
   'dashboard.routes.ts': '/dashboard',
+  'report.routes.ts': '/reports',
   'webhook.routes.ts': '/webhooks',
 };
 

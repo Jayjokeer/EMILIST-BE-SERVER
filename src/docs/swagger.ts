@@ -76,6 +76,7 @@ Endpoints marked as \`multipart/form-data\` expect the file(s) under the field
     { name: "Orders", description: "Order history, cancellation, returns, ratings, and tracking." },
     { name: "Subscriptions", description: "Plans, subscriptions, and promoted listings." },
     { name: "Targets", description: "User targets and performance metrics." },
+    { name: "Reports", description: "User Jobs, Applications, Finance, Trade, Insights, targets, and CSV exports." },
     { name: "Private Experts", description: "Private expert registration." },
   ],
   security: [{ bearerAuth: [] }],

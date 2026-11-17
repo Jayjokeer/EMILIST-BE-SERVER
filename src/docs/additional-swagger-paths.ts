@@ -177,6 +177,21 @@ const routes: RouteDoc[] = [
   { path: '/transaction/fetch-user-earning', method: 'get', tag: 'Transactions', summary: 'Fetch user earnings' },
   { path: '/transaction/fetch-vat', method: 'get', tag: 'Transactions', summary: 'Fetch the current VAT rate', auth: false },
 
+  // User Reports and Insights
+  {
+    path: '/reports',
+    method: 'get',
+    tag: 'Reports',
+    summary: 'Fetch the complete user Reports and Insights dashboard',
+    description: 'Returns Jobs, Applications, Finance, Trade, Insights, promotion duration, click tracking, and target progress for one validated date range and currency. Use year/month, a named range, or startDate/endDate.',
+    queryParams: ['year', 'month', 'range', 'startDate', 'endDate', 'currency'],
+    responseExample: { message: 'success', data: { filters: { year: 2026, month: 4, range: 'month', currency: 'NGN', label: '1 Apr 2026 - 30 Apr 2026' }, jobs: { total: 13, active: 8, pending: 3, completed: 2, overdue: 0 }, applications: { applicants: { total: 800, hired: 3, rehired: 2, flagged: 0 }, myApplications: { total: 10, hired: 2, rehired: 1, flagged: 0 } }, finance: { currency: 'NGN', earnings: { total: 150000, categories: { jobs: 85000, materials: 35000, referrals: 30000, others: 0 } }, expenses: { total: 150000, categories: { jobs: 85000, materials: 35000, promotions: 30000, others: 0 } } }, trade: { orders: { total: 19, completed: 14, pending: 2, cancelled: 2, returned: 1 }, sales: { total: 49, completed: 40, ongoing: 5, cancelled: 2, returned: 2 } }, insights: { overview: { impressions: 8, reach: 8, saves: 3, shares: 2, clicks: 8, contacts: 2 }, promotionDuration: { totalDays: 30, daysRemaining: 7 }, targets: { configured: true, progress: { overall: 18 } } } } },
+  },
+  { path: '/reports/export', method: 'get', tag: 'Reports', summary: 'Download the filtered user report as CSV', description: 'Uses the same year, month, range, startDate, endDate and currency filters as GET /reports and streams a UTF-8 CSV attachment.', queryParams: ['year', 'month', 'range', 'startDate', 'endDate', 'currency'] },
+  { path: '/reports/targets', method: 'get', tag: 'Reports', summary: 'Fetch target goals, actual values, and progress', queryParams: ['year', 'month', 'range', 'startDate', 'endDate', 'currency'] },
+  { path: '/reports/targets', method: 'put', tag: 'Reports', summary: 'Create or update a monthly or yearly report target', description: 'Upserts the target for the authenticated user, duration, period, and currency so editing does not create duplicates.', bodyExample: { duration: 'monthly', year: 2026, month: 4, currency: 'NGN', job: 2, amount: 150000, referrals: 15, invites: 24 }, successStatus: '200' },
+  { path: '/reports/events', method: 'post', tag: 'Reports', summary: 'Record a report impression, click, share, or contact action', description: 'Publicly callable with optional bearer auth. For job, material, and business resources, ownership is resolved server-side from resourceId. For profile events, subjectUserId is required.', auth: false, bodyExample: { type: 'impression', resourceType: 'job', resourceId: id } },
+
   // Private expert, targets, and subscriptions
   { path: '/expert/create-private-expert', method: 'post', tag: 'Private Experts', summary: 'Create a private expert', auth: false, multipart: true },
   { path: '/target/create-target', method: 'post', tag: 'Targets', summary: 'Create a performance target', bodyExample: { name: 'Monthly revenue', target: 500000 } },

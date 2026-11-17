@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as authController from "../controllers/auth.controller";
-import { userAuth } from "../middlewares/current-user";
+import { optionalUserAuth, userAuth } from "../middlewares/current-user";
 import { multipleUpload, singleUpload } from "../utils/image-upload";
 import passport from "passport";
 import { validateAdminTriggeredPasswordReset, validateRegisterUser, validateLoginUser, validateVerifyEmail, validateForgetPassword, validateResetPassword, validateChangePassword, validateUpdateAccountDetails, validatePaymentForVerification, validateUpdateUser, validatePasswordOtp } from "../validations/auth.validation";
@@ -45,7 +45,7 @@ router.get('/google/callback', (req, res, next) => {
     }
   )(req, res, next);
 }, authController.googleRedirectController);
-router.route("/add-click").patch(authController.countClicksController);
+router.route("/add-click").patch(optionalUserAuth, authController.countClicksController);
 router.route("/subscribe-newsletter").post( authController.subscribeNewsLetterController);
 router.route("/user-details/:userId").get( authController.getUserDetailsController);
 

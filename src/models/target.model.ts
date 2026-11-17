@@ -12,9 +12,13 @@ import { WalletEnum } from '../enums/transaction.enum';
       invites: {type: Number, default: 0},
       referrals: {type: Number, default: 0},
       amount: {type: Number, default: 0},
-      currency: {type: String, enum: WalletEnum}
+      currency: {type: String, enum: WalletEnum},
+      year: {type: Number},
+      month: {type: Number, min: 1, max: 12},
     },
     { timestamps: true }
   );
+
+  targetSchema.index({ userId: 1, duration: 1, year: 1, month: 1, currency: 1 });
   
   export default mongoose.model<ITarget>("Target", targetSchema);

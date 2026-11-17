@@ -43,6 +43,9 @@ const targetSchema = new mongoose_1.default.Schema({
     invites: { type: Number, default: 0 },
     referrals: { type: Number, default: 0 },
     amount: { type: Number, default: 0 },
-    currency: { type: String, enum: transaction_enum_1.WalletEnum }
+    currency: { type: String, enum: transaction_enum_1.WalletEnum },
+    year: { type: Number },
+    month: { type: Number, min: 1, max: 12 },
 }, { timestamps: true });
+targetSchema.index({ userId: 1, duration: 1, year: 1, month: 1, currency: 1 });
 exports.default = mongoose_1.default.model("Target", targetSchema);

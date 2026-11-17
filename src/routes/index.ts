@@ -16,6 +16,7 @@ import { AdminRoute } from "./admin.routes";
 import { OrderRoute } from "./order.routes";
 import { DashboardRoute } from "./dashboard.routes";
 import { SupportRoute } from "./support.routes";
+import { ReportRoute } from "./report.routes";
 const router = Router();
 
 router.use("/auth", AuthRoute);
@@ -35,4 +36,5 @@ router.use("/admin", AdminRoute);
 router.use("/orders", OrderRoute);
 router.use("/dashboard", DashboardRoute);
 router.use("/support", SupportRoute);
+router.use("/reports", ReportRoute);
 export default router;

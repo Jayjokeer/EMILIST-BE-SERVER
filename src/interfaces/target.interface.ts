@@ -9,4 +9,6 @@ export interface ITarget {
     userId: any;
     currency: WalletEnum;
     duration: TargetEnum
+    year?: number;
+    month?: number;
   }

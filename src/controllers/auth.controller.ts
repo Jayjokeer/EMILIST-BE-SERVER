@@ -29,6 +29,8 @@ import * as verificationService from "../services/verification.service";
 import { extractProfileDto } from "../helpers/validation.helper";
 import Users from "../models/users.model";
 import * as adminCustomerService from "../services/admin-customer.service";
+import * as reportEventService from "../services/report-event.service";
+import { ReportEventType } from "../models/report-event.model";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -471,6 +473,13 @@ export const inviteUserController = catchAsync(async (req: JwtPayload, res: Resp
 
   const {html, subject} = sendInviteMessage(req.user.userName, config.frontendSignUpUrl);
   await sendEmail(email, subject,html); 
+  await reportEventService.recordReportEvent({
+    subjectUserId: String(userId),
+    actorUserId: String(userId),
+    type: ReportEventType.invite,
+    resourceType: "profile",
+    metadata: { invitedEmail: String(email).toLowerCase() },
+  });
   return successResponse(res, StatusCodes.OK, "Invite sent successfully");
 });
 
@@ -623,6 +632,7 @@ export const insightsController = catchAsync(async (req: JwtPayload, res: Respon
 
 export const countClicksController = catchAsync(async (req: JwtPayload, res: Response) => {
   const { service, serviceId, userId } = req.query;
+  const actorUserId = req.user?._id ? String(req.user._id) : null;
 
   if (!service ) {
     throw new BadRequestError('Service is required!');
@@ -638,6 +648,9 @@ export const countClicksController = catchAsync(async (req: JwtPayload, res: Res
       throw new NotFoundError("User not found!");
     }
   }
+  if (service === 'shared' && !user) {
+    throw new BadRequestError('userId is required when recording a share');
+  }
 
   let data;
   if (service === 'job') {
@@ -652,7 +665,7 @@ export const countClicksController = catchAsync(async (req: JwtPayload, res: Res
     if (!data) {
       throw new NotFoundError("Business not found");
     }
-  } else if (service === 'materials') {
+  } else if (service === 'material') {
     data = await productService.fetchProductById(serviceId);
     if (!data) {
       throw new NotFoundError("Material not found");
@@ -661,17 +674,30 @@ export const countClicksController = catchAsync(async (req: JwtPayload, res: Res
   }else if(service === 'shared'){
     user!.sharedCount!+=1;
     await user?.save();
+    await reportEventService.recordReportEvent({
+      subjectUserId: String(userId),
+      actorUserId,
+      type: ReportEventType.share,
+      resourceType: "profile",
+    });
   }
 
    if(service !== 'shared'){
-    if (userId ) {
-    if (!data!.clicks.users.includes(userId)) { 
-      data!.clicks.users.push(userId);
+    if (actorUserId) {
+    if (!data!.clicks.users.some((id: any) => String(id) === actorUserId)) {
+      data!.clicks.users.push(actorUserId);
     }
   }
   data!.clicks.clickCount = (data!.clicks.clickCount || 0) + 1;
 
   await data!.save();
+  await reportEventService.recordReportEvent({
+    subjectUserId: String(data!.userId),
+    actorUserId,
+    type: ReportEventType.click,
+    resourceType: service as "job" | "material" | "business",
+    resourceId: String(data!._id),
+  });
    };
 
   return successResponse(res, StatusCodes.OK, "Successful");

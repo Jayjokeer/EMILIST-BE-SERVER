@@ -10,7 +10,7 @@ const transaction_enum_1 = require("../enums/transaction.enum");
 const validateTarget = (req, res, next) => {
     const targetValidationSchema = joi_1.default.object({
         duration: joi_1.default.string()
-            .valid(...Object.values(target_enum_1.TargetEnum))
+            .valid(...Object.values(target_enum_1.TargetEnum), 'annual')
             .required()
             .messages({
             'string.base': 'Duration must be a string',
@@ -48,6 +48,8 @@ const validateTarget = (req, res, next) => {
             'string.base': 'Currency must be a string',
             'any.only': 'Currency must be one of the allowed values',
         }),
+        year: joi_1.default.number().integer().min(2000).max(2100).optional(),
+        month: joi_1.default.number().integer().min(1).max(12).optional(),
     });
     const { error } = targetValidationSchema.validate(req.body, { abortEarly: false });
     if (error) {
