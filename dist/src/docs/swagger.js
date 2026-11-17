@@ -2113,7 +2113,7 @@ The milestone returns to \`active\`, its invoice review status becomes \`rejecte
             get: {
                 tags: ["Jobs"],
                 summary: "Job analytics for the current user",
-                description: "Returns job analytics (counts, totals, charts) for the authenticated user, optionally filtered by `year`, `month` or a date range.",
+                description: "Returns a single job analytics object for the authenticated user, optionally filtered by `year`, `month` or a date range. `periods` contains the daily breakdown when `month` is supplied, otherwise it contains the monthly breakdown.",
                 security: [{ bearerAuth: [] }],
                 parameters: [
                     { name: "startDate", in: "query", required: false, schema: { type: "string", format: "date" }, example: "2025-01-01" },
@@ -2122,7 +2122,59 @@ The milestone returns to \`active\`, its invoice review status becomes \`rejecte
                     { name: "month", in: "query", required: false, schema: { type: "integer" }, example: 1 },
                 ],
                 responses: {
-                    "200": { description: "Job analytics", content: { "application/json": { example: { message: "success", data: { totalJobs: 5, activeJobs: 2, completedJobs: 1, pendingJobs: 2 } } } } },
+                    "200": {
+                        description: "Job analytics object",
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    properties: {
+                                        message: { type: "string" },
+                                        data: {
+                                            type: "object",
+                                            properties: {
+                                                totalJobs: { type: "integer" },
+                                                totalActiveJobs: { type: "integer" },
+                                                totalOverdueJobs: { type: "integer" },
+                                                totalPausedJobs: { type: "integer" },
+                                                totalCompletedJobs: { type: "integer" },
+                                                totalPendingJobs: { type: "integer" },
+                                                periods: {
+                                                    type: "array",
+                                                    items: {
+                                                        type: "object",
+                                                        properties: {
+                                                            period: { type: "string" },
+                                                            totalJobs: { type: "integer" },
+                                                            totalActiveJobs: { type: "integer" },
+                                                            totalOverdueJobs: { type: "integer" },
+                                                            totalPausedJobs: { type: "integer" },
+                                                            totalCompletedJobs: { type: "integer" },
+                                                            totalPendingJobs: { type: "integer" },
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                                example: {
+                                    message: "success",
+                                    data: {
+                                        totalJobs: 5,
+                                        totalActiveJobs: 2,
+                                        totalOverdueJobs: 0,
+                                        totalPausedJobs: 0,
+                                        totalCompletedJobs: 1,
+                                        totalPendingJobs: 2,
+                                        periods: [
+                                            { period: "Jan 2025", totalJobs: 5, totalActiveJobs: 2, totalOverdueJobs: 0, totalPausedJobs: 0, totalCompletedJobs: 1, totalPendingJobs: 2 },
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                    },
                     "401": { description: "Unauthorized" },
                 },
             },

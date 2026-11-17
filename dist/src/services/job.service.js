@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsByUserId = exports.jobCreatedAtSort = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.attachMilestonePaymentReferences = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.hasUnresolvedMilestoneDispute = exports.jobDisputeSummary = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
+exports.fetchJobsByUserId = exports.jobCreatedAtSort = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.formatJobAnalyticsResponse = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.attachMilestonePaymentReferences = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.hasUnresolvedMilestoneDispute = exports.jobDisputeSummary = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -922,6 +922,24 @@ const fetchUserApplications = async (userId, skip, limit, status, page) => {
     };
 };
 exports.fetchUserApplications = fetchUserApplications;
+const formatJobAnalyticsResponse = (periods) => periods.reduce((response, period) => {
+    response.totalJobs += period.totalJobs;
+    response.totalActiveJobs += period.totalActiveJobs;
+    response.totalOverdueJobs += period.totalOverdueJobs;
+    response.totalPausedJobs += period.totalPausedJobs;
+    response.totalCompletedJobs += period.totalCompletedJobs;
+    response.totalPendingJobs += period.totalPendingJobs;
+    return response;
+}, {
+    totalJobs: 0,
+    totalActiveJobs: 0,
+    totalOverdueJobs: 0,
+    totalPausedJobs: 0,
+    totalCompletedJobs: 0,
+    totalPendingJobs: 0,
+    periods,
+});
+exports.formatJobAnalyticsResponse = formatJobAnalyticsResponse;
 const jobAnalytics = async (year = (0, moment_1.default)().year(), month, startDate, endDate, userId) => {
     let start, end;
     if (startDate && endDate) {
@@ -949,13 +967,16 @@ const jobAnalytics = async (year = (0, moment_1.default)().year(), month, startD
         dateRange.push(currentDate.clone());
         currentDate = currentDate.add(1, interval);
     }
+    const analyticsUserId = userId && mongoose_1.Types.ObjectId.isValid(userId)
+        ? new mongoose_1.Types.ObjectId(userId)
+        : userId;
     const analyticsData = await Promise.all(dateRange.map(async (date) => {
         const dayStart = date.startOf(interval).toDate();
         const dayEnd = date.endOf(interval).toDate();
         const jobs = await jobs_model_1.default.aggregate([
             {
                 $match: {
-                    userId,
+                    userId: analyticsUserId,
                     createdAt: { $gte: dayStart, $lt: dayEnd },
                 },
             },
@@ -983,6 +1004,10 @@ const jobAnalytics = async (year = (0, moment_1.default)().year(), month, startD
                         { $match: { status: jobs_enum_1.JobStatusEnum.complete } },
                         { $count: 'count' },
                     ],
+                    totalPendingJobs: [
+                        { $match: { status: { $in: [jobs_enum_1.JobStatusEnum.listed, jobs_enum_1.JobStatusEnum.pending] } } },
+                        { $count: 'count' },
+                    ],
                 },
             },
             {
@@ -992,6 +1017,7 @@ const jobAnalytics = async (year = (0, moment_1.default)().year(), month, startD
                     totalOverdueJobs: { $arrayElemAt: ['$totalOverdueJobs.count', 0] },
                     totalPausedJobs: { $arrayElemAt: ['$totalPausedJobs.count', 0] },
                     totalCompletedJobs: { $arrayElemAt: ['$totalCompletedJobs.count', 0] },
+                    totalPendingJobs: { $arrayElemAt: ['$totalPendingJobs.count', 0] },
                 },
             },
         ]);
@@ -1002,9 +1028,10 @@ const jobAnalytics = async (year = (0, moment_1.default)().year(), month, startD
             totalOverdueJobs: jobs[0]?.totalOverdueJobs || 0,
             totalPausedJobs: jobs[0]?.totalPausedJobs || 0,
             totalCompletedJobs: jobs[0]?.totalCompletedJobs || 0,
+            totalPendingJobs: jobs[0]?.totalPendingJobs || 0,
         };
     }));
-    return analyticsData;
+    return (0, exports.formatJobAnalyticsResponse)(analyticsData);
 };
 exports.jobAnalytics = jobAnalytics;
 const fetchJobCount = async (userId) => {

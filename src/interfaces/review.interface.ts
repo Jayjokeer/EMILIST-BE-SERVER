@@ -15,4 +15,4 @@ export interface IReview extends Document {
     notHelpfulUsers?: any;
     notHelpfulCount?: number;
   }
-  
+

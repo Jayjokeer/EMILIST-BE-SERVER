@@ -1013,6 +1013,37 @@ export const fetchUserJobApplications = async (
   }
 
 
+  export type JobAnalyticsPeriod = {
+    period: string;
+    totalJobs: number;
+    totalActiveJobs: number;
+    totalOverdueJobs: number;
+    totalPausedJobs: number;
+    totalCompletedJobs: number;
+    totalPendingJobs: number;
+  };
+
+  export const formatJobAnalyticsResponse = (periods: JobAnalyticsPeriod[]) => periods.reduce(
+    (response, period) => {
+      response.totalJobs += period.totalJobs;
+      response.totalActiveJobs += period.totalActiveJobs;
+      response.totalOverdueJobs += period.totalOverdueJobs;
+      response.totalPausedJobs += period.totalPausedJobs;
+      response.totalCompletedJobs += period.totalCompletedJobs;
+      response.totalPendingJobs += period.totalPendingJobs;
+      return response;
+    },
+    {
+      totalJobs: 0,
+      totalActiveJobs: 0,
+      totalOverdueJobs: 0,
+      totalPausedJobs: 0,
+      totalCompletedJobs: 0,
+      totalPendingJobs: 0,
+      periods,
+    },
+  );
+
   export const jobAnalytics = async (year: number = moment().year(), month?: number, startDate?: string, endDate?: string, userId?: string) => {
     let start, end;
   
@@ -1042,7 +1073,11 @@ export const fetchUserJobApplications = async (
       currentDate = currentDate.add(1, interval);
     }
   
-    const analyticsData = await Promise.all(
+    const analyticsUserId = userId && Types.ObjectId.isValid(userId)
+      ? new Types.ObjectId(userId)
+      : userId;
+
+    const analyticsData: JobAnalyticsPeriod[] = await Promise.all(
       dateRange.map(async (date) => {
         const dayStart = date.startOf(interval).toDate();
         const dayEnd = date.endOf(interval).toDate();
@@ -1050,7 +1085,7 @@ export const fetchUserJobApplications = async (
         const jobs = await Jobs.aggregate([
           {
             $match: {
-              userId,
+              userId: analyticsUserId,
               createdAt: { $gte: dayStart, $lt: dayEnd },
             },
           },
@@ -1078,6 +1113,10 @@ export const fetchUserJobApplications = async (
                 { $match: { status: JobStatusEnum.complete } },
                 { $count: 'count' },
               ],
+              totalPendingJobs: [
+                { $match: { status: { $in: [JobStatusEnum.listed, JobStatusEnum.pending] } } },
+                { $count: 'count' },
+              ],
             },
           },
           {
@@ -1087,6 +1126,7 @@ export const fetchUserJobApplications = async (
               totalOverdueJobs: { $arrayElemAt: ['$totalOverdueJobs.count', 0] },
               totalPausedJobs: { $arrayElemAt: ['$totalPausedJobs.count', 0] },
               totalCompletedJobs: { $arrayElemAt: ['$totalCompletedJobs.count', 0] },
+              totalPendingJobs: { $arrayElemAt: ['$totalPendingJobs.count', 0] },
             },
           },
         ]);
@@ -1098,11 +1138,12 @@ export const fetchUserJobApplications = async (
           totalOverdueJobs: jobs[0]?.totalOverdueJobs || 0,
           totalPausedJobs: jobs[0]?.totalPausedJobs || 0,
           totalCompletedJobs: jobs[0]?.totalCompletedJobs || 0,
+          totalPendingJobs: jobs[0]?.totalPendingJobs || 0,
         };
       })
     );
   
-    return analyticsData;
+    return formatJobAnalyticsResponse(analyticsData);
   };
   
 export const fetchJobCount = async (userId: string) => {
