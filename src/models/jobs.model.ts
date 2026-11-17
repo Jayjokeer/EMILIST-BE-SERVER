@@ -122,6 +122,7 @@ const jobSchema: Schema = new mongoose.Schema(
     userId: {type: Schema.Types.ObjectId, ref: 'Users'},
     applications: [ {type: Schema.Types.ObjectId, ref: 'Project'}  ],
     acceptedApplicationId: {type: Schema.Types.ObjectId, ref: 'Project'},
+    acceptedAt: { type: Date },
     additionalAmount: {type: Number},
     startDate: { type: Date }, 
     endDate: { type: Date },

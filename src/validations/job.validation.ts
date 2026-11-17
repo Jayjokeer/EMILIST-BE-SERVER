@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { FrequencyEnum, JobExpertLevel, JobPeriod, JobType, MilestoneEnum, JobUrgencyEnum, JobFrequencyEnum, DurationUnitEnum, ExperienceLevelEnum, JobStatusEnum } from '../enums/jobs.enum';
-import { ProjectStatusEnum } from '../enums/project.enum';
+import { ProjectStatusEnum, QuoteStatusEnum } from '../enums/project.enum';
 
 // ===================== SHARED REUSABLE SCHEMAS =====================
 
@@ -88,6 +88,22 @@ export const validateFetchJobsByStatus = (req: Request, res: Response, next: Nex
   const { error, value } = schema.validate(req.query, { abortEarly: false });
   if (error) {
     res.status(400).json({ errors: error.details.map((detail) => detail.message) });
+    return;
+  }
+  req.query = value;
+  next();
+};
+
+export const validateJobAnalyticsQuery = (req: Request, res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    year: Joi.number().integer().min(2000).max(2100),
+    month: Joi.number().integer().min(1).max(12),
+    startDate: Joi.date().iso(),
+    endDate: Joi.date().iso().min(Joi.ref('startDate')),
+  }).and('startDate', 'endDate');
+  const { error, value } = schema.validate(req.query, { abortEarly: false });
+  if (error) {
+    res.status(400).json({ errors: error.details.map(detail => detail.message) });
     return;
   }
   req.query = value;
@@ -542,6 +558,33 @@ export const validateApplicationStatusUpdate = (req: Request, res: Response, nex
   const { error, value } = validation.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
     res.status(400).json({ message: error.details.map(detail => detail.message).join(', ') });
+    return;
+  }
+  req.body = value;
+  next();
+};
+
+export const validateDirectJobResponse = (req: Request, res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    status: Joi.string().valid(ProjectStatusEnum.accepted, ProjectStatusEnum.rejected).required(),
+    businessId: Joi.string().hex().length(24),
+  });
+  const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    res.status(400).json({ errors: error.details.map(detail => detail.message) });
+    return;
+  }
+  req.body = value;
+  next();
+};
+
+export const validateQuoteStatusUpdate = (req: Request, res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    status: Joi.string().valid(QuoteStatusEnum.accepted, QuoteStatusEnum.rejected).required(),
+  });
+  const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    res.status(400).json({ errors: error.details.map(detail => detail.message) });
     return;
   }
   req.body = value;

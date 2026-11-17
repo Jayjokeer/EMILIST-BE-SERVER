@@ -50,6 +50,7 @@ export interface IJob {
     userId: string;
     applications?: string[];
     acceptedApplicationId?: any;
+    acceptedAt?: Date;
     startDate?: Date;
     endDate?: Date;
     pausedDate?: Date;

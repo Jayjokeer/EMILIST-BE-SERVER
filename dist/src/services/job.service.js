@@ -36,7 +36,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsByUserId = exports.jobCreatedAtSort = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.formatJobAnalyticsResponse = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.attachMilestonePaymentReferences = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.hasUnresolvedMilestoneDispute = exports.jobDisputeSummary = exports.areAllMilestonesCompletedAndPaid = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
+exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.formatJobAnalyticsResponse = exports.summarizeJobAnalyticsPeriod = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.attachMilestonePaymentReferences = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.hasUnresolvedMilestoneDispute = exports.jobDisputeSummary = exports.areAllMilestonesCompletedAndPaid = exports.activateAcceptedApplication = exports.resolveJobLifecycleStatus = exports.calculateJobDueDate = exports.getJobLifecycleStartDate = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
+exports.fetchJobsByUserId = exports.jobCreatedAtSort = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -71,6 +72,86 @@ const normalizeProjectStatus = (status) => {
     return status;
 };
 exports.normalizeProjectStatus = normalizeProjectStatus;
+const validDate = (value) => {
+    if (!value)
+        return null;
+    const date = value instanceof Date ? new Date(value) : new Date(String(value));
+    return Number.isNaN(date.getTime()) ? null : date;
+};
+const addDuration = (date, amount, period) => {
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0)
+        return date;
+    switch (String(period || '').toLowerCase()) {
+        case 'hour':
+        case 'hours': return (0, date_fns_1.add)(date, { hours: value });
+        case 'day':
+        case 'days': return (0, date_fns_1.add)(date, { days: value });
+        case 'week':
+        case 'weeks': return (0, date_fns_1.add)(date, { weeks: value });
+        case 'month':
+        case 'months': return (0, date_fns_1.add)(date, { months: value });
+        case 'year':
+        case 'years': return (0, date_fns_1.add)(date, { years: value });
+        default: return date;
+    }
+};
+/**
+ * The accepted timestamp is the lifecycle source of truth. A future scheduled
+ * date wins when work is not intended to begin immediately.
+ */
+const getJobLifecycleStartDate = (job) => {
+    const acceptedAt = validDate(job?.acceptedAt);
+    const legacyStart = validDate(job?.startDate);
+    const scheduledStart = validDate(job?.jobSchedule?.startDate);
+    const candidates = [acceptedAt, legacyStart, scheduledStart].filter((date) => Boolean(date));
+    if (!candidates.length)
+        return null;
+    return new Date(Math.max(...candidates.map(date => date.getTime())));
+};
+exports.getJobLifecycleStartDate = getJobLifecycleStartDate;
+/** Calculates one consistent due date for list, count and analytics endpoints. */
+const calculateJobDueDate = (job) => {
+    const start = (0, exports.getJobLifecycleStartDate)(job);
+    if (!start)
+        return null;
+    const milestones = Array.isArray(job?.milestones) ? job.milestones : [];
+    const milestonesWithDuration = milestones.filter((milestone) => Number(milestone?.timeFrame?.number) > 0 && milestone?.timeFrame?.period);
+    if (milestonesWithDuration.length) {
+        return milestonesWithDuration.reduce((dueDate, milestone) => addDuration(dueDate, Number(milestone.timeFrame.number), milestone.timeFrame.period), new Date(start));
+    }
+    if (Number(job?.jobDuration?.value) > 0 && job?.jobDuration?.unit) {
+        return addDuration(new Date(start), Number(job.jobDuration.value), job.jobDuration.unit);
+    }
+    return validDate(job?.jobSchedule?.endDate) || validDate(job?.endDate);
+};
+exports.calculateJobDueDate = calculateJobDueDate;
+const resolveJobLifecycleStatus = (job, now = new Date()) => {
+    const status = (0, exports.normalizeJobStatus)(job?.status) || String(job?.status || '');
+    if (status === jobs_enum_1.JobStatusEnum.overdue)
+        return jobs_enum_1.JobStatusEnum.overdue;
+    if (status !== jobs_enum_1.JobStatusEnum.active)
+        return status;
+    const dueDate = (0, exports.calculateJobDueDate)(job);
+    return dueDate && dueDate.getTime() < now.getTime() ? jobs_enum_1.JobStatusEnum.overdue : jobs_enum_1.JobStatusEnum.active;
+};
+exports.resolveJobLifecycleStatus = resolveJobLifecycleStatus;
+/** Applies every invariant required when an application becomes the assignee. */
+const activateAcceptedApplication = (job, project, acceptedAt = new Date()) => {
+    const effectiveAcceptedAt = validDate(project?.acceptedAt) || acceptedAt;
+    project.status = project_enum_1.ProjectStatusEnum.accepted;
+    project.acceptedAt = effectiveAcceptedAt;
+    job.status = jobs_enum_1.JobStatusEnum.active;
+    job.acceptedApplicationId = project._id;
+    job.acceptedAt = effectiveAcceptedAt;
+    if (!job.startDate)
+        job.startDate = effectiveAcceptedAt;
+    const firstOpenMilestone = (job.milestones || []).find((milestone) => milestone.status === jobs_enum_1.MilestoneEnum.pending);
+    if (firstOpenMilestone)
+        firstOpenMilestone.status = jobs_enum_1.MilestoneEnum.active;
+    return { job, project };
+};
+exports.activateAcceptedApplication = activateAcceptedApplication;
 const areAllMilestonesCompletedAndPaid = (milestones = []) => milestones.length > 0 && milestones.every(milestone => milestone.status === jobs_enum_1.MilestoneEnum.completed
     && milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.paid);
 exports.areAllMilestonesCompletedAndPaid = areAllMilestonesCompletedAndPaid;
@@ -771,6 +852,9 @@ exports.fetchJobByUserIdAndStatus = fetchJobByUserIdAndStatus;
 const fetchUserJobApplications = async (userId, skip, limit, status, page, search = null, filters = {}) => {
     const myProjects = await project_model_1.default.find({ user: userId }).select('_id status');
     const projectIds = myProjects.map((project) => project._id);
+    const acceptedProjectIds = myProjects
+        .filter(project => [project_enum_1.ProjectStatusEnum.accepted, project_enum_1.ProjectStatusEnum.completed].includes(project.status))
+        .map(project => project._id);
     let query = { applications: { $in: projectIds } };
     if (status) {
         const sl = String(status).toLowerCase().trim();
@@ -789,7 +873,13 @@ const fetchUserJobApplications = async (userId, skip, limit, status, page, searc
         else
             query.status = status;
         if (status === jobs_enum_1.JobStatusEnum.active || status === 'overdue') {
-            query = { acceptedApplicationId: { $in: projectIds }, status: jobs_enum_1.JobStatusEnum.active };
+            query = {
+                $or: [
+                    { acceptedApplicationId: { $in: projectIds } },
+                    { applications: { $in: acceptedProjectIds } },
+                ],
+                status: jobs_enum_1.JobStatusEnum.active,
+            };
         }
     }
     if (search) {
@@ -815,64 +905,27 @@ const fetchUserJobApplications = async (userId, skip, limit, status, page, searc
         if (job.status !== jobs_enum_1.JobStatusEnum.active && job.status !== jobs_enum_1.JobStatusEnum.paused) {
             return job.toObject();
         }
-        let accumulatedTime = job.startDate?.getTime();
-        let milestoneDueDate = null;
         const totalMilestones = job.milestones.length;
-        let completedMilestones = 0;
-        job.milestones.forEach((milestone) => {
-            const timeMultiplier = milestone.timeFrame.period === 'days' ? 86400000 : 604800000;
-            const milestoneDuration = milestone.timeFrame.number * timeMultiplier;
-            accumulatedTime += milestoneDuration;
-            if (milestone.status === jobs_enum_1.MilestoneEnum.active ||
-                milestone.status === jobs_enum_1.MilestoneEnum.completed) {
-                completedMilestones += 1;
-            }
-            if ((milestone.status === jobs_enum_1.MilestoneEnum.active ||
-                milestone.status === jobs_enum_1.MilestoneEnum.paused) &&
-                !milestoneDueDate) {
-                milestoneDueDate = new Date(accumulatedTime);
-            }
-        });
+        const completedMilestones = job.milestones.filter((milestone) => milestone.status === jobs_enum_1.MilestoneEnum.completed).length;
         const milestoneProgress = `${completedMilestones}/${totalMilestones}`;
-        const overallDueDate = new Date(accumulatedTime);
+        const overallDueDate = (0, exports.calculateJobDueDate)(job);
         return {
             ...job.toObject(),
-            milestoneDueDate,
+            milestoneDueDate: overallDueDate,
             overallDueDate,
             milestoneProgress,
+            isOverdue: (0, exports.resolveJobLifecycleStatus)(job) === jobs_enum_1.JobStatusEnum.overdue,
         };
     }));
-    const filteredApplications = applicationsWithDueDates.filter((job) => {
-        if (status === jobs_enum_1.JobStatusEnum.active) {
-            return job.overallDueDate > new Date();
-        }
-        if (status === 'overdue') {
-            return job.overallDueDate <= new Date();
-        }
-        return true;
-    });
-    const withDisplay = applicationsWithDueDates.map((job) => {
-        const plain = typeof job.toObject === "function" ? job.toObject() : { ...job };
-        const apps = Array.isArray(plain.applications) ? plain.applications : [];
-        const mine = apps.find((a) => a && a.user && String(a.user._id || a.user) === String(userId));
-        const myStatus = mine ? String(mine.status || "").toLowerCase() : null;
-        if (myStatus === "rejected")
-            plain.status = project_enum_1.ProjectStatusEnum.rejected;
-        else if (myStatus === "accepted")
-            plain.status = jobs_enum_1.JobStatusEnum.active;
-        else if (myStatus === "applied" || myStatus === "pending")
-            plain.status = project_enum_1.ProjectStatusEnum.applied;
-        else if (plain.status === jobs_enum_1.JobStatusEnum.pending)
-            plain.status = jobs_enum_1.JobStatusEnum.listed;
-        return plain;
-    });
-    const filteredWithDisplay = withDisplay.filter((job) => {
+    const filteredWithDisplay = applicationsWithDueDates
+        .filter((job) => {
         if (status === jobs_enum_1.JobStatusEnum.active)
-            return job.overallDueDate > new Date();
-        if (status === "overdue")
-            return job.overallDueDate <= new Date();
+            return (0, exports.resolveJobLifecycleStatus)(job) === jobs_enum_1.JobStatusEnum.active;
+        if (status === 'overdue')
+            return (0, exports.resolveJobLifecycleStatus)(job) === jobs_enum_1.JobStatusEnum.overdue;
         return true;
-    });
+    })
+        .map((job) => (0, exports.withJobDisplayStatus)(job, userId));
     const totalApplications = filteredWithDisplay.length;
     const paginatedApplications = await withApplicationAttention(filteredWithDisplay.slice(skip, skip + limit), userId);
     return {
@@ -899,19 +952,7 @@ const fetchUserApplications = async (userId, skip, limit, status, page) => {
         applications: { $in: projectIds },
     });
     const _mapStatus = (job) => {
-        const plain = typeof job.toObject === "function" ? job.toObject() : { ...job };
-        const apps = Array.isArray(plain.applications) ? plain.applications : [];
-        const mine = apps.find((a) => a && a.user && String(a.user._id || a.user) === String(userId));
-        const myStatus = mine ? String(mine.status || "").toLowerCase() : String(status || "").toLowerCase();
-        if (myStatus === "rejected")
-            plain.status = project_enum_1.ProjectStatusEnum.rejected;
-        else if (myStatus === "accepted")
-            plain.status = jobs_enum_1.JobStatusEnum.active;
-        else if (myStatus === "applied" || myStatus === "pending")
-            plain.status = project_enum_1.ProjectStatusEnum.applied;
-        else if (plain.status === jobs_enum_1.JobStatusEnum.pending)
-            plain.status = jobs_enum_1.JobStatusEnum.listed;
-        return plain;
+        return (0, exports.withJobDisplayStatus)(job, userId);
     };
     const _mapped = await withApplicationAttention(userApplications.map(_mapStatus), userId);
     return {
@@ -922,6 +963,26 @@ const fetchUserApplications = async (userId, skip, limit, status, page) => {
     };
 };
 exports.fetchUserApplications = fetchUserApplications;
+const summarizeJobAnalyticsPeriod = (records, period, now = new Date()) => {
+    const statuses = records.map(record => (0, exports.resolveJobLifecycleStatus)(record.job, now));
+    const totalDraftJobs = statuses.filter(status => status === jobs_enum_1.JobStatusEnum.draft).length;
+    const totalListedJobs = statuses.filter(status => status === jobs_enum_1.JobStatusEnum.listed || status === jobs_enum_1.JobStatusEnum.pending).length;
+    const totalInReviewJobs = statuses.filter(status => status === jobs_enum_1.JobStatusEnum.in_review).length;
+    return {
+        period,
+        totalJobs: records.length,
+        totalActiveJobs: statuses.filter(status => status === jobs_enum_1.JobStatusEnum.active).length,
+        totalOverdueJobs: statuses.filter(status => status === jobs_enum_1.JobStatusEnum.overdue).length,
+        totalPausedJobs: statuses.filter(status => status === jobs_enum_1.JobStatusEnum.paused).length,
+        totalCompletedJobs: statuses.filter(status => status === jobs_enum_1.JobStatusEnum.complete).length,
+        totalPendingJobs: totalDraftJobs + totalListedJobs + totalInReviewJobs,
+        totalDraftJobs,
+        totalListedJobs,
+        totalInReviewJobs,
+        totalCancelledJobs: statuses.filter(status => status === jobs_enum_1.JobStatusEnum.cancelled).length,
+    };
+};
+exports.summarizeJobAnalyticsPeriod = summarizeJobAnalyticsPeriod;
 const formatJobAnalyticsResponse = (periods) => periods.reduce((response, period) => {
     response.totalJobs += period.totalJobs;
     response.totalActiveJobs += period.totalActiveJobs;
@@ -929,6 +990,10 @@ const formatJobAnalyticsResponse = (periods) => periods.reduce((response, period
     response.totalPausedJobs += period.totalPausedJobs;
     response.totalCompletedJobs += period.totalCompletedJobs;
     response.totalPendingJobs += period.totalPendingJobs;
+    response.totalDraftJobs += period.totalDraftJobs || 0;
+    response.totalListedJobs += period.totalListedJobs || 0;
+    response.totalInReviewJobs += period.totalInReviewJobs || 0;
+    response.totalCancelledJobs += period.totalCancelledJobs || 0;
     return response;
 }, {
     totalJobs: 0,
@@ -937,105 +1002,116 @@ const formatJobAnalyticsResponse = (periods) => periods.reduce((response, period
     totalPausedJobs: 0,
     totalCompletedJobs: 0,
     totalPendingJobs: 0,
+    totalDraftJobs: 0,
+    totalListedJobs: 0,
+    totalInReviewJobs: 0,
+    totalCancelledJobs: 0,
     periods,
 });
 exports.formatJobAnalyticsResponse = formatJobAnalyticsResponse;
-const jobAnalytics = async (year = (0, moment_1.default)().year(), month, startDate, endDate, userId) => {
-    let start, end;
-    if (startDate && endDate) {
-        start = (0, moment_1.default)(startDate);
-        end = (0, moment_1.default)(endDate);
-        if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
-            throw new error_1.BadRequestError('Invalid date range');
-        }
+const resolveAnalyticsRange = (yearInput, monthInput, startDate, endDate) => {
+    if (Boolean(startDate) !== Boolean(endDate)) {
+        throw new error_1.BadRequestError('startDate and endDate must be provided together');
     }
-    else if (year && month) {
-        start = (0, moment_1.default)(`${year}-${month}-01`);
+    const year = Number(yearInput || moment_1.default.utc().year());
+    const month = monthInput === undefined || monthInput === null || String(monthInput) === ''
+        ? undefined
+        : Number(monthInput);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100)
+        throw new error_1.BadRequestError('Invalid year');
+    if (month !== undefined && (!Number.isInteger(month) || month < 1 || month > 12)) {
+        throw new error_1.BadRequestError('Month must be between 1 and 12');
+    }
+    let start;
+    let end;
+    if (startDate && endDate) {
+        start = moment_1.default.utc(startDate, moment_1.default.ISO_8601, true).startOf('day');
+        end = moment_1.default.utc(endDate, moment_1.default.ISO_8601, true).endOf('day');
+        if (!start.isValid() || !end.isValid() || end.isBefore(start))
+            throw new error_1.BadRequestError('Invalid date range');
+    }
+    else if (month !== undefined) {
+        start = moment_1.default.utc(`${year}-${String(month).padStart(2, '0')}-01`, 'YYYY-MM-DD', true).startOf('month');
         end = start.clone().endOf('month');
     }
-    else if (year) {
-        start = (0, moment_1.default)(`${year}-01-01`);
-        end = (0, moment_1.default)(`${year}-12-31`);
-    }
     else {
-        throw new error_1.BadRequestError('Year is required');
+        start = moment_1.default.utc(`${year}-01-01`, 'YYYY-MM-DD', true).startOf('year');
+        end = start.clone().endOf('year');
     }
-    const dateRange = [];
-    let currentDate = start.clone();
-    const interval = month ? 'days' : 'months';
-    while (currentDate.isSameOrBefore(end)) {
-        dateRange.push(currentDate.clone());
-        currentDate = currentDate.add(1, interval);
+    if (end.diff(start, 'days') > 366)
+        throw new error_1.BadRequestError('Analytics date range cannot exceed 366 days');
+    return { start, end, month };
+};
+const jobAnalytics = async (year, month, startDate, endDate, userId) => {
+    if (!userId || !mongoose_1.Types.ObjectId.isValid(String(userId)))
+        throw new error_1.BadRequestError('Valid user is required');
+    const { start, end, month: resolvedMonth } = resolveAnalyticsRange(year, month, startDate, endDate);
+    const analyticsUserId = new mongoose_1.Types.ObjectId(String(userId));
+    const projects = await project_model_1.default.find({ user: analyticsUserId })
+        .select('_id status directJobStatus acceptedAt updatedAt')
+        .lean();
+    const projectById = new Map(projects.map(project => [String(project._id), project]));
+    const projectIds = projects.map(project => project._id);
+    const jobs = await jobs_model_1.default.find({
+        $or: [
+            { userId: analyticsUserId },
+            { acceptedApplicationId: { $in: projectIds } },
+            { applications: { $in: projectIds } },
+        ],
+    }).lean();
+    const records = jobs.flatMap((job) => {
+        const isOwner = String(job.userId) === String(analyticsUserId);
+        if (isOwner) {
+            const relationshipDate = validDate(job.createdAt);
+            return relationshipDate ? [{ job, relationship: 'owner', relationshipDate }] : [];
+        }
+        const applicationIds = [job.acceptedApplicationId, ...(job.applications || [])]
+            .filter(Boolean)
+            .map((id) => String(id));
+        const project = applicationIds.map((id) => projectById.get(id)).find((candidate) => {
+            if (!candidate)
+                return false;
+            const acceptedStatus = [project_enum_1.ProjectStatusEnum.accepted, project_enum_1.ProjectStatusEnum.completed].includes(candidate.status);
+            const directAccepted = candidate.directJobStatus === project_enum_1.ProjectStatusEnum.accepted;
+            const acceptedPointer = String(job.acceptedApplicationId || '') === String(candidate._id)
+                && [jobs_enum_1.JobStatusEnum.active, jobs_enum_1.JobStatusEnum.paused, jobs_enum_1.JobStatusEnum.complete, jobs_enum_1.JobStatusEnum.overdue].includes(job.status);
+            return acceptedStatus || directAccepted || acceptedPointer;
+        });
+        if (!project)
+            return [];
+        const relationshipDate = validDate(project.acceptedAt)
+            || validDate(job.acceptedAt)
+            || validDate(job.startDate)
+            || validDate(project.updatedAt)
+            || validDate(job.createdAt);
+        return relationshipDate ? [{ job, relationship: 'assigned', relationshipDate }] : [];
+    }).filter(record => record.relationshipDate.getTime() >= start.valueOf() && record.relationshipDate.getTime() <= end.valueOf());
+    const interval = resolvedMonth ? 'day' : 'month';
+    const periods = [];
+    for (let cursor = start.clone().startOf(interval); cursor.isSameOrBefore(end); cursor.add(1, interval)) {
+        const periodStart = cursor.clone().startOf(interval).valueOf();
+        const periodEnd = cursor.clone().endOf(interval).valueOf();
+        const periodRecords = records.filter(record => {
+            const value = record.relationshipDate.getTime();
+            return value >= periodStart && value <= periodEnd;
+        });
+        periods.push((0, exports.summarizeJobAnalyticsPeriod)(periodRecords, cursor.format(resolvedMonth ? 'MMM D, YYYY' : 'MMM YYYY')));
     }
-    const analyticsUserId = userId && mongoose_1.Types.ObjectId.isValid(userId)
-        ? new mongoose_1.Types.ObjectId(userId)
-        : userId;
-    const analyticsData = await Promise.all(dateRange.map(async (date) => {
-        const dayStart = date.startOf(interval).toDate();
-        const dayEnd = date.endOf(interval).toDate();
-        const jobs = await jobs_model_1.default.aggregate([
-            {
-                $match: {
-                    userId: analyticsUserId,
-                    createdAt: { $gte: dayStart, $lt: dayEnd },
-                },
-            },
-            {
-                $facet: {
-                    totalJobs: [{ $count: 'count' }],
-                    totalActiveJobs: [
-                        { $match: { status: jobs_enum_1.JobStatusEnum.active } },
-                        { $count: 'count' },
-                    ],
-                    totalOverdueJobs: [
-                        {
-                            $match: {
-                                status: { $ne: jobs_enum_1.JobStatusEnum.complete },
-                                'milestones.timeFrame': { $lt: new Date() },
-                            },
-                        },
-                        { $count: 'count' },
-                    ],
-                    totalPausedJobs: [
-                        { $match: { status: jobs_enum_1.JobStatusEnum.paused } },
-                        { $count: 'count' },
-                    ],
-                    totalCompletedJobs: [
-                        { $match: { status: jobs_enum_1.JobStatusEnum.complete } },
-                        { $count: 'count' },
-                    ],
-                    totalPendingJobs: [
-                        { $match: { status: { $in: [jobs_enum_1.JobStatusEnum.listed, jobs_enum_1.JobStatusEnum.pending] } } },
-                        { $count: 'count' },
-                    ],
-                },
-            },
-            {
-                $project: {
-                    totalJobs: { $arrayElemAt: ['$totalJobs.count', 0] },
-                    totalActiveJobs: { $arrayElemAt: ['$totalActiveJobs.count', 0] },
-                    totalOverdueJobs: { $arrayElemAt: ['$totalOverdueJobs.count', 0] },
-                    totalPausedJobs: { $arrayElemAt: ['$totalPausedJobs.count', 0] },
-                    totalCompletedJobs: { $arrayElemAt: ['$totalCompletedJobs.count', 0] },
-                    totalPendingJobs: { $arrayElemAt: ['$totalPendingJobs.count', 0] },
-                },
-            },
-        ]);
-        return {
-            period: date.format(interval === 'months' ? 'MMM YYYY' : 'MMM D, YYYY'),
-            totalJobs: jobs[0]?.totalJobs || 0,
-            totalActiveJobs: jobs[0]?.totalActiveJobs || 0,
-            totalOverdueJobs: jobs[0]?.totalOverdueJobs || 0,
-            totalPausedJobs: jobs[0]?.totalPausedJobs || 0,
-            totalCompletedJobs: jobs[0]?.totalCompletedJobs || 0,
-            totalPendingJobs: jobs[0]?.totalPendingJobs || 0,
-        };
-    }));
-    return (0, exports.formatJobAnalyticsResponse)(analyticsData);
+    return {
+        ...(0, exports.formatJobAnalyticsResponse)(periods),
+        scope: {
+            ownedJobs: records.filter(record => record.relationship === 'owner').length,
+            assignedJobs: records.filter(record => record.relationship === 'assigned').length,
+        },
+        range: {
+            startDate: start.toISOString(),
+            endDate: end.toISOString(),
+        },
+    };
 };
 exports.jobAnalytics = jobAnalytics;
 const fetchJobCount = async (userId) => {
-    const jobs = await jobs_model_1.default.find({ userId });
+    const jobs = await jobs_model_1.default.find({ userId }).lean();
     const now = new Date();
     let totalPendingJobs = 0;
     let totalActiveJobs = 0;
@@ -1043,33 +1119,17 @@ const fetchJobCount = async (userId) => {
     let totalCompletedJobs = 0;
     let totalOverdueJobs = 0;
     jobs.forEach(job => {
-        const { status, startDate, milestones } = job;
-        if (status === jobs_enum_1.JobStatusEnum.pending || status === jobs_enum_1.JobStatusEnum.listed || status === "listed")
+        const status = (0, exports.resolveJobLifecycleStatus)(job, now);
+        if ([jobs_enum_1.JobStatusEnum.draft, jobs_enum_1.JobStatusEnum.listed, jobs_enum_1.JobStatusEnum.pending, jobs_enum_1.JobStatusEnum.in_review].includes(status))
             totalPendingJobs++;
         if (status === jobs_enum_1.JobStatusEnum.paused)
             totalPausedJobs++;
         if (status === jobs_enum_1.JobStatusEnum.complete)
             totalCompletedJobs++;
-        if (status === jobs_enum_1.JobStatusEnum.active && startDate && milestones?.length > 0) {
-            let totalDays = 0;
-            milestones.forEach((m) => {
-                if (m.timeFrame?.period === "days" &&
-                    !isNaN(parseInt(m.timeFrame.number))) {
-                    totalDays += parseInt(m.timeFrame.number);
-                }
-            });
-            const dueDate = new Date(startDate);
-            dueDate.setDate(dueDate.getDate() + totalDays);
-            if (dueDate < now) {
-                totalOverdueJobs++;
-            }
-            else {
-                totalActiveJobs++;
-            }
-        }
-        else if (status === jobs_enum_1.JobStatusEnum.active) {
+        if (status === jobs_enum_1.JobStatusEnum.overdue)
+            totalOverdueJobs++;
+        if (status === jobs_enum_1.JobStatusEnum.active)
             totalActiveJobs++;
-        }
     });
     return {
         totalPendingJobs,
@@ -1081,53 +1141,35 @@ const fetchJobCount = async (userId) => {
 };
 exports.fetchJobCount = fetchJobCount;
 const fetchProjectCounts = async (userId) => {
-    const userProjects = await project_model_1.default.find({ user: userId });
-    let totalPendingProjects = 0;
-    let totalOverdueProjects = 0;
-    let totalDueProjects = 0;
+    if (!mongoose_1.Types.ObjectId.isValid(userId))
+        throw new error_1.BadRequestError('Valid user is required');
+    const userProjects = await project_model_1.default.find({ user: userId }).select('_id status directJobStatus').lean();
+    const userProjectIds = userProjects.map(project => project._id);
+    const acceptedProjectIds = userProjects
+        .filter(project => [project_enum_1.ProjectStatusEnum.accepted, project_enum_1.ProjectStatusEnum.completed].includes(project.status)
+        || project.directJobStatus === project_enum_1.ProjectStatusEnum.accepted)
+        .map(project => project._id);
+    const jobs = await jobs_model_1.default.find({
+        $or: [
+            { acceptedApplicationId: { $in: userProjectIds } },
+            { applications: { $in: acceptedProjectIds } },
+        ],
+        status: { $in: [jobs_enum_1.JobStatusEnum.active, jobs_enum_1.JobStatusEnum.paused, jobs_enum_1.JobStatusEnum.complete, jobs_enum_1.JobStatusEnum.overdue] },
+    }).lean();
     const currentDate = new Date();
-    const userProjectIds = userProjects.map((project) => project._id);
-    const totalActiveProjectsRaw = await jobs_model_1.default.find({
-        acceptedApplicationId: { $in: userProjectIds },
-        status: jobs_enum_1.JobStatusEnum.active,
-    });
-    const totalPausedProjects = await jobs_model_1.default.countDocuments({
-        acceptedApplicationId: { $in: userProjectIds },
-        status: jobs_enum_1.JobStatusEnum.paused,
-    });
-    const totalCompletedProjects = await jobs_model_1.default.countDocuments({
-        acceptedApplicationId: { $in: userProjectIds },
-        status: jobs_enum_1.JobStatusEnum.complete,
-    });
-    userProjects.forEach((project) => {
-        if (project.status == project_enum_1.ProjectStatusEnum.pending || project.status == project_enum_1.ProjectStatusEnum.applied || project.status == "applied") {
-            totalPendingProjects++;
-        }
-    });
-    let totalActiveProjects = 0;
-    for (const job of totalActiveProjectsRaw) {
-        if (!job.startDate || !job.milestones?.length) {
-            totalActiveProjects++;
-            continue;
-        }
-        let accumulatedTime = job.startDate.getTime();
-        for (const milestone of job.milestones) {
-            const timeMultiplier = milestone.timeFrame?.period === "days" ? 86400000 : 604800000;
-            const milestoneDuration = (milestone.timeFrame?.number ?? 0) * timeMultiplier;
-            accumulatedTime += milestoneDuration;
-        }
-        const overallDueDate = new Date(accumulatedTime);
-        if (overallDueDate <= currentDate) {
-            totalOverdueProjects++;
-        }
-        else {
-            totalActiveProjects++;
-            const threeDaysAhead = new Date(currentDate.getTime() + 3 * 86400000);
-            if (overallDueDate <= threeDaysAhead) {
-                totalDueProjects++;
-            }
-        }
-    }
+    const threeDaysAhead = new Date(currentDate.getTime() + 3 * 86400000);
+    const resolved = jobs.map(job => ({ job, status: (0, exports.resolveJobLifecycleStatus)(job, currentDate) }));
+    const totalActiveProjects = resolved.filter(item => item.status === jobs_enum_1.JobStatusEnum.active).length;
+    const totalOverdueProjects = resolved.filter(item => item.status === jobs_enum_1.JobStatusEnum.overdue).length;
+    const totalPausedProjects = resolved.filter(item => item.status === jobs_enum_1.JobStatusEnum.paused).length;
+    const totalCompletedProjects = resolved.filter(item => item.status === jobs_enum_1.JobStatusEnum.complete).length;
+    const totalDueProjects = resolved.filter(item => {
+        if (item.status !== jobs_enum_1.JobStatusEnum.active)
+            return false;
+        const dueDate = (0, exports.calculateJobDueDate)(item.job);
+        return Boolean(dueDate && dueDate > currentDate && dueDate <= threeDaysAhead);
+    }).length;
+    const totalPendingProjects = userProjects.filter(project => [project_enum_1.ProjectStatusEnum.pending, project_enum_1.ProjectStatusEnum.applied, project_enum_1.ProjectStatusEnum.in_review].includes(project.status)).length;
     return {
         totalPendingProjects,
         totalActiveProjects,
@@ -1138,88 +1180,78 @@ const fetchProjectCounts = async (userId) => {
     };
 };
 exports.fetchProjectCounts = fetchProjectCounts;
-const projectAnalytics = async (year = (0, moment_1.default)().year(), month, startDate, endDate, userId) => {
-    let start, end;
-    if (startDate && endDate) {
-        start = (0, moment_1.default)(startDate, 'YYYY-MM-DD', true);
-        end = (0, moment_1.default)(endDate, 'YYYY-MM-DD', true);
-        if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
-            throw new error_1.BadRequestError('Invalid date range');
-        }
-    }
-    else if (year && month) {
-        start = (0, moment_1.default)(`${year}-${String(month).padStart(2, '0')}-01`, 'YYYY-MM-DD', true);
-        end = start.clone().endOf('month');
-    }
-    else if (year) {
-        start = (0, moment_1.default)(`${year}-01-01`, 'YYYY-MM-DD', true);
-        end = (0, moment_1.default)(`${year}-12-31`, 'YYYY-MM-DD', true);
-    }
-    const dateRange = [];
-    let currentDate = start.clone();
-    const interval = month ? 'days' : 'months';
-    while (currentDate.isSameOrBefore(end)) {
-        dateRange.push(currentDate.clone());
-        currentDate = currentDate.add(1, interval);
-    }
-    const projects = await project_model_1.default.find({ user: userId }).select('_id');
+const projectAnalytics = async (year, month, startDate, endDate, userId) => {
+    if (!userId || !mongoose_1.Types.ObjectId.isValid(String(userId)))
+        throw new error_1.BadRequestError('Valid user is required');
+    const { start, end, month: resolvedMonth } = resolveAnalyticsRange(year, month, startDate, endDate);
+    const projects = await project_model_1.default.find({ user: userId })
+        .select('_id status directJobStatus acceptedAt updatedAt')
+        .lean();
+    const projectById = new Map(projects.map(project => [String(project._id), project]));
     const projectIds = projects.map(project => project._id);
-    const analyticsData = await Promise.all(dateRange.map(async (date) => {
-        const dayStart = date.startOf(interval).toDate();
-        const dayEnd = date.endOf(interval).toDate();
-        const jobs = await jobs_model_1.default.aggregate([
-            {
-                $match: {
-                    acceptedApplicationId: { $in: projectIds },
-                    createdAt: { $gte: dayStart, $lt: dayEnd },
-                },
-            },
-            {
-                $facet: {
-                    totalProjects: [{ $count: 'count' }],
-                    totalActiveProjects: [
-                        { $match: { status: jobs_enum_1.JobStatusEnum.active } },
-                        { $count: 'count' },
-                    ],
-                    totalOverdueProjects: [
-                        {
-                            $match: {
-                                status: { $ne: jobs_enum_1.JobStatusEnum.complete },
-                                'milestones.timeFrame': { $lt: new Date() },
-                            },
-                        },
-                        { $count: 'count' },
-                    ],
-                    totalPausedProjects: [
-                        { $match: { status: jobs_enum_1.JobStatusEnum.paused } },
-                        { $count: 'count' },
-                    ],
-                    totalCompletedProjects: [
-                        { $match: { status: jobs_enum_1.JobStatusEnum.complete } },
-                        { $count: 'count' },
-                    ],
-                },
-            },
-            {
-                $project: {
-                    totalProjects: { $arrayElemAt: ['$totalProjects.count', 0] },
-                    totalActiveProjects: { $arrayElemAt: ['$totalActiveProjects.count', 0] },
-                    totalOverdueProjects: { $arrayElemAt: ['$totalOverdueProjects.count', 0] },
-                    totalPausedProjects: { $arrayElemAt: ['$totalPausedProjects.count', 0] },
-                    totalCompletedProjects: { $arrayElemAt: ['$totalCompletedProjects.count', 0] },
-                },
-            },
-        ]);
-        return {
-            period: date.format(interval === 'months' ? 'MMM YYYY' : 'MMM D, YYYY'),
-            totalProjects: jobs[0]?.totalProjects || 0,
-            totalActiveProjects: jobs[0]?.totalActiveProjects || 0,
-            totalOverdueProjects: jobs[0]?.totalOverdueProjects || 0,
-            totalPausedProjects: jobs[0]?.totalPausedProjects || 0,
-            totalCompletedProjects: jobs[0]?.totalCompletedProjects || 0,
-        };
-    }));
-    return analyticsData;
+    const jobs = await jobs_model_1.default.find({
+        $or: [
+            { acceptedApplicationId: { $in: projectIds } },
+            { applications: { $in: projectIds } },
+        ],
+    }).lean();
+    const records = jobs.flatMap((job) => {
+        const applicationIds = [job.acceptedApplicationId, ...(job.applications || [])]
+            .filter(Boolean)
+            .map((id) => String(id));
+        const project = applicationIds.map((id) => projectById.get(id)).find((candidate) => {
+            if (!candidate)
+                return false;
+            return [project_enum_1.ProjectStatusEnum.accepted, project_enum_1.ProjectStatusEnum.completed].includes(candidate.status)
+                || candidate.directJobStatus === project_enum_1.ProjectStatusEnum.accepted
+                || (String(job.acceptedApplicationId || '') === String(candidate._id)
+                    && [jobs_enum_1.JobStatusEnum.active, jobs_enum_1.JobStatusEnum.paused, jobs_enum_1.JobStatusEnum.complete, jobs_enum_1.JobStatusEnum.overdue].includes(job.status));
+        });
+        if (!project)
+            return [];
+        const relationshipDate = validDate(project.acceptedAt)
+            || validDate(job.acceptedAt)
+            || validDate(job.startDate)
+            || validDate(project.updatedAt)
+            || validDate(job.createdAt);
+        return relationshipDate ? [{ job, relationship: 'assigned', relationshipDate }] : [];
+    }).filter(record => record.relationshipDate.getTime() >= start.valueOf() && record.relationshipDate.getTime() <= end.valueOf());
+    const interval = resolvedMonth ? 'day' : 'month';
+    const periods = [];
+    for (let cursor = start.clone().startOf(interval); cursor.isSameOrBefore(end); cursor.add(1, interval)) {
+        const periodStart = cursor.clone().startOf(interval).valueOf();
+        const periodEnd = cursor.clone().endOf(interval).valueOf();
+        const summary = (0, exports.summarizeJobAnalyticsPeriod)(records.filter(record => {
+            const value = record.relationshipDate.getTime();
+            return value >= periodStart && value <= periodEnd;
+        }), cursor.format(resolvedMonth ? 'MMM D, YYYY' : 'MMM YYYY'));
+        periods.push({
+            period: summary.period,
+            totalProjects: summary.totalJobs,
+            totalActiveProjects: summary.totalActiveJobs,
+            totalOverdueProjects: summary.totalOverdueJobs,
+            totalPausedProjects: summary.totalPausedJobs,
+            totalCompletedProjects: summary.totalCompletedJobs,
+        });
+    }
+    const totals = periods.reduce((result, period) => ({
+        totalProjects: result.totalProjects + period.totalProjects,
+        totalActiveProjects: result.totalActiveProjects + period.totalActiveProjects,
+        totalOverdueProjects: result.totalOverdueProjects + period.totalOverdueProjects,
+        totalPausedProjects: result.totalPausedProjects + period.totalPausedProjects,
+        totalCompletedProjects: result.totalCompletedProjects + period.totalCompletedProjects,
+    }), {
+        totalProjects: 0,
+        totalActiveProjects: 0,
+        totalOverdueProjects: 0,
+        totalPausedProjects: 0,
+        totalCompletedProjects: 0,
+    });
+    return {
+        ...totals,
+        periods,
+        range: { startDate: start.toISOString(), endDate: end.toISOString() },
+    };
 };
 exports.projectAnalytics = projectAnalytics;
 const fetchAllJobsForAdminDashboard = async () => {

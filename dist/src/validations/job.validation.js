@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneRejection = exports.validateMilestoneStatusUpdate = exports.validateAttentionViewed = exports.validateApplicationStatusUpdate = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = exports.validateReviewJobOwner = exports.validateFetchJobsByStatus = void 0;
+exports.validateRecurringJob = exports.validateUpdateMilestonePayment = exports.validatePostQuote = exports.validateMilestoneRejection = exports.validateMilestoneStatusUpdate = exports.validateAttentionViewed = exports.validateQuoteStatusUpdate = exports.validateDirectJobResponse = exports.validateApplicationStatusUpdate = exports.validateCounterBidResponse = exports.validateCounterBid = exports.validateProjectApplication = exports.validateUpdateJob = exports.validateJob = exports.validateReviewJobOwner = exports.validateJobAnalyticsQuery = exports.validateFetchJobsByStatus = void 0;
 const joi_1 = __importDefault(require("joi"));
 const jobs_enum_1 = require("../enums/jobs.enum");
 const project_enum_1 = require("../enums/project.enum");
@@ -82,6 +82,22 @@ const validateFetchJobsByStatus = (req, res, next) => {
     next();
 };
 exports.validateFetchJobsByStatus = validateFetchJobsByStatus;
+const validateJobAnalyticsQuery = (req, res, next) => {
+    const schema = joi_1.default.object({
+        year: joi_1.default.number().integer().min(2000).max(2100),
+        month: joi_1.default.number().integer().min(1).max(12),
+        startDate: joi_1.default.date().iso(),
+        endDate: joi_1.default.date().iso().min(joi_1.default.ref('startDate')),
+    }).and('startDate', 'endDate');
+    const { error, value } = schema.validate(req.query, { abortEarly: false });
+    if (error) {
+        res.status(400).json({ errors: error.details.map(detail => detail.message) });
+        return;
+    }
+    req.query = value;
+    next();
+};
+exports.validateJobAnalyticsQuery = validateJobAnalyticsQuery;
 const validateReviewJobOwner = (req, res, next) => {
     const schema = joi_1.default.object({
         rating: joi_1.default.number().integer().min(1).max(5).required(),
@@ -504,6 +520,33 @@ const validateApplicationStatusUpdate = (req, res, next) => {
     next();
 };
 exports.validateApplicationStatusUpdate = validateApplicationStatusUpdate;
+const validateDirectJobResponse = (req, res, next) => {
+    const schema = joi_1.default.object({
+        status: joi_1.default.string().valid(project_enum_1.ProjectStatusEnum.accepted, project_enum_1.ProjectStatusEnum.rejected).required(),
+        businessId: joi_1.default.string().hex().length(24),
+    });
+    const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) {
+        res.status(400).json({ errors: error.details.map(detail => detail.message) });
+        return;
+    }
+    req.body = value;
+    next();
+};
+exports.validateDirectJobResponse = validateDirectJobResponse;
+const validateQuoteStatusUpdate = (req, res, next) => {
+    const schema = joi_1.default.object({
+        status: joi_1.default.string().valid(project_enum_1.QuoteStatusEnum.accepted, project_enum_1.QuoteStatusEnum.rejected).required(),
+    });
+    const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) {
+        res.status(400).json({ errors: error.details.map(detail => detail.message) });
+        return;
+    }
+    req.body = value;
+    next();
+};
+exports.validateQuoteStatusUpdate = validateQuoteStatusUpdate;
 const validateAttentionViewed = (req, res, next) => {
     const validation = joi_1.default.object({
         eventIds: joi_1.default.array().items(joi_1.default.string().required()).min(1),

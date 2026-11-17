@@ -50,3 +50,41 @@ const job_validation_1 = require("../src/validations/job.validation");
     strict_1.default.equal(statusCode, 400);
     strict_1.default.equal(responseBody.errors.length, 2);
 });
+(0, node_test_1.default)("job analytics validates and converts year and month", () => {
+    const req = { query: { year: "2026", month: "11" } };
+    let nextCalled = false;
+    (0, job_validation_1.validateJobAnalyticsQuery)(req, {}, () => { nextCalled = true; });
+    strict_1.default.equal(nextCalled, true);
+    strict_1.default.equal(req.query.year, 2026);
+    strict_1.default.equal(req.query.month, 11);
+});
+(0, node_test_1.default)("job analytics requires a complete date range", () => {
+    const req = { query: { startDate: "2026-11-01" } };
+    let statusCode;
+    const res = {
+        status(code) { statusCode = code; return this; },
+        json() { return this; },
+    };
+    (0, job_validation_1.validateJobAnalyticsQuery)(req, res, () => {
+        throw new Error("next must not be called for an incomplete date range");
+    });
+    strict_1.default.equal(statusCode, 400);
+});
+(0, node_test_1.default)("direct-job and quote responses accept only terminal decisions", () => {
+    for (const validator of [job_validation_1.validateDirectJobResponse, job_validation_1.validateQuoteStatusUpdate]) {
+        const acceptedReq = { body: { status: "accepted" } };
+        let nextCalled = false;
+        validator(acceptedReq, {}, () => { nextCalled = true; });
+        strict_1.default.equal(nextCalled, true);
+        const invalidReq = { body: { status: "pending" } };
+        let statusCode;
+        const res = {
+            status(code) { statusCode = code; return this; },
+            json() { return this; },
+        };
+        validator(invalidReq, res, () => {
+            throw new Error("next must not be called for a non-terminal response");
+        });
+        strict_1.default.equal(statusCode, 400);
+    }
+});

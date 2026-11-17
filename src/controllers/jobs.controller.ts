@@ -166,13 +166,13 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
         job: data._id,
         user: artisanUser._id,
         creator: userId,
+        businessId: business._id,
         directJobStatus: ProjectStatusEnum.pending,
       };
       const project = await projectService.createProject(payload);
       data.applications = [];
       data.applications!.push(String(project._id));
-      data.acceptedApplicationId = String(project._id);
-      data.save();
+      await data.save();
       const { html, subject } = directJobApplicationMessage(
         jobEmailDisplayName(artisanUser, "there"),
         jobEmailDisplayName(req.user, "An Emilist customer"),
@@ -201,8 +201,7 @@ export const createJobController = catchAsync( async (req: JwtPayload, res: Resp
       const project = await projectService.createProject(payload);
       data.applications = [];
       data.applications!.push(String(project._id));
-      data.acceptedApplicationId = String(project._id);
-      data.save();
+      await data.save();
       const { html, subject } = directJobApplicationMessage(
         jobEmailDisplayName(user, "there"),
         jobEmailDisplayName(req.user, "An Emilist customer"),
@@ -353,6 +352,9 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
     const business = await businessService.fetchSingleBusiness(String(businessId));
     if(!business){
       throw new NotFoundError("Business not found!");
+    }
+    if (String((business.userId as any)?._id || business.userId) !== String(userId)) {
+      throw new UnauthorizedError("You can only apply with a business that belongs to you!");
     }
     const payload: any = {
       job: jobId,
@@ -710,11 +712,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       await project.save();
     } else {
       latest.status = CounterOfferStatusEnum.accepted;
-      project.status = ProjectStatusEnum.accepted;
-      project.acceptedAt = new Date();
-      job.status = JobStatusEnum.active;
-      job.acceptedApplicationId = project._id;
-      job.startDate = project.acceptedAt;
+      jobService.activateAcceptedApplication(job, project);
       job.maximumPrice = project.biddableDetails.maximumPrice;
       (project.biddableDetails.milestones || []).forEach((offeredMilestone: any) => {
         const milestone = (job.milestones || []).find((item: any) => String(item._id) === String(offeredMilestone.milestoneId));
@@ -723,7 +721,6 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
           milestone.achievement = offeredMilestone.achievement;
         }
       });
-      if (job.milestones?.length) job.milestones[0].status = MilestoneEnum.active;
       await projectService.updateRejectProject(projectId, String(job._id));
       await project.save();
       await job.save();
@@ -903,14 +900,7 @@ export const fetchLikedJobsController = catchAsync(async (req: JwtPayload, res: 
       if ((project as any).counterOffers?.length) {
         throw new BadRequestError("Use the counteroffer response endpoint to accept the negotiated bid!");
       }
-      job.status = JobStatusEnum.active;
-      job.acceptedApplicationId = projectId;
-      project.acceptedAt = new Date();
-      job.startDate = project.acceptedAt || new Date();
-      if (job.milestones && job.milestones.length > 0) {
-        job.milestones[0].status = MilestoneEnum.active;
-      }
-      project.status = status;
+      jobService.activateAcceptedApplication(job, project);
 
       if (job.type === JobType.biddable && project.biddableDetails) {
         job.maximumPrice = project.biddableDetails.maximumPrice;
@@ -1052,51 +1042,21 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
 
     const progressMilestones =
       job.milestones?.filter(
-        (m: any) =>
-          m.status === MilestoneEnum.completed ||
-          m.status === MilestoneEnum.active ||
-          m.status === MilestoneEnum.paused
+        (m: any) => m.status === MilestoneEnum.completed
       ).length || 0;
 
     const milestoneProgress = `${progressMilestones}/${totalMilestones}`;
-
-    let overallDueDate = job.startDate ? new Date(job.startDate) : null;
-    let currentMilestoneDueDate: Date | null = null;
-
-    if (job.startDate && totalMilestones > 0) {
-      let accumulatedDays = 0;
-      let currentMilestoneFound = false;
-
-      for (const milestone of job.milestones) {
-        const days = parseInt(milestone.timeFrame?.number, 10) || 0;
-
-        if (milestone.timeFrame?.period === "days") {
-          accumulatedDays += days;
-        }
-
-        if (overallDueDate && !isNaN(days)) {
-          overallDueDate.setDate(overallDueDate.getDate() + days);
-        }
-
-        if (
-          !currentMilestoneFound &&
-          (milestone.status === MilestoneEnum.active ||
-            milestone.status === MilestoneEnum.paused)
-        ) {
-          currentMilestoneDueDate = new Date(job.startDate);
-          currentMilestoneDueDate.setDate(
-            currentMilestoneDueDate.getDate() + accumulatedDays
-          );
-          currentMilestoneFound = true;
-        }
-      }
-    }
-
-    const isOverdue =
-      job.status === JobStatusEnum.active &&
-      job.startDate &&
-      overallDueDate &&
-      overallDueDate < now;
+    const overallDueDate = jobService.calculateJobDueDate(job);
+    const currentMilestoneIndex = (job.milestones || []).findIndex((milestone: any) =>
+      milestone.status === MilestoneEnum.active || milestone.status === MilestoneEnum.paused,
+    );
+    const currentMilestoneDueDate = currentMilestoneIndex >= 0
+      ? jobService.calculateJobDueDate({
+        ...(typeof job.toObject === 'function' ? job.toObject() : job),
+        milestones: job.milestones.slice(0, currentMilestoneIndex + 1),
+      })
+      : null;
+    const isOverdue = jobService.resolveJobLifecycleStatus(job, now) === JobStatusEnum.overdue;
 
     return {
       ...(typeof job.toObject === 'function' ? job.toObject() : job),
@@ -1128,29 +1088,17 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
 
   if (status === JobStatusEnum.active) {
     data = processedJobs.filter((job: any) => {
-      if (job.status !== JobStatusEnum.active) return false;
-      if (!job.startDate) return true;
-      if (job.overallDueDate && job.overallDueDate >= now) return true;
-      return false;
+      return jobService.resolveJobLifecycleStatus(job, now) === JobStatusEnum.active;
     });
   }
 
   if (status === JobStatusEnum.paused) {
-    data = processedJobs.filter((job: any) => {
-      if (job.status !== JobStatusEnum.paused) return false;
-      if (!job.startDate) return true;
-      if (job.overallDueDate && job.overallDueDate >= now) return true;
-      return false;
-    });
+    data = processedJobs.filter((job: any) => job.status === JobStatusEnum.paused);
   }
 
   if (status === JobStatusEnum.overdue) {
     data = processedJobs.filter(
-      (job: any) =>
-        job.status === JobStatusEnum.active &&
-        job.startDate &&
-        job.overallDueDate &&
-        job.overallDueDate < now
+      (job: any) => jobService.resolveJobLifecycleStatus(job, now) === JobStatusEnum.overdue,
     );
   }
 
@@ -1201,12 +1149,21 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
       throw new NotFoundError("Job not found!")
     }
     if(status == ProjectStatusEnum.accepted){
-      job.status = JobStatusEnum.active;
-      if (job.milestones && job.milestones.length > 0) {
-        job.milestones[0].status = MilestoneEnum.active;
+      let acceptedBusiness: any = null;
+      if (businessId) {
+        acceptedBusiness = await businessService.fetchSingleBusiness(String(businessId));
+      } else if (project.businessId) {
+        acceptedBusiness = await businessService.fetchSingleBusiness(String(project.businessId));
+      } else {
+        const businesses = await businessService.fetchUserBusiness(String(user.id));
+        acceptedBusiness = businesses[0] || null;
       }
-      project.status= ProjectStatusEnum.accepted;
-      project.businessId= businessId; 
+      if (!acceptedBusiness) throw new BadRequestError("Create or select your artisan business before accepting this direct job!");
+      if (String((acceptedBusiness.userId as any)?._id || acceptedBusiness.userId) !== String(user.id)) {
+        throw new UnauthorizedError("The selected business does not belong to you!");
+      }
+      jobService.activateAcceptedApplication(job, project);
+      project.businessId = acceptedBusiness._id;
       project.directJobStatus= ProjectStatusEnum.accepted;
       
     }else if(status == ProjectStatusEnum.rejected){
@@ -1411,7 +1368,7 @@ export const fetchJobByStatusController = catchAsync(async (req: JwtPayload, res
     const project = await projectService.fetchProjectById(String(job.acceptedApplicationId));
     const user = await authService.findUserById(String(project?.user));
     if(!user) throw new NotFoundError("user not found!");
-    job.save();
+    await job.save();
 
     const { html, subject } = requestForQuoteMessage(
       jobEmailDisplayName(user, "there"),
@@ -1763,8 +1720,7 @@ export const createRecurringJobController = catchAsync( async (req: JwtPayload, 
      const project = await projectService.createProject(payload);
      data.applications = [];
      data.applications!.push(String(project._id));
-     data.acceptedApplicationId = String(project._id);
-     data.save();
+     await data.save();
      const { html, subject } = directJobApplicationMessage(
        jobEmailDisplayName(user, "there"),
        jobEmailDisplayName(req.user, "An Emilist customer"),
