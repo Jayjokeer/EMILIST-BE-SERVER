@@ -6,6 +6,7 @@ import passport from "passport";
 import { validateAdminTriggeredPasswordReset, validateRegisterUser, validateLoginUser, validateVerifyEmail, validateForgetPassword, validateResetPassword, validateChangePassword, validateUpdateAccountDetails, validatePaymentForVerification, validateUpdateUser, validatePasswordOtp } from "../validations/auth.validation";
 import *  as paymentController from "../controllers/payment.controller";
 import { config } from "../utils/config";
+import { buildFrontendUrl } from "../utils/frontend-url";
 
 const router = Router();
 
@@ -37,7 +38,7 @@ router.get('/google/callback', (req, res, next) => {
     { session: false },
     (err, user) => {
       if (err || !user) {
-        return res.redirect(`${config.frontendUrl}/login`);
+        return res.redirect(buildFrontendUrl(config.frontendUrl, { path: "/login" }));
       }
 
       req.user = user;

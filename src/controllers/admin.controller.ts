@@ -1185,7 +1185,7 @@ export const updateAdminProfileController = catchAsync(async (req: Request, res:
 
 const requestingAdminId = (req: Request) => String((req as any).user?._id || (req as any).user?.id);
 const customerResetUrl = (token: string) => {
-  return buildFrontendUrl(config.customerFrontendUrl, {
+  return buildFrontendUrl(config.frontendUrl, {
     path: "/reset-password",
     query: { adminToken: token },
   });

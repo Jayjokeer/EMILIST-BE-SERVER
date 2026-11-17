@@ -46,6 +46,7 @@ const utility_1 = require("../utils/utility");
 const jwt_1 = require("../utils/jwt");
 const error_handler_1 = require("../errors/error-handler");
 const templates_1 = require("../utils/templates");
+const frontend_url_1 = require("../utils/frontend-url");
 const send_email_1 = require("../utils/send_email");
 const config_1 = require("../utils/config");
 const user_enums_1 = require("../enums/user.enums");
@@ -386,7 +387,7 @@ exports.googleRedirectController = (0, error_handler_1.catchAsync)(async (req, r
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    return res.redirect(`${config_1.config.frontendUrl}`);
+    return res.redirect((0, frontend_url_1.buildFrontendUrl)(config_1.config.frontendUrl));
 });
 exports.logoutController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const user = await authService.findUserById(req.user.id);
@@ -430,7 +431,7 @@ exports.inviteUserController = (0, error_handler_1.catchAsync)(async (req, res) 
     }
     loggedInUser.invitedUsers?.push(email);
     await loggedInUser.save();
-    const { html, subject } = (0, templates_1.sendInviteMessage)(req.user.userName, config_1.config.frontendSignUpUrl);
+    const { html, subject } = (0, templates_1.sendInviteMessage)(req.user.userName);
     await (0, send_email_1.sendEmail)(email, subject, html);
     await reportEventService.recordReportEvent({
         subjectUserId: String(userId),

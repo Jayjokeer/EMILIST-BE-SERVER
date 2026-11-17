@@ -23,11 +23,8 @@ exports.config = {
     cloudinarySecretKey: process.env.CLOUDINARY_SECRET_KEY,
     cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
     cloudinaryName: process.env.CLOUDINARY_NAME,
-    frontendSignUpUrl: process.env.FRONTEND_SIGNUP,
     paystackSecretKey: process.env.PAYSTACK_SECRET_KEY,
     paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY,
     adminEmail: process.env.ADMIN_EMAIL,
-    frontendLoginUrl: (process.env.FRONTEND_LOGIN || process.env.FRONTEND_URL),
     adminFrontendUrl: process.env.FRONTEND_ADMIN_URL,
-    customerFrontendUrl: (process.env.CUSTOMER_FRONTEND_URL || process.env.FRONTEND_URL),
 };

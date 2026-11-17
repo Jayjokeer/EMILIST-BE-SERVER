@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.invoicePaymentReminderEmail = exports.generateReminderEmail = exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.counterOfferMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.adminCustomerMessage = exports.adminCreatedCustomerMessage = exports.customerPasswordResetMessage = exports.passwordResetMessage = exports.adminInvitationMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
 const config_1 = require("./config");
+const frontend_url_1 = require("./frontend-url");
 const rawText = (value) => {
     if (value === undefined || value === null)
         return "";
@@ -17,6 +18,8 @@ const escapeHtml = (value) => rawText(value)
 const emailText = (value, fallback) => escapeHtml(rawText(value) || fallback);
 const subjectText = (value, fallback) => (rawText(value) || fallback).replace(/[\r\n]+/g, " ");
 const emailUrl = (value) => emailText(value, "#");
+const userFrontendUrl = () => (0, frontend_url_1.buildFrontendUrl)(config_1.config.frontendUrl);
+const adminFrontendUrl = () => (0, frontend_url_1.buildFrontendUrl)(config_1.config.adminFrontendUrl);
 const otpMessage = (otp) => ({
     subject: "OTP Email",
     html: `<p>Your OTP is <strong>${emailText(otp, "unavailable")}</strong>, valid for 5 minutes.</p>`,
@@ -26,7 +29,7 @@ const welcomeMessageAdmin = (name) => ({
     subject: "Welcome to Emilist",
     html: `
     <p><strong>Hi ${emailText(name, "there")}, welcome to Emilist.</strong></p>
-    <p>Go to <a href="${emailUrl(config_1.config.adminFrontendUrl)}">the Emilist Admin platform</a> and use Forgot Password to create your password and log in.</p>`,
+    <p>Go to <a href="${emailUrl(adminFrontendUrl())}">the Emilist Admin platform</a> and use Forgot Password to create your password and log in.</p>`,
 });
 exports.welcomeMessageAdmin = welcomeMessageAdmin;
 const adminInvitationMessage = (name, invitationUrl) => ({
@@ -74,7 +77,7 @@ const directJobApplicationMessage = (name, creatorName, id) => ({
     html: `
     <p>Hi ${emailText(name, "there")},</p>
     <p>${emailText(creatorName, "An Emilist customer")} created and assigned a job to you with ID: ${emailText(id, "unavailable")}.</p>
-    <p>Kindly <a href="${emailUrl(config_1.config.frontendLoginUrl)}">log in to your account</a> to view and accept the job.</p>`,
+    <p>Kindly <a href="${emailUrl(userFrontendUrl())}">log in to your account</a> to view and accept the job.</p>`,
 });
 exports.directJobApplicationMessage = directJobApplicationMessage;
 const requestForQuoteMessage = (name, creatorName, id) => ({
@@ -82,7 +85,7 @@ const requestForQuoteMessage = (name, creatorName, id) => ({
     html: `
     <p>Hi ${emailText(name, "there")},</p>
     <p>${emailText(creatorName, "The job owner")} requested a quote for job ID: ${emailText(id, "unavailable")}.</p>
-    <p>Kindly <a href="${emailUrl(config_1.config.frontendLoginUrl)}">log in to your account</a> to submit the quote.</p>`,
+    <p>Kindly <a href="${emailUrl(userFrontendUrl())}">log in to your account</a> to submit the quote.</p>`,
 });
 exports.requestForQuoteMessage = requestForQuoteMessage;
 const postQuoteMessage = (name, posterName, id) => ({
@@ -90,7 +93,7 @@ const postQuoteMessage = (name, posterName, id) => ({
     html: `
     <p>Hi ${emailText(name, "there")},</p>
     <p>${emailText(posterName, "The assigned professional")} posted a quote for job ID: ${emailText(id, "unavailable")}.</p>
-    <p>Kindly <a href="${emailUrl(config_1.config.frontendLoginUrl)}">log in to your account</a> to accept or reject the quote.</p>`,
+    <p>Kindly <a href="${emailUrl(userFrontendUrl())}">log in to your account</a> to accept or reject the quote.</p>`,
 });
 exports.postQuoteMessage = postQuoteMessage;
 const sendMessage = (name, posterName) => ({
@@ -98,7 +101,7 @@ const sendMessage = (name, posterName) => ({
     html: `
     <p>Hi ${emailText(name, "there")},</p>
     <p>${emailText(posterName, "An Emilist user")} sent you a message.</p>
-    <p>Kindly <a href="${emailUrl(config_1.config.frontendLoginUrl)}">log in to your account</a> to respond.</p>`,
+    <p>Kindly <a href="${emailUrl(userFrontendUrl())}">log in to your account</a> to respond.</p>`,
 });
 exports.sendMessage = sendMessage;
 const sendJobApplicationMessage = (name, user, title) => ({
@@ -106,7 +109,7 @@ const sendJobApplicationMessage = (name, user, title) => ({
     html: `
     <p>Hi ${emailText(name, "there")},</p>
     <p>${emailText(user, "An Emilist professional")} applied to your job titled <strong>${emailText(title, "your job")}</strong>.</p>
-    <p>Kindly <a href="${emailUrl(config_1.config.frontendLoginUrl)}">log in to your account</a> to review the application.</p>`,
+    <p>Kindly <a href="${emailUrl(userFrontendUrl())}">log in to your account</a> to review the application.</p>`,
 });
 exports.sendJobApplicationMessage = sendJobApplicationMessage;
 const counterOfferMessage = (recipientName, senderName, jobTitle, amount, currency) => {
@@ -120,7 +123,7 @@ const counterOfferMessage = (recipientName, senderName, jobTitle, amount, curren
         html: `
       <p>Hi ${emailText(recipientName, "there")},</p>
       <p>${emailText(senderName, "An Emilist user")} sent you a counteroffer of ${emailText(formattedAmount, "an updated amount")} for <strong>${emailText(jobTitle, "your job")}</strong>.</p>
-      <p><a href="${emailUrl(config_1.config.frontendLoginUrl)}">Log in</a> to review, accept, reject, or counter the offer.</p>`,
+      <p><a href="${emailUrl(userFrontendUrl())}">Log in</a> to review, accept, reject, or counter the offer.</p>`,
     };
 };
 exports.counterOfferMessage = counterOfferMessage;
@@ -129,7 +132,7 @@ const acceptJobApplicationMessage = (name, user, title, status) => ({
     html: `
     <p>Hi ${emailText(name, "there")},</p>
     <p>${emailText(user, "The job owner")} ${emailText(status, "updated")} your application for <strong>${emailText(title, "the job")}</strong>.</p>
-    <p>Kindly <a href="${emailUrl(config_1.config.frontendLoginUrl)}">log in to your account</a> to view the update.</p>`,
+    <p>Kindly <a href="${emailUrl(userFrontendUrl())}">log in to your account</a> to view the update.</p>`,
 });
 exports.acceptJobApplicationMessage = acceptJobApplicationMessage;
 const acceptDirectJobApplicationMessage = (creatorName, name, id) => ({
@@ -137,14 +140,14 @@ const acceptDirectJobApplicationMessage = (creatorName, name, id) => ({
     html: `
     <p>Hi ${emailText(creatorName, "there")},</p>
     <p>${emailText(name, "The assigned professional")} accepted your direct job with ID: ${emailText(id, "unavailable")}.</p>
-    <p>Kindly <a href="${emailUrl(config_1.config.frontendLoginUrl)}">log in to your account</a> to view it.</p>`,
+    <p>Kindly <a href="${emailUrl(userFrontendUrl())}">log in to your account</a> to view it.</p>`,
 });
 exports.acceptDirectJobApplicationMessage = acceptDirectJobApplicationMessage;
-const sendInviteMessage = (creatorName, link) => ({
+const sendInviteMessage = (creatorName) => ({
     subject: "Emilist Invite",
     html: `
     <p>You were invited by ${emailText(creatorName, "an Emilist user")} to join Emilist.</p>
-    <p><a href="${emailUrl(link)}">Create your account</a></p>`,
+    <p><a href="${emailUrl((0, frontend_url_1.buildFrontendUrl)(config_1.config.frontendUrl, { path: "/sign-up" }))}">Create your account</a></p>`,
 });
 exports.sendInviteMessage = sendInviteMessage;
 const sendPrivateExpertMessage = (fullName, phoneNumber, email, typeOfExpert, details, location, time, date) => ({

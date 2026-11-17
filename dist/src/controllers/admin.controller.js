@@ -1027,7 +1027,7 @@ exports.updateAdminProfileController = (0, error_handler_1.catchAsync)(async (re
 });
 const requestingAdminId = (req) => String(req.user?._id || req.user?.id);
 const customerResetUrl = (token) => {
-    return (0, frontend_url_1.buildFrontendUrl)(config_1.config.customerFrontendUrl, {
+    return (0, frontend_url_1.buildFrontendUrl)(config_1.config.frontendUrl, {
         path: "/reset-password",
         query: { adminToken: token },
     });

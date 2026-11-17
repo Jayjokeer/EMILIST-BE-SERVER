@@ -22,11 +22,8 @@ export const config = {
   cloudinarySecretKey: process.env.CLOUDINARY_SECRET_KEY as string,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY as string,
   cloudinaryName: process.env.CLOUDINARY_NAME as string,
-  frontendSignUpUrl: process.env.FRONTEND_SIGNUP as string,
   paystackSecretKey: process.env.PAYSTACK_SECRET_KEY as string,
   paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY as string,
   adminEmail: process.env.ADMIN_EMAIL as string,
-  frontendLoginUrl: (process.env.FRONTEND_LOGIN || process.env.FRONTEND_URL) as string,
   adminFrontendUrl: process.env.FRONTEND_ADMIN_URL as string,
-  customerFrontendUrl: (process.env.CUSTOMER_FRONTEND_URL || process.env.FRONTEND_URL) as string,
 };

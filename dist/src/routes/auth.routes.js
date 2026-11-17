@@ -45,6 +45,7 @@ const passport_1 = __importDefault(require("passport"));
 const auth_validation_1 = require("../validations/auth.validation");
 const paymentController = __importStar(require("../controllers/payment.controller"));
 const config_1 = require("../utils/config");
+const frontend_url_1 = require("../utils/frontend-url");
 const router = (0, express_1.Router)();
 exports.AuthRoute = router;
 router.route("/").get((req, res) => {
@@ -69,7 +70,7 @@ router.route('/google').get(passport_1.default.authenticate('google', {
 router.get('/google/callback', (req, res, next) => {
     passport_1.default.authenticate('google', { session: false }, (err, user) => {
         if (err || !user) {
-            return res.redirect(`${config_1.config.frontendUrl}/login`);
+            return res.redirect((0, frontend_url_1.buildFrontendUrl)(config_1.config.frontendUrl, { path: "/login" }));
         }
         req.user = user;
         next();

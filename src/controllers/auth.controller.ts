@@ -9,6 +9,7 @@ import { generateOTPData, generateShortUUID } from "../utils/utility";
 import { generateJWTwithExpiryDate } from "../utils/jwt";
 import { catchAsync } from "../errors/error-handler";
 import { otpMessage, sendInviteMessage } from "../utils/templates";
+import { buildFrontendUrl } from "../utils/frontend-url";
 import { sendEmail } from "../utils/send_email";
 import { JwtPayload } from "jsonwebtoken";
 import { config } from "../utils/config";
@@ -420,7 +421,7 @@ export const googleRedirectController = catchAsync(async (req: Request, res: Res
   maxAge: 7 * 24 * 60 * 60 * 1000,
 });
 
- return res.redirect(`${config.frontendUrl}`);
+ return res.redirect(buildFrontendUrl(config.frontendUrl));
 });
 
 export const logoutController = catchAsync(async (req: JwtPayload, res: Response) => {
@@ -471,7 +472,7 @@ export const inviteUserController = catchAsync(async (req: JwtPayload, res: Resp
   loggedInUser.invitedUsers?.push(email);
   await loggedInUser.save();
 
-  const {html, subject} = sendInviteMessage(req.user.userName, config.frontendSignUpUrl);
+  const {html, subject} = sendInviteMessage(req.user.userName);
   await sendEmail(email, subject,html); 
   await reportEventService.recordReportEvent({
     subjectUserId: String(userId),
