@@ -66,6 +66,25 @@ test("outbound email sanitizer removes unresolved interpolation values", () => {
   assert.equal(sanitizeEmailContent(undefined, "fallback"), "fallback");
 });
 
+test("admin invitation email renders the supplied branded message and invitation details", () => {
+  const email = adminInvitationMessage(
+    "Jane Doe",
+    "https://admin.example.com/accept-invite?token=abc",
+    "Super Admin",
+    "Support Agent",
+    "jane@example.com",
+    new Date("2026-11-20T12:00:00.000Z"),
+  );
+
+  assert.match(email.html, /administrator_updates\.jpg/);
+  assert.match(email.html, /Hello Jane Doe/);
+  assert.match(email.html, /Super Admin/);
+  assert.match(email.html, /Support Agent/);
+  assert.match(email.html, /jane@example\.com/);
+  assert.match(email.html, /href="https:\/\/admin\.example\.com\/accept-invite\?token=abc"/);
+  assert.match(email.html, /authenticator app/);
+});
+
 test("generated user and admin email links use their dedicated frontend URLs", () => {
   const originalUserUrl = config.frontendUrl;
   const originalAdminUrl = config.adminFrontendUrl;

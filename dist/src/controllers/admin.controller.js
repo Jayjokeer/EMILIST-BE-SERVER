@@ -728,7 +728,7 @@ exports.createAdminController = (0, error_handler_1.catchAsync)(async (req, res)
         invitationTokenHash: tokenHash,
         invitationExpiresAt,
     });
-    const { html, subject } = (0, templates_1.adminInvitationMessage)(fullName, invitationUrl);
+    const { html, subject } = (0, templates_1.adminInvitationMessage)(fullName, invitationUrl, invitedBy, String(role), normalizedEmail, invitationExpiresAt);
     await (0, send_email_1.sendEmail)(normalizedEmail, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, {
         admin: adminResponse(admin),

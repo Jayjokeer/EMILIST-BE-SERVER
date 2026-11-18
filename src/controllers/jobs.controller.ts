@@ -1633,7 +1633,11 @@ export const reviewJobOwnerController = catchAsync(async (req: JwtPayload, res: 
     rateCommunication: req.body.rateCommunication,
     isRecommendVendor: req.body.isRecommendOwner,
   });
-  return successResponse(res, StatusCodes.CREATED, review);
+  return successResponse(res, StatusCodes.CREATED, {
+    review,
+    hasReviewedJobOwner: true,
+    canReviewJobOwner: false,
+  });
 });
 
 export const fetchJobCountsController = catchAsync( async(req:JwtPayload, res: Response) =>{

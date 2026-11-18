@@ -32,12 +32,81 @@ const welcomeMessageAdmin = (name) => ({
     <p>Go to <a href="${emailUrl(adminFrontendUrl())}">the Emilist Admin platform</a> and use Forgot Password to create your password and log in.</p>`,
 });
 exports.welcomeMessageAdmin = welcomeMessageAdmin;
-const adminInvitationMessage = (name, invitationUrl) => ({
+const adminInvitationMessage = (name, invitationUrl, invitedBy = "Emilist Admin", role = "administrator", email = "", expiresAt) => ({
     subject: "Your Emilist Admin invitation",
     html: `
-    <p>Hi ${emailText(name, "there")},</p>
-    <p>You have been invited to Emilist Admin. This invitation expires in 48 hours.</p>
-    <p><a href="${emailUrl(invitationUrl)}">Accept invite</a></p>`,
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Your Emilist Admin invitation</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#f4f6f5;font-family:Arial,Helvetica,sans-serif;color:#17241d;-webkit-text-size-adjust:100%">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all">
+      Accept your invitation to set up your Emilist Admin account.
+    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f6f5">
+      <tr>
+        <td align="center" style="padding:32px 12px">
+          <!--[if mso]><table role="presentation" width="600" align="center"><tr><td><![endif]-->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background-color:#ffffff;border:1px solid #e5ebe7;border-radius:12px;border-spacing:0;table-layout:fixed">
+            <tr>
+              <td style="padding:0">
+                <img src="https://res.cloudinary.com/dkdmwicti/image/upload/v1795002971/administrator_updates.jpg" alt="Emilist administrator updates" width="600" border="0" style="display:block;width:100%;max-width:600px;height:auto;border-radius:12px 12px 0 0" />
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px 24px">
+                <h1 style="margin:0 0 24px;color:#17241d;font-size:26px;line-height:34px;font-weight:700">You&rsquo;re invited to Emilist Admin</h1>
+                <p style="margin:0 0 16px;font-size:16px;line-height:26px">Hello ${emailText(name, "there")},</p>
+                <p style="margin:0 0 16px;font-size:16px;line-height:26px"><strong>${emailText(invitedBy, "Emilist Admin")}</strong> has invited you to join <strong>Emilist Admin</strong> as <strong>${emailText(role, "administrator")}</strong>.</p>
+                <p style="margin:0 0 24px;font-size:16px;line-height:26px">Accept your invitation to review your account details, create your password, and secure your access with an authenticator app.</p>
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0">
+                  <tr>
+                    <td align="center" bgcolor="#109f52" style="background-color:#109f52;border-radius:6px;mso-padding-alt:14px 28px">
+                      <a href="${emailUrl(invitationUrl)}" target="_blank" style="display:inline-block;padding:14px 28px;border:1px solid #109f52;border-radius:6px;color:#ffffff;font-size:16px;line-height:24px;font-weight:700;text-align:center;text-decoration:none;mso-padding-alt:0">Accept Invitation</a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:24px 0 0;color:#58675e;font-size:14px;line-height:23px">Your invitation expires on <strong>${emailText(expiresAt instanceof Date && !Number.isNaN(expiresAt.getTime())
+        ? expiresAt.toLocaleString("en-NG", { dateStyle: "long", timeStyle: "short", timeZone: "Africa/Lagos" })
+        : "48 hours", "48 hours")}</strong>. If it expires, ask your inviter to send a new invitation.</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:28px">
+                  <tr>
+                    <td style="padding-top:24px;border-top:1px solid #e5ebe7">
+                      <p style="margin:0 0 10px;color:#58675e;font-size:13px;line-height:21px">If the button doesn&rsquo;t open, copy and paste this link into your browser:</p>
+                      <p style="margin:0;font-size:12px;line-height:20px;word-break:break-all;overflow-wrap:anywhere"><a href="${emailUrl(invitationUrl)}" style="color:#08753c;text-decoration:underline">${emailUrl(invitationUrl)}</a></p>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:24px 0 0;color:#58675e;font-size:13px;line-height:22px">For help with this invitation, contact ${emailText(invitedBy, "your administrator")} or your administrator. If you weren&rsquo;t expecting this invitation, you can ignore this email.</p>
+                <p style="margin:24px 0 0;font-size:14px;line-height:23px">Best regards,<br /><strong>The Emilist Team</strong></p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:24px;background-color:#f8faf9;border-top:1px solid #e5ebe7;border-radius:0 0 12px 12px">
+                <p style="margin:0 0 16px;color:#58675e;font-size:13px;line-height:20px">Stay connected with Emilist</p>
+                <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding:0 8px"><img src="https://res.cloudinary.com/dkdmwicti/image/upload/v1795002968/facebook.jpg" alt="Facebook" width="28" height="28" border="0" style="display:block;border-radius:4px" /></td>
+                    <td style="padding:0 8px"><img src="https://res.cloudinary.com/dkdmwicti/image/upload/v1795002970/linkedin.jpg" alt="LinkedIn" width="28" height="28" border="0" style="display:block;border-radius:4px" /></td>
+                    <td style="padding:0 8px"><img src="https://res.cloudinary.com/dkdmwicti/image/upload/v1795002970/instagram.jpg" alt="Instagram" width="28" height="28" border="0" style="display:block;border-radius:4px" /></td>
+                    <td style="padding:0 8px"><img src="https://res.cloudinary.com/dkdmwicti/image/upload/v1795002970/twitter.jpg" alt="Twitter" width="28" height="28" border="0" style="display:block;border-radius:4px" /></td>
+                  </tr>
+                </table>
+                <p style="margin:20px 0 6px;color:#68766e;font-size:12px;line-height:20px">This email was sent to ${emailText(email, "the invited administrator")} about an Emilist Admin invitation.</p>
+                <p style="margin:0;color:#68766e;font-size:12px;line-height:20px">&copy; ${new Date().getFullYear()} Emilist. All rights reserved.</p>
+              </td>
+            </tr>
+          </table>
+          <!--[if mso]></td></tr></table><![endif]-->
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`,
 });
 exports.adminInvitationMessage = adminInvitationMessage;
 const passwordResetMessage = (name, resetUrl) => ({

@@ -1486,7 +1486,11 @@ exports.reviewJobOwnerController = (0, error_handler_1.catchAsync)(async (req, r
         rateCommunication: req.body.rateCommunication,
         isRecommendVendor: req.body.isRecommendOwner,
     });
-    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, review);
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, {
+        review,
+        hasReviewedJobOwner: true,
+        canReviewJobOwner: false,
+    });
 });
 exports.fetchJobCountsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;

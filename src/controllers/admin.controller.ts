@@ -837,7 +837,14 @@ export const createAdminController = catchAsync(async(req: JwtPayload, res: Resp
     invitationExpiresAt,
   });
 
-  const { html, subject } = adminInvitationMessage(fullName, invitationUrl);
+  const { html, subject } = adminInvitationMessage(
+    fullName,
+    invitationUrl,
+    invitedBy,
+    String(role),
+    normalizedEmail,
+    invitationExpiresAt,
+  );
   await sendEmail(normalizedEmail, subject, html);
 
   return successResponse(res, StatusCodes.CREATED, {

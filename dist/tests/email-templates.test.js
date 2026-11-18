@@ -42,6 +42,16 @@ const missing = undefined;
     strict_1.default.equal((0, send_email_1.sanitizeEmailContent)("Hello undefined, value null and NaN", "fallback"), "Hello Not provided, value Not provided and Not provided");
     strict_1.default.equal((0, send_email_1.sanitizeEmailContent)(undefined, "fallback"), "fallback");
 });
+(0, node_test_1.default)("admin invitation email renders the supplied branded message and invitation details", () => {
+    const email = (0, templates_1.adminInvitationMessage)("Jane Doe", "https://admin.example.com/accept-invite?token=abc", "Super Admin", "Support Agent", "jane@example.com", new Date("2026-11-20T12:00:00.000Z"));
+    strict_1.default.match(email.html, /administrator_updates\.jpg/);
+    strict_1.default.match(email.html, /Hello Jane Doe/);
+    strict_1.default.match(email.html, /Super Admin/);
+    strict_1.default.match(email.html, /Support Agent/);
+    strict_1.default.match(email.html, /jane@example\.com/);
+    strict_1.default.match(email.html, /href="https:\/\/admin\.example\.com\/accept-invite\?token=abc"/);
+    strict_1.default.match(email.html, /authenticator app/);
+});
 (0, node_test_1.default)("generated user and admin email links use their dedicated frontend URLs", () => {
     const originalUserUrl = config_1.config.frontendUrl;
     const originalAdminUrl = config_1.config.adminFrontendUrl;

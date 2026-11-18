@@ -634,6 +634,17 @@ const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5,
     });
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
+    const viewerId = viewerUserId ? String(viewerUserId) : "";
+    const ownerId = String(job.userId?._id ?? job.userId);
+    const acceptedProject = job.acceptedApplicationId
+        ? await project_model_1.default.findById(job.acceptedApplicationId).select("user").lean()
+        : null;
+    const acceptedArtisanId = String(acceptedProject?.user?._id ?? acceptedProject?.user ?? "");
+    const isAcceptedArtisan = Boolean(viewerId && acceptedArtisanId && viewerId === acceptedArtisanId);
+    const ownerReview = isAcceptedArtisan
+        ? await reviewService.findJobOwnerReview(String(job._id), viewerId, ownerId)
+        : null;
+    const hasReviewedJobOwner = Boolean(ownerReview);
     const creatorId = job.userId;
     const totalJobsPosted = await jobs_model_1.default.countDocuments({ userId: creatorId });
     const totalArtisansHired = await project_model_1.default.countDocuments({
@@ -687,6 +698,15 @@ const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5,
         milestones,
         applicantsCount,
         milestonesCount: milestones.length,
+        hasReviewedJobOwner,
+        canReviewJobOwner: isAcceptedArtisan && Boolean(job.isClosed) && !hasReviewedJobOwner,
+        jobOwnerReview: {
+            eligible: isAcceptedArtisan,
+            hasReviewed: hasReviewedJobOwner,
+            canReview: isAcceptedArtisan && Boolean(job.isClosed) && !hasReviewedJobOwner,
+            reviewId: ownerReview?._id ?? null,
+            reviewedAt: ownerReview?.createdAt ?? null,
+        },
     };
     delete publicJob.applications;
     return {
