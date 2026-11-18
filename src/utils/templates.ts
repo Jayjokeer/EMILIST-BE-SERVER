@@ -168,6 +168,19 @@ export const contractClosedReviewOwnerMessage = (
     <p><a href="${emailUrl(reviewUrl)}">Review the job owner</a></p>`,
 });
 
+export const contractCloseReminderEmail = (
+  jobOwnerName: string,
+  jobTitle: string,
+  closeContractUrl: string,
+) => ({
+  subject: `Action required: Close ${subjectText(jobTitle, "your completed job")}`,
+  html: `
+    <p>Hi ${emailText(jobOwnerName, "there")},</p>
+    <p>All milestones for <strong>${emailText(jobTitle, "your job")}</strong> have been completed and paid.</p>
+    <p>Please review the completed work and close the contract.</p>
+    <p><a href="${emailUrl(closeContractUrl)}">Review and close contract</a></p>`,
+});
+
 export const sendInviteMessage = (creatorName: string) => ({
   subject: "Emilist Invite",
   html: `

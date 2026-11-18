@@ -155,6 +155,8 @@ const jobSchema = new mongoose_1.default.Schema({
     isRequestForQuote: { type: Boolean, default: false },
     pausedDate: { type: Date },
     isClosed: { type: Boolean, default: false },
+    contractCloseReminderLastSentAt: { type: Date },
+    contractCloseReminderCount: { type: Number, default: 0 },
     review: {
         rating: { type: String, enum: jobs_enum_1.RatingEnum },
         note: { type: String },

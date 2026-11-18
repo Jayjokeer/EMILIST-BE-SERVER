@@ -13,6 +13,7 @@ import { ProjectStatusEnum } from "../enums/project.enum";
 import { Types } from "mongoose";
 import Users from "../models/users.model";
 import { assertAllProfileFieldsPresent, assertServiceFieldsPresent } from "../helpers/validation.helper";
+import * as reviewService from "./review.service";
 
 export const createBusiness = async (data:  IBusiness) =>{
     return await Business.create(data);
@@ -165,27 +166,27 @@ export const fetchSingleBusiness = async (businessId: string)=>{
 };
 export const fetchSingleBusinessWithDetails = async (businessId: string)=>{
     const business =  await Business.findById(businessId)
+    .select('-reviews')
     .populate('userId', 'fullName email userName uniqueId profileImage level')
-    .populate('reviews', 'rating');
+    ;
     if(!business){
         return null;
     }
-    const reviews = business.reviews || []; 
-    const totalReviews = reviews.length;
-    const averageRating =
-      totalReviews > 0
-        ? business.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalReviews
-        : 0;
-        const totalJobs = await Projects.countDocuments({ user: business.userId,
+    const ownerId = (business.userId as any)?._id || business.userId;
+    const [reviewSummary, totalJobs, successfulJobs, unsuccessfulJobs] = await Promise.all([
+      reviewService.fetchReviewsForBusiness(businessId, 1, 3, 'newest'),
+      Projects.countDocuments({ user: ownerId,
              status: { $nin: [ ProjectStatusEnum.pending,  ProjectStatusEnum.rejected] }
-        });
-        const successfulJobs = await Projects.countDocuments({ user: business.userId, status: ProjectStatusEnum.completed });
-        const unsuccessfulJobs = await Projects.countDocuments({ user: business.userId, status: ProjectStatusEnum.cancelled});
-        const successRate = totalJobs > 0 ? (successfulJobs / totalJobs) * 100 : 0;
+        }),
+      Projects.countDocuments({ user: ownerId, status: ProjectStatusEnum.completed }),
+      Projects.countDocuments({ user: ownerId, status: ProjectStatusEnum.cancelled }),
+    ]);
+    const successRate = totalJobs > 0 ? (successfulJobs / totalJobs) * 100 : 0;
     return {
       ...business.toObject(),
-      totalReviews,
-      averageRating: parseFloat(averageRating.toFixed(2)),
+      reviews: reviewSummary.reviews,
+      totalReviews: reviewSummary.numberOfRatings,
+      averageRating: reviewSummary.averageRating,
       totalJobs ,
       successfulJobs,
       unsuccessfulJobs,
@@ -667,60 +668,11 @@ export const fetchBusinessReviews = async (
     throw new NotFoundError('Service not found!');
   }
 
-  const skip = (Number(page) - 1) * Number(limit);
-
-  const sortCriteria: { [key: string]: 1 | -1 } =
-  sortBy === 'mostRelevant' ? { helpfulCount: -1, createdAt: -1 } : { createdAt: -1 };
-
-  const reviews = await Review.find({ businessId })
-    .skip(skip)
-    .limit(Number(limit))
-    .sort(sortCriteria)
-    .populate('userId', 'profileImage fullName userName uniqueId gender level')
-    .lean()
-    ;
-
-  const allReviews = await Review.find({ businessId }).lean();
-
-  const starCounts = [1, 2, 3, 4, 5].reduce((acc, star) => {
-    acc[star] = allReviews.filter((review) => review.rating === star).length;
-    return acc;
-  }, {} as Record<number, number>);
-
-  const totalRatings = allReviews.length;
-  const averageRating =
-    totalRatings > 0
-      ? allReviews.reduce((sum: number, review: any) => sum + review.rating, 0) / totalRatings
-      : 0;
-      const averageCommunicationRating =
-      totalRatings > 0
-        ? allReviews.reduce(
-            (sum: number, review: any) => sum + review.rateCommunication,
-            0
-          ) / totalRatings
-        : 0;
-  
-    const averageIsRecommended =
-      totalRatings > 0
-        ? (allReviews.filter((review) => review.isRecommendVendor).length /
-            totalRatings) *
-          100
-        : 0;
-
-  const data = {
-    averageRating: parseFloat(averageRating.toFixed(2)),
-    averageCommunicationRating: parseFloat(
-      averageCommunicationRating.toFixed(2)
-    ),
-    serviceAsSeen: parseFloat(averageIsRecommended.toFixed(2)), 
-    numberOfRatings: totalRatings,
-    starCounts,
-    reviews,
-    currentPage: Number(page),
-    totalPages: Math.ceil(totalRatings / Number(limit)),
+  const data = await reviewService.fetchReviewsForBusiness(businessId, page, limit, sortBy);
+  return {
+    ...data,
+    starCounts: data.ratingDistribution,
   };
-
-  return data;
 };
 
 export const markReviewHelpful = async (reviewId: string, isHelpful: boolean, userId?: string) => {

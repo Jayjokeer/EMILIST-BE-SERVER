@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.invoicePaymentReminderEmail = exports.generateReminderEmail = exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.contractClosedReviewOwnerMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.counterOfferMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.adminCustomerMessage = exports.adminCreatedCustomerMessage = exports.customerPasswordResetMessage = exports.passwordResetMessage = exports.adminInvitationMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
+exports.invoicePaymentReminderEmail = exports.generateReminderEmail = exports.sendPrivateExpertMessage = exports.sendInviteMessage = exports.contractCloseReminderEmail = exports.contractClosedReviewOwnerMessage = exports.acceptDirectJobApplicationMessage = exports.acceptJobApplicationMessage = exports.counterOfferMessage = exports.sendJobApplicationMessage = exports.sendMessage = exports.postQuoteMessage = exports.requestForQuoteMessage = exports.directJobApplicationMessage = exports.adminCustomerMessage = exports.adminCreatedCustomerMessage = exports.customerPasswordResetMessage = exports.passwordResetMessage = exports.adminInvitationMessage = exports.welcomeMessageAdmin = exports.otpMessage = void 0;
 const config_1 = require("./config");
 const frontend_url_1 = require("./frontend-url");
 const rawText = (value) => {
@@ -152,6 +152,15 @@ const contractClosedReviewOwnerMessage = (artisanName, jobOwnerName, jobTitle, r
     <p><a href="${emailUrl(reviewUrl)}">Review the job owner</a></p>`,
 });
 exports.contractClosedReviewOwnerMessage = contractClosedReviewOwnerMessage;
+const contractCloseReminderEmail = (jobOwnerName, jobTitle, closeContractUrl) => ({
+    subject: `Action required: Close ${subjectText(jobTitle, "your completed job")}`,
+    html: `
+    <p>Hi ${emailText(jobOwnerName, "there")},</p>
+    <p>All milestones for <strong>${emailText(jobTitle, "your job")}</strong> have been completed and paid.</p>
+    <p>Please review the completed work and close the contract.</p>
+    <p><a href="${emailUrl(closeContractUrl)}">Review and close contract</a></p>`,
+});
+exports.contractCloseReminderEmail = contractCloseReminderEmail;
 const sendInviteMessage = (creatorName) => ({
     subject: "Emilist Invite",
     html: `

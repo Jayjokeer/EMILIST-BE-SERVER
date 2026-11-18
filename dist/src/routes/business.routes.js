@@ -55,7 +55,8 @@ router.route("/like-business/:businessId").patch(current_user_1.userAuth, busine
 router.route("/unlike-business/:businessId").patch(current_user_1.userAuth, businesController.unlikeBusinessController);
 router.route("/fetch-other-business-by-user/:userId").get(businesController.fetchOtherBusinessByUserController);
 router.route("/fetch-similar-business-by-user/:businessId").get(businesController.fetchSimilarBusinessByUserController);
-router.route("/fetch-business-reviews/:businessId").get(businesController.fetchBusinessReviewsController);
+router.route("/fetch-business-reviews/:businessId").get(business_validation_1.validateBusinessReviewsQuery, businesController.fetchBusinessReviewsController);
+router.route("/:businessId/reviews").get(business_validation_1.validateBusinessReviewsQuery, businesController.fetchBusinessReviewsController);
 router.route("/mark-helpul-review/:reviewId").patch(business_validation_1.validateMarkBusinessReview, businesController.markReviewController);
 router.route("/mute-business/:businessId").patch(current_user_1.userAuth, businesController.muteBusinessController);
 router.route("/delete-business-item/:businessId/:itemId/:itemType").delete(current_user_1.userAuth, businesController.deleteBusinessItemController);

@@ -39,6 +39,7 @@ export const fetchSingleBusinessController = catchAsync( async (req: JwtPayload,
     let isCompared = false;
 
     const business = await businessService.fetchSingleBusinessWithDetails(String(businessId));
+    if (!business) throw new NotFoundError("Business not found!");
         if (userId) {
         const likedBusiness = await businessService.ifLikedBusiness(businessId, userId);
         liked = !!likedBusiness;
@@ -270,9 +271,14 @@ export const unlikeBusinessController = catchAsync(async (req: JwtPayload, res: 
 
   export const fetchBusinessReviewsController = catchAsync(async (req: JwtPayload, res: Response) => {
     const {businessId} = req.params; 
-    const {page = 1, limit = 10, sortBy } = req.query;
+    const {page = 1, limit = 10, sortBy = 'newest' } = req.query;
 
-     const data = await businessService.fetchBusinessReviews(businessId, Number(page), Number(limit), sortBy);
+     const data = await businessService.fetchBusinessReviews(
+       businessId,
+       Number(page),
+       Number(limit),
+       sortBy as 'mostRelevant' | 'newest',
+     );
     return successResponse(res, StatusCodes.OK, data);
   });
 

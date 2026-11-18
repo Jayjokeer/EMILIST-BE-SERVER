@@ -49,6 +49,7 @@ const project_enum_1 = require("../enums/project.enum");
 const mongoose_1 = require("mongoose");
 const users_model_1 = __importDefault(require("../models/users.model"));
 const validation_helper_1 = require("../helpers/validation.helper");
+const reviewService = __importStar(require("./review.service"));
 const createBusiness = async (data) => {
     return await business_model_1.default.create(data);
 };
@@ -182,26 +183,26 @@ const fetchSingleBusiness = async (businessId) => {
 exports.fetchSingleBusiness = fetchSingleBusiness;
 const fetchSingleBusinessWithDetails = async (businessId) => {
     const business = await business_model_1.default.findById(businessId)
-        .populate('userId', 'fullName email userName uniqueId profileImage level')
-        .populate('reviews', 'rating');
+        .select('-reviews')
+        .populate('userId', 'fullName email userName uniqueId profileImage level');
     if (!business) {
         return null;
     }
-    const reviews = business.reviews || [];
-    const totalReviews = reviews.length;
-    const averageRating = totalReviews > 0
-        ? business.reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
-        : 0;
-    const totalJobs = await project_model_1.default.countDocuments({ user: business.userId,
-        status: { $nin: [project_enum_1.ProjectStatusEnum.pending, project_enum_1.ProjectStatusEnum.rejected] }
-    });
-    const successfulJobs = await project_model_1.default.countDocuments({ user: business.userId, status: project_enum_1.ProjectStatusEnum.completed });
-    const unsuccessfulJobs = await project_model_1.default.countDocuments({ user: business.userId, status: project_enum_1.ProjectStatusEnum.cancelled });
+    const ownerId = business.userId?._id || business.userId;
+    const [reviewSummary, totalJobs, successfulJobs, unsuccessfulJobs] = await Promise.all([
+        reviewService.fetchReviewsForBusiness(businessId, 1, 3, 'newest'),
+        project_model_1.default.countDocuments({ user: ownerId,
+            status: { $nin: [project_enum_1.ProjectStatusEnum.pending, project_enum_1.ProjectStatusEnum.rejected] }
+        }),
+        project_model_1.default.countDocuments({ user: ownerId, status: project_enum_1.ProjectStatusEnum.completed }),
+        project_model_1.default.countDocuments({ user: ownerId, status: project_enum_1.ProjectStatusEnum.cancelled }),
+    ]);
     const successRate = totalJobs > 0 ? (successfulJobs / totalJobs) * 100 : 0;
     return {
         ...business.toObject(),
-        totalReviews,
-        averageRating: parseFloat(averageRating.toFixed(2)),
+        reviews: reviewSummary.reviews,
+        totalReviews: reviewSummary.numberOfRatings,
+        averageRating: reviewSummary.averageRating,
         totalJobs,
         successfulJobs,
         unsuccessfulJobs,
@@ -583,42 +584,11 @@ const fetchBusinessReviews = async (businessId, page, limit, sortBy = 'newest') 
     if (!business) {
         throw new error_1.NotFoundError('Service not found!');
     }
-    const skip = (Number(page) - 1) * Number(limit);
-    const sortCriteria = sortBy === 'mostRelevant' ? { helpfulCount: -1, createdAt: -1 } : { createdAt: -1 };
-    const reviews = await review_model_1.default.find({ businessId })
-        .skip(skip)
-        .limit(Number(limit))
-        .sort(sortCriteria)
-        .populate('userId', 'profileImage fullName userName uniqueId gender level')
-        .lean();
-    const allReviews = await review_model_1.default.find({ businessId }).lean();
-    const starCounts = [1, 2, 3, 4, 5].reduce((acc, star) => {
-        acc[star] = allReviews.filter((review) => review.rating === star).length;
-        return acc;
-    }, {});
-    const totalRatings = allReviews.length;
-    const averageRating = totalRatings > 0
-        ? allReviews.reduce((sum, review) => sum + review.rating, 0) / totalRatings
-        : 0;
-    const averageCommunicationRating = totalRatings > 0
-        ? allReviews.reduce((sum, review) => sum + review.rateCommunication, 0) / totalRatings
-        : 0;
-    const averageIsRecommended = totalRatings > 0
-        ? (allReviews.filter((review) => review.isRecommendVendor).length /
-            totalRatings) *
-            100
-        : 0;
-    const data = {
-        averageRating: parseFloat(averageRating.toFixed(2)),
-        averageCommunicationRating: parseFloat(averageCommunicationRating.toFixed(2)),
-        serviceAsSeen: parseFloat(averageIsRecommended.toFixed(2)),
-        numberOfRatings: totalRatings,
-        starCounts,
-        reviews,
-        currentPage: Number(page),
-        totalPages: Math.ceil(totalRatings / Number(limit)),
+    const data = await reviewService.fetchReviewsForBusiness(businessId, page, limit, sortBy);
+    return {
+        ...data,
+        starCounts: data.ratingDistribution,
     };
-    return data;
 };
 exports.fetchBusinessReviews = fetchBusinessReviews;
 const markReviewHelpful = async (reviewId, isHelpful, userId) => {

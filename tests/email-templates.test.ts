@@ -8,6 +8,7 @@ import {
   adminInvitationMessage,
   counterOfferMessage,
   contractClosedReviewOwnerMessage,
+  contractCloseReminderEmail,
   directJobApplicationMessage,
   generateReminderEmail,
   otpMessage,
@@ -42,6 +43,7 @@ test("all email templates replace missing values with readable fallbacks", () =>
     sendJobApplicationMessage(missing, missing, missing),
     counterOfferMessage(missing, missing, missing, missing, missing),
     contractClosedReviewOwnerMessage(missing, missing, missing, missing),
+    contractCloseReminderEmail(missing, missing, missing),
     acceptJobApplicationMessage(missing, missing, missing, missing),
     acceptDirectJobApplicationMessage(missing, missing, missing),
     sendInviteMessage(missing),
@@ -91,6 +93,14 @@ test("generated user and admin email links use their dedicated frontend URLs", (
     assert.match(
       sendInviteMessage("Inviter").html,
       /href="https:\/\/users\.example\.com\/sign-up"/,
+    );
+    assert.match(
+      contractCloseReminderEmail(
+        "Owner",
+        "Job",
+        "https://users.example.com/?action=close-job-contract",
+      ).html,
+      /href="https:\/\/users\.example\.com\/\?action=close-job-contract"/,
     );
     assert.match(
       welcomeMessageAdmin("Admin").html,

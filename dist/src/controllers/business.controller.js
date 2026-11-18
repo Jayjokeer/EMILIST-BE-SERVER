@@ -62,6 +62,8 @@ exports.fetchSingleBusinessController = (0, error_handler_1.catchAsync)(async (r
     let liked = false;
     let isCompared = false;
     const business = await businessService.fetchSingleBusinessWithDetails(String(businessId));
+    if (!business)
+        throw new error_1.NotFoundError("Business not found!");
     if (userId) {
         const likedBusiness = await businessService.ifLikedBusiness(businessId, userId);
         liked = !!likedBusiness;
@@ -235,7 +237,7 @@ exports.fetchSimilarBusinessByUserController = (0, error_handler_1.catchAsync)(a
 });
 exports.fetchBusinessReviewsController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { businessId } = req.params;
-    const { page = 1, limit = 10, sortBy } = req.query;
+    const { page = 1, limit = 10, sortBy = 'newest' } = req.query;
     const data = await businessService.fetchBusinessReviews(businessId, Number(page), Number(limit), sortBy);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });

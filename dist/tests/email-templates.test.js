@@ -25,6 +25,7 @@ const missing = undefined;
         (0, templates_1.sendJobApplicationMessage)(missing, missing, missing),
         (0, templates_1.counterOfferMessage)(missing, missing, missing, missing, missing),
         (0, templates_1.contractClosedReviewOwnerMessage)(missing, missing, missing, missing),
+        (0, templates_1.contractCloseReminderEmail)(missing, missing, missing),
         (0, templates_1.acceptJobApplicationMessage)(missing, missing, missing, missing),
         (0, templates_1.acceptDirectJobApplicationMessage)(missing, missing, missing),
         (0, templates_1.sendInviteMessage)(missing),
@@ -63,6 +64,7 @@ const missing = undefined;
             strict_1.default.doesNotMatch(email.html, /admin\.example\.com/);
         }
         strict_1.default.match((0, templates_1.sendInviteMessage)("Inviter").html, /href="https:\/\/users\.example\.com\/sign-up"/);
+        strict_1.default.match((0, templates_1.contractCloseReminderEmail)("Owner", "Job", "https://users.example.com/?action=close-job-contract").html, /href="https:\/\/users\.example\.com\/\?action=close-job-contract"/);
         strict_1.default.match((0, templates_1.welcomeMessageAdmin)("Admin").html, /href="https:\/\/admin\.example\.com\/login"/);
     }
     finally {

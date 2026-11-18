@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import * as businesController from "../controllers/business.controller";
 import { userAuth } from "../middlewares/current-user";
 import { multipleUpload, parseBusinessOnboarding, singleUpload, uploadBusinessImages } from "../utils/image-upload";
-import { validateBusinessRegistration, validateBusinessUpdate, validateMarkBusinessReview, validateReviewBusiness } from "../validations/business.validation";
+import { validateBusinessRegistration, validateBusinessReviewsQuery, validateBusinessUpdate, validateMarkBusinessReview, validateReviewBusiness } from "../validations/business.validation";
 
 const router = Router();
 
@@ -20,7 +20,8 @@ router.route("/like-business/:businessId").patch(userAuth, businesController.lik
 router.route("/unlike-business/:businessId").patch(userAuth, businesController.unlikeBusinessController);
 router.route("/fetch-other-business-by-user/:userId").get(businesController.fetchOtherBusinessByUserController  );
 router.route("/fetch-similar-business-by-user/:businessId").get(businesController.fetchSimilarBusinessByUserController );
-router.route("/fetch-business-reviews/:businessId").get(businesController.fetchBusinessReviewsController );
+router.route("/fetch-business-reviews/:businessId").get(validateBusinessReviewsQuery, businesController.fetchBusinessReviewsController );
+router.route("/:businessId/reviews").get(validateBusinessReviewsQuery, businesController.fetchBusinessReviewsController );
 router.route("/mark-helpul-review/:reviewId").patch(validateMarkBusinessReview,businesController.markReviewController );
 router.route("/mute-business/:businessId").patch(userAuth,businesController.muteBusinessController  );
 router.route("/delete-business-item/:businessId/:itemId/:itemType").delete(userAuth,businesController.deleteBusinessItemController);

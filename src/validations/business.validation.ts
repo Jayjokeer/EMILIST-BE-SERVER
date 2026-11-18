@@ -1,6 +1,25 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 
+export const validateBusinessReviewsQuery = (req: Request, res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(50).default(10),
+    sortBy: Joi.string().valid('newest', 'mostRelevant').default('newest'),
+  });
+  const { error, value } = schema.validate(req.query, { abortEarly: false, convert: true });
+  if (error) {
+    res.status(400).json({
+      code: 400,
+      status: 'fail',
+      message: error.details.map((detail) => detail.message).join(', '),
+    });
+    return;
+  }
+  req.query = value;
+  next();
+};
+
 export const validateBusinessRegistration = (
   req: Request,
   res: Response,

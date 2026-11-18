@@ -58,6 +58,8 @@ export interface IJob {
     userName?: string; 
     isRequestForQuote?: boolean; 
     isClosed?: boolean;
+    contractCloseReminderLastSentAt?: Date;
+    contractCloseReminderCount?: number;
     review?: any;
     createdAt?: any;
     clicks?: any;

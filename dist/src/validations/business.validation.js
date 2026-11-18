@@ -3,8 +3,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateReviewBusiness = exports.validateMarkBusinessReview = exports.validateBusinessUpdate = exports.validateBusinessRegistration = void 0;
+exports.validateReviewBusiness = exports.validateMarkBusinessReview = exports.validateBusinessUpdate = exports.validateBusinessRegistration = exports.validateBusinessReviewsQuery = void 0;
 const joi_1 = __importDefault(require("joi"));
+const validateBusinessReviewsQuery = (req, res, next) => {
+    const schema = joi_1.default.object({
+        page: joi_1.default.number().integer().min(1).default(1),
+        limit: joi_1.default.number().integer().min(1).max(50).default(10),
+        sortBy: joi_1.default.string().valid('newest', 'mostRelevant').default('newest'),
+    });
+    const { error, value } = schema.validate(req.query, { abortEarly: false, convert: true });
+    if (error) {
+        res.status(400).json({
+            code: 400,
+            status: 'fail',
+            message: error.details.map((detail) => detail.message).join(', '),
+        });
+        return;
+    }
+    req.query = value;
+    next();
+};
+exports.validateBusinessReviewsQuery = validateBusinessReviewsQuery;
 const validateBusinessRegistration = (req, res, next) => {
     const profileSchema = joi_1.default.object({
         firstName: joi_1.default.string().optional(),

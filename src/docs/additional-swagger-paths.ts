@@ -84,7 +84,7 @@ const routes: RouteDoc[] = [
   // Business/expert profiles
   { path: '/business/register-business', method: 'post', tag: 'Business', summary: 'Register a business/expert profile', multipart: true },
   { path: '/business/update-business/{businessId}', method: 'patch', tag: 'Business', summary: 'Update a business profile', multipart: true },
-  { path: '/business/fetch-single-business/{businessId}', method: 'get', tag: 'Business', summary: 'Fetch a business profile', auth: false, queryParams: ['userId'] },
+  { path: '/business/fetch-single-business/{businessId}', method: 'get', tag: 'Business', summary: 'Fetch a business profile with at most the three newest enriched reviews', auth: false, queryParams: ['userId'] },
   { path: '/business/fetch-user-business', method: 'get', tag: 'Business', summary: "Fetch all businesses belonging to the authenticated user" },
   { path: '/business/delete-business/{businessId}/image/{imageId}', method: 'delete', tag: 'Business', summary: 'Delete a business image' },
   { path: '/business/fetch-all-business', method: 'get', tag: 'Business', summary: 'Fetch all businesses', auth: false, queryParams: ['page', 'limit', 'search', 'userId'] },
@@ -93,7 +93,8 @@ const routes: RouteDoc[] = [
   { path: '/business/unlike-business/{businessId}', method: 'patch', tag: 'Business', summary: 'Unlike a business' },
   { path: '/business/fetch-other-business-by-user/{userId}', method: 'get', tag: 'Business', summary: "Fetch all businesses belonging to a user", auth: false },
   { path: '/business/fetch-similar-business-by-user/{businessId}', method: 'get', tag: 'Business', summary: 'Fetch similar businesses', auth: false },
-  { path: '/business/fetch-business-reviews/{businessId}', method: 'get', tag: 'Business', summary: 'Fetch business reviews', auth: false, queryParams: ['page', 'limit', 'sortBy'] },
+  { path: '/business/fetch-business-reviews/{businessId}', method: 'get', tag: 'Business', summary: 'Fetch paginated enriched business reviews (compatibility route)', auth: false, queryParams: ['page', 'limit', 'sortBy'] },
+  { path: '/business/{businessId}/reviews', method: 'get', tag: 'Business', summary: 'Fetch all enriched reviews for a business with pagination and rating statistics', auth: false, queryParams: ['page', 'limit', 'sortBy'] },
   { path: '/business/mark-helpul-review/{reviewId}', method: 'patch', tag: 'Business', summary: 'Mark a business review as helpful', auth: false, bodyExample: { isHelpful: true } },
   { path: '/business/mute-business/{businessId}', method: 'patch', tag: 'Business', summary: 'Mute or unmute a business' },
   { path: '/business/delete-business-item/{businessId}/{itemId}/{itemType}', method: 'delete', tag: 'Business', summary: 'Delete a certification, membership, insurance, or service item' },
