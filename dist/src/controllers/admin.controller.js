@@ -705,8 +705,17 @@ exports.createAdminController = (0, error_handler_1.catchAsync)(async (req, res)
         throw new error_1.BadRequestError("An admin with this email already exists");
     const { token, tokenHash } = adminService.createInvitationToken();
     const invitationExpiresAt = new Date(Date.now() + admin_onboarding_service_1.ADMIN_INVITATION_TTL_MS);
+    const invitedBy = String(req.user?.fullName || req.user?.email || "Emilist Admin");
     const invitationUrl = (0, frontend_url_1.buildFrontendUrl)(config_1.config.adminFrontendUrl, {
-        query: { invite: token },
+        path: "/accept-invite",
+        replacePath: true,
+        query: {
+            token,
+            fullName,
+            email: normalizedEmail,
+            role: String(role),
+            invitedBy,
+        },
     });
     const admin = await adminService.createAdmin({
         fullName,

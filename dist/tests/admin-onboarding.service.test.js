@@ -59,9 +59,17 @@ const frontend_url_1 = require("../src/utils/frontend-url");
     strict_1.default.equal(reset.tokenHash.length, 64);
 });
 (0, node_test_1.default)('admin invitation links use the configured frontend and safely encode the token', () => {
-    strict_1.default.equal((0, frontend_url_1.buildFrontendUrl)('https://emilist-v2.vercel.app/', {
-        query: { invite: 'token with + and /' },
-    }), 'https://emilist-v2.vercel.app/?invite=token+with+%2B+and+%2F');
+    strict_1.default.equal((0, frontend_url_1.buildFrontendUrl)('https://emilist-admin-v2-l28s.vercel.app/login', {
+        path: '/accept-invite',
+        replacePath: true,
+        query: {
+            token: 'token with + and /',
+            fullName: 'Jane Doe',
+            email: 'jane@example.com',
+            role: 'Support Agent',
+            invitedBy: 'Super Admin',
+        },
+    }), 'https://emilist-admin-v2-l28s.vercel.app/accept-invite?token=token+with+%2B+and+%2F&fullName=Jane+Doe&email=jane%40example.com&role=Support+Agent&invitedBy=Super+Admin');
 });
 (0, node_test_1.default)('frontend links preserve existing queries and append the requested path', () => {
     strict_1.default.equal((0, frontend_url_1.buildFrontendUrl)('https://emilist-v2.vercel.app/admin?source=email', {

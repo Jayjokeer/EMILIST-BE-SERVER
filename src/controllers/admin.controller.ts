@@ -813,8 +813,17 @@ export const createAdminController = catchAsync(async(req: JwtPayload, res: Resp
 
   const { token, tokenHash } = adminService.createInvitationToken();
   const invitationExpiresAt = new Date(Date.now() + ADMIN_INVITATION_TTL_MS);
+  const invitedBy = String(req.user?.fullName || req.user?.email || "Emilist Admin");
   const invitationUrl = buildFrontendUrl(config.adminFrontendUrl, {
-    query: { invite: token },
+    path: "/accept-invite",
+    replacePath: true,
+    query: {
+      token,
+      fullName,
+      email: normalizedEmail,
+      role: String(role),
+      invitedBy,
+    },
   });
   const admin = await adminService.createAdmin({
     fullName,

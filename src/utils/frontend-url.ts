@@ -24,16 +24,17 @@ export const buildFrontendUrl = (
   baseUrl: string | undefined,
   options: {
     path?: string;
+    replacePath?: boolean;
     query?: Record<string, string>;
   } = {},
 ) => {
   const url = parseFrontendUrl(baseUrl);
 
   if (options.path) {
-    const basePath = url.pathname.replace(/\/+$/, "");
     const requestedPath = options.path.startsWith("/")
       ? options.path
       : `/${options.path}`;
+    const basePath = options.replacePath ? "" : url.pathname.replace(/\/+$/, "");
     url.pathname = `${basePath}${requestedPath}`;
   }
 

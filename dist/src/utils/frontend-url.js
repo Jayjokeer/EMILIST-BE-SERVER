@@ -21,10 +21,10 @@ const parseFrontendUrl = (baseUrl) => {
 const buildFrontendUrl = (baseUrl, options = {}) => {
     const url = parseFrontendUrl(baseUrl);
     if (options.path) {
-        const basePath = url.pathname.replace(/\/+$/, "");
         const requestedPath = options.path.startsWith("/")
             ? options.path
             : `/${options.path}`;
+        const basePath = options.replacePath ? "" : url.pathname.replace(/\/+$/, "");
         url.pathname = `${basePath}${requestedPath}`;
     }
     for (const [key, value] of Object.entries(options.query || {})) {

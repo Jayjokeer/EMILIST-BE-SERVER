@@ -70,10 +70,18 @@ test('password reset links store only a deterministic hash of an opaque token', 
 
 test('admin invitation links use the configured frontend and safely encode the token', () => {
   assert.equal(
-    buildFrontendUrl('https://emilist-v2.vercel.app/', {
-      query: { invite: 'token with + and /' },
+    buildFrontendUrl('https://emilist-admin-v2-l28s.vercel.app/login', {
+      path: '/accept-invite',
+      replacePath: true,
+      query: {
+        token: 'token with + and /',
+        fullName: 'Jane Doe',
+        email: 'jane@example.com',
+        role: 'Support Agent',
+        invitedBy: 'Super Admin',
+      },
     }),
-    'https://emilist-v2.vercel.app/?invite=token+with+%2B+and+%2F',
+    'https://emilist-admin-v2-l28s.vercel.app/accept-invite?token=token+with+%2B+and+%2F&fullName=Jane+Doe&email=jane%40example.com&role=Support+Agent&invitedBy=Super+Admin',
   );
 });
 
