@@ -62,6 +62,51 @@ const job_service_1 = require("../src/services/job.service");
     strict_1.default.equal(summary.canCloseContract, false);
     strict_1.default.deepEqual(summary.unresolvedMilestoneIds, ['milestone-2']);
 });
+(0, node_test_1.default)('contract closure requires ownership, completed and paid milestones, and no unresolved dispute', () => {
+    const summary = (0, job_service_1.jobContractClosureSummary)({
+        userId: 'owner-1',
+        isClosed: false,
+        milestones: [
+            {
+                _id: 'milestone-1',
+                status: jobs_enum_1.MilestoneEnum.completed,
+                paymentStatus: jobs_enum_1.MilestonePaymentStatus.unpaid,
+            },
+        ],
+    }, 'owner-1');
+    strict_1.default.equal(summary.canClose, false);
+    strict_1.default.equal(summary.isJobOwner, true);
+    strict_1.default.equal(summary.allMilestonesCompleted, true);
+    strict_1.default.equal(summary.allMilestonesPaid, false);
+    strict_1.default.deepEqual(summary.blockingReasons.map(reason => reason.code), ['milestones_unpaid']);
+});
+(0, node_test_1.default)('contract closure is allowed only when every backend closing guard passes', () => {
+    const displayed = (0, job_service_1.withJobDisplayStatus)({
+        userId: 'owner-1',
+        isClosed: false,
+        status: jobs_enum_1.JobStatusEnum.active,
+        milestones: [
+            {
+                _id: 'milestone-1',
+                status: jobs_enum_1.MilestoneEnum.completed,
+                paymentStatus: jobs_enum_1.MilestonePaymentStatus.paid,
+                invoice: { disputeTicketId: 'ticket-1', disputeStatus: 'resolved' },
+            },
+        ],
+    }, 'owner-1');
+    strict_1.default.equal(displayed.contractClosure.canClose, true);
+    strict_1.default.equal(displayed.disputeSummary.canCloseContract, true);
+    strict_1.default.deepEqual(displayed.contractClosure.blockingReasons, []);
+});
+(0, node_test_1.default)('contract closure remains unavailable to a non-owner even when work and payment are complete', () => {
+    const summary = (0, job_service_1.jobContractClosureSummary)({
+        userId: 'owner-1',
+        isClosed: false,
+        milestones: [{ status: jobs_enum_1.MilestoneEnum.completed, paymentStatus: jobs_enum_1.MilestonePaymentStatus.paid }],
+    }, 'artisan-1');
+    strict_1.default.equal(summary.canClose, false);
+    strict_1.default.deepEqual(summary.blockingReasons.map(reason => reason.code), ['not_job_owner']);
+});
 (0, node_test_1.default)('owner rejection reactivates completed work and records the reason', () => {
     const rejectedAt = new Date('2026-10-30T09:00:00.000Z');
     const milestone = {

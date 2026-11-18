@@ -1166,6 +1166,20 @@ Paystack reference is returned as \`milestones[].paymentInfo.referenceId\`. The 
                                             milestonesCount: 3,
                                             attention: { requiresAttention: false, unviewedCount: 0, types: [], latestEventAt: null, eventIds: [] },
                                             disputeSummary: { hasDispute: true, hasUnresolvedDispute: true, disputeCount: 1, unresolvedCount: 1, disputedMilestoneIds: ["64fb0a1b2c3d4e5f6a7b8c9b"], unresolvedMilestoneIds: ["64fb0a1b2c3d4e5f6a7b8c9b"], canCloseContract: false },
+                                            contractClosure: {
+                                                canClose: false,
+                                                isJobOwner: true,
+                                                isAlreadyClosed: false,
+                                                hasMilestones: true,
+                                                allMilestonesCompleted: false,
+                                                allMilestonesPaid: false,
+                                                hasUnresolvedDispute: true,
+                                                blockingReasons: [
+                                                    { code: "milestones_incomplete", message: "All milestones must be completed." },
+                                                    { code: "milestones_unpaid", message: "All milestones must be paid." },
+                                                    { code: "unresolved_dispute", message: "All milestone disputes must be resolved." },
+                                                ],
+                                            },
                                             milestones: [
                                                 {
                                                     _id: "64fb0a1b2c3d4e5f6a7b8c9b",

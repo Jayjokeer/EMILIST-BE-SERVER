@@ -134,12 +134,59 @@ export const jobDisputeSummary = (milestones: any[] = []) => {
     unresolvedCount: unresolved.length,
     disputedMilestoneIds: disputed.map((milestone: any) => String(milestone._id)),
     unresolvedMilestoneIds: unresolved.map((milestone: any) => String(milestone._id)),
-    canCloseContract: unresolved.length === 0,
+    canCloseContract: unresolved.length === 0 && areAllMilestonesCompletedAndPaid(milestones),
   };
 };
 
 export const hasUnresolvedMilestoneDispute = (milestones: any[] = []) =>
   jobDisputeSummary(milestones).hasUnresolvedDispute;
+
+export const jobContractClosureSummary = (job: any, viewerUserId?: string | null) => {
+  const milestones = Array.isArray(job?.milestones) ? job.milestones : [];
+  const hasMilestones = milestones.length > 0;
+  const allMilestonesCompleted = hasMilestones && milestones.every(
+    (milestone: any) => milestone.status === MilestoneEnum.completed,
+  );
+  const allMilestonesPaid = hasMilestones && milestones.every(
+    (milestone: any) => milestone.paymentStatus === MilestonePaymentStatus.paid,
+  );
+  const hasUnresolvedDispute = hasUnresolvedMilestoneDispute(milestones);
+  const ownerId = String(job?.userId?._id || job?.userId || "");
+  const isJobOwner = Boolean(viewerUserId) && ownerId === String(viewerUserId);
+  const isAlreadyClosed = Boolean(job?.isClosed);
+  const blockingReasons: Array<{ code: string; message: string }> = [];
+
+  if (!isJobOwner) {
+    blockingReasons.push({ code: "not_job_owner", message: "Only the job owner can close this contract." });
+  }
+  if (isAlreadyClosed) {
+    blockingReasons.push({ code: "already_closed", message: "This contract is already closed." });
+  }
+  if (!hasMilestones) {
+    blockingReasons.push({ code: "no_milestones", message: "The contract must have at least one milestone." });
+  } else {
+    if (!allMilestonesCompleted) {
+      blockingReasons.push({ code: "milestones_incomplete", message: "All milestones must be completed." });
+    }
+    if (!allMilestonesPaid) {
+      blockingReasons.push({ code: "milestones_unpaid", message: "All milestones must be paid." });
+    }
+  }
+  if (hasUnresolvedDispute) {
+    blockingReasons.push({ code: "unresolved_dispute", message: "All milestone disputes must be resolved." });
+  }
+
+  return {
+    canClose: blockingReasons.length === 0,
+    isJobOwner,
+    isAlreadyClosed,
+    hasMilestones,
+    allMilestonesCompleted,
+    allMilestonesPaid,
+    hasUnresolvedDispute,
+    blockingReasons,
+  };
+};
 
 export const raiseMilestoneInvoice = (
   invoice: any,
@@ -258,7 +305,12 @@ export const withJobDisplayStatus = (job: any, viewerUserId?: string | null) => 
   if (plain.status === JobStatusEnum.listed) {
     (plain as any).legacyStatus = 'pending';
   }
-  plain.disputeSummary = jobDisputeSummary(plain.milestones || []);
+  const contractClosure = jobContractClosureSummary(plain, viewerUserId);
+  plain.contractClosure = contractClosure;
+  plain.disputeSummary = {
+    ...jobDisputeSummary(plain.milestones || []),
+    canCloseContract: contractClosure.canClose,
+  };
   plain.milestones = (plain.milestones || []).map((milestone: any) => ({
     ...milestone,
     hasDispute: Boolean(milestone.invoice?.disputeTicketId),

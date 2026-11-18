@@ -7,6 +7,7 @@ import {
   adminCustomerMessage,
   adminInvitationMessage,
   counterOfferMessage,
+  contractClosedReviewOwnerMessage,
   directJobApplicationMessage,
   generateReminderEmail,
   otpMessage,
@@ -40,6 +41,7 @@ test("all email templates replace missing values with readable fallbacks", () =>
     sendMessage(missing, missing),
     sendJobApplicationMessage(missing, missing, missing),
     counterOfferMessage(missing, missing, missing, missing, missing),
+    contractClosedReviewOwnerMessage(missing, missing, missing, missing),
     acceptJobApplicationMessage(missing, missing, missing, missing),
     acceptDirectJobApplicationMessage(missing, missing, missing),
     sendInviteMessage(missing),
@@ -78,6 +80,7 @@ test("generated user and admin email links use their dedicated frontend URLs", (
       counterOfferMessage("User", "Sender", "Job", 1000, "NGN"),
       acceptJobApplicationMessage("Artisan", "Owner", "Job", "accepted"),
       acceptDirectJobApplicationMessage("Owner", "Artisan", "job-id"),
+      contractClosedReviewOwnerMessage("Artisan", "Owner", "Job", "https://users.example.com/"),
     ];
 
     for (const email of userEmails) {

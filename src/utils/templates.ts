@@ -154,6 +154,20 @@ export const acceptDirectJobApplicationMessage = (creatorName: string, name: str
     <p>Kindly <a href="${emailUrl(userFrontendUrl())}">log in to your account</a> to view it.</p>`,
 });
 
+export const contractClosedReviewOwnerMessage = (
+  artisanName: string,
+  jobOwnerName: string,
+  jobTitle: string,
+  reviewUrl: string,
+) => ({
+  subject: `Contract closed: Review ${subjectText(jobOwnerName, "the job owner")}`,
+  html: `
+    <p>Hi ${emailText(artisanName, "there")},</p>
+    <p>The contract for <strong>${emailText(jobTitle, "your completed job")}</strong> has been closed by ${emailText(jobOwnerName, "the job owner")}.</p>
+    <p>Please share your experience by writing a review for the job owner.</p>
+    <p><a href="${emailUrl(reviewUrl)}">Review the job owner</a></p>`,
+});
+
 export const sendInviteMessage = (creatorName: string) => ({
   subject: "Emilist Invite",
   html: `

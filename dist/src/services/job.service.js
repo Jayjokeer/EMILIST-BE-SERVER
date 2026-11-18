@@ -36,8 +36,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.formatJobAnalyticsResponse = exports.summarizeJobAnalyticsPeriod = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.attachMilestonePaymentReferences = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.hasUnresolvedMilestoneDispute = exports.jobDisputeSummary = exports.areAllMilestonesCompletedAndPaid = exports.activateAcceptedApplication = exports.resolveJobLifecycleStatus = exports.calculateJobDueDate = exports.getJobLifecycleStartDate = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
-exports.fetchJobsByUserId = exports.jobCreatedAtSort = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = void 0;
+exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.formatJobAnalyticsResponse = exports.summarizeJobAnalyticsPeriod = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.attachMilestonePaymentReferences = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.jobContractClosureSummary = exports.hasUnresolvedMilestoneDispute = exports.jobDisputeSummary = exports.areAllMilestonesCompletedAndPaid = exports.activateAcceptedApplication = exports.resolveJobLifecycleStatus = exports.calculateJobDueDate = exports.getJobLifecycleStartDate = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
+exports.fetchJobsByUserId = exports.jobCreatedAtSort = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -165,12 +165,54 @@ const jobDisputeSummary = (milestones = []) => {
         unresolvedCount: unresolved.length,
         disputedMilestoneIds: disputed.map((milestone) => String(milestone._id)),
         unresolvedMilestoneIds: unresolved.map((milestone) => String(milestone._id)),
-        canCloseContract: unresolved.length === 0,
+        canCloseContract: unresolved.length === 0 && (0, exports.areAllMilestonesCompletedAndPaid)(milestones),
     };
 };
 exports.jobDisputeSummary = jobDisputeSummary;
 const hasUnresolvedMilestoneDispute = (milestones = []) => (0, exports.jobDisputeSummary)(milestones).hasUnresolvedDispute;
 exports.hasUnresolvedMilestoneDispute = hasUnresolvedMilestoneDispute;
+const jobContractClosureSummary = (job, viewerUserId) => {
+    const milestones = Array.isArray(job?.milestones) ? job.milestones : [];
+    const hasMilestones = milestones.length > 0;
+    const allMilestonesCompleted = hasMilestones && milestones.every((milestone) => milestone.status === jobs_enum_1.MilestoneEnum.completed);
+    const allMilestonesPaid = hasMilestones && milestones.every((milestone) => milestone.paymentStatus === jobs_enum_1.MilestonePaymentStatus.paid);
+    const hasUnresolvedDispute = (0, exports.hasUnresolvedMilestoneDispute)(milestones);
+    const ownerId = String(job?.userId?._id || job?.userId || "");
+    const isJobOwner = Boolean(viewerUserId) && ownerId === String(viewerUserId);
+    const isAlreadyClosed = Boolean(job?.isClosed);
+    const blockingReasons = [];
+    if (!isJobOwner) {
+        blockingReasons.push({ code: "not_job_owner", message: "Only the job owner can close this contract." });
+    }
+    if (isAlreadyClosed) {
+        blockingReasons.push({ code: "already_closed", message: "This contract is already closed." });
+    }
+    if (!hasMilestones) {
+        blockingReasons.push({ code: "no_milestones", message: "The contract must have at least one milestone." });
+    }
+    else {
+        if (!allMilestonesCompleted) {
+            blockingReasons.push({ code: "milestones_incomplete", message: "All milestones must be completed." });
+        }
+        if (!allMilestonesPaid) {
+            blockingReasons.push({ code: "milestones_unpaid", message: "All milestones must be paid." });
+        }
+    }
+    if (hasUnresolvedDispute) {
+        blockingReasons.push({ code: "unresolved_dispute", message: "All milestone disputes must be resolved." });
+    }
+    return {
+        canClose: blockingReasons.length === 0,
+        isJobOwner,
+        isAlreadyClosed,
+        hasMilestones,
+        allMilestonesCompleted,
+        allMilestonesPaid,
+        hasUnresolvedDispute,
+        blockingReasons,
+    };
+};
+exports.jobContractClosureSummary = jobContractClosureSummary;
 const raiseMilestoneInvoice = (invoice, issuedAt = new Date(), invoiceId = new mongoose_1.Types.ObjectId()) => {
     if (!invoice.invoiceId)
         invoice.invoiceId = invoiceId;
@@ -286,7 +328,12 @@ const withJobDisplayStatus = (job, viewerUserId) => {
     if (plain.status === jobs_enum_1.JobStatusEnum.listed) {
         plain.legacyStatus = 'pending';
     }
-    plain.disputeSummary = (0, exports.jobDisputeSummary)(plain.milestones || []);
+    const contractClosure = (0, exports.jobContractClosureSummary)(plain, viewerUserId);
+    plain.contractClosure = contractClosure;
+    plain.disputeSummary = {
+        ...(0, exports.jobDisputeSummary)(plain.milestones || []),
+        canCloseContract: contractClosure.canClose,
+    };
     plain.milestones = (plain.milestones || []).map((milestone) => ({
         ...milestone,
         hasDispute: Boolean(milestone.invoice?.disputeTicketId),

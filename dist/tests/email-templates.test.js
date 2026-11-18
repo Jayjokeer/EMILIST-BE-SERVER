@@ -24,6 +24,7 @@ const missing = undefined;
         (0, templates_1.sendMessage)(missing, missing),
         (0, templates_1.sendJobApplicationMessage)(missing, missing, missing),
         (0, templates_1.counterOfferMessage)(missing, missing, missing, missing, missing),
+        (0, templates_1.contractClosedReviewOwnerMessage)(missing, missing, missing, missing),
         (0, templates_1.acceptJobApplicationMessage)(missing, missing, missing, missing),
         (0, templates_1.acceptDirectJobApplicationMessage)(missing, missing, missing),
         (0, templates_1.sendInviteMessage)(missing),
@@ -55,6 +56,7 @@ const missing = undefined;
             (0, templates_1.counterOfferMessage)("User", "Sender", "Job", 1000, "NGN"),
             (0, templates_1.acceptJobApplicationMessage)("Artisan", "Owner", "Job", "accepted"),
             (0, templates_1.acceptDirectJobApplicationMessage)("Owner", "Artisan", "job-id"),
+            (0, templates_1.contractClosedReviewOwnerMessage)("Artisan", "Owner", "Job", "https://users.example.com/"),
         ];
         for (const email of userEmails) {
             strict_1.default.match(email.html, /href="https:\/\/users\.example\.com\/"/);

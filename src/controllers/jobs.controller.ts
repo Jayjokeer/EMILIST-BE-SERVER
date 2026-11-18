@@ -12,7 +12,7 @@ import { CounterOfferRoleEnum, CounterOfferStatusEnum, ProjectStatusEnum } from 
 import { JobStatusEnum, JobType, MilestoneEnum, MilestonePaymentStatus, QuoteStatusEnum, JobUrgencyEnum } from "../enums/jobs.enum";
 import * as authService from "../services/auth.service";
 import { sendEmail } from "../utils/send_email";
-import { acceptDirectJobApplicationMessage, acceptJobApplicationMessage, counterOfferMessage, directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage, sendJobApplicationMessage } from "../utils/templates";
+import { acceptDirectJobApplicationMessage, acceptJobApplicationMessage, contractClosedReviewOwnerMessage, counterOfferMessage, directJobApplicationMessage, postQuoteMessage, requestForQuoteMessage, sendJobApplicationMessage } from "../utils/templates";
 import mongoose from "mongoose";
 import Project from "../models/project.model";
 import * as  businessService from "../services/business.service";
@@ -29,6 +29,8 @@ import * as jobAttentionService from "../services/job-attention.service";
 import { getUserRoom } from "../socket";
 import { io } from "../server";
 import * as invoicePaymentReminderService from "../services/invoice-payment-reminder.service";
+import { config } from "../utils/config";
+import { buildFrontendUrl } from "../utils/frontend-url";
 
 // ===================== HELPER: Map new fields to old for backward compat =====================
 function mapJobBodyToLegacy(body: any): any {
@@ -1538,17 +1540,15 @@ export const closeContractController = catchAsync( async(req:JwtPayload, res: Re
 
   const job = await jobService.fetchJobById(String(jobId));
   if (!job) throw new NotFoundError('Job not found!');
-  if(String(userId) !== String(job.userId)){
+  const contractClosure = jobService.jobContractClosureSummary(job, String(userId));
+  if(!contractClosure.isJobOwner){
     throw new UnauthorizedError("Unauthorized!");
   }
-  if (job.isClosed) throw new BadRequestError('Contract is already closed!');
-  if (jobService.hasUnresolvedMilestoneDispute(job.milestones)) {
+  if (contractClosure.isAlreadyClosed) throw new BadRequestError('Contract is already closed!');
+  if (contractClosure.hasUnresolvedDispute) {
     throw new BadRequestError('This contract cannot be closed while a milestone dispute is unresolved.');
   }
-
-  const allMilestonesCompletedAndPaid = jobService.areAllMilestonesCompletedAndPaid(job.milestones);
-
-  if (!allMilestonesCompletedAndPaid) {
+  if (!contractClosure.hasMilestones || !contractClosure.allMilestonesCompleted || !contractClosure.allMilestonesPaid) {
     throw new BadRequestError('All milestones must be completed and paid before closing the contract.');
   }
   if(job.status !== JobStatusEnum.complete){
@@ -1578,6 +1578,30 @@ const data = await reviewService.addReview(payload);
   await project.save();
   await business.reviews?.push(data._id);
   await business.save();
+
+  try {
+    const artisan = await authService.findUserByIdAlone(String(project.user));
+    if (artisan?.email) {
+      const artisanName = [artisan.firstName, artisan.lastName].filter(Boolean).join(" ")
+        || artisan.userName
+        || artisan.email.split("@")[0];
+      const ownerName = [req.user?.firstName, req.user?.lastName].filter(Boolean).join(" ")
+        || req.user?.userName
+        || req.user?.email?.split("@")[0]
+        || "the job owner";
+      const reviewUrl = buildFrontendUrl(config.frontendUrl);
+      const { subject, html } = contractClosedReviewOwnerMessage(
+        artisanName,
+        ownerName,
+        String(job.title || "your completed job"),
+        reviewUrl,
+      );
+      await sendEmail(artisan.email, subject, html);
+    }
+  } catch (error) {
+    console.error("Failed to send the contract-closed review reminder:", error);
+  }
+
   return successResponse(res,StatusCodes.OK, "Job closed successfully");
 
 });

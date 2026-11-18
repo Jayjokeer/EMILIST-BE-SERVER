@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JobStatusEnum, MilestoneEnum, MilestonePaymentStatus } from '../src/enums/jobs.enum';
 import { ProjectStatusEnum } from '../src/enums/project.enum';
-import { areAllMilestonesCompletedAndPaid, attachMilestonePaymentReferences, buildListedLifecycleScope, buildVisibleJobsQuery, jobCreatedAtSort, jobDisputeSummary, milestonePaymentBreakdown, raiseMilestoneInvoice, rejectCompletedMilestone, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate } from '../src/services/job.service';
+import { areAllMilestonesCompletedAndPaid, attachMilestonePaymentReferences, buildListedLifecycleScope, buildVisibleJobsQuery, jobContractClosureSummary, jobCreatedAtSort, jobDisputeSummary, milestonePaymentBreakdown, raiseMilestoneInvoice, rejectCompletedMilestone, resolveJobDisplayStatus, serializeMilestoneWithInvoiceDate, withJobDisplayStatus } from '../src/services/job.service';
 
 test('job owner can omit an artisan additional cost and pay the original invoice amount', () => {
   const milestone = { amount: 50000, invoice: { additionalAmount: 7500, invoiceRaised: true } };
@@ -65,6 +65,57 @@ test('job dispute summary blocks closure while any milestone dispute remains ope
   assert.equal(summary.hasUnresolvedDispute, true);
   assert.equal(summary.canCloseContract, false);
   assert.deepEqual(summary.unresolvedMilestoneIds, ['milestone-2']);
+});
+
+test('contract closure requires ownership, completed and paid milestones, and no unresolved dispute', () => {
+  const summary = jobContractClosureSummary({
+    userId: 'owner-1',
+    isClosed: false,
+    milestones: [
+      {
+        _id: 'milestone-1',
+        status: MilestoneEnum.completed,
+        paymentStatus: MilestonePaymentStatus.unpaid,
+      },
+    ],
+  }, 'owner-1');
+
+  assert.equal(summary.canClose, false);
+  assert.equal(summary.isJobOwner, true);
+  assert.equal(summary.allMilestonesCompleted, true);
+  assert.equal(summary.allMilestonesPaid, false);
+  assert.deepEqual(summary.blockingReasons.map(reason => reason.code), ['milestones_unpaid']);
+});
+
+test('contract closure is allowed only when every backend closing guard passes', () => {
+  const displayed = withJobDisplayStatus({
+    userId: 'owner-1',
+    isClosed: false,
+    status: JobStatusEnum.active,
+    milestones: [
+      {
+        _id: 'milestone-1',
+        status: MilestoneEnum.completed,
+        paymentStatus: MilestonePaymentStatus.paid,
+        invoice: { disputeTicketId: 'ticket-1', disputeStatus: 'resolved' },
+      },
+    ],
+  }, 'owner-1');
+
+  assert.equal(displayed.contractClosure.canClose, true);
+  assert.equal(displayed.disputeSummary.canCloseContract, true);
+  assert.deepEqual(displayed.contractClosure.blockingReasons, []);
+});
+
+test('contract closure remains unavailable to a non-owner even when work and payment are complete', () => {
+  const summary = jobContractClosureSummary({
+    userId: 'owner-1',
+    isClosed: false,
+    milestones: [{ status: MilestoneEnum.completed, paymentStatus: MilestonePaymentStatus.paid }],
+  }, 'artisan-1');
+
+  assert.equal(summary.canClose, false);
+  assert.deepEqual(summary.blockingReasons.map(reason => reason.code), ['not_job_owner']);
 });
 
 test('owner rejection reactivates completed work and records the reason', () => {

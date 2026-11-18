@@ -63,6 +63,8 @@ const jobAttentionService = __importStar(require("../services/job-attention.serv
 const socket_1 = require("../socket");
 const server_1 = require("../server");
 const invoicePaymentReminderService = __importStar(require("../services/invoice-payment-reminder.service"));
+const config_1 = require("../utils/config");
+const frontend_url_1 = require("../utils/frontend-url");
 // ===================== HELPER: Map new fields to old for backward compat =====================
 function mapJobBodyToLegacy(body) {
     const mapped = { ...body };
@@ -1398,16 +1400,16 @@ exports.closeContractController = (0, error_handler_1.catchAsync)(async (req, re
     const job = await jobService.fetchJobById(String(jobId));
     if (!job)
         throw new error_1.NotFoundError('Job not found!');
-    if (String(userId) !== String(job.userId)) {
+    const contractClosure = jobService.jobContractClosureSummary(job, String(userId));
+    if (!contractClosure.isJobOwner) {
         throw new error_1.UnauthorizedError("Unauthorized!");
     }
-    if (job.isClosed)
+    if (contractClosure.isAlreadyClosed)
         throw new error_1.BadRequestError('Contract is already closed!');
-    if (jobService.hasUnresolvedMilestoneDispute(job.milestones)) {
+    if (contractClosure.hasUnresolvedDispute) {
         throw new error_1.BadRequestError('This contract cannot be closed while a milestone dispute is unresolved.');
     }
-    const allMilestonesCompletedAndPaid = jobService.areAllMilestonesCompletedAndPaid(job.milestones);
-    if (!allMilestonesCompletedAndPaid) {
+    if (!contractClosure.hasMilestones || !contractClosure.allMilestonesCompleted || !contractClosure.allMilestonesPaid) {
         throw new error_1.BadRequestError('All milestones must be completed and paid before closing the contract.');
     }
     if (job.status !== jobs_enum_1.JobStatusEnum.complete) {
@@ -1437,6 +1439,24 @@ exports.closeContractController = (0, error_handler_1.catchAsync)(async (req, re
     await project.save();
     await business.reviews?.push(data._id);
     await business.save();
+    try {
+        const artisan = await authService.findUserByIdAlone(String(project.user));
+        if (artisan?.email) {
+            const artisanName = [artisan.firstName, artisan.lastName].filter(Boolean).join(" ")
+                || artisan.userName
+                || artisan.email.split("@")[0];
+            const ownerName = [req.user?.firstName, req.user?.lastName].filter(Boolean).join(" ")
+                || req.user?.userName
+                || req.user?.email?.split("@")[0]
+                || "the job owner";
+            const reviewUrl = (0, frontend_url_1.buildFrontendUrl)(config_1.config.frontendUrl);
+            const { subject, html } = (0, templates_1.contractClosedReviewOwnerMessage)(artisanName, ownerName, String(job.title || "your completed job"), reviewUrl);
+            await (0, send_email_1.sendEmail)(artisan.email, subject, html);
+        }
+    }
+    catch (error) {
+        console.error("Failed to send the contract-closed review reminder:", error);
+    }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Job closed successfully");
 });
 exports.reviewJobOwnerController = (0, error_handler_1.catchAsync)(async (req, res) => {
