@@ -51,6 +51,7 @@ router.route("/settings").get(current_user_1.adminAuth, adminController.adminSet
 router.route("/settings/platform").patch(current_user_1.superAdminAuth, admin_validation_1.validatePlatformSettings, adminController.updatePlatformSettingsController);
 router.route("/settings/subscriptions").patch(current_user_1.superAdminAuth, admin_validation_1.validateSubscriptionPrices, adminController.updateSubscriptionPricesController);
 router.route("/settings/spotlight").put(current_user_1.superAdminAuth, admin_validation_1.validateSpotlightSettings, adminController.publishSpotlightController);
+router.route("/current-user").get(current_user_1.adminAuth, adminController.currentAdminController);
 router.route("/profile").get(current_user_1.adminAuth, adminController.adminProfileController);
 router.route("/profile").patch(current_user_1.adminAuth, image_upload_1.singleUpload, admin_validation_1.validateAdminProfileUpdate, adminController.updateAdminProfileController);
 router.route("/jobs/summary").get(current_user_1.adminAuth, adminController.adminJobSummaryController);

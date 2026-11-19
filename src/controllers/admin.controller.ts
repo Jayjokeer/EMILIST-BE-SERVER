@@ -792,7 +792,16 @@ const adminResponse = (admin: any) => ({
   role: admin.role,
   status: admin.status,
   onboardingStatus: admin.onboardingStatus,
+  isEmailVerified: Boolean(admin.isEmailVerified),
   mfaEnabled: admin.mfaEnabled,
+  mfaVerifiedAt: admin.mfaVerifiedAt || null,
+  lastLoginAt: admin.lastLoginAt || null,
+  createdAt: admin.createdAt || null,
+  updatedAt: admin.updatedAt || null,
+});
+
+export const currentAdminController = catchAsync(async (req: JwtPayload, res: Response) => {
+  return successResponse(res, StatusCodes.OK, adminResponse(req.user));
 });
 
 const getValidInvitation = async (token: string) => {
