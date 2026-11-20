@@ -1,4 +1,5 @@
 import { additionalSwaggerPaths } from './additional-swagger-paths';
+import { enrichSwaggerResponseExamples } from './swagger-response-examples';
 
 /**
  * Emilist API - Swagger / OpenAPI 3.0 specification
@@ -9,7 +10,7 @@ import { additionalSwaggerPaths } from './additional-swagger-paths';
  * Auth: protected endpoints require an `Authorization: Bearer <token>` header.
  *       Obtain a token from `POST /api/v1/auth/login`.
  */
-export const swaggerSpec = {
+export const swaggerSpec = enrichSwaggerResponseExamples({
   openapi: "3.0.3",
   info: {
     title: "Emilist API",
@@ -2959,4 +2960,4 @@ required fields for that type. Two media types are supported:
       },
     },
   },
-};
+});

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.swaggerSpec = void 0;
 const additional_swagger_paths_1 = require("./additional-swagger-paths");
+const swagger_response_examples_1 = require("./swagger-response-examples");
 /**
  * Emilist API - Swagger / OpenAPI 3.0 specification
  * -------------------------------------------------
@@ -11,7 +12,7 @@ const additional_swagger_paths_1 = require("./additional-swagger-paths");
  * Auth: protected endpoints require an `Authorization: Bearer <token>` header.
  *       Obtain a token from `POST /api/v1/auth/login`.
  */
-exports.swaggerSpec = {
+exports.swaggerSpec = (0, swagger_response_examples_1.enrichSwaggerResponseExamples)({
     openapi: "3.0.3",
     info: {
         title: "Emilist API",
@@ -2961,4 +2962,4 @@ required fields for that type. Two media types are supported:
             },
         },
     },
-};
+});

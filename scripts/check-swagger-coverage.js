@@ -68,6 +68,19 @@ for (const [routePath, pathItem] of Object.entries(swaggerSpec.paths)) {
     if (!operation.responses || Object.keys(operation.responses).length === 0) {
       qualityIssues.push(`${method.toUpperCase()} ${routePath}: missing responses`);
     }
+    for (const [statusCode, response] of Object.entries(operation.responses || {})) {
+      if (statusCode === '204') continue;
+      const numericStatus = Number(statusCode);
+      const isRedirect = numericStatus >= 300 && numericStatus < 400;
+      const hasRedirectExample = response.headers?.Location?.example !== undefined;
+      const media = Object.values(response.content || {});
+      const hasContentExample = media.length > 0 && media.every((entry) =>
+        entry.example !== undefined || entry.examples !== undefined
+      );
+      if (!(isRedirect ? hasRedirectExample : hasContentExample)) {
+        qualityIssues.push(`${method.toUpperCase()} ${routePath} ${statusCode}: missing sample response`);
+      }
+    }
     for (const match of routePath.matchAll(/\{([^}]+)\}/g)) {
       const parameter = (operation.parameters || []).find((item) =>
         item.in === 'path' && item.name === match[1] && item.required === true
