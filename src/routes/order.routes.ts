@@ -6,6 +6,7 @@ import {
   validateListOrders,
   validateRateMerchant,
   validateReason,
+  validateUpdateDeliveryStatus,
 } from "../validations/order.validation";
 
 const router = Router();
@@ -13,6 +14,7 @@ const router = Router();
 router.route("/").get(userAuth, validateListOrders, orderController.getMyOrdersController);
 router.route("/bulk-cancel").post(userAuth, validateBulkCancel, orderController.bulkCancelOrdersController);
 router.route("/:id").get(userAuth, orderController.getOrderByIdController);
+router.route("/:id/status").patch(userAuth, validateUpdateDeliveryStatus, orderController.updateOrderStatusController);
 router.route("/:id/cancel").post(userAuth, validateReason, orderController.cancelOrderController);
 router.route("/:id/return").post(userAuth, validateReason, orderController.returnOrderController);
 router.route("/:id/reorder").post(userAuth, orderController.reorderController);

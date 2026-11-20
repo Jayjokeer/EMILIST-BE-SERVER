@@ -22,8 +22,18 @@ export const getMyOrdersController = catchAsync(async (req: JwtPayload, res: Res
 export const getOrderByIdController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user._id;
   const { id } = req.params;
-  const order = await orderService.fetchOrderByIdAndUser(id, userId);
+  const order = await orderService.fetchOrderByIdForParticipant(id, userId);
   if (!order) throw new NotFoundError("Order not found");
+  return successResponse(res, StatusCodes.OK, orderService.orderDetailsForParticipant(order, userId));
+});
+
+export const updateOrderStatusController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const order = await orderService.updateOrderDeliveryStatus(
+    req.params.id,
+    req.user._id,
+    req.body.status,
+    req.body.note,
+  );
   return successResponse(res, StatusCodes.OK, order);
 });
 
@@ -77,14 +87,19 @@ export const rateMerchantController = catchAsync(async (req: JwtPayload, res: Re
 export const trackOrderController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user._id;
   const { id } = req.params;
-  const order = await orderService.fetchOrderByIdAndUser(id, userId);
+  const order = await orderService.fetchOrderByIdForParticipant(id, userId);
   if (!order) throw new NotFoundError("Order not found");
+
+  const details = orderService.orderDetailsForParticipant(order, userId);
 
   return successResponse(res, StatusCodes.OK, {
     deliveryStatus: order.deliveryStatus,
     deliveryDate: order.deliveryDate,
     deliveredAt: order.deliveredAt,
-    timeline: order.deliverySteps || [],
+    viewerRole: details.viewerRole,
+    allowedDeliveryStatusUpdates: details.allowedDeliveryStatusUpdates,
+    orderSteps: details.orderSteps,
+    timeline: details.orderSteps,
   });
 });
 

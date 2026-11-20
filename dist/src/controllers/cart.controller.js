@@ -405,6 +405,12 @@ exports.checkoutCartController = (0, error_handler_1.catchAsync)(async (req, res
         orderNote: orderNote || undefined,
         status: order_enum_1.OrderStatus.pending,
         paymentStatus: order_enum_1.OrderPaymentStatus.unpaid,
+        deliverySteps: [{
+                status: order_enum_1.OrderDeliveryStatus.orderConfirmed,
+                timestamp: new Date(),
+                note: "Order created",
+                actorType: "system",
+            }],
         cartId: cart._id,
     });
     for (const promo of effectivePromos) {

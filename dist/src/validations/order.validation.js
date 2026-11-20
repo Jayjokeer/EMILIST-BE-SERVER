@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateReason = exports.validateRateMerchant = exports.validateBulkCancel = exports.validateListOrders = void 0;
+exports.validateUpdateDeliveryStatus = exports.validateReason = exports.validateRateMerchant = exports.validateBulkCancel = exports.validateListOrders = void 0;
 const joi_1 = __importDefault(require("joi"));
 const order_enum_1 = require("../enums/order.enum");
 const validateListOrders = (req, res, next) => {
@@ -59,3 +59,18 @@ const validateReason = (req, res, next) => {
     next();
 };
 exports.validateReason = validateReason;
+const validateUpdateDeliveryStatus = (req, res, next) => {
+    const schema = joi_1.default.object({
+        status: joi_1.default.string()
+            .valid(order_enum_1.OrderDeliveryStatus.outForDelivery, order_enum_1.OrderDeliveryStatus.delivered)
+            .required(),
+        note: joi_1.default.string().trim().max(500).optional().allow(""),
+    });
+    const { error } = schema.validate(req.body, { abortEarly: false });
+    if (error) {
+        res.status(400).json({ errors: error.details.map((detail) => detail.message) });
+        return;
+    }
+    next();
+};
+exports.validateUpdateDeliveryStatus = validateUpdateDeliveryStatus;

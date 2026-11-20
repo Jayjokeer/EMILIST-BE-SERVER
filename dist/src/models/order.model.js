@@ -61,6 +61,8 @@ const DeliveryStepSchema = new mongoose_1.Schema({
     status: { type: String, enum: order_enum_1.OrderDeliveryStatus, required: true },
     timestamp: { type: Date, required: true },
     note: { type: String, trim: true },
+    actorType: { type: String, enum: ["buyer", "seller", "system", "admin"] },
+    actorId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users" },
 }, { _id: false });
 const OrderSchema = new mongoose_1.Schema({
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Users", required: true },

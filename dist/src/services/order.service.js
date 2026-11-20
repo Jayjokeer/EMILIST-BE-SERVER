@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createReorderCart = exports.returnOrder = exports.cancelOrder = exports.pushDeliveryStep = exports.fetchOrdersForUser = exports.fetchOrderByIdAndUser = exports.fetchOrderByOrderId = exports.fetchOrderByCartIdForUser = exports.fetchOrderByCartId = exports.createOrder = void 0;
+exports.createReorderCart = exports.returnOrder = exports.cancelOrder = exports.updateOrderDeliveryStatus = exports.pushDeliveryStep = exports.fetchOrdersForUser = exports.orderDetailsForParticipant = exports.fetchOrderByIdForParticipant = exports.fetchOrderByIdAndUser = exports.fetchOrderByOrderId = exports.fetchOrderByCartIdForUser = exports.fetchOrderByCartId = exports.createOrder = exports.availableOrderActions = exports.buildOrderSteps = void 0;
 const order_model_1 = __importDefault(require("../models/order.model"));
 const order_enum_1 = require("../enums/order.enum");
 const transaction_enum_1 = require("../enums/transaction.enum");
@@ -45,6 +45,83 @@ const transactionService = __importStar(require("./transaction.service"));
 const productService = __importStar(require("./product.service"));
 const cartService = __importStar(require("./cart.service"));
 const error_1 = require("../errors/error");
+const orderStepDefinitions = [
+    { status: order_enum_1.OrderDeliveryStatus.orderConfirmed, label: "Order confirmed", responsibleParty: "system" },
+    { status: order_enum_1.OrderDeliveryStatus.outForDelivery, label: "Out for delivery", responsibleParty: "seller" },
+    { status: order_enum_1.OrderDeliveryStatus.delivered, label: "Delivered", responsibleParty: "buyer" },
+];
+const statusRank = {
+    [order_enum_1.OrderDeliveryStatus.orderConfirmed]: 0,
+    [order_enum_1.OrderDeliveryStatus.outForDelivery]: 1,
+    [order_enum_1.OrderDeliveryStatus.delivered]: 2,
+};
+const dateValue = (value) => {
+    if (!value)
+        return undefined;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+};
+const buildOrderSteps = (order) => {
+    const savedSteps = [...(order.deliverySteps || [])].sort((left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime());
+    const currentRank = statusRank[order.deliveryStatus];
+    const standardSteps = orderStepDefinitions.map((definition, index) => {
+        const saved = savedSteps.find((step) => step.status === definition.status);
+        const activatedAt = dateValue(saved?.timestamp)
+            || (definition.status === order_enum_1.OrderDeliveryStatus.orderConfirmed ? dateValue(order.createdAt) : undefined)
+            || (definition.status === order_enum_1.OrderDeliveryStatus.delivered ? dateValue(order.deliveredAt) : undefined);
+        const reached = Boolean(activatedAt) || (currentRank !== undefined && currentRank >= index);
+        return {
+            status: definition.status,
+            label: definition.label,
+            responsibleParty: definition.responsibleParty,
+            isCompleted: reached,
+            isCurrent: order.deliveryStatus === definition.status,
+            ...(activatedAt ? { activatedAt } : {}),
+            ...(saved?.note ? { note: saved.note } : {}),
+            ...(saved?.actorType ? { updatedBy: saved.actorType } : {}),
+            ...(saved?.actorId ? { updatedByUserId: saved.actorId } : {}),
+        };
+    });
+    const exceptionalSteps = [
+        { status: order_enum_1.OrderDeliveryStatus.canceled, label: "Order cancelled", date: order.cancelledAt },
+        { status: order_enum_1.OrderDeliveryStatus.returned, label: "Order returned", date: order.returnedAt },
+    ].flatMap((definition) => {
+        const saved = savedSteps.find((step) => step.status === definition.status);
+        const activatedAt = dateValue(saved?.timestamp) || dateValue(definition.date);
+        if (!activatedAt && order.deliveryStatus !== definition.status)
+            return [];
+        return [{
+                status: definition.status,
+                label: definition.label,
+                responsibleParty: "buyer",
+                isCompleted: true,
+                isCurrent: order.deliveryStatus === definition.status,
+                ...(activatedAt ? { activatedAt } : {}),
+                ...(saved?.note ? { note: saved.note } : {}),
+                ...(saved?.actorType ? { updatedBy: saved.actorType } : {}),
+                ...(saved?.actorId ? { updatedByUserId: saved.actorId } : {}),
+            }];
+    });
+    return [...standardSteps, ...exceptionalSteps];
+};
+exports.buildOrderSteps = buildOrderSteps;
+const participantRole = (order, userId) => {
+    if (String(order.userId) === String(userId))
+        return "buyer";
+    const isSeller = (order.products || []).some((product) => String(product.merchantId) === String(userId));
+    return isSeller ? "seller" : null;
+};
+const availableOrderActions = (order, userId) => {
+    const role = participantRole(order, userId);
+    if (role === "seller" && order.paymentStatus === order_enum_1.OrderPaymentStatus.paid && order.deliveryStatus === order_enum_1.OrderDeliveryStatus.orderConfirmed) {
+        return [order_enum_1.OrderDeliveryStatus.outForDelivery];
+    }
+    if (role === "buyer" && order.deliveryStatus === order_enum_1.OrderDeliveryStatus.outForDelivery) {
+        return [order_enum_1.OrderDeliveryStatus.delivered];
+    }
+    return [];
+};
+exports.availableOrderActions = availableOrderActions;
 const createOrder = async (payload) => {
     return await order_model_1.default.create(payload);
 };
@@ -65,6 +142,24 @@ const fetchOrderByIdAndUser = async (orderId, userId) => {
     return await order_model_1.default.findOne({ _id: orderId, userId });
 };
 exports.fetchOrderByIdAndUser = fetchOrderByIdAndUser;
+const fetchOrderByIdForParticipant = async (orderId, userId) => {
+    return await order_model_1.default.findOne({
+        _id: orderId,
+        $or: [{ userId }, { products: { $elemMatch: { merchantId: userId } } }],
+    });
+};
+exports.fetchOrderByIdForParticipant = fetchOrderByIdForParticipant;
+const orderDetailsForParticipant = (order, userId) => {
+    const value = typeof order.toObject === "function" ? order.toObject() : { ...order };
+    const viewerRole = participantRole(value, userId);
+    return {
+        ...value,
+        viewerRole,
+        allowedDeliveryStatusUpdates: (0, exports.availableOrderActions)(value, userId),
+        orderSteps: (0, exports.buildOrderSteps)(value),
+    };
+};
+exports.orderDetailsForParticipant = orderDetailsForParticipant;
 // Real server-side pagination — never fetch-all-then-slice.
 const fetchOrdersForUser = async (userId, { page = 1, limit = 10, sortBy = "latest", status, }) => {
     const currentPage = Math.max(Number(page) || 1, 1);
@@ -100,13 +195,59 @@ const fetchOrdersForUser = async (userId, { page = 1, limit = 10, sortBy = "late
     };
 };
 exports.fetchOrdersForUser = fetchOrdersForUser;
-const pushDeliveryStep = async (orderId, status, note) => {
+const pushDeliveryStep = async (orderId, status, note, actorType, actorId) => {
     return await order_model_1.default.findByIdAndUpdate(orderId, {
         $set: { deliveryStatus: status },
-        $push: { deliverySteps: { status, timestamp: new Date(), note: note || undefined } },
+        $push: { deliverySteps: { status, timestamp: new Date(), note: note || undefined, actorType, actorId } },
     }, { new: true });
 };
 exports.pushDeliveryStep = pushDeliveryStep;
+const updateOrderDeliveryStatus = async (orderId, userId, nextStatus, note) => {
+    const order = await (0, exports.fetchOrderByIdForParticipant)(orderId, userId);
+    if (!order)
+        throw new error_1.BadRequestError("Order not found");
+    const role = participantRole(order, userId);
+    const allowed = (0, exports.availableOrderActions)(order, userId);
+    if (!role || !allowed.includes(nextStatus)) {
+        if (nextStatus === order_enum_1.OrderDeliveryStatus.outForDelivery && role !== "seller") {
+            throw new error_1.ForbiddenError("Only a seller on this order can mark it as out for delivery");
+        }
+        if (nextStatus === order_enum_1.OrderDeliveryStatus.delivered && role !== "buyer") {
+            throw new error_1.ForbiddenError("Only the buyer can confirm that this order was delivered");
+        }
+        if (nextStatus === order_enum_1.OrderDeliveryStatus.outForDelivery && order.paymentStatus !== order_enum_1.OrderPaymentStatus.paid) {
+            throw new error_1.BadRequestError("An order must be paid before it can be sent for delivery");
+        }
+        throw new error_1.BadRequestError(`Order cannot move from "${order.deliveryStatus}" to "${nextStatus}"`);
+    }
+    const now = new Date();
+    const expectedStatus = nextStatus === order_enum_1.OrderDeliveryStatus.outForDelivery
+        ? order_enum_1.OrderDeliveryStatus.orderConfirmed
+        : order_enum_1.OrderDeliveryStatus.outForDelivery;
+    const update = {
+        $set: {
+            deliveryStatus: nextStatus,
+            ...(nextStatus === order_enum_1.OrderDeliveryStatus.delivered && {
+                deliveredAt: now,
+                status: order_enum_1.OrderStatus.completed,
+            }),
+        },
+        $push: {
+            deliverySteps: {
+                status: nextStatus,
+                timestamp: now,
+                note: note || undefined,
+                actorType: role,
+                actorId: userId,
+            },
+        },
+    };
+    const updated = await order_model_1.default.findOneAndUpdate({ _id: orderId, deliveryStatus: expectedStatus }, update, { new: true });
+    if (!updated)
+        throw new error_1.BadRequestError("The order status changed. Refresh the order and try again");
+    return (0, exports.orderDetailsForParticipant)(updated, userId);
+};
+exports.updateOrderDeliveryStatus = updateOrderDeliveryStatus;
 const restoreOrderStock = async (order) => {
     for (const item of order.products || []) {
         const product = await productService.fetchProductById(item.productId);
@@ -161,6 +302,8 @@ const cancelOrder = async (orderId, userId, reason) => {
                 status: order_enum_1.OrderDeliveryStatus.canceled,
                 timestamp: new Date(),
                 note: reason || "Order cancelled",
+                actorType: "buyer",
+                actorId: userId,
             },
         },
     }, { new: true });
@@ -194,6 +337,8 @@ const returnOrder = async (orderId, userId, reason) => {
                 status: order_enum_1.OrderDeliveryStatus.returned,
                 timestamp: new Date(),
                 note: reason || "Order returned",
+                actorType: "buyer",
+                actorId: userId,
             },
         },
     }, { new: true });

@@ -31,6 +31,8 @@ const DeliveryStepSchema: Schema = new Schema(
     status: { type: String, enum: OrderDeliveryStatus, required: true },
     timestamp: { type: Date, required: true },
     note: { type: String, trim: true },
+    actorType: { type: String, enum: ["buyer", "seller", "system", "admin"] },
+    actorId: { type: Schema.Types.ObjectId, ref: "Users" },
   },
   { _id: false }
 );

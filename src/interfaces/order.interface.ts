@@ -28,6 +28,8 @@ export interface IDeliveryStep {
     status: OrderDeliveryStatus;
     timestamp: Date;
     note?: string;
+    actorType?: "buyer" | "seller" | "system" | "admin";
+    actorId?: Schema.Types.ObjectId;
 }
 
 export interface IOrder extends Document {

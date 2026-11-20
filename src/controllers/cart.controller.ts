@@ -5,7 +5,7 @@ import { catchAsync } from "../errors/error-handler";
 import { successResponse } from "../helpers/success-response";
 import { BadRequestError, NotFoundError } from "../errors/error";
 import { CartStatus } from "../enums/cart.enum";
-import { OrderPaymentStatus, OrderStatus } from "../enums/order.enum";
+import { OrderDeliveryStatus, OrderPaymentStatus, OrderStatus } from "../enums/order.enum";
 import * as cartService from "../services/cart.service";
 import * as orderService from "../services/order.service";
 import * as productService from "../services/product.service";
@@ -381,6 +381,12 @@ export const checkoutCartController = catchAsync(async (req: JwtPayload, res: Re
     orderNote: orderNote || undefined,
     status: OrderStatus.pending,
     paymentStatus: OrderPaymentStatus.unpaid,
+    deliverySteps: [{
+      status: OrderDeliveryStatus.orderConfirmed,
+      timestamp: new Date(),
+      note: "Order created",
+      actorType: "system",
+    }],
     cartId: cart._id,
   });
   for (const promo of effectivePromos) {

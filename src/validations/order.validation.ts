@@ -54,3 +54,18 @@ export const validateReason = (req: Request, res: Response, next: NextFunction) 
   }
   next();
 };
+
+export const validateUpdateDeliveryStatus = (req: Request, res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    status: Joi.string()
+      .valid(OrderDeliveryStatus.outForDelivery, OrderDeliveryStatus.delivered)
+      .required(),
+    note: Joi.string().trim().max(500).optional().allow(""),
+  });
+  const { error } = schema.validate(req.body, { abortEarly: false });
+  if (error) {
+    res.status(400).json({ errors: error.details.map((detail) => detail.message) });
+    return;
+  }
+  next();
+};

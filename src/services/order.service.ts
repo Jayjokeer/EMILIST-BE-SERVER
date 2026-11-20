@@ -6,7 +6,92 @@ import * as walletService from "./wallet.services";
 import * as transactionService from "./transaction.service";
 import * as productService from "./product.service";
 import * as cartService from "./cart.service";
-import { BadRequestError } from "../errors/error";
+import { BadRequestError, ForbiddenError } from "../errors/error";
+
+type OrderActorType = "buyer" | "seller" | "system" | "admin";
+
+const orderStepDefinitions = [
+  { status: OrderDeliveryStatus.orderConfirmed, label: "Order confirmed", responsibleParty: "system" },
+  { status: OrderDeliveryStatus.outForDelivery, label: "Out for delivery", responsibleParty: "seller" },
+  { status: OrderDeliveryStatus.delivered, label: "Delivered", responsibleParty: "buyer" },
+] as const;
+
+const statusRank: Partial<Record<OrderDeliveryStatus, number>> = {
+  [OrderDeliveryStatus.orderConfirmed]: 0,
+  [OrderDeliveryStatus.outForDelivery]: 1,
+  [OrderDeliveryStatus.delivered]: 2,
+};
+
+const dateValue = (value: unknown): Date | undefined => {
+  if (!value) return undefined;
+  const date = new Date(value as string | number | Date);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
+export const buildOrderSteps = (order: any) => {
+  const savedSteps = [...(order.deliverySteps || [])].sort(
+    (left: any, right: any) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime()
+  );
+  const currentRank = statusRank[order.deliveryStatus as OrderDeliveryStatus];
+
+  const standardSteps = orderStepDefinitions.map((definition, index) => {
+    const saved = savedSteps.find((step: any) => step.status === definition.status);
+    const activatedAt = dateValue(saved?.timestamp)
+      || (definition.status === OrderDeliveryStatus.orderConfirmed ? dateValue(order.createdAt) : undefined)
+      || (definition.status === OrderDeliveryStatus.delivered ? dateValue(order.deliveredAt) : undefined);
+    const reached = Boolean(activatedAt) || (currentRank !== undefined && currentRank >= index);
+    return {
+      status: definition.status,
+      label: definition.label,
+      responsibleParty: definition.responsibleParty,
+      isCompleted: reached,
+      isCurrent: order.deliveryStatus === definition.status,
+      ...(activatedAt ? { activatedAt } : {}),
+      ...(saved?.note ? { note: saved.note } : {}),
+      ...(saved?.actorType ? { updatedBy: saved.actorType } : {}),
+      ...(saved?.actorId ? { updatedByUserId: saved.actorId } : {}),
+    };
+  });
+
+  const exceptionalSteps = [
+    { status: OrderDeliveryStatus.canceled, label: "Order cancelled", date: order.cancelledAt },
+    { status: OrderDeliveryStatus.returned, label: "Order returned", date: order.returnedAt },
+  ].flatMap((definition) => {
+    const saved = savedSteps.find((step: any) => step.status === definition.status);
+    const activatedAt = dateValue(saved?.timestamp) || dateValue(definition.date);
+    if (!activatedAt && order.deliveryStatus !== definition.status) return [];
+    return [{
+      status: definition.status,
+      label: definition.label,
+      responsibleParty: "buyer",
+      isCompleted: true,
+      isCurrent: order.deliveryStatus === definition.status,
+      ...(activatedAt ? { activatedAt } : {}),
+      ...(saved?.note ? { note: saved.note } : {}),
+      ...(saved?.actorType ? { updatedBy: saved.actorType } : {}),
+      ...(saved?.actorId ? { updatedByUserId: saved.actorId } : {}),
+    }];
+  });
+
+  return [...standardSteps, ...exceptionalSteps];
+};
+
+const participantRole = (order: any, userId: string): "buyer" | "seller" | null => {
+  if (String(order.userId) === String(userId)) return "buyer";
+  const isSeller = (order.products || []).some((product: any) => String(product.merchantId) === String(userId));
+  return isSeller ? "seller" : null;
+};
+
+export const availableOrderActions = (order: any, userId: string) => {
+  const role = participantRole(order, userId);
+  if (role === "seller" && order.paymentStatus === OrderPaymentStatus.paid && order.deliveryStatus === OrderDeliveryStatus.orderConfirmed) {
+    return [OrderDeliveryStatus.outForDelivery];
+  }
+  if (role === "buyer" && order.deliveryStatus === OrderDeliveryStatus.outForDelivery) {
+    return [OrderDeliveryStatus.delivered];
+  }
+  return [];
+};
 
 export const createOrder = async (payload: any) => {
   return await Order.create(payload);
@@ -26,6 +111,24 @@ export const fetchOrderByOrderId = async (orderId: string) => {
 
 export const fetchOrderByIdAndUser = async (orderId: string, userId: string) => {
   return await Order.findOne({ _id: orderId, userId });
+};
+
+export const fetchOrderByIdForParticipant = async (orderId: string, userId: string) => {
+  return await Order.findOne({
+    _id: orderId,
+    $or: [{ userId }, { products: { $elemMatch: { merchantId: userId } } }],
+  });
+};
+
+export const orderDetailsForParticipant = (order: any, userId: string) => {
+  const value = typeof order.toObject === "function" ? order.toObject() : { ...order };
+  const viewerRole = participantRole(value, userId);
+  return {
+    ...value,
+    viewerRole,
+    allowedDeliveryStatusUpdates: availableOrderActions(value, userId),
+    orderSteps: buildOrderSteps(value),
+  };
 };
 
 // Real server-side pagination — never fetch-all-then-slice.
@@ -81,15 +184,76 @@ export const fetchOrdersForUser = async (
   };
 };
 
-export const pushDeliveryStep = async (orderId: string, status: OrderDeliveryStatus, note?: string) => {
+export const pushDeliveryStep = async (
+  orderId: string,
+  status: OrderDeliveryStatus,
+  note?: string,
+  actorType?: OrderActorType,
+  actorId?: string,
+) => {
   return await Order.findByIdAndUpdate(
     orderId,
     {
       $set: { deliveryStatus: status },
-      $push: { deliverySteps: { status, timestamp: new Date(), note: note || undefined } },
+      $push: { deliverySteps: { status, timestamp: new Date(), note: note || undefined, actorType, actorId } },
     },
     { new: true }
   );
+};
+
+export const updateOrderDeliveryStatus = async (
+  orderId: string,
+  userId: string,
+  nextStatus: OrderDeliveryStatus,
+  note?: string,
+) => {
+  const order = await fetchOrderByIdForParticipant(orderId, userId);
+  if (!order) throw new BadRequestError("Order not found");
+
+  const role = participantRole(order, userId);
+  const allowed = availableOrderActions(order, userId);
+  if (!role || !allowed.includes(nextStatus)) {
+    if (nextStatus === OrderDeliveryStatus.outForDelivery && role !== "seller") {
+      throw new ForbiddenError("Only a seller on this order can mark it as out for delivery");
+    }
+    if (nextStatus === OrderDeliveryStatus.delivered && role !== "buyer") {
+      throw new ForbiddenError("Only the buyer can confirm that this order was delivered");
+    }
+    if (nextStatus === OrderDeliveryStatus.outForDelivery && order.paymentStatus !== OrderPaymentStatus.paid) {
+      throw new BadRequestError("An order must be paid before it can be sent for delivery");
+    }
+    throw new BadRequestError(`Order cannot move from "${order.deliveryStatus}" to "${nextStatus}"`);
+  }
+
+  const now = new Date();
+  const expectedStatus = nextStatus === OrderDeliveryStatus.outForDelivery
+    ? OrderDeliveryStatus.orderConfirmed
+    : OrderDeliveryStatus.outForDelivery;
+  const update: any = {
+    $set: {
+      deliveryStatus: nextStatus,
+      ...(nextStatus === OrderDeliveryStatus.delivered && {
+        deliveredAt: now,
+        status: OrderStatus.completed,
+      }),
+    },
+    $push: {
+      deliverySteps: {
+        status: nextStatus,
+        timestamp: now,
+        note: note || undefined,
+        actorType: role,
+        actorId: userId,
+      },
+    },
+  };
+  const updated = await Order.findOneAndUpdate(
+    { _id: orderId, deliveryStatus: expectedStatus },
+    update,
+    { new: true }
+  );
+  if (!updated) throw new BadRequestError("The order status changed. Refresh the order and try again");
+  return orderDetailsForParticipant(updated, userId);
 };
 
 const restoreOrderStock = async (order: any) => {
@@ -155,6 +319,8 @@ export const cancelOrder = async (orderId: string, userId: string, reason?: stri
           status: OrderDeliveryStatus.canceled,
           timestamp: new Date(),
           note: reason || "Order cancelled",
+          actorType: "buyer",
+          actorId: userId,
         },
       },
     },
@@ -196,6 +362,8 @@ export const returnOrder = async (orderId: string, userId: string, reason?: stri
           status: OrderDeliveryStatus.returned,
           timestamp: new Date(),
           note: reason || "Order returned",
+          actorType: "buyer",
+          actorId: userId,
         },
       },
     },

@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.bulkCancelOrdersController = exports.trackOrderController = exports.rateMerchantController = exports.reorderController = exports.returnOrderController = exports.cancelOrderController = exports.getOrderByIdController = exports.getMyOrdersController = void 0;
+exports.bulkCancelOrdersController = exports.trackOrderController = exports.rateMerchantController = exports.reorderController = exports.returnOrderController = exports.cancelOrderController = exports.updateOrderStatusController = exports.getOrderByIdController = exports.getMyOrdersController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -54,9 +54,13 @@ exports.getMyOrdersController = (0, error_handler_1.catchAsync)(async (req, res)
 exports.getOrderByIdController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
     const { id } = req.params;
-    const order = await orderService.fetchOrderByIdAndUser(id, userId);
+    const order = await orderService.fetchOrderByIdForParticipant(id, userId);
     if (!order)
         throw new error_1.NotFoundError("Order not found");
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, orderService.orderDetailsForParticipant(order, userId));
+});
+exports.updateOrderStatusController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const order = await orderService.updateOrderDeliveryStatus(req.params.id, req.user._id, req.body.status, req.body.note);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, order);
 });
 exports.cancelOrderController = (0, error_handler_1.catchAsync)(async (req, res) => {
@@ -100,14 +104,18 @@ exports.rateMerchantController = (0, error_handler_1.catchAsync)(async (req, res
 exports.trackOrderController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
     const { id } = req.params;
-    const order = await orderService.fetchOrderByIdAndUser(id, userId);
+    const order = await orderService.fetchOrderByIdForParticipant(id, userId);
     if (!order)
         throw new error_1.NotFoundError("Order not found");
+    const details = orderService.orderDetailsForParticipant(order, userId);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, {
         deliveryStatus: order.deliveryStatus,
         deliveryDate: order.deliveryDate,
         deliveredAt: order.deliveredAt,
-        timeline: order.deliverySteps || [],
+        viewerRole: details.viewerRole,
+        allowedDeliveryStatusUpdates: details.allowedDeliveryStatusUpdates,
+        orderSteps: details.orderSteps,
+        timeline: details.orderSteps,
     });
 });
 exports.bulkCancelOrdersController = (0, error_handler_1.catchAsync)(async (req, res) => {

@@ -43,6 +43,7 @@ exports.OrderRoute = router;
 router.route("/").get(current_user_1.userAuth, order_validation_1.validateListOrders, orderController.getMyOrdersController);
 router.route("/bulk-cancel").post(current_user_1.userAuth, order_validation_1.validateBulkCancel, orderController.bulkCancelOrdersController);
 router.route("/:id").get(current_user_1.userAuth, orderController.getOrderByIdController);
+router.route("/:id/status").patch(current_user_1.userAuth, order_validation_1.validateUpdateDeliveryStatus, orderController.updateOrderStatusController);
 router.route("/:id/cancel").post(current_user_1.userAuth, order_validation_1.validateReason, orderController.cancelOrderController);
 router.route("/:id/return").post(current_user_1.userAuth, order_validation_1.validateReason, orderController.returnOrderController);
 router.route("/:id/reorder").post(current_user_1.userAuth, orderController.reorderController);
