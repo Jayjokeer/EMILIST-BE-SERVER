@@ -373,6 +373,7 @@ exports.checkoutCartController = (0, error_handler_1.catchAsync)(async (req, res
             productId: product._id,
             quantity: item.quantity,
             price: item.price,
+            currency: product.currency || "NGN",
             productName: product.name,
             brand: product.brand,
             categoryName: category?.name || "",

@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createReorderCart = exports.returnOrder = exports.cancelOrder = exports.updateOrderDeliveryStatus = exports.pushDeliveryStep = exports.fetchOrdersForUser = exports.orderDetailsForParticipant = exports.fetchOrderByIdForParticipant = exports.fetchOrderByIdAndUser = exports.fetchOrderByOrderId = exports.fetchOrderByCartIdForUser = exports.fetchOrderByCartId = exports.createOrder = exports.availableOrderActions = exports.buildOrderSteps = void 0;
+exports.createReorderCart = exports.returnOrder = exports.cancelOrder = exports.updateOrderDeliveryStatus = exports.pushDeliveryStep = exports.fetchSalesForSeller = exports.fetchOrdersForUser = exports.orderDetailsForParticipant = exports.fetchOrderByIdForParticipant = exports.fetchOrderByIdAndUser = exports.fetchOrderByOrderId = exports.fetchOrderByCartIdForUser = exports.fetchOrderByCartId = exports.createOrder = exports.availableOrderActions = exports.buildOrderSteps = void 0;
 const order_model_1 = __importDefault(require("../models/order.model"));
 const order_enum_1 = require("../enums/order.enum");
 const transaction_enum_1 = require("../enums/transaction.enum");
@@ -45,6 +45,7 @@ const transactionService = __importStar(require("./transaction.service"));
 const productService = __importStar(require("./product.service"));
 const cartService = __importStar(require("./cart.service"));
 const error_1 = require("../errors/error");
+const mongoose_1 = require("mongoose");
 const orderStepDefinitions = [
     { status: order_enum_1.OrderDeliveryStatus.orderConfirmed, label: "Order confirmed", responsibleParty: "system" },
     { status: order_enum_1.OrderDeliveryStatus.outForDelivery, label: "Out for delivery", responsibleParty: "seller" },
@@ -195,6 +196,144 @@ const fetchOrdersForUser = async (userId, { page = 1, limit = 10, sortBy = "late
     };
 };
 exports.fetchOrdersForUser = fetchOrdersForUser;
+const fetchSalesForSeller = async (sellerId, { page = 1, limit = 10, sortBy = "latest", status, paymentStatus, search, }) => {
+    const currentPage = Math.max(Number(page) || 1, 1);
+    const pageSize = Math.min(Math.max(Number(limit) || 10, 1), 100);
+    const sellerObjectId = new mongoose_1.Types.ObjectId(sellerId);
+    const lineMatch = { "products.merchantId": sellerObjectId };
+    if (status)
+        lineMatch.deliveryStatus = status;
+    if (paymentStatus)
+        lineMatch.paymentStatus = paymentStatus;
+    const sortMap = {
+        latest: { createdAt: -1, _id: -1 },
+        oldest: { createdAt: 1, _id: 1 },
+        total_high_low: { saleTotal: -1, createdAt: -1 },
+        total_low_high: { saleTotal: 1, createdAt: -1 },
+    };
+    const normalizedSearch = String(search || "").trim();
+    const searchMatch = normalizedSearch
+        ? [
+            { "products.productName": { $regex: normalizedSearch, $options: "i" } },
+            { "products.brand": { $regex: normalizedSearch, $options: "i" } },
+            { "products.categoryName": { $regex: normalizedSearch, $options: "i" } },
+            { "buyer.email": { $regex: normalizedSearch, $options: "i" } },
+            { "buyer.firstName": { $regex: normalizedSearch, $options: "i" } },
+            { "buyer.lastName": { $regex: normalizedSearch, $options: "i" } },
+            { "buyer.userName": { $regex: normalizedSearch, $options: "i" } },
+        ]
+        : [];
+    if (normalizedSearch && mongoose_1.Types.ObjectId.isValid(normalizedSearch)) {
+        searchMatch.push({ _id: new mongoose_1.Types.ObjectId(normalizedSearch) });
+    }
+    const pipeline = [
+        { $match: { "products.merchantId": sellerObjectId } },
+        { $unwind: "$products" },
+        { $match: lineMatch },
+        {
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "buyer",
+            },
+        },
+        { $unwind: { path: "$buyer", preserveNullAndEmptyArrays: true } },
+        ...(searchMatch.length ? [{ $match: { $or: searchMatch } }] : []),
+        {
+            $addFields: {
+                lineSubtotal: { $multiply: ["$products.quantity", "$products.price"] },
+                saleTotal: {
+                    $add: [
+                        { $subtract: [{ $multiply: ["$products.quantity", "$products.price"] }, { $ifNull: ["$products.discountAmount", 0] }] },
+                        { $ifNull: ["$products.taxAmount", 0] },
+                    ],
+                },
+            },
+        },
+        {
+            $facet: {
+                metadata: [{ $count: "total" }],
+                rows: [
+                    { $sort: sortMap[sortBy] || sortMap.latest },
+                    { $skip: (currentPage - 1) * pageSize },
+                    { $limit: pageSize },
+                ],
+            },
+        },
+    ];
+    const [result] = await order_model_1.default.aggregate(pipeline);
+    const total = Number(result?.metadata?.[0]?.total || 0);
+    const sales = (result?.rows || []).map((row) => {
+        const buyerName = [row.buyer?.firstName, row.buyer?.lastName].filter(Boolean).join(" ")
+            || row.buyer?.fullName
+            || row.buyer?.userName
+            || "Buyer";
+        const orderForActions = { ...row, products: [row.products] };
+        const steps = (0, exports.buildOrderSteps)(orderForActions);
+        const activeStep = [...steps].reverse().find((step) => step.isCompleted);
+        const lineSubtotal = Number(row.lineSubtotal || 0);
+        const discountAmount = Number(row.products?.discountAmount || 0);
+        const taxAmount = Number(row.products?.taxAmount || 0);
+        return {
+            saleId: String(row.products?._id || `${row._id}:${row.products?.productId}`),
+            orderId: row._id,
+            orderNumber: String(row._id),
+            orderDate: row.createdAt,
+            quantity: Number(row.products?.quantity || 0),
+            quantityMetric: row.products?.quantityMetric || "unit",
+            paymentStatus: row.paymentStatus,
+            deliveryStatus: row.deliveryStatus,
+            deliveryDate: row.deliveryDate || null,
+            deliveredAt: row.deliveredAt || null,
+            deliveryAddress: row.shippingAddress || null,
+            product: {
+                id: row.products?.productId,
+                name: row.products?.productName,
+                brand: row.products?.brand,
+                category: row.products?.categoryName,
+                thumbnail: row.products?.thumbnail,
+                unitPrice: Number(row.products?.price || 0),
+            },
+            pricing: {
+                currency: row.products?.currency || "NGN",
+                subtotalAmount: lineSubtotal,
+                discountAmount,
+                taxAmount,
+                totalAmount: Number(row.saleTotal || lineSubtotal - discountAmount + taxAmount),
+            },
+            buyer: {
+                id: row.buyer?._id || row.userId,
+                name: buyerName,
+                email: row.buyer?.email || null,
+                phone: row.buyer?.mobile || null,
+                image: row.buyer?.displayImage || null,
+            },
+            latestStep: activeStep || null,
+            orderSteps: steps,
+            allowedDeliveryStatusUpdates: (0, exports.availableOrderActions)(orderForActions, sellerId),
+        };
+    });
+    const totalPages = Math.ceil(total / pageSize) || 1;
+    return {
+        sales,
+        pagination: {
+            total,
+            currentPage,
+            pageSize,
+            totalPages,
+            hasNextPage: currentPage < totalPages,
+            hasPreviousPage: currentPage > 1,
+        },
+        filters: {
+            sortBy: sortBy in sortMap ? sortBy : "latest",
+            status: status || null,
+            paymentStatus: paymentStatus || null,
+            search: normalizedSearch || null,
+        },
+    };
+};
+exports.fetchSalesForSeller = fetchSalesForSeller;
 const pushDeliveryStep = async (orderId, status, note, actorType, actorId) => {
     return await order_model_1.default.findByIdAndUpdate(orderId, {
         $set: { deliveryStatus: status },

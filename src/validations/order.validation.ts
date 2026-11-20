@@ -1,6 +1,6 @@
 import Joi from "joi";
 import { Request, Response, NextFunction } from "express";
-import { OrderDeliveryStatus } from "../enums/order.enum";
+import { OrderDeliveryStatus, OrderPaymentStatus } from "../enums/order.enum";
 
 export const validateListOrders = (req: Request, res: Response, next: NextFunction) => {
   const schema = Joi.object({
@@ -12,6 +12,23 @@ export const validateListOrders = (req: Request, res: Response, next: NextFuncti
   const { error } = schema.validate(req.query, { abortEarly: false });
   if (error) {
     res.status(400).json({ errors: error.details.map((d) => d.message) });
+    return;
+  }
+  next();
+};
+
+export const validateListSales = (req: Request, res: Response, next: NextFunction) => {
+  const schema = Joi.object({
+    page: Joi.number().integer().min(1).optional(),
+    limit: Joi.number().integer().min(1).max(100).optional(),
+    sortBy: Joi.string().valid("latest", "oldest", "total_high_low", "total_low_high").optional(),
+    status: Joi.string().valid(...Object.values(OrderDeliveryStatus)).optional(),
+    paymentStatus: Joi.string().valid(...Object.values(OrderPaymentStatus)).optional(),
+    search: Joi.string().trim().max(100).optional().allow(""),
+  });
+  const { error } = schema.validate(req.query, { abortEarly: false });
+  if (error) {
+    res.status(400).json({ errors: error.details.map((detail) => detail.message) });
     return;
   }
   next();

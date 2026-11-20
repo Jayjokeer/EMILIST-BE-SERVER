@@ -39,6 +39,7 @@ const OrderProductSchema = new mongoose_1.Schema({
     productId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Product" },
     quantity: { type: Number, required: true, min: 1 },
     price: { type: Number, required: true },
+    currency: { type: String, trim: true, uppercase: true, default: "NGN" },
     // === Snapshot fields captured at order-creation time ===
     productName: { type: String, trim: true },
     brand: { type: String, trim: true },

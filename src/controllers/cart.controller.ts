@@ -349,6 +349,7 @@ export const checkoutCartController = catchAsync(async (req: JwtPayload, res: Re
       productId: product._id,
       quantity: item.quantity,
       price: item.price,
+      currency: product.currency || "NGN",
       productName: product.name,
       brand: product.brand,
       categoryName: category?.name || "",

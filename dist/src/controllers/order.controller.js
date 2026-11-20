@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.bulkCancelOrdersController = exports.trackOrderController = exports.rateMerchantController = exports.reorderController = exports.returnOrderController = exports.cancelOrderController = exports.updateOrderStatusController = exports.getOrderByIdController = exports.getMyOrdersController = void 0;
+exports.bulkCancelOrdersController = exports.trackOrderController = exports.rateMerchantController = exports.reorderController = exports.returnOrderController = exports.cancelOrderController = exports.updateOrderStatusController = exports.getOrderByIdController = exports.getMySalesController = exports.getMyOrdersController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const error_handler_1 = require("../errors/error-handler");
 const success_response_1 = require("../helpers/success-response");
@@ -48,6 +48,18 @@ exports.getMyOrdersController = (0, error_handler_1.catchAsync)(async (req, res)
         limit: Number(limit),
         sortBy: sortBy,
         status: status,
+    });
+    return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
+});
+exports.getMySalesController = (0, error_handler_1.catchAsync)(async (req, res) => {
+    const { page, limit, sortBy, status, paymentStatus, search } = req.query;
+    const data = await orderService.fetchSalesForSeller(String(req.user._id), {
+        page: Number(page),
+        limit: Number(limit),
+        sortBy: sortBy,
+        status: status,
+        paymentStatus: paymentStatus,
+        search: search,
     });
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });

@@ -5,6 +5,7 @@ export interface IOrderProduct {
     productId: Schema.Types.ObjectId;
     quantity: number; 
     price: number;
+    currency?: string;
     // === Snapshot fields captured at order-creation time ===
     productName?: string;
     brand?: string;

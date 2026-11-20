@@ -7,6 +7,7 @@ import * as transactionService from "./transaction.service";
 import * as productService from "./product.service";
 import * as cartService from "./cart.service";
 import { BadRequestError, ForbiddenError } from "../errors/error";
+import { PipelineStage, Types } from "mongoose";
 
 type OrderActorType = "buyer" | "seller" | "system" | "admin";
 
@@ -180,6 +181,162 @@ export const fetchOrdersForUser = async (
       totalPages,
       hasNext: currentPage < totalPages,
       hasPrevious: currentPage > 1,
+    },
+  };
+};
+
+export const fetchSalesForSeller = async (
+  sellerId: string,
+  {
+    page = 1,
+    limit = 10,
+    sortBy = "latest",
+    status,
+    paymentStatus,
+    search,
+  }: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    status?: string;
+    paymentStatus?: string;
+    search?: string;
+  },
+) => {
+  const currentPage = Math.max(Number(page) || 1, 1);
+  const pageSize = Math.min(Math.max(Number(limit) || 10, 1), 100);
+  const sellerObjectId = new Types.ObjectId(sellerId);
+  const lineMatch: Record<string, unknown> = { "products.merchantId": sellerObjectId };
+  if (status) lineMatch.deliveryStatus = status;
+  if (paymentStatus) lineMatch.paymentStatus = paymentStatus;
+
+  const sortMap: Record<string, Record<string, 1 | -1>> = {
+    latest: { createdAt: -1, _id: -1 },
+    oldest: { createdAt: 1, _id: 1 },
+    total_high_low: { saleTotal: -1, createdAt: -1 },
+    total_low_high: { saleTotal: 1, createdAt: -1 },
+  };
+  const normalizedSearch = String(search || "").trim();
+  const searchMatch: Record<string, unknown>[] = normalizedSearch
+    ? [
+        { "products.productName": { $regex: normalizedSearch, $options: "i" } },
+        { "products.brand": { $regex: normalizedSearch, $options: "i" } },
+        { "products.categoryName": { $regex: normalizedSearch, $options: "i" } },
+        { "buyer.email": { $regex: normalizedSearch, $options: "i" } },
+        { "buyer.firstName": { $regex: normalizedSearch, $options: "i" } },
+        { "buyer.lastName": { $regex: normalizedSearch, $options: "i" } },
+        { "buyer.userName": { $regex: normalizedSearch, $options: "i" } },
+      ]
+    : [];
+  if (normalizedSearch && Types.ObjectId.isValid(normalizedSearch)) {
+    searchMatch.push({ _id: new Types.ObjectId(normalizedSearch) });
+  }
+
+  const pipeline: PipelineStage[] = [
+    { $match: { "products.merchantId": sellerObjectId } },
+    { $unwind: "$products" },
+    { $match: lineMatch },
+    {
+      $lookup: {
+        from: "users",
+        localField: "userId",
+        foreignField: "_id",
+        as: "buyer",
+      },
+    },
+    { $unwind: { path: "$buyer", preserveNullAndEmptyArrays: true } },
+    ...(searchMatch.length ? [{ $match: { $or: searchMatch } } as PipelineStage.Match] : []),
+    {
+      $addFields: {
+        lineSubtotal: { $multiply: ["$products.quantity", "$products.price"] },
+        saleTotal: {
+          $add: [
+            { $subtract: [{ $multiply: ["$products.quantity", "$products.price"] }, { $ifNull: ["$products.discountAmount", 0] }] },
+            { $ifNull: ["$products.taxAmount", 0] },
+          ],
+        },
+      },
+    },
+    {
+      $facet: {
+        metadata: [{ $count: "total" }],
+        rows: [
+          { $sort: sortMap[sortBy] || sortMap.latest },
+          { $skip: (currentPage - 1) * pageSize },
+          { $limit: pageSize },
+        ],
+      },
+    },
+  ];
+
+  const [result] = await Order.aggregate(pipeline);
+  const total = Number(result?.metadata?.[0]?.total || 0);
+  const sales = (result?.rows || []).map((row: any) => {
+    const buyerName = [row.buyer?.firstName, row.buyer?.lastName].filter(Boolean).join(" ")
+      || row.buyer?.fullName
+      || row.buyer?.userName
+      || "Buyer";
+    const orderForActions = { ...row, products: [row.products] };
+    const steps = buildOrderSteps(orderForActions);
+    const activeStep = [...steps].reverse().find((step: any) => step.isCompleted);
+    const lineSubtotal = Number(row.lineSubtotal || 0);
+    const discountAmount = Number(row.products?.discountAmount || 0);
+    const taxAmount = Number(row.products?.taxAmount || 0);
+    return {
+      saleId: String(row.products?._id || `${row._id}:${row.products?.productId}`),
+      orderId: row._id,
+      orderNumber: String(row._id),
+      orderDate: row.createdAt,
+      quantity: Number(row.products?.quantity || 0),
+      quantityMetric: row.products?.quantityMetric || "unit",
+      paymentStatus: row.paymentStatus,
+      deliveryStatus: row.deliveryStatus,
+      deliveryDate: row.deliveryDate || null,
+      deliveredAt: row.deliveredAt || null,
+      deliveryAddress: row.shippingAddress || null,
+      product: {
+        id: row.products?.productId,
+        name: row.products?.productName,
+        brand: row.products?.brand,
+        category: row.products?.categoryName,
+        thumbnail: row.products?.thumbnail,
+        unitPrice: Number(row.products?.price || 0),
+      },
+      pricing: {
+        currency: row.products?.currency || "NGN",
+        subtotalAmount: lineSubtotal,
+        discountAmount,
+        taxAmount,
+        totalAmount: Number(row.saleTotal || lineSubtotal - discountAmount + taxAmount),
+      },
+      buyer: {
+        id: row.buyer?._id || row.userId,
+        name: buyerName,
+        email: row.buyer?.email || null,
+        phone: row.buyer?.mobile || null,
+        image: row.buyer?.displayImage || null,
+      },
+      latestStep: activeStep || null,
+      orderSteps: steps,
+      allowedDeliveryStatusUpdates: availableOrderActions(orderForActions, sellerId),
+    };
+  });
+  const totalPages = Math.ceil(total / pageSize) || 1;
+  return {
+    sales,
+    pagination: {
+      total,
+      currentPage,
+      pageSize,
+      totalPages,
+      hasNextPage: currentPage < totalPages,
+      hasPreviousPage: currentPage > 1,
+    },
+    filters: {
+      sortBy: sortBy in sortMap ? sortBy : "latest",
+      status: status || null,
+      paymentStatus: paymentStatus || null,
+      search: normalizedSearch || null,
     },
   };
 };

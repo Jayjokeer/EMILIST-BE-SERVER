@@ -3,6 +3,7 @@ import * as orderController from "../controllers/order.controller";
 import { userAuth } from "../middlewares/current-user";
 import {
   validateBulkCancel,
+  validateListSales,
   validateListOrders,
   validateRateMerchant,
   validateReason,
@@ -13,6 +14,7 @@ const router = Router();
 
 router.route("/").get(userAuth, validateListOrders, orderController.getMyOrdersController);
 router.route("/bulk-cancel").post(userAuth, validateBulkCancel, orderController.bulkCancelOrdersController);
+router.route("/sales").get(userAuth, validateListSales, orderController.getMySalesController);
 router.route("/:id").get(userAuth, orderController.getOrderByIdController);
 router.route("/:id/status").patch(userAuth, validateUpdateDeliveryStatus, orderController.updateOrderStatusController);
 router.route("/:id/cancel").post(userAuth, validateReason, orderController.cancelOrderController);

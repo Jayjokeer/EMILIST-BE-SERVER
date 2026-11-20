@@ -42,6 +42,7 @@ const router = (0, express_1.Router)();
 exports.OrderRoute = router;
 router.route("/").get(current_user_1.userAuth, order_validation_1.validateListOrders, orderController.getMyOrdersController);
 router.route("/bulk-cancel").post(current_user_1.userAuth, order_validation_1.validateBulkCancel, orderController.bulkCancelOrdersController);
+router.route("/sales").get(current_user_1.userAuth, order_validation_1.validateListSales, orderController.getMySalesController);
 router.route("/:id").get(current_user_1.userAuth, orderController.getOrderByIdController);
 router.route("/:id/status").patch(current_user_1.userAuth, order_validation_1.validateUpdateDeliveryStatus, orderController.updateOrderStatusController);
 router.route("/:id/cancel").post(current_user_1.userAuth, order_validation_1.validateReason, orderController.cancelOrderController);

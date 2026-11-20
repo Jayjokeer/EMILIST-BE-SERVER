@@ -19,6 +19,19 @@ export const getMyOrdersController = catchAsync(async (req: JwtPayload, res: Res
   return successResponse(res, StatusCodes.OK, data);
 });
 
+export const getMySalesController = catchAsync(async (req: JwtPayload, res: Response) => {
+  const { page, limit, sortBy, status, paymentStatus, search } = req.query;
+  const data = await orderService.fetchSalesForSeller(String(req.user._id), {
+    page: Number(page),
+    limit: Number(limit),
+    sortBy: sortBy as string | undefined,
+    status: status as string | undefined,
+    paymentStatus: paymentStatus as string | undefined,
+    search: search as string | undefined,
+  });
+  return successResponse(res, StatusCodes.OK, data);
+});
+
 export const getOrderByIdController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user._id;
   const { id } = req.params;

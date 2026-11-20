@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { OrderDeliveryStatus, OrderPaymentStatus } from "../src/enums/order.enum";
-import { availableOrderActions, buildOrderSteps } from "../src/services/order.service";
+import Order from "../src/models/order.model";
+import { availableOrderActions, buildOrderSteps, fetchSalesForSeller } from "../src/services/order.service";
 
 const buyerId = "64e1a2b3c4d5e6f7a8b9c0d1";
 const sellerId = "64e1a2b3c4d5e6f7a8b9c0d2";
@@ -48,4 +49,52 @@ test("only the buyer can confirm delivery after dispatch", () => {
   };
   assert.deepEqual(availableOrderActions(order, buyerId), [OrderDeliveryStatus.delivered]);
   assert.deepEqual(availableOrderActions(order, sellerId), []);
+});
+
+test("seller sales returns seller-owned line details and dispatch action", async () => {
+  const originalAggregate = Order.aggregate;
+  let capturedPipeline: any[] = [];
+  (Order as any).aggregate = async (pipeline: any[]) => {
+    capturedPipeline = pipeline;
+    return [{
+      metadata: [{ total: 1 }],
+      rows: [{
+        _id: "64e1a2b3c4d5e6f7a8b9c0d4",
+        userId: buyerId,
+        buyer: { _id: buyerId, firstName: "Ada", lastName: "Okafor", email: "ada@example.com" },
+        products: {
+          _id: "64e1a2b3c4d5e6f7a8b9c0d5",
+          productId: "64e1a2b3c4d5e6f7a8b9c0d6",
+          merchantId: sellerId,
+          productName: "Cement",
+          brand: "Dangote",
+          categoryName: "Building Materials",
+          quantity: 15,
+          quantityMetric: "bags",
+          price: 9000,
+          currency: "NGN",
+          discountAmount: 0,
+          taxAmount: 0,
+        },
+        lineSubtotal: 135000,
+        saleTotal: 135000,
+        paymentStatus: OrderPaymentStatus.paid,
+        deliveryStatus: OrderDeliveryStatus.orderConfirmed,
+        shippingAddress: "12 Sample Close, Yaba, Lagos",
+        createdAt: new Date("2026-02-17T10:00:00.000Z"),
+        deliverySteps: [],
+      }],
+    }];
+  };
+
+  try {
+    const result = await fetchSalesForSeller(sellerId, { page: 1, limit: 10, sortBy: "latest" });
+    assert.equal(result.pagination.total, 1);
+    assert.equal(result.sales[0].buyer.name, "Ada Okafor");
+    assert.equal(result.sales[0].pricing.totalAmount, 135000);
+    assert.deepEqual(result.sales[0].allowedDeliveryStatusUpdates, [OrderDeliveryStatus.outForDelivery]);
+    assert.ok(capturedPipeline.some((stage) => stage.$unwind === "$products"));
+  } finally {
+    (Order as any).aggregate = originalAggregate;
+  }
 });
