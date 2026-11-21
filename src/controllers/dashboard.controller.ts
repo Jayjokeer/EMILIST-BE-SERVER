@@ -7,6 +7,6 @@ import * as dashboardService from "../services/dashboard.service";
 
 export const dashboardOverviewController = catchAsync(async (req: JwtPayload, res: Response) => {
   const userId = req.user._id;
-  const data = await dashboardService.fetchDashboardOverview(userId);
+  const data = await dashboardService.fetchDashboardOverview(userId, String(req.query.period || "week") as dashboardService.DashboardPeriod);
   return successResponse(res, StatusCodes.OK, data);
 });

@@ -201,8 +201,8 @@ Endpoints marked as \`multipart/form-data\` expect the file(s) under the field
                 tags: ["Dashboard"],
                 summary: "Fetch the logged-in user's dashboard overview",
                 description: `Powers the "Hello, {name}" home screen: new job applications, upcoming
-payments, job completion rate, a job-completion donut breakdown, and a spotlighted service
-provider.
+payments, job completion rate, a period-filtered job-completion donut, referral QR/link data,
+the active subscription state, and a spotlighted service provider.
 
 Notes on the metrics:
 - \`newJobApplications.count\` is the number of applications currently pending review across
@@ -212,11 +212,17 @@ Notes on the metrics:
   date falls within the next 7 days, across the user's active/paused jobs.
 - \`jobCompletionRate.percentChangeToday\` is a percentage-**point** change vs. this time
   yesterday (not a relative percent).
-- \`jobCompletion\` gives completed/pending/overdue as percentages of all the user's jobs (for
-  the donut chart legend).
+- \`jobCompletion\` groups every non-draft/non-cancelled job in the selected period into exactly
+  one of completed, pending or overdue, so the donut percentages total 100. The default period is
+  \`week\`; use \`month\`, \`year\` or \`all\` for the dropdown.
+- \`referral.qrValue\` is the value the frontend should render as a QR code. It is also returned as
+  \`referral.link\` for copy/share actions. Registrations may submit its \`referralCode\` query value.
 - \`spotlight\` is the highest-rated Business profile (by average review rating, tie-broken by
   review count) other than the user's own — a "top-rated now" pick, not a stored weekly rotation.`,
                 security: [{ bearerAuth: [] }],
+                parameters: [
+                    { name: "period", in: "query", required: false, schema: { type: "string", enum: ["week", "month", "year", "all"], default: "week" }, description: "Job-completion donut period" },
+                ],
                 responses: {
                     "200": {
                         description: "Dashboard overview",
@@ -225,11 +231,14 @@ Notes on the metrics:
                                 example: {
                                     message: "success",
                                     data: {
-                                        user: { _id: "64e1a2b3c4d5e6f7a8b9c0d1", fullName: "Toks Williams", uniqueId: "Toks13356", displayImage: "https://.../avatar.jpg" },
+                                        generatedAt: "2026-11-21T09:42:15.000Z",
+                                        user: { _id: "64e1a2b3c4d5e6f7a8b9c0d1", firstName: "Toks", fullName: "Toks Williams", greetingName: "Toks", uniqueId: "Toks13356", displayImage: "https://.../avatar.jpg" },
+                                        subscription: { planName: "Basic", status: "active", isPro: false },
                                         newJobApplications: { count: 32, newToday: 4, percentChangeToday: 13 },
                                         upcomingPayments: { amount: 3200000, currency: "NGN", totalsByCurrency: { NGN: 3200000 }, period: "this week" },
                                         jobCompletionRate: { rate: 85, percentChangeToday: -4 },
-                                        jobCompletion: { completed: 48, pending: 41, overdue: 11, period: "This week" },
+                                        jobCompletion: { completed: 8, pending: 44, overdue: 48, counts: { completed: 2, pending: 11, overdue: 12, total: 25 }, period: "week", periodLabel: "This week", range: { startDate: "2026-11-16T00:00:00.000Z", endDate: "2026-11-21T09:42:15.000Z" }, availablePeriods: ["week", "month", "year", "all"] },
+                                        referral: { code: "Toks13356", link: "https://emilist-v2.vercel.app/sign-up?referralCode=Toks13356", qrValue: "https://emilist-v2.vercel.app/sign-up?referralCode=Toks13356", invitedCount: 15, sharedCount: 24, shareText: "Join me on Emilist: https://emilist-v2.vercel.app/sign-up?referralCode=Toks13356" },
                                         spotlight: {
                                             businessId: "64aa1b2c3d4e5f6a7b8c9ab",
                                             businessName: "Cole Furniture Works",
@@ -245,6 +254,7 @@ Notes on the metrics:
                         },
                     },
                     "401": { description: "Unauthorized - missing or invalid token", content: { "application/json": { example: { message: "Kindly login" } } } },
+                    "400": { description: "Invalid period" },
                     "404": { description: "User not found" },
                     "500": { description: "Server error" },
                 },

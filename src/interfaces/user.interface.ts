@@ -3,6 +3,7 @@ import { UserRolesEnum } from "../enums/user.enums";
 
 export interface IUser {
     firstName: string;
+    fullName?: string;
     middleName?: string;
     lastName: string;
     email: string;

@@ -27,7 +27,7 @@ const operationIdFor = (route) => `${route.method}_${route.path}`
 const routes = [
     // Authentication and user profile
     { path: '/auth', method: 'get', tag: 'Auth', summary: 'API welcome message', auth: false },
-    { path: '/auth/sign-up', method: 'post', tag: 'Auth', summary: 'Register a user', auth: false, bodyExample: { userName: 'jane', email: 'jane@example.com', password: 'Password123!' } },
+    { path: '/auth/sign-up', method: 'post', tag: 'Auth', summary: 'Register a user', description: 'Registers a user. referralCode is optional and attributes a QR/referral-link registration to the inviter whose uniqueId matches the code.', auth: false, bodyExample: { email: 'jane@example.com', password: 'Password123!', referralCode: 'Toks13356' } },
     { path: '/auth/login', method: 'post', tag: 'Auth', summary: 'Log in', auth: false, bodyExample: { email: 'jane@example.com', password: 'Password123!' }, successStatus: '200' },
     { path: '/auth/verify-email', method: 'post', tag: 'Auth', summary: 'Verify email address', auth: false, bodyExample: { email: 'jane@example.com', otp: '123456' }, successStatus: '200' },
     { path: '/auth/forgot-password', method: 'post', tag: 'Auth', summary: 'Request password reset OTP', auth: false, bodyExample: { email: 'jane@example.com' }, successStatus: '200' },

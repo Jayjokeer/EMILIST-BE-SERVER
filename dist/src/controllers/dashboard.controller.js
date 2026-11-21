@@ -40,6 +40,6 @@ const success_response_1 = require("../helpers/success-response");
 const dashboardService = __importStar(require("../services/dashboard.service"));
 exports.dashboardOverviewController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const userId = req.user._id;
-    const data = await dashboardService.fetchDashboardOverview(userId);
+    const data = await dashboardService.fetchDashboardOverview(userId, String(req.query.period || "week"));
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, data);
 });

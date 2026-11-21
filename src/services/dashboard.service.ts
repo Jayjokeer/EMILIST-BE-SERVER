@@ -5,10 +5,55 @@ import AppConfig from "../models/app-config.model";
 import Users from "../models/users.model";
 import { JobStatusEnum } from "../enums/jobs.enum";
 import { ProjectStatusEnum } from "../enums/project.enum";
-import { fetchJobCount } from "./job.service";
 import { NotFoundError } from "../errors/error";
+import { buildFrontendUrl } from "../utils/frontend-url";
+import { config } from "../utils/config";
+import * as subscriptionService from "./subscription.service";
+import { PlanEnum } from "../enums/plan.enum";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+export type DashboardPeriod = "week" | "month" | "year" | "all";
+
+export const dashboardPeriodRange = (period: DashboardPeriod, now = new Date()) => {
+  if (period === "all") return { startDate: null, endDate: now, label: "All time" };
+  const startDate = new Date(now);
+  startDate.setHours(0, 0, 0, 0);
+  if (period === "week") {
+    const mondayOffset = (startDate.getDay() + 6) % 7;
+    startDate.setDate(startDate.getDate() - mondayOffset);
+  } else if (period === "month") {
+    startDate.setDate(1);
+  } else {
+    startDate.setMonth(0, 1);
+  }
+  return {
+    startDate,
+    endDate: now,
+    label: period === "week" ? "This week" : period === "month" ? "This month" : "This year",
+  };
+};
+
+export const summarizeJobCompletion = (statuses: string[]) => {
+  const counts = statuses.reduce(
+    (summary, status) => {
+      if (status === JobStatusEnum.complete) summary.completed += 1;
+      else if (status === JobStatusEnum.overdue) summary.overdue += 1;
+      else if (status !== JobStatusEnum.cancelled && status !== JobStatusEnum.draft) summary.pending += 1;
+      return summary;
+    },
+    { completed: 0, pending: 0, overdue: 0 },
+  );
+  const total = counts.completed + counts.pending + counts.overdue;
+  const percentage = (value: number) => total ? Number(((value / total) * 100).toFixed(1)) : 0;
+  return {
+    counts: { ...counts, total },
+    percentages: {
+      completed: percentage(counts.completed),
+      pending: percentage(counts.pending),
+      overdue: percentage(counts.overdue),
+    },
+  };
+};
 
 const percentChange = (current: number, previous: number): number => {
   if (previous === 0) return current > 0 ? 100 : 0;
@@ -106,22 +151,19 @@ const getJobCompletionRate = async (userId: string) => {
   };
 };
 
-const getJobCompletionBreakdown = async (userId: string) => {
-  const counts = await fetchJobCount(userId);
-  const total =
-    counts.totalCompletedJobs +
-    counts.totalPendingJobs +
-    counts.totalOverdueJobs +
-    counts.totalActiveJobs +
-    counts.totalPausedJobs;
-
-  const pct = (value: number) => (total > 0 ? parseFloat(((value / total) * 100).toFixed(1)) : 0);
-
+const getJobCompletionBreakdown = async (userId: string, period: DashboardPeriod) => {
+  const range = dashboardPeriodRange(period);
+  const filter: Record<string, unknown> = { userId };
+  if (range.startDate) filter.createdAt = { $gte: range.startDate, $lte: range.endDate };
+  const jobs = await Jobs.find(filter).select("status").lean();
+  const summary = summarizeJobCompletion(jobs.map((job: any) => String(job.status)));
   return {
-    completed: pct(counts.totalCompletedJobs),
-    pending: pct(counts.totalPendingJobs),
-    overdue: pct(counts.totalOverdueJobs),
-    period: "This week",
+    ...summary.percentages,
+    counts: summary.counts,
+    period,
+    periodLabel: range.label,
+    range: { startDate: range.startDate, endDate: range.endDate },
+    availablePeriods: ["week", "month", "year", "all"],
   };
 };
 
@@ -152,7 +194,9 @@ const getSpotlight = async (excludeUserId: string) => {
     const reviews = (business.reviews as any[]) || [];
     const totalReviews = reviews.length;
     if (totalReviews === 0 && !selectedIsVisible) continue;
-    const averageRating = reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / totalReviews;
+    const averageRating = totalReviews
+      ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / totalReviews
+      : 0;
 
     const isBetter =
       averageRating > bestScore.averageRating ||
@@ -178,24 +222,55 @@ const getSpotlight = async (excludeUserId: string) => {
   };
 };
 
-export const fetchDashboardOverview = async (userId: string) => {
-  const user = await Users.findById(userId).select('firstName lastName fullName userName uniqueId displayImage');
+export const fetchDashboardOverview = async (userId: string, period: DashboardPeriod = "week") => {
+  const user = await Users.findById(userId).select('firstName lastName fullName userName uniqueId displayImage email isPrimeMember invitedUsers sharedCount');
   if (!user) throw new NotFoundError("User not found");
 
-  const [newJobApplications, upcomingPayments, jobCompletionRate, jobCompletion, spotlight] = await Promise.all([
+  const [newJobApplications, upcomingPayments, jobCompletionRate, jobCompletion, spotlight, subscription] = await Promise.all([
     getNewJobApplications(userId),
     getUpcomingPayments(userId),
     getJobCompletionRate(userId),
-    getJobCompletionBreakdown(userId),
+    getJobCompletionBreakdown(userId, period),
     getSpotlight(userId),
+    subscriptionService.getActiveSubscription(userId),
   ]);
 
+  const displayName = user.firstName || user.fullName || user.userName || user.email.split("@")[0];
+  const plan = (subscription?.planId as any)?.name || PlanEnum.basic;
+  const referralLink = buildFrontendUrl(config.frontendUrl, {
+    path: "/sign-up",
+    query: { referralCode: String(user.uniqueId) },
+  });
+
   return {
-    user,
+    generatedAt: new Date(),
+    user: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      fullName: user.fullName,
+      userName: user.userName,
+      uniqueId: user.uniqueId,
+      displayImage: user.displayImage,
+      greetingName: displayName,
+    },
+    subscription: {
+      planName: plan,
+      status: subscription?.status || null,
+      isPro: Boolean(user.isPrimeMember || plan !== PlanEnum.basic),
+    },
     newJobApplications,
     upcomingPayments,
     jobCompletionRate,
     jobCompletion,
     spotlight,
+    referral: {
+      code: user.uniqueId,
+      link: referralLink,
+      qrValue: referralLink,
+      invitedCount: user.invitedUsers?.length || 0,
+      sharedCount: user.sharedCount || 0,
+      shareText: `Join me on Emilist: ${referralLink}`,
+    },
   };
 };

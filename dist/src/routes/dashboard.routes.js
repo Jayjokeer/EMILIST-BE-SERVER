@@ -37,6 +37,7 @@ exports.DashboardRoute = void 0;
 const express_1 = require("express");
 const dashboardController = __importStar(require("../controllers/dashboard.controller"));
 const current_user_1 = require("../middlewares/current-user");
+const dashboard_validation_1 = require("../validations/dashboard.validation");
 const router = (0, express_1.Router)();
 exports.DashboardRoute = router;
-router.route("/overview").get(current_user_1.userAuth, dashboardController.dashboardOverviewController);
+router.route("/overview").get(current_user_1.userAuth, dashboard_validation_1.validateDashboardOverview, dashboardController.dashboardOverviewController);

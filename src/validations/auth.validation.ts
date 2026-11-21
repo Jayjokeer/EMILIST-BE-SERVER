@@ -14,6 +14,7 @@ export const validateRegisterUser = (req: Request, res: Response, next: NextFunc
         "string.empty": "Password is required",
         "string.min": "Password must be at least 6 characters",
       }),
+      referralCode: Joi.string().trim().max(50).optional(),
     });
   
     const { error } = schema.validate(req.body, { abortEarly: false });

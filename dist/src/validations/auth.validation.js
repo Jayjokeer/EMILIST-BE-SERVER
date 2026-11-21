@@ -18,6 +18,7 @@ const validateRegisterUser = (req, res, next) => {
             "string.empty": "Password is required",
             "string.min": "Password must be at least 6 characters",
         }),
+        referralCode: joi_1.default.string().trim().max(50).optional(),
     });
     const { error } = schema.validate(req.body, { abortEarly: false });
     if (error) {

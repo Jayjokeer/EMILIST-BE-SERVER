@@ -37,10 +37,13 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     const {
       email,
       password,
+      referralCode,
     } = req.body;
     const isEmailExists = await authService.findUserByEmail(email.toLowerCase());
 
     if(isEmailExists) throw new BadRequestError("User with email already exists!");
+    const referrer = referralCode ? await authService.findUserByUniqueId(String(referralCode).trim()) : null;
+    if (referralCode && !referrer) throw new BadRequestError("Invalid referral code");
 
     const encryptPwd = await hashPassword(password);
 
@@ -52,6 +55,18 @@ export const registerUserController = catchAsync( async (req: Request, res: Resp
     
     const data = await authService.createUser(newUser);
     const userId = String(data._id);
+    if (referrer && !referrer.invitedUsers?.some((invitedEmail) => invitedEmail.toLowerCase() === email.toLowerCase())) {
+      referrer.invitedUsers ??= [];
+      referrer.invitedUsers.push(email.toLowerCase());
+      await referrer.save();
+      await reportEventService.recordReportEvent({
+        subjectUserId: String(referrer._id),
+        actorUserId: userId,
+        type: ReportEventType.invite,
+        resourceType: "profile",
+        metadata: { registeredEmail: email.toLowerCase(), referralCode: String(referralCode) },
+      });
+    }
     const {otp, otpCreatedAt, otpExpiryTime} = generateOTPData(userId);
     data.otpExpiresAt = otpExpiryTime;
     data.registrationOtp = otp;

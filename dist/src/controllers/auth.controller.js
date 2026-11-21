@@ -67,10 +67,13 @@ const adminCustomerService = __importStar(require("../services/admin-customer.se
 const reportEventService = __importStar(require("../services/report-event.service"));
 const report_event_model_1 = require("../models/report-event.model");
 exports.registerUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const { email, password, } = req.body;
+    const { email, password, referralCode, } = req.body;
     const isEmailExists = await authService.findUserByEmail(email.toLowerCase());
     if (isEmailExists)
         throw new error_1.BadRequestError("User with email already exists!");
+    const referrer = referralCode ? await authService.findUserByUniqueId(String(referralCode).trim()) : null;
+    if (referralCode && !referrer)
+        throw new error_1.BadRequestError("Invalid referral code");
     const encryptPwd = await (0, hashing_1.hashPassword)(password);
     const newUser = {
         email: email.toLowerCase(),
@@ -79,6 +82,18 @@ exports.registerUserController = (0, error_handler_1.catchAsync)(async (req, res
     };
     const data = await authService.createUser(newUser);
     const userId = String(data._id);
+    if (referrer && !referrer.invitedUsers?.some((invitedEmail) => invitedEmail.toLowerCase() === email.toLowerCase())) {
+        referrer.invitedUsers ??= [];
+        referrer.invitedUsers.push(email.toLowerCase());
+        await referrer.save();
+        await reportEventService.recordReportEvent({
+            subjectUserId: String(referrer._id),
+            actorUserId: userId,
+            type: report_event_model_1.ReportEventType.invite,
+            resourceType: "profile",
+            metadata: { registeredEmail: email.toLowerCase(), referralCode: String(referralCode) },
+        });
+    }
     const { otp, otpCreatedAt, otpExpiryTime } = (0, utility_1.generateOTPData)(userId);
     data.otpExpiresAt = otpExpiryTime;
     data.registrationOtp = otp;
