@@ -174,6 +174,7 @@ export const fetchUserSupportRequest = async (requesterId: string, requestId: st
 };
 
 const SLA_HOURS = 24;
+const SUPPORT_TREND_DAYS = 7;
 const overdueCutoff = (now = new Date()) => new Date(now.getTime() - SLA_HOURS * 60 * 60 * 1000);
 const isResolved = (status: string) => status === SupportRequestStatus.resolved;
 const elapsedSeconds = (from: Date, to = new Date()) => Math.max(0, Math.floor((to.getTime() - from.getTime()) / 1000));
@@ -191,11 +192,115 @@ const displayRequest = (request: any, now = new Date()) => {
   };
 };
 
+type SupportTrendMetric = { current: number; previous: number };
+type SupportTrendMetrics = Record<"total" | "unassigned" | "highPriority" | "overdue" | "pendingCustomer" | "averageResolution", SupportTrendMetric>;
+
+export const supportTrend = (current: number, previous: number, lowerIsBetter = true) => {
+  const percentage = previous === 0 ? (current === 0 ? 0 : 100) : Number((((current - previous) / previous) * 100).toFixed(1));
+  const direction = percentage > 0 ? "up" : percentage < 0 ? "down" : "flat";
+  return {
+    percentage: Math.abs(percentage),
+    signedPercentage: percentage,
+    direction,
+    isImprovement: direction === "flat" ? null : lowerIsBetter ? direction === "down" : direction === "up",
+    comparison: `previous_${SUPPORT_TREND_DAYS}_days`,
+    currentPeriodValue: current,
+    previousPeriodValue: previous,
+  };
+};
+
+const formatResolutionTime = (seconds: number) => {
+  if (!seconds) return "—";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours && minutes) return `${hours}h ${minutes}m`;
+  if (hours) return `${hours}h`;
+  if (minutes) return `${minutes}m`;
+  return `${seconds}s`;
+};
+
+export const supportCards = (summary: any, trends: SupportTrendMetrics) => ({
+  totalTickets: {
+    key: "totalTickets", title: "Total Tickets", value: summary.ticketCount,
+    displayValue: String(summary.ticketCount), description: "All support requests",
+    trend: supportTrend(trends.total.current, trends.total.previous),
+  },
+  unassignedTickets: {
+    key: "unassignedTickets", title: "Unassigned Tickets", value: summary.unassignedTickets,
+    displayValue: String(summary.unassignedTickets), description: "Open tickets with no admin or team assigned",
+    trend: supportTrend(trends.unassigned.current, trends.unassigned.previous),
+  },
+  highPriorityTickets: {
+    key: "highPriorityTickets", title: "High Priority Tickets", value: summary.highPriorityTickets,
+    displayValue: String(summary.highPriorityTickets), description: "Unresolved high, critical, or urgent tickets",
+    trend: supportTrend(trends.highPriority.current, trends.highPriority.previous),
+  },
+  overdueTickets: {
+    key: "overdueTickets", title: "Overdue Tickets", value: summary.overdueTickets,
+    displayValue: String(summary.overdueTickets), description: `Unresolved tickets older than the ${summary.slaHours}-hour SLA`,
+    trend: supportTrend(trends.overdue.current, trends.overdue.previous),
+  },
+  awaitingCustomerResponse: {
+    key: "awaitingCustomerResponse", title: "Awaiting Customer Response", value: summary.pendingTickets,
+    displayValue: String(summary.pendingTickets), description: "Tickets currently waiting for a customer reply",
+    trend: supportTrend(trends.pendingCustomer.current, trends.pendingCustomer.previous),
+  },
+  averageResolutionTime: {
+    key: "averageResolutionTime", title: "Average Resolution Time",
+    value: summary.averageResolution.seconds || null,
+    displayValue: formatResolutionTime(summary.averageResolution.seconds),
+    unit: "seconds", description: `Average for tickets resolved in the last ${SUPPORT_TREND_DAYS} days`,
+    resolvedInPeriod: summary.averageResolution.resolvedInPeriod,
+    trend: supportTrend(trends.averageResolution.current, trends.averageResolution.previous),
+  },
+});
+
+const fetchSupportTrendMetrics = async (now: Date): Promise<SupportTrendMetrics> => {
+  const currentStart = new Date(now.getTime() - SUPPORT_TREND_DAYS * 24 * 60 * 60 * 1000);
+  const previousStart = new Date(currentStart.getTime() - SUPPORT_TREND_DAYS * 24 * 60 * 60 * 1000);
+  const unresolved = { status: { $ne: SupportRequestStatus.resolved } };
+  const unassigned = { ...unresolved, assignedAdminId: { $exists: false }, assignedTeam: { $in: [null, ""] } };
+  const highPriority = { ...unresolved, priority: { $in: [SupportRequestPriority.high, SupportRequestPriority.critical, SupportRequestPriority.urgent] } };
+  const overdue = { ...unresolved, createdAt: { $lt: overdueCutoff(now) } };
+  const countFacet = (match: Record<string, unknown>) => [{ $match: match }, { $count: "value" }];
+  const resolutionFacet = (start: Date, end: Date) => [
+    { $match: { status: SupportRequestStatus.resolved, resolvedAt: { $gte: start, $lt: end } } },
+    { $group: { _id: null, value: { $avg: { $subtract: ["$resolvedAt", "$createdAt"] } } } },
+  ];
+  const [row] = await SupportRequest.aggregate([{ $facet: {
+    totalCurrent: countFacet({ createdAt: { $gte: currentStart, $lte: now } }),
+    totalPrevious: countFacet({ createdAt: { $gte: previousStart, $lt: currentStart } }),
+    unassignedCurrent: countFacet({ ...unassigned, createdAt: { $gte: currentStart, $lte: now } }),
+    unassignedPrevious: countFacet({ ...unassigned, createdAt: { $gte: previousStart, $lt: currentStart } }),
+    highPriorityCurrent: countFacet({ ...highPriority, createdAt: { $gte: currentStart, $lte: now } }),
+    highPriorityPrevious: countFacet({ ...highPriority, createdAt: { $gte: previousStart, $lt: currentStart } }),
+    overdueCurrent: countFacet({ ...overdue, createdAt: { $gte: currentStart, $lt: overdueCutoff(now) } }),
+    overduePrevious: countFacet({ ...unresolved, createdAt: { $gte: previousStart, $lt: currentStart } }),
+    pendingCustomerCurrent: countFacet({ status: SupportRequestStatus.pendingCustomer, createdAt: { $gte: currentStart, $lte: now } }),
+    pendingCustomerPrevious: countFacet({ status: SupportRequestStatus.pendingCustomer, createdAt: { $gte: previousStart, $lt: currentStart } }),
+    averageResolutionCurrent: resolutionFacet(currentStart, now),
+    averageResolutionPrevious: resolutionFacet(previousStart, currentStart),
+  } }]);
+  const value = (key: string, milliseconds = false) => {
+    const result = Number(row?.[key]?.[0]?.value || 0);
+    return milliseconds ? Math.round(result / 1000) : result;
+  };
+  return {
+    total: { current: value("totalCurrent"), previous: value("totalPrevious") },
+    unassigned: { current: value("unassignedCurrent"), previous: value("unassignedPrevious") },
+    highPriority: { current: value("highPriorityCurrent"), previous: value("highPriorityPrevious") },
+    overdue: { current: value("overdueCurrent"), previous: value("overduePrevious") },
+    pendingCustomer: { current: value("pendingCustomerCurrent"), previous: value("pendingCustomerPrevious") },
+    averageResolution: { current: value("averageResolutionCurrent", true), previous: value("averageResolutionPrevious", true) },
+  };
+};
+
 export const fetchSupportSummary = async (now = new Date()) => {
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const cutoff = overdueCutoff(now);
   const unresolved = { status: { $ne: SupportRequestStatus.resolved } };
-  const [unassignedTickets, highPriorityTickets, overdueTickets, pendingTickets, resolutionRows] = await Promise.all([
+  const [ticketCount, unassignedTickets, highPriorityTickets, overdueTickets, pendingTickets, resolutionRows, trends] = await Promise.all([
+    SupportRequest.countDocuments(),
     SupportRequest.countDocuments({ ...unresolved, assignedAdminId: { $exists: false }, assignedTeam: { $in: [null, ""] } }),
     SupportRequest.countDocuments({ ...unresolved, priority: { $in: [SupportRequestPriority.high, SupportRequestPriority.critical, SupportRequestPriority.urgent] } }),
     SupportRequest.countDocuments({ ...unresolved, createdAt: { $lt: cutoff } }),
@@ -205,10 +310,11 @@ export const fetchSupportSummary = async (now = new Date()) => {
       { $project: { duration: { $subtract: ["$resolvedAt", "$createdAt"] } } },
       { $group: { _id: null, averageMilliseconds: { $avg: "$duration" }, count: { $sum: 1 } } },
     ]),
+    fetchSupportTrendMetrics(now),
   ]);
   const averageResolutionSeconds = Math.round((resolutionRows[0]?.averageMilliseconds || 0) / 1000);
-  return {
-    ticketCount: await SupportRequest.countDocuments(),
+  const summary: any = {
+    ticketCount,
     unassignedTickets,
     highPriorityTickets,
     overdueTickets,
@@ -222,6 +328,8 @@ export const fetchSupportSummary = async (now = new Date()) => {
     },
     slaHours: SLA_HOURS,
   };
+  summary.cards = supportCards(summary, trends);
+  return summary;
 };
 
 export const fetchSupportRequests = async (query: any) => {
@@ -260,7 +368,7 @@ export const fetchSupportRequests = async (query: any) => {
     if (users.length) filter.$or.push({ requesterId: { $in: users.map((user: any) => user._id) } });
   }
 
-  const [requests, total, statusRows, overdue] = await Promise.all([
+  const [requests, total, statusRows, overdue, summary] = await Promise.all([
     SupportRequest.find(filter)
       .populate("requesterId", "firstName lastName userName email uniqueId displayImage")
       .populate("assignedAdminId", "fullName email department")
@@ -269,9 +377,11 @@ export const fetchSupportRequests = async (query: any) => {
     SupportRequest.countDocuments(filter),
     SupportRequest.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
     SupportRequest.countDocuments({ status: { $ne: SupportRequestStatus.resolved }, createdAt: { $lt: cutoff } }),
+    fetchSupportSummary(),
   ]);
   return {
     requests: requests.map((request: any) => displayRequest(request)),
+    cards: summary.cards,
     counts: supportStatusCounts(statusRows, overdue),
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   };

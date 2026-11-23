@@ -27,6 +27,41 @@ const support_enum_1 = require("../src/enums/support.enum");
         overdue: 1,
     });
 });
+(0, node_test_1.default)("admin support cards expose display-ready values and trend metadata", () => {
+    const cards = (0, support_request_service_1.supportCards)({
+        ticketCount: 12,
+        unassignedTickets: 3,
+        highPriorityTickets: 2,
+        overdueTickets: 1,
+        pendingTickets: 4,
+        averageResolution: { seconds: 3900, resolvedInPeriod: 5 },
+        slaHours: 24,
+    }, {
+        total: { current: 6, previous: 4 },
+        unassigned: { current: 1, previous: 2 },
+        highPriority: { current: 2, previous: 2 },
+        overdue: { current: 1, previous: 2 },
+        pendingCustomer: { current: 4, previous: 2 },
+        averageResolution: { current: 3900, previous: 5200 },
+    });
+    strict_1.default.equal(cards.totalTickets.value, 12);
+    strict_1.default.equal(cards.totalTickets.trend.signedPercentage, 50);
+    strict_1.default.equal(cards.unassignedTickets.trend.isImprovement, true);
+    strict_1.default.equal(cards.averageResolutionTime.displayValue, "1h 5m");
+    strict_1.default.equal(cards.averageResolutionTime.resolvedInPeriod, 5);
+});
+(0, node_test_1.default)("support trend handles an empty comparison period", () => {
+    strict_1.default.deepEqual((0, support_request_service_1.supportTrend)(0, 0), {
+        percentage: 0,
+        signedPercentage: 0,
+        direction: "flat",
+        isImprovement: null,
+        comparison: "previous_7_days",
+        currentPeriodValue: 0,
+        previousPeriodValue: 0,
+    });
+    strict_1.default.equal((0, support_request_service_1.supportTrend)(3, 0).signedPercentage, 100);
+});
 (0, node_test_1.default)("invoice dispute resolves the exact raised invoice for the job owner", () => {
     const job = {
         userId: "6a21f270d23c3015a245cc84",

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.countUnresolvedSupportRequests = exports.fetchSupportAssignees = exports.addSupportAdminNote = exports.customerReplyToSupportRequest = exports.replyToSupportRequest = exports.assignSupportRequest = exports.resolveSupportRequest = exports.updateSupportRequest = exports.fetchSupportRequest = exports.supportStatusCounts = exports.fetchSupportRequests = exports.fetchSupportSummary = exports.fetchUserSupportRequest = exports.fetchUserSupportRequests = exports.createInvoiceDispute = exports.invoiceDisputeMilestone = exports.INVOICE_NON_PAYMENT_GRACE_DAYS = exports.createSupportRequest = exports.supportPagination = void 0;
+exports.countUnresolvedSupportRequests = exports.fetchSupportAssignees = exports.addSupportAdminNote = exports.customerReplyToSupportRequest = exports.replyToSupportRequest = exports.assignSupportRequest = exports.resolveSupportRequest = exports.updateSupportRequest = exports.fetchSupportRequest = exports.supportStatusCounts = exports.fetchSupportRequests = exports.fetchSupportSummary = exports.supportCards = exports.supportTrend = exports.fetchUserSupportRequest = exports.fetchUserSupportRequests = exports.createInvoiceDispute = exports.invoiceDisputeMilestone = exports.INVOICE_NON_PAYMENT_GRACE_DAYS = exports.createSupportRequest = exports.supportPagination = void 0;
 const mongoose_1 = require("mongoose");
 const error_1 = require("../errors/error");
 const support_enum_1 = require("../enums/support.enum");
@@ -170,6 +170,7 @@ const fetchUserSupportRequest = async (requesterId, requestId) => {
 };
 exports.fetchUserSupportRequest = fetchUserSupportRequest;
 const SLA_HOURS = 24;
+const SUPPORT_TREND_DAYS = 7;
 const overdueCutoff = (now = new Date()) => new Date(now.getTime() - SLA_HOURS * 60 * 60 * 1000);
 const isResolved = (status) => status === support_enum_1.SupportRequestStatus.resolved;
 const elapsedSeconds = (from, to = new Date()) => Math.max(0, Math.floor((to.getTime() - from.getTime()) / 1000));
@@ -186,11 +187,114 @@ const displayRequest = (request, now = new Date()) => {
         queueTime: elapsedSeconds(createdAt, resolvedAt || now),
     };
 };
+const supportTrend = (current, previous, lowerIsBetter = true) => {
+    const percentage = previous === 0 ? (current === 0 ? 0 : 100) : Number((((current - previous) / previous) * 100).toFixed(1));
+    const direction = percentage > 0 ? "up" : percentage < 0 ? "down" : "flat";
+    return {
+        percentage: Math.abs(percentage),
+        signedPercentage: percentage,
+        direction,
+        isImprovement: direction === "flat" ? null : lowerIsBetter ? direction === "down" : direction === "up",
+        comparison: `previous_${SUPPORT_TREND_DAYS}_days`,
+        currentPeriodValue: current,
+        previousPeriodValue: previous,
+    };
+};
+exports.supportTrend = supportTrend;
+const formatResolutionTime = (seconds) => {
+    if (!seconds)
+        return "—";
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours && minutes)
+        return `${hours}h ${minutes}m`;
+    if (hours)
+        return `${hours}h`;
+    if (minutes)
+        return `${minutes}m`;
+    return `${seconds}s`;
+};
+const supportCards = (summary, trends) => ({
+    totalTickets: {
+        key: "totalTickets", title: "Total Tickets", value: summary.ticketCount,
+        displayValue: String(summary.ticketCount), description: "All support requests",
+        trend: (0, exports.supportTrend)(trends.total.current, trends.total.previous),
+    },
+    unassignedTickets: {
+        key: "unassignedTickets", title: "Unassigned Tickets", value: summary.unassignedTickets,
+        displayValue: String(summary.unassignedTickets), description: "Open tickets with no admin or team assigned",
+        trend: (0, exports.supportTrend)(trends.unassigned.current, trends.unassigned.previous),
+    },
+    highPriorityTickets: {
+        key: "highPriorityTickets", title: "High Priority Tickets", value: summary.highPriorityTickets,
+        displayValue: String(summary.highPriorityTickets), description: "Unresolved high, critical, or urgent tickets",
+        trend: (0, exports.supportTrend)(trends.highPriority.current, trends.highPriority.previous),
+    },
+    overdueTickets: {
+        key: "overdueTickets", title: "Overdue Tickets", value: summary.overdueTickets,
+        displayValue: String(summary.overdueTickets), description: `Unresolved tickets older than the ${summary.slaHours}-hour SLA`,
+        trend: (0, exports.supportTrend)(trends.overdue.current, trends.overdue.previous),
+    },
+    awaitingCustomerResponse: {
+        key: "awaitingCustomerResponse", title: "Awaiting Customer Response", value: summary.pendingTickets,
+        displayValue: String(summary.pendingTickets), description: "Tickets currently waiting for a customer reply",
+        trend: (0, exports.supportTrend)(trends.pendingCustomer.current, trends.pendingCustomer.previous),
+    },
+    averageResolutionTime: {
+        key: "averageResolutionTime", title: "Average Resolution Time",
+        value: summary.averageResolution.seconds || null,
+        displayValue: formatResolutionTime(summary.averageResolution.seconds),
+        unit: "seconds", description: `Average for tickets resolved in the last ${SUPPORT_TREND_DAYS} days`,
+        resolvedInPeriod: summary.averageResolution.resolvedInPeriod,
+        trend: (0, exports.supportTrend)(trends.averageResolution.current, trends.averageResolution.previous),
+    },
+});
+exports.supportCards = supportCards;
+const fetchSupportTrendMetrics = async (now) => {
+    const currentStart = new Date(now.getTime() - SUPPORT_TREND_DAYS * 24 * 60 * 60 * 1000);
+    const previousStart = new Date(currentStart.getTime() - SUPPORT_TREND_DAYS * 24 * 60 * 60 * 1000);
+    const unresolved = { status: { $ne: support_enum_1.SupportRequestStatus.resolved } };
+    const unassigned = { ...unresolved, assignedAdminId: { $exists: false }, assignedTeam: { $in: [null, ""] } };
+    const highPriority = { ...unresolved, priority: { $in: [support_enum_1.SupportRequestPriority.high, support_enum_1.SupportRequestPriority.critical, support_enum_1.SupportRequestPriority.urgent] } };
+    const overdue = { ...unresolved, createdAt: { $lt: overdueCutoff(now) } };
+    const countFacet = (match) => [{ $match: match }, { $count: "value" }];
+    const resolutionFacet = (start, end) => [
+        { $match: { status: support_enum_1.SupportRequestStatus.resolved, resolvedAt: { $gte: start, $lt: end } } },
+        { $group: { _id: null, value: { $avg: { $subtract: ["$resolvedAt", "$createdAt"] } } } },
+    ];
+    const [row] = await support_request_model_1.default.aggregate([{ $facet: {
+                totalCurrent: countFacet({ createdAt: { $gte: currentStart, $lte: now } }),
+                totalPrevious: countFacet({ createdAt: { $gte: previousStart, $lt: currentStart } }),
+                unassignedCurrent: countFacet({ ...unassigned, createdAt: { $gte: currentStart, $lte: now } }),
+                unassignedPrevious: countFacet({ ...unassigned, createdAt: { $gte: previousStart, $lt: currentStart } }),
+                highPriorityCurrent: countFacet({ ...highPriority, createdAt: { $gte: currentStart, $lte: now } }),
+                highPriorityPrevious: countFacet({ ...highPriority, createdAt: { $gte: previousStart, $lt: currentStart } }),
+                overdueCurrent: countFacet({ ...overdue, createdAt: { $gte: currentStart, $lt: overdueCutoff(now) } }),
+                overduePrevious: countFacet({ ...unresolved, createdAt: { $gte: previousStart, $lt: currentStart } }),
+                pendingCustomerCurrent: countFacet({ status: support_enum_1.SupportRequestStatus.pendingCustomer, createdAt: { $gte: currentStart, $lte: now } }),
+                pendingCustomerPrevious: countFacet({ status: support_enum_1.SupportRequestStatus.pendingCustomer, createdAt: { $gte: previousStart, $lt: currentStart } }),
+                averageResolutionCurrent: resolutionFacet(currentStart, now),
+                averageResolutionPrevious: resolutionFacet(previousStart, currentStart),
+            } }]);
+    const value = (key, milliseconds = false) => {
+        const result = Number(row?.[key]?.[0]?.value || 0);
+        return milliseconds ? Math.round(result / 1000) : result;
+    };
+    return {
+        total: { current: value("totalCurrent"), previous: value("totalPrevious") },
+        unassigned: { current: value("unassignedCurrent"), previous: value("unassignedPrevious") },
+        highPriority: { current: value("highPriorityCurrent"), previous: value("highPriorityPrevious") },
+        overdue: { current: value("overdueCurrent"), previous: value("overduePrevious") },
+        pendingCustomer: { current: value("pendingCustomerCurrent"), previous: value("pendingCustomerPrevious") },
+        averageResolution: { current: value("averageResolutionCurrent", true), previous: value("averageResolutionPrevious", true) },
+    };
+};
 const fetchSupportSummary = async (now = new Date()) => {
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const cutoff = overdueCutoff(now);
     const unresolved = { status: { $ne: support_enum_1.SupportRequestStatus.resolved } };
-    const [unassignedTickets, highPriorityTickets, overdueTickets, pendingTickets, resolutionRows] = await Promise.all([
+    const [ticketCount, unassignedTickets, highPriorityTickets, overdueTickets, pendingTickets, resolutionRows, trends] = await Promise.all([
+        support_request_model_1.default.countDocuments(),
         support_request_model_1.default.countDocuments({ ...unresolved, assignedAdminId: { $exists: false }, assignedTeam: { $in: [null, ""] } }),
         support_request_model_1.default.countDocuments({ ...unresolved, priority: { $in: [support_enum_1.SupportRequestPriority.high, support_enum_1.SupportRequestPriority.critical, support_enum_1.SupportRequestPriority.urgent] } }),
         support_request_model_1.default.countDocuments({ ...unresolved, createdAt: { $lt: cutoff } }),
@@ -200,10 +304,11 @@ const fetchSupportSummary = async (now = new Date()) => {
             { $project: { duration: { $subtract: ["$resolvedAt", "$createdAt"] } } },
             { $group: { _id: null, averageMilliseconds: { $avg: "$duration" }, count: { $sum: 1 } } },
         ]),
+        fetchSupportTrendMetrics(now),
     ]);
     const averageResolutionSeconds = Math.round((resolutionRows[0]?.averageMilliseconds || 0) / 1000);
-    return {
-        ticketCount: await support_request_model_1.default.countDocuments(),
+    const summary = {
+        ticketCount,
         unassignedTickets,
         highPriorityTickets,
         overdueTickets,
@@ -217,6 +322,8 @@ const fetchSupportSummary = async (now = new Date()) => {
         },
         slaHours: SLA_HOURS,
     };
+    summary.cards = (0, exports.supportCards)(summary, trends);
+    return summary;
 };
 exports.fetchSupportSummary = fetchSupportSummary;
 const fetchSupportRequests = async (query) => {
@@ -263,7 +370,7 @@ const fetchSupportRequests = async (query) => {
         if (users.length)
             filter.$or.push({ requesterId: { $in: users.map((user) => user._id) } });
     }
-    const [requests, total, statusRows, overdue] = await Promise.all([
+    const [requests, total, statusRows, overdue, summary] = await Promise.all([
         support_request_model_1.default.find(filter)
             .populate("requesterId", "firstName lastName userName email uniqueId displayImage")
             .populate("assignedAdminId", "fullName email department")
@@ -272,9 +379,11 @@ const fetchSupportRequests = async (query) => {
         support_request_model_1.default.countDocuments(filter),
         support_request_model_1.default.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
         support_request_model_1.default.countDocuments({ status: { $ne: support_enum_1.SupportRequestStatus.resolved }, createdAt: { $lt: cutoff } }),
+        (0, exports.fetchSupportSummary)(),
     ]);
     return {
         requests: requests.map((request) => displayRequest(request)),
+        cards: summary.cards,
         counts: (0, exports.supportStatusCounts)(statusRows, overdue),
         pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };

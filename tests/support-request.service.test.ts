@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { invoiceDisputeMilestone, supportPagination, supportStatusCounts } from "../src/services/support-request.service";
+import {
+  invoiceDisputeMilestone,
+  supportCards,
+  supportPagination,
+  supportStatusCounts,
+  supportTrend,
+} from "../src/services/support-request.service";
 import { InvoiceDisputeType, SupportRequestStatus } from "../src/enums/support.enum";
 
 test("support request pagination is bounded and deterministic", () => {
@@ -26,6 +32,44 @@ test("admin support ticket counts include the global total", () => {
       overdue: 1,
     },
   );
+});
+
+test("admin support cards expose display-ready values and trend metadata", () => {
+  const cards = supportCards({
+    ticketCount: 12,
+    unassignedTickets: 3,
+    highPriorityTickets: 2,
+    overdueTickets: 1,
+    pendingTickets: 4,
+    averageResolution: { seconds: 3900, resolvedInPeriod: 5 },
+    slaHours: 24,
+  }, {
+    total: { current: 6, previous: 4 },
+    unassigned: { current: 1, previous: 2 },
+    highPriority: { current: 2, previous: 2 },
+    overdue: { current: 1, previous: 2 },
+    pendingCustomer: { current: 4, previous: 2 },
+    averageResolution: { current: 3900, previous: 5200 },
+  });
+
+  assert.equal(cards.totalTickets.value, 12);
+  assert.equal(cards.totalTickets.trend.signedPercentage, 50);
+  assert.equal(cards.unassignedTickets.trend.isImprovement, true);
+  assert.equal(cards.averageResolutionTime.displayValue, "1h 5m");
+  assert.equal(cards.averageResolutionTime.resolvedInPeriod, 5);
+});
+
+test("support trend handles an empty comparison period", () => {
+  assert.deepEqual(supportTrend(0, 0), {
+    percentage: 0,
+    signedPercentage: 0,
+    direction: "flat",
+    isImprovement: null,
+    comparison: "previous_7_days",
+    currentPeriodValue: 0,
+    previousPeriodValue: 0,
+  });
+  assert.equal(supportTrend(3, 0).signedPercentage, 100);
 });
 
 test("invoice dispute resolves the exact raised invoice for the job owner", () => {
