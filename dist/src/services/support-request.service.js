@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.countUnresolvedSupportRequests = exports.fetchSupportAssignees = exports.addSupportAdminNote = exports.customerReplyToSupportRequest = exports.replyToSupportRequest = exports.assignSupportRequest = exports.resolveSupportRequest = exports.updateSupportRequest = exports.fetchSupportRequest = exports.fetchSupportRequests = exports.fetchSupportSummary = exports.fetchUserSupportRequest = exports.fetchUserSupportRequests = exports.createInvoiceDispute = exports.invoiceDisputeMilestone = exports.INVOICE_NON_PAYMENT_GRACE_DAYS = exports.createSupportRequest = exports.supportPagination = void 0;
+exports.countUnresolvedSupportRequests = exports.fetchSupportAssignees = exports.addSupportAdminNote = exports.customerReplyToSupportRequest = exports.replyToSupportRequest = exports.assignSupportRequest = exports.resolveSupportRequest = exports.updateSupportRequest = exports.fetchSupportRequest = exports.supportStatusCounts = exports.fetchSupportRequests = exports.fetchSupportSummary = exports.fetchUserSupportRequest = exports.fetchUserSupportRequests = exports.createInvoiceDispute = exports.invoiceDisputeMilestone = exports.INVOICE_NON_PAYMENT_GRACE_DAYS = exports.createSupportRequest = exports.supportPagination = void 0;
 const mongoose_1 = require("mongoose");
 const error_1 = require("../errors/error");
 const support_enum_1 = require("../enums/support.enum");
@@ -263,7 +263,7 @@ const fetchSupportRequests = async (query) => {
         if (users.length)
             filter.$or.push({ requesterId: { $in: users.map((user) => user._id) } });
     }
-    const [requests, total, statusRows] = await Promise.all([
+    const [requests, total, statusRows, overdue] = await Promise.all([
         support_request_model_1.default.find(filter)
             .populate("requesterId", "firstName lastName userName email uniqueId displayImage")
             .populate("assignedAdminId", "fullName email department")
@@ -271,22 +271,28 @@ const fetchSupportRequests = async (query) => {
             .sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
         support_request_model_1.default.countDocuments(filter),
         support_request_model_1.default.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+        support_request_model_1.default.countDocuments({ status: { $ne: support_enum_1.SupportRequestStatus.resolved }, createdAt: { $lt: cutoff } }),
     ]);
-    const counts = Object.fromEntries(statusRows.map((row) => [row._id, row.count]));
     return {
         requests: requests.map((request) => displayRequest(request)),
-        counts: {
-            open: counts[support_enum_1.SupportRequestStatus.open] || 0,
-            inProgress: counts[support_enum_1.SupportRequestStatus.inProgress] || 0,
-            pendingCustomer: counts[support_enum_1.SupportRequestStatus.pendingCustomer] || 0,
-            pendingResolution: counts[support_enum_1.SupportRequestStatus.pendingResolution] || 0,
-            resolved: counts[support_enum_1.SupportRequestStatus.resolved] || 0,
-            overdue: await support_request_model_1.default.countDocuments({ status: { $ne: support_enum_1.SupportRequestStatus.resolved }, createdAt: { $lt: cutoff } }),
-        },
+        counts: (0, exports.supportStatusCounts)(statusRows, overdue),
         pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
 };
 exports.fetchSupportRequests = fetchSupportRequests;
+const supportStatusCounts = (statusRows, overdue) => {
+    const counts = Object.fromEntries(statusRows.map((row) => [row._id, Number(row.count) || 0]));
+    return {
+        total: statusRows.reduce((sum, row) => sum + (Number(row.count) || 0), 0),
+        open: counts[support_enum_1.SupportRequestStatus.open] || 0,
+        inProgress: counts[support_enum_1.SupportRequestStatus.inProgress] || 0,
+        pendingCustomer: counts[support_enum_1.SupportRequestStatus.pendingCustomer] || 0,
+        pendingResolution: counts[support_enum_1.SupportRequestStatus.pendingResolution] || 0,
+        resolved: counts[support_enum_1.SupportRequestStatus.resolved] || 0,
+        overdue,
+    };
+};
+exports.supportStatusCounts = supportStatusCounts;
 const fetchSupportRequest = async (requestId) => {
     assertId(requestId, "support request id");
     const request = await support_request_model_1.default.findById(requestId)

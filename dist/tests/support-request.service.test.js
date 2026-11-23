@@ -12,6 +12,21 @@ const support_enum_1 = require("../src/enums/support.enum");
     strict_1.default.deepEqual((0, support_request_service_1.supportPagination)("2", "20"), { page: 2, limit: 20, skip: 20 });
     strict_1.default.deepEqual((0, support_request_service_1.supportPagination)("0", "1000"), { page: 1, limit: 100, skip: 0 });
 });
+(0, node_test_1.default)("admin support ticket counts include the global total", () => {
+    strict_1.default.deepEqual((0, support_request_service_1.supportStatusCounts)([
+        { _id: support_enum_1.SupportRequestStatus.open, count: 3 },
+        { _id: support_enum_1.SupportRequestStatus.inProgress, count: 2 },
+        { _id: support_enum_1.SupportRequestStatus.resolved, count: 5 },
+    ], 1), {
+        total: 10,
+        open: 3,
+        inProgress: 2,
+        pendingCustomer: 0,
+        pendingResolution: 0,
+        resolved: 5,
+        overdue: 1,
+    });
+});
 (0, node_test_1.default)("invoice dispute resolves the exact raised invoice for the job owner", () => {
     const job = {
         userId: "6a21f270d23c3015a245cc84",

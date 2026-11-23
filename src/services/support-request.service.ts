@@ -260,7 +260,7 @@ export const fetchSupportRequests = async (query: any) => {
     if (users.length) filter.$or.push({ requesterId: { $in: users.map((user: any) => user._id) } });
   }
 
-  const [requests, total, statusRows] = await Promise.all([
+  const [requests, total, statusRows, overdue] = await Promise.all([
     SupportRequest.find(filter)
       .populate("requesterId", "firstName lastName userName email uniqueId displayImage")
       .populate("assignedAdminId", "fullName email department")
@@ -268,19 +268,25 @@ export const fetchSupportRequests = async (query: any) => {
       .sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
     SupportRequest.countDocuments(filter),
     SupportRequest.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+    SupportRequest.countDocuments({ status: { $ne: SupportRequestStatus.resolved }, createdAt: { $lt: cutoff } }),
   ]);
-  const counts = Object.fromEntries(statusRows.map((row: any) => [row._id, row.count]));
   return {
     requests: requests.map((request: any) => displayRequest(request)),
-    counts: {
-      open: counts[SupportRequestStatus.open] || 0,
-      inProgress: counts[SupportRequestStatus.inProgress] || 0,
-      pendingCustomer: counts[SupportRequestStatus.pendingCustomer] || 0,
-      pendingResolution: counts[SupportRequestStatus.pendingResolution] || 0,
-      resolved: counts[SupportRequestStatus.resolved] || 0,
-      overdue: await SupportRequest.countDocuments({ status: { $ne: SupportRequestStatus.resolved }, createdAt: { $lt: cutoff } }),
-    },
+    counts: supportStatusCounts(statusRows, overdue),
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+  };
+};
+
+export const supportStatusCounts = (statusRows: Array<{ _id: string; count: number }>, overdue: number) => {
+  const counts = Object.fromEntries(statusRows.map((row) => [row._id, Number(row.count) || 0]));
+  return {
+    total: statusRows.reduce((sum, row) => sum + (Number(row.count) || 0), 0),
+    open: counts[SupportRequestStatus.open] || 0,
+    inProgress: counts[SupportRequestStatus.inProgress] || 0,
+    pendingCustomer: counts[SupportRequestStatus.pendingCustomer] || 0,
+    pendingResolution: counts[SupportRequestStatus.pendingResolution] || 0,
+    resolved: counts[SupportRequestStatus.resolved] || 0,
+    overdue,
   };
 };
 

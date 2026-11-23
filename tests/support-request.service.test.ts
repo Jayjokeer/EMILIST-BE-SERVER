@@ -1,12 +1,31 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { invoiceDisputeMilestone, supportPagination } from "../src/services/support-request.service";
-import { InvoiceDisputeType } from "../src/enums/support.enum";
+import { invoiceDisputeMilestone, supportPagination, supportStatusCounts } from "../src/services/support-request.service";
+import { InvoiceDisputeType, SupportRequestStatus } from "../src/enums/support.enum";
 
 test("support request pagination is bounded and deterministic", () => {
   assert.deepEqual(supportPagination(undefined, undefined), { page: 1, limit: 10, skip: 0 });
   assert.deepEqual(supportPagination("2", "20"), { page: 2, limit: 20, skip: 20 });
   assert.deepEqual(supportPagination("0", "1000"), { page: 1, limit: 100, skip: 0 });
+});
+
+test("admin support ticket counts include the global total", () => {
+  assert.deepEqual(
+    supportStatusCounts([
+      { _id: SupportRequestStatus.open, count: 3 },
+      { _id: SupportRequestStatus.inProgress, count: 2 },
+      { _id: SupportRequestStatus.resolved, count: 5 },
+    ], 1),
+    {
+      total: 10,
+      open: 3,
+      inProgress: 2,
+      pendingCustomer: 0,
+      pendingResolution: 0,
+      resolved: 5,
+      overdue: 1,
+    },
+  );
 });
 
 test("invoice dispute resolves the exact raised invoice for the job owner", () => {
