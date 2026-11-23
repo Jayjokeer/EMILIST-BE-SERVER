@@ -35,7 +35,7 @@ import {
   validateSpotlightSettings,
   validateAdminProfileUpdate,
 } from "../validations/admin.validation";
-import { multipleUpload, singleUpload } from "../utils/image-upload";
+import { applySupportImageAttachments, multipleUpload, singleUpload, supportImageUpload } from "../utils/image-upload";
 import { validateJob } from "../validations/job.validation";
 import * as walletController from "../controllers/wallet.controller";
 
@@ -66,7 +66,7 @@ router.route("/support-requests/summary").get(adminAuth, adminController.support
 router.route("/support-requests/assignees").get(adminAuth, adminController.supportAssigneesController);
 router.route("/support-requests").get(adminAuth, adminController.supportRequestsController);
 router.route("/support-requests/:requestId/assignment").patch(adminAuth, validateAssignSupportRequest, adminController.assignSupportRequestController);
-router.route("/support-requests/:requestId/replies").post(adminAuth, validateSupportReply, adminController.replyToSupportRequestController);
+router.route("/support-requests/:requestId/replies").post(adminAuth, supportImageUpload, applySupportImageAttachments, validateSupportReply, adminController.replyToSupportRequestController);
 router.route("/support-requests/:requestId/notes").post(adminAuth, validateSupportNote, adminController.addSupportAdminNoteController);
 router.route("/support-requests/:requestId/resolve").post(adminAuth, validateResolveSupportRequest, adminController.resolveSupportRequestController);
 router.route("/support-requests/:requestId").get(adminAuth, adminController.supportRequestController);

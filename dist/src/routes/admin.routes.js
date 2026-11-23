@@ -67,7 +67,7 @@ router.route("/support-requests/summary").get(current_user_1.adminAuth, adminCon
 router.route("/support-requests/assignees").get(current_user_1.adminAuth, adminController.supportAssigneesController);
 router.route("/support-requests").get(current_user_1.adminAuth, adminController.supportRequestsController);
 router.route("/support-requests/:requestId/assignment").patch(current_user_1.adminAuth, admin_validation_1.validateAssignSupportRequest, adminController.assignSupportRequestController);
-router.route("/support-requests/:requestId/replies").post(current_user_1.adminAuth, admin_validation_1.validateSupportReply, adminController.replyToSupportRequestController);
+router.route("/support-requests/:requestId/replies").post(current_user_1.adminAuth, image_upload_1.supportImageUpload, image_upload_1.applySupportImageAttachments, admin_validation_1.validateSupportReply, adminController.replyToSupportRequestController);
 router.route("/support-requests/:requestId/notes").post(current_user_1.adminAuth, admin_validation_1.validateSupportNote, adminController.addSupportAdminNoteController);
 router.route("/support-requests/:requestId/resolve").post(current_user_1.adminAuth, admin_validation_1.validateResolveSupportRequest, adminController.resolveSupportRequestController);
 router.route("/support-requests/:requestId").get(current_user_1.adminAuth, adminController.supportRequestController);

@@ -6,7 +6,7 @@ import { applySupportImageAttachments, supportImageUpload } from "../utils/image
 
 const router = Router();
 
-router.post("/requests", userAuth, validateCreateSupportRequest, createSupportRequestController);
+router.post("/requests", userAuth, supportImageUpload, applySupportImageAttachments, validateCreateSupportRequest, createSupportRequestController);
 router.get("/requests", userAuth, fetchMySupportRequestsController);
 router.get("/requests/:requestId", userAuth, fetchMySupportRequestController);
 router.post("/requests/:requestId/replies", userAuth, supportImageUpload, applySupportImageAttachments, validateSupportReply, customerReplyToSupportRequestController);

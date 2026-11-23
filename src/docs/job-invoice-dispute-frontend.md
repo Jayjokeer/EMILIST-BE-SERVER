@@ -28,21 +28,13 @@ If `invoice.disputeStatus === "open"`, show **Dispute under review** and use
 POST /support/job-invoice-disputes
 ```
 
-```json
-{
-  "jobId": "6ab513136fc013d4563af8fe",
-  "milestoneId": "6ab584cbcff7d52841928b9a",
-  "invoiceId": "6ab584cbcff7d52841928b9b",
-  "subject": "Work does not meet the agreed requirements",
-  "reason": "The repaired pipe is still leaking and the completed work does not match the milestone requirements.",
-  "attachments": [
-    "https://cdn.example.com/evidence/leaking-pipe.jpg"
-  ]
-}
-```
+Send `multipart/form-data` rather than JSON. Append `jobId`, `milestoneId`,
+`invoiceId`, `disputeType`, `subject`, and `reason` as text fields. Append every
+selected image as a separate `attachments` file field.
 
 `invoiceId` and `subject` are optional. `reason` must contain 10–5000
-characters. `attachments` accepts up to 10 already-uploaded HTTPS URLs.
+characters. `attachments` accepts up to 10 JPG, PNG, or WEBP image files, with
+a maximum size of 10 MB per image. Do not send URLs in `attachments`.
 
 Successful response: `201 Created`.
 
@@ -99,14 +91,9 @@ Only the user who created the ticket can fetch it.
 POST /support/requests/{requestId}/replies
 ```
 
-```json
-{
-  "message": "I have attached a clearer photo showing the unfinished work.",
-  "attachments": [
-    "https://cdn.example.com/evidence/unfinished-work.jpg"
-  ]
-}
-```
+Send `multipart/form-data` with `message` as a text field. Append every selected
+image as a separate `attachments` file field. The same 10-image and 10 MB per
+image limits apply.
 
 ## 6. Resolution behavior
 
