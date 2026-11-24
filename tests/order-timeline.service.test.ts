@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { OrderDeliveryStatus, OrderPaymentStatus } from "../src/enums/order.enum";
 import Order from "../src/models/order.model";
-import { availableOrderActions, buildOrderSteps, fetchSalesForSeller } from "../src/services/order.service";
+import { availableOrderActions, buildOrderSteps, currentDeliveryStatusUpdatedAt, fetchSalesForSeller } from "../src/services/order.service";
 
 const buyerId = "64e1a2b3c4d5e6f7a8b9c0d1";
 const sellerId = "64e1a2b3c4d5e6f7a8b9c0d2";
@@ -79,6 +79,17 @@ test("received order timeline records the receipt timestamp", () => {
   assert.equal(steps[3].activatedAt?.toISOString(), receivedAt.toISOString());
 });
 
+test("current delivery status exposes the time that status was activated", () => {
+  const updatedAt = currentDeliveryStatusUpdatedAt({
+    deliveryStatus: OrderDeliveryStatus.outForDelivery,
+    deliverySteps: [
+      { status: OrderDeliveryStatus.orderConfirmed, timestamp: "2026-11-20T09:00:00.000Z" },
+      { status: OrderDeliveryStatus.outForDelivery, timestamp: "2026-11-20T12:00:00.000Z" },
+    ],
+  });
+  assert.equal(updatedAt?.toISOString(), "2026-11-20T12:00:00.000Z");
+});
+
 test("seller sales returns seller-owned line details and dispatch action", async () => {
   const originalAggregate = Order.aggregate;
   let capturedPipeline: any[] = [];
@@ -120,6 +131,7 @@ test("seller sales returns seller-owned line details and dispatch action", async
     assert.equal(result.pagination.total, 1);
     assert.equal(result.sales[0].buyer.name, "Ada Okafor");
     assert.equal(result.sales[0].pricing.totalAmount, 135000);
+    assert.equal(result.sales[0].deliveryStatusUpdatedAt?.toISOString(), "2026-02-17T10:00:00.000Z");
     assert.deepEqual(result.sales[0].allowedDeliveryStatusUpdates, [OrderDeliveryStatus.outForDelivery]);
     assert.ok(capturedPipeline.some((stage) => stage.$unwind === "$products"));
   } finally {

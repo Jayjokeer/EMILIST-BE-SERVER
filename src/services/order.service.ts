@@ -54,6 +54,7 @@ export const buildOrderSteps = (order: any) => {
       ...(saved?.note ? { note: saved.note } : {}),
       ...(saved?.actorType ? { updatedBy: saved.actorType } : {}),
       ...(saved?.actorId ? { updatedByUserId: saved.actorId } : {}),
+      ...(saved?.imageUrl ? { imageUrl: saved.imageUrl } : {}),
     };
   });
 
@@ -74,10 +75,30 @@ export const buildOrderSteps = (order: any) => {
       ...(saved?.note ? { note: saved.note } : {}),
       ...(saved?.actorType ? { updatedBy: saved.actorType } : {}),
       ...(saved?.actorId ? { updatedByUserId: saved.actorId } : {}),
+      ...(saved?.imageUrl ? { imageUrl: saved.imageUrl } : {}),
     }];
   });
 
   return [...standardSteps, ...exceptionalSteps];
+};
+
+export const currentDeliveryStatusUpdatedAt = (order: any): Date | null => {
+  const matchingSteps = (order.deliverySteps || [])
+    .filter((step: any) => step.status === order.deliveryStatus)
+    .map((step: any) => dateValue(step.timestamp))
+    .filter(Boolean) as Date[];
+  if (matchingSteps.length) {
+    return matchingSteps.sort((left, right) => right.getTime() - left.getTime())[0];
+  }
+
+  const fallbackByStatus: Partial<Record<OrderDeliveryStatus, unknown>> = {
+    [OrderDeliveryStatus.orderConfirmed]: order.createdAt,
+    [OrderDeliveryStatus.delivered]: order.deliveredAt,
+    [OrderDeliveryStatus.received]: order.receivedAt,
+    [OrderDeliveryStatus.canceled]: order.cancelledAt,
+    [OrderDeliveryStatus.returned]: order.returnedAt,
+  };
+  return dateValue(fallbackByStatus[order.deliveryStatus as OrderDeliveryStatus]) || null;
 };
 
 const participantRole = (order: any, userId: string): "buyer" | "seller" | null => {
@@ -132,6 +153,7 @@ export const orderDetailsForParticipant = (order: any, userId: string) => {
   const viewerRole = participantRole(value, userId);
   return {
     ...value,
+    deliveryStatusUpdatedAt: currentDeliveryStatusUpdatedAt(value),
     viewerRole,
     allowedDeliveryStatusUpdates: availableOrderActions(value, userId),
     orderSteps: buildOrderSteps(value),
@@ -180,7 +202,10 @@ export const fetchOrdersForUser = async (
   const totalPages = Math.ceil(total / pageSize) || 1;
 
   return {
-    orders,
+    orders: orders.map((order: any) => {
+      const value = typeof order.toObject === "function" ? order.toObject() : { ...order };
+      return { ...value, deliveryStatusUpdatedAt: currentDeliveryStatusUpdatedAt(value) };
+    }),
     pagination: {
       total,
       currentPage,
@@ -297,8 +322,11 @@ export const fetchSalesForSeller = async (
       quantityMetric: row.products?.quantityMetric || "unit",
       paymentStatus: row.paymentStatus,
       deliveryStatus: row.deliveryStatus,
+      deliveryStatusUpdatedAt: currentDeliveryStatusUpdatedAt(row),
       deliveryDate: row.deliveryDate || null,
       deliveredAt: row.deliveredAt || null,
+      deliveryImage: row.deliveryImage || null,
+      receivedAt: row.receivedAt || null,
       deliveryAddress: row.shippingAddress || null,
       product: {
         id: row.products?.productId,
@@ -369,6 +397,7 @@ export const updateOrderDeliveryStatus = async (
   userId: string,
   nextStatus: OrderDeliveryStatus,
   note?: string,
+  deliveryImage?: string,
 ) => {
   const order = await fetchOrderByIdForParticipant(orderId, userId);
   if (!order) throw new BadRequestError("Order not found");
@@ -392,6 +421,9 @@ export const updateOrderDeliveryStatus = async (
   }
 
   const now = new Date();
+  if (nextStatus === OrderDeliveryStatus.delivered && !deliveryImage) {
+    throw new BadRequestError("A delivery image is required when marking an order as delivered");
+  }
   const expectedStatus = nextStatus === OrderDeliveryStatus.outForDelivery
     ? OrderDeliveryStatus.orderConfirmed
     : nextStatus === OrderDeliveryStatus.delivered
@@ -402,6 +434,7 @@ export const updateOrderDeliveryStatus = async (
       deliveryStatus: nextStatus,
       ...(nextStatus === OrderDeliveryStatus.delivered && {
         deliveredAt: now,
+        deliveryImage,
         status: OrderStatus.completed,
       }),
       ...(nextStatus === OrderDeliveryStatus.received && { receivedAt: now }),
@@ -413,6 +446,7 @@ export const updateOrderDeliveryStatus = async (
         note: note || undefined,
         actorType: role,
         actorId: userId,
+        ...(nextStatus === OrderDeliveryStatus.delivered && { imageUrl: deliveryImage }),
       },
     },
   };

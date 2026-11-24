@@ -34,6 +34,7 @@ const DeliveryStepSchema: Schema = new Schema(
     note: { type: String, trim: true },
     actorType: { type: String, enum: ["buyer", "seller", "system", "admin"] },
     actorId: { type: Schema.Types.ObjectId, ref: "Users" },
+    imageUrl: { type: String, trim: true },
   },
   { _id: false }
 );
@@ -73,6 +74,7 @@ const OrderSchema: Schema = new Schema(
     },
     deliveryDate: { type: Date },
     deliveredAt: { type: Date },
+    deliveryImage: { type: String, trim: true },
     receivedAt: { type: Date },
     deliverySteps: { type: [DeliveryStepSchema], default: [] },
     cancelReason: { type: String, trim: true },

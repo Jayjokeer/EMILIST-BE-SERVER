@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createReorderCart = exports.returnOrder = exports.cancelOrder = exports.updateOrderDeliveryStatus = exports.pushDeliveryStep = exports.fetchSalesForSeller = exports.fetchOrdersForUser = exports.orderDetailsForParticipant = exports.fetchOrderByIdForParticipant = exports.fetchOrderByIdAndUser = exports.fetchOrderByOrderId = exports.fetchOrderByCartIdForUser = exports.fetchOrderByCartId = exports.createOrder = exports.availableOrderActions = exports.buildOrderSteps = void 0;
+exports.createReorderCart = exports.returnOrder = exports.cancelOrder = exports.updateOrderDeliveryStatus = exports.pushDeliveryStep = exports.fetchSalesForSeller = exports.fetchOrdersForUser = exports.orderDetailsForParticipant = exports.fetchOrderByIdForParticipant = exports.fetchOrderByIdAndUser = exports.fetchOrderByOrderId = exports.fetchOrderByCartIdForUser = exports.fetchOrderByCartId = exports.createOrder = exports.availableOrderActions = exports.currentDeliveryStatusUpdatedAt = exports.buildOrderSteps = void 0;
 const order_model_1 = __importDefault(require("../models/order.model"));
 const order_enum_1 = require("../enums/order.enum");
 const transaction_enum_1 = require("../enums/transaction.enum");
@@ -84,6 +84,7 @@ const buildOrderSteps = (order) => {
             ...(saved?.note ? { note: saved.note } : {}),
             ...(saved?.actorType ? { updatedBy: saved.actorType } : {}),
             ...(saved?.actorId ? { updatedByUserId: saved.actorId } : {}),
+            ...(saved?.imageUrl ? { imageUrl: saved.imageUrl } : {}),
         };
     });
     const exceptionalSteps = [
@@ -104,11 +105,30 @@ const buildOrderSteps = (order) => {
                 ...(saved?.note ? { note: saved.note } : {}),
                 ...(saved?.actorType ? { updatedBy: saved.actorType } : {}),
                 ...(saved?.actorId ? { updatedByUserId: saved.actorId } : {}),
+                ...(saved?.imageUrl ? { imageUrl: saved.imageUrl } : {}),
             }];
     });
     return [...standardSteps, ...exceptionalSteps];
 };
 exports.buildOrderSteps = buildOrderSteps;
+const currentDeliveryStatusUpdatedAt = (order) => {
+    const matchingSteps = (order.deliverySteps || [])
+        .filter((step) => step.status === order.deliveryStatus)
+        .map((step) => dateValue(step.timestamp))
+        .filter(Boolean);
+    if (matchingSteps.length) {
+        return matchingSteps.sort((left, right) => right.getTime() - left.getTime())[0];
+    }
+    const fallbackByStatus = {
+        [order_enum_1.OrderDeliveryStatus.orderConfirmed]: order.createdAt,
+        [order_enum_1.OrderDeliveryStatus.delivered]: order.deliveredAt,
+        [order_enum_1.OrderDeliveryStatus.received]: order.receivedAt,
+        [order_enum_1.OrderDeliveryStatus.canceled]: order.cancelledAt,
+        [order_enum_1.OrderDeliveryStatus.returned]: order.returnedAt,
+    };
+    return dateValue(fallbackByStatus[order.deliveryStatus]) || null;
+};
+exports.currentDeliveryStatusUpdatedAt = currentDeliveryStatusUpdatedAt;
 const participantRole = (order, userId) => {
     if (String(order.userId) === String(userId))
         return "buyer";
@@ -161,6 +181,7 @@ const orderDetailsForParticipant = (order, userId) => {
     const viewerRole = participantRole(value, userId);
     return {
         ...value,
+        deliveryStatusUpdatedAt: (0, exports.currentDeliveryStatusUpdatedAt)(value),
         viewerRole,
         allowedDeliveryStatusUpdates: (0, exports.availableOrderActions)(value, userId),
         orderSteps: (0, exports.buildOrderSteps)(value),
@@ -191,7 +212,10 @@ const fetchOrdersForUser = async (userId, { page = 1, limit = 10, sortBy = "late
     ]);
     const totalPages = Math.ceil(total / pageSize) || 1;
     return {
-        orders,
+        orders: orders.map((order) => {
+            const value = typeof order.toObject === "function" ? order.toObject() : { ...order };
+            return { ...value, deliveryStatusUpdatedAt: (0, exports.currentDeliveryStatusUpdatedAt)(value) };
+        }),
         pagination: {
             total,
             currentPage,
@@ -290,8 +314,11 @@ const fetchSalesForSeller = async (sellerId, { page = 1, limit = 10, sortBy = "l
             quantityMetric: row.products?.quantityMetric || "unit",
             paymentStatus: row.paymentStatus,
             deliveryStatus: row.deliveryStatus,
+            deliveryStatusUpdatedAt: (0, exports.currentDeliveryStatusUpdatedAt)(row),
             deliveryDate: row.deliveryDate || null,
             deliveredAt: row.deliveredAt || null,
+            deliveryImage: row.deliveryImage || null,
+            receivedAt: row.receivedAt || null,
             deliveryAddress: row.shippingAddress || null,
             product: {
                 id: row.products?.productId,
@@ -347,7 +374,7 @@ const pushDeliveryStep = async (orderId, status, note, actorType, actorId) => {
     }, { new: true });
 };
 exports.pushDeliveryStep = pushDeliveryStep;
-const updateOrderDeliveryStatus = async (orderId, userId, nextStatus, note) => {
+const updateOrderDeliveryStatus = async (orderId, userId, nextStatus, note, deliveryImage) => {
     const order = await (0, exports.fetchOrderByIdForParticipant)(orderId, userId);
     if (!order)
         throw new error_1.BadRequestError("Order not found");
@@ -369,6 +396,9 @@ const updateOrderDeliveryStatus = async (orderId, userId, nextStatus, note) => {
         throw new error_1.BadRequestError(`Order cannot move from "${order.deliveryStatus}" to "${nextStatus}"`);
     }
     const now = new Date();
+    if (nextStatus === order_enum_1.OrderDeliveryStatus.delivered && !deliveryImage) {
+        throw new error_1.BadRequestError("A delivery image is required when marking an order as delivered");
+    }
     const expectedStatus = nextStatus === order_enum_1.OrderDeliveryStatus.outForDelivery
         ? order_enum_1.OrderDeliveryStatus.orderConfirmed
         : nextStatus === order_enum_1.OrderDeliveryStatus.delivered
@@ -379,6 +409,7 @@ const updateOrderDeliveryStatus = async (orderId, userId, nextStatus, note) => {
             deliveryStatus: nextStatus,
             ...(nextStatus === order_enum_1.OrderDeliveryStatus.delivered && {
                 deliveredAt: now,
+                deliveryImage,
                 status: order_enum_1.OrderStatus.completed,
             }),
             ...(nextStatus === order_enum_1.OrderDeliveryStatus.received && { receivedAt: now }),
@@ -390,6 +421,7 @@ const updateOrderDeliveryStatus = async (orderId, userId, nextStatus, note) => {
                 note: note || undefined,
                 actorType: role,
                 actorId: userId,
+                ...(nextStatus === order_enum_1.OrderDeliveryStatus.delivered && { imageUrl: deliveryImage }),
             },
         },
     };

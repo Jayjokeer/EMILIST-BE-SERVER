@@ -21,6 +21,11 @@ const storage = new CloudinaryStorage({
       publicId = `cert_${index}_${Date.now()}`;
     }
 
+    if (file.fieldname === 'deliveryImage') {
+      folder = 'uploads/order-deliveries';
+      publicId = `delivery_${Date.now()}`;
+    }
+
     return {
       folder,
       allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv', 'mp3', 'm4a', 'wav', 'webm', 'ogg'],
@@ -45,6 +50,31 @@ const supportImageUpload = multer({
     return callback(error);
   },
 }).array("attachments", 10);
+
+const orderDeliveryImageUpload = multer({
+  storage,
+  limits: { files: 1, fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    if (["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) return callback(null, true);
+    const error = new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname);
+    error.message = "Delivery image must be a JPG, PNG, or WEBP image";
+    return callback(error);
+  },
+}).single("deliveryImage");
+
+export const applyOrderDeliveryImage = (req: Request, res: Response, next: NextFunction) => {
+  if (req.body.deliveryImage !== undefined) {
+    return res.status(400).json({
+      code: 400,
+      status: "fail",
+      message: "deliveryImage must be an uploaded image file, not a link or text value",
+    });
+  }
+
+  const file = req.file as Express.Multer.File | undefined;
+  if (file?.path) req.body.deliveryImage = file.path;
+  next();
+};
 
 const chatAttachmentMimeTypes = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
@@ -240,4 +270,4 @@ export const parseJobBody = (
   }
 };
 
-export { cloudinary, singleUpload, multipleUpload, supportImageUpload, chatAttachmentUpload, uploadBusinessImages };
+export { cloudinary, singleUpload, multipleUpload, supportImageUpload, orderDeliveryImageUpload, chatAttachmentUpload, uploadBusinessImages };

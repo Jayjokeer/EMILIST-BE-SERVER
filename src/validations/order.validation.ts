@@ -78,6 +78,11 @@ export const validateUpdateDeliveryStatus = (req: Request, res: Response, next: 
       .valid(OrderDeliveryStatus.outForDelivery, OrderDeliveryStatus.delivered, OrderDeliveryStatus.received)
       .required(),
     note: Joi.string().trim().max(500).optional().allow(""),
+    deliveryImage: Joi.string().uri().when("status", {
+      is: OrderDeliveryStatus.delivered,
+      then: Joi.required(),
+      otherwise: Joi.forbidden(),
+    }),
   });
   const { error } = schema.validate(req.body, { abortEarly: false });
   if (error) {

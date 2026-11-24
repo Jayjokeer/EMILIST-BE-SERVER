@@ -46,6 +46,7 @@ export const updateOrderStatusController = catchAsync(async (req: JwtPayload, re
     req.user._id,
     req.body.status,
     req.body.note,
+    req.body.deliveryImage,
   );
   return successResponse(res, StatusCodes.OK, order);
 });
@@ -109,6 +110,7 @@ export const trackOrderController = catchAsync(async (req: JwtPayload, res: Resp
     deliveryStatus: order.deliveryStatus,
     deliveryDate: order.deliveryDate,
     deliveredAt: order.deliveredAt,
+    deliveryImage: order.deliveryImage || null,
     receivedAt: order.receivedAt,
     viewerRole: details.viewerRole,
     allowedDeliveryStatusUpdates: details.allowedDeliveryStatusUpdates,

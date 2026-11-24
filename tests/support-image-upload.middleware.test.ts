@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applySupportImageAttachments } from "../src/utils/image-upload";
+import { applyOrderDeliveryImage, applySupportImageAttachments } from "../src/utils/image-upload";
 
 test("support image middleware stores uploaded Cloudinary paths as attachments", () => {
   const req: any = {
@@ -34,4 +34,28 @@ test("support image middleware rejects attachment links sent as text", () => {
 
   assert.equal(statusCode, 400);
   assert.match(responseBody.message, /uploaded image files/);
+});
+
+test("order delivery middleware maps the uploaded proof image", () => {
+  const req: any = {
+    body: { status: "delivered" },
+    file: { path: "https://res.cloudinary.com/emilist/image/upload/delivery.jpg" },
+  };
+  let nextCalled = false;
+  applyOrderDeliveryImage(req, {} as any, () => { nextCalled = true; });
+  assert.equal(nextCalled, true);
+  assert.equal(req.body.deliveryImage, "https://res.cloudinary.com/emilist/image/upload/delivery.jpg");
+});
+
+test("order delivery middleware rejects proof image links", () => {
+  const req: any = { body: { status: "delivered", deliveryImage: "https://example.com/proof.jpg" } };
+  let statusCode = 0;
+  let responseBody: any;
+  const res: any = {
+    status(code: number) { statusCode = code; return this; },
+    json(body: any) { responseBody = body; return this; },
+  };
+  applyOrderDeliveryImage(req, res, () => assert.fail("next should not be called"));
+  assert.equal(statusCode, 400);
+  assert.match(responseBody.message, /uploaded image file/);
 });

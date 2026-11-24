@@ -82,6 +82,11 @@ const validateUpdateDeliveryStatus = (req, res, next) => {
             .valid(order_enum_1.OrderDeliveryStatus.outForDelivery, order_enum_1.OrderDeliveryStatus.delivered, order_enum_1.OrderDeliveryStatus.received)
             .required(),
         note: joi_1.default.string().trim().max(500).optional().allow(""),
+        deliveryImage: joi_1.default.string().uri().when("status", {
+            is: order_enum_1.OrderDeliveryStatus.delivered,
+            then: joi_1.default.required(),
+            otherwise: joi_1.default.forbidden(),
+        }),
     });
     const { error } = schema.validate(req.body, { abortEarly: false });
     if (error) {

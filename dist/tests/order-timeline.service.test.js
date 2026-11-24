@@ -76,6 +76,16 @@ const sellerId = "64e1a2b3c4d5e6f7a8b9c0d2";
     strict_1.default.equal(steps[3].isCurrent, true);
     strict_1.default.equal(steps[3].activatedAt?.toISOString(), receivedAt.toISOString());
 });
+(0, node_test_1.default)("current delivery status exposes the time that status was activated", () => {
+    const updatedAt = (0, order_service_1.currentDeliveryStatusUpdatedAt)({
+        deliveryStatus: order_enum_1.OrderDeliveryStatus.outForDelivery,
+        deliverySteps: [
+            { status: order_enum_1.OrderDeliveryStatus.orderConfirmed, timestamp: "2026-11-20T09:00:00.000Z" },
+            { status: order_enum_1.OrderDeliveryStatus.outForDelivery, timestamp: "2026-11-20T12:00:00.000Z" },
+        ],
+    });
+    strict_1.default.equal(updatedAt?.toISOString(), "2026-11-20T12:00:00.000Z");
+});
 (0, node_test_1.default)("seller sales returns seller-owned line details and dispatch action", async () => {
     const originalAggregate = order_model_1.default.aggregate;
     let capturedPipeline = [];
@@ -116,6 +126,7 @@ const sellerId = "64e1a2b3c4d5e6f7a8b9c0d2";
         strict_1.default.equal(result.pagination.total, 1);
         strict_1.default.equal(result.sales[0].buyer.name, "Ada Okafor");
         strict_1.default.equal(result.sales[0].pricing.totalAmount, 135000);
+        strict_1.default.equal(result.sales[0].deliveryStatusUpdatedAt?.toISOString(), "2026-02-17T10:00:00.000Z");
         strict_1.default.deepEqual(result.sales[0].allowedDeliveryStatusUpdates, [order_enum_1.OrderDeliveryStatus.outForDelivery]);
         strict_1.default.ok(capturedPipeline.some((stage) => stage.$unwind === "$products"));
     }

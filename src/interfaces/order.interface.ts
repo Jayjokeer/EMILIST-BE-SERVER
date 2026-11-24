@@ -31,6 +31,7 @@ export interface IDeliveryStep {
     note?: string;
     actorType?: "buyer" | "seller" | "system" | "admin";
     actorId?: Schema.Types.ObjectId;
+    imageUrl?: string;
 }
 
 export interface IOrder extends Document {
@@ -54,6 +55,7 @@ export interface IOrder extends Document {
     deliveryStatus?: OrderDeliveryStatus;
     deliveryDate?: Date;
     deliveredAt?: Date;
+    deliveryImage?: string;
     receivedAt?: Date;
     deliverySteps?: IDeliveryStep[];
     cancelReason?: string;

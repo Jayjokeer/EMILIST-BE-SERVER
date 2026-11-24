@@ -72,7 +72,7 @@ exports.getOrderByIdController = (0, error_handler_1.catchAsync)(async (req, res
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, orderService.orderDetailsForParticipant(order, userId));
 });
 exports.updateOrderStatusController = (0, error_handler_1.catchAsync)(async (req, res) => {
-    const order = await orderService.updateOrderDeliveryStatus(req.params.id, req.user._id, req.body.status, req.body.note);
+    const order = await orderService.updateOrderDeliveryStatus(req.params.id, req.user._id, req.body.status, req.body.note, req.body.deliveryImage);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, order);
 });
 exports.cancelOrderController = (0, error_handler_1.catchAsync)(async (req, res) => {
@@ -124,6 +124,7 @@ exports.trackOrderController = (0, error_handler_1.catchAsync)(async (req, res) 
         deliveryStatus: order.deliveryStatus,
         deliveryDate: order.deliveryDate,
         deliveredAt: order.deliveredAt,
+        deliveryImage: order.deliveryImage || null,
         receivedAt: order.receivedAt,
         viewerRole: details.viewerRole,
         allowedDeliveryStatusUpdates: details.allowedDeliveryStatusUpdates,
