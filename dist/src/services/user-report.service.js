@@ -213,7 +213,7 @@ const orderBucket = (order) => {
         return "returned";
     if (order.status === order_enum_1.OrderStatus.canceled || order.deliveryStatus === order_enum_1.OrderDeliveryStatus.canceled)
         return "cancelled";
-    if (order.status === order_enum_1.OrderStatus.completed || order.deliveryStatus === order_enum_1.OrderDeliveryStatus.delivered)
+    if (order.status === order_enum_1.OrderStatus.completed || [order_enum_1.OrderDeliveryStatus.delivered, order_enum_1.OrderDeliveryStatus.received].includes(order.deliveryStatus))
         return "completed";
     return "pending";
 };

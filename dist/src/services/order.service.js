@@ -50,11 +50,13 @@ const orderStepDefinitions = [
     { status: order_enum_1.OrderDeliveryStatus.orderConfirmed, label: "Order confirmed", responsibleParty: "system" },
     { status: order_enum_1.OrderDeliveryStatus.outForDelivery, label: "Out for delivery", responsibleParty: "seller" },
     { status: order_enum_1.OrderDeliveryStatus.delivered, label: "Delivered", responsibleParty: "buyer" },
+    { status: order_enum_1.OrderDeliveryStatus.received, label: "Received", responsibleParty: "buyer" },
 ];
 const statusRank = {
     [order_enum_1.OrderDeliveryStatus.orderConfirmed]: 0,
     [order_enum_1.OrderDeliveryStatus.outForDelivery]: 1,
     [order_enum_1.OrderDeliveryStatus.delivered]: 2,
+    [order_enum_1.OrderDeliveryStatus.received]: 3,
 };
 const dateValue = (value) => {
     if (!value)
@@ -69,7 +71,8 @@ const buildOrderSteps = (order) => {
         const saved = savedSteps.find((step) => step.status === definition.status);
         const activatedAt = dateValue(saved?.timestamp)
             || (definition.status === order_enum_1.OrderDeliveryStatus.orderConfirmed ? dateValue(order.createdAt) : undefined)
-            || (definition.status === order_enum_1.OrderDeliveryStatus.delivered ? dateValue(order.deliveredAt) : undefined);
+            || (definition.status === order_enum_1.OrderDeliveryStatus.delivered ? dateValue(order.deliveredAt) : undefined)
+            || (definition.status === order_enum_1.OrderDeliveryStatus.received ? dateValue(order.receivedAt) : undefined);
         const reached = Boolean(activatedAt) || (currentRank !== undefined && currentRank >= index);
         return {
             status: definition.status,
@@ -119,6 +122,9 @@ const availableOrderActions = (order, userId) => {
     }
     if (role === "buyer" && order.deliveryStatus === order_enum_1.OrderDeliveryStatus.outForDelivery) {
         return [order_enum_1.OrderDeliveryStatus.delivered];
+    }
+    if (role === "buyer" && order.deliveryStatus === order_enum_1.OrderDeliveryStatus.delivered) {
+        return [order_enum_1.OrderDeliveryStatus.received];
     }
     return [];
 };
@@ -354,6 +360,9 @@ const updateOrderDeliveryStatus = async (orderId, userId, nextStatus, note) => {
         if (nextStatus === order_enum_1.OrderDeliveryStatus.delivered && role !== "buyer") {
             throw new error_1.ForbiddenError("Only the buyer can confirm that this order was delivered");
         }
+        if (nextStatus === order_enum_1.OrderDeliveryStatus.received && role !== "buyer") {
+            throw new error_1.ForbiddenError("Only the buyer can confirm that this order was received");
+        }
         if (nextStatus === order_enum_1.OrderDeliveryStatus.outForDelivery && order.paymentStatus !== order_enum_1.OrderPaymentStatus.paid) {
             throw new error_1.BadRequestError("An order must be paid before it can be sent for delivery");
         }
@@ -362,7 +371,9 @@ const updateOrderDeliveryStatus = async (orderId, userId, nextStatus, note) => {
     const now = new Date();
     const expectedStatus = nextStatus === order_enum_1.OrderDeliveryStatus.outForDelivery
         ? order_enum_1.OrderDeliveryStatus.orderConfirmed
-        : order_enum_1.OrderDeliveryStatus.outForDelivery;
+        : nextStatus === order_enum_1.OrderDeliveryStatus.delivered
+            ? order_enum_1.OrderDeliveryStatus.outForDelivery
+            : order_enum_1.OrderDeliveryStatus.delivered;
     const update = {
         $set: {
             deliveryStatus: nextStatus,
@@ -370,6 +381,7 @@ const updateOrderDeliveryStatus = async (orderId, userId, nextStatus, note) => {
                 deliveredAt: now,
                 status: order_enum_1.OrderStatus.completed,
             }),
+            ...(nextStatus === order_enum_1.OrderDeliveryStatus.received && { receivedAt: now }),
         },
         $push: {
             deliverySteps: {
@@ -453,8 +465,8 @@ const returnOrder = async (orderId, userId, reason) => {
     const order = await (0, exports.fetchOrderByIdAndUser)(orderId, userId);
     if (!order)
         throw new error_1.BadRequestError("Order not found");
-    if (order.deliveryStatus !== order_enum_1.OrderDeliveryStatus.delivered) {
-        throw new error_1.BadRequestError("Order can only be returned after delivery");
+    if (![order_enum_1.OrderDeliveryStatus.delivered, order_enum_1.OrderDeliveryStatus.received].includes(order.deliveryStatus)) {
+        throw new error_1.BadRequestError("Order can only be returned after delivery or receipt confirmation");
     }
     // 7-day return window from delivery
     if (order.deliveredAt) {
@@ -490,8 +502,8 @@ const createReorderCart = async (orderId, userId) => {
     const order = await (0, exports.fetchOrderByIdAndUser)(orderId, userId);
     if (!order)
         throw new error_1.BadRequestError("Order not found");
-    if (order.deliveryStatus !== order_enum_1.OrderDeliveryStatus.delivered) {
-        throw new error_1.BadRequestError("Reorder is only available for delivered orders");
+    if (![order_enum_1.OrderDeliveryStatus.delivered, order_enum_1.OrderDeliveryStatus.received].includes(order.deliveryStatus)) {
+        throw new error_1.BadRequestError("Reorder is only available for delivered or received orders");
     }
     const products = [];
     let totalAmount = 0;

@@ -301,7 +301,12 @@ const fetchAdminMaterialOrderDetails = async (orderId, query) => {
         throw new error_1.NotFoundError("Product is not part of this order");
     const productId = selected.productId?._id || selected.productId;
     const ratings = productId ? await reviewData(productId, selected.merchantId?._id || selected.merchantId, query) : null;
-    return { ...order, selectedProduct: selected, ratings, canInitiateReturn: order.deliveryStatus === order_enum_1.OrderDeliveryStatus.delivered };
+    return {
+        ...order,
+        selectedProduct: selected,
+        ratings,
+        canInitiateReturn: [order_enum_1.OrderDeliveryStatus.delivered, order_enum_1.OrderDeliveryStatus.received].includes(order.deliveryStatus),
+    };
 };
 exports.fetchAdminMaterialOrderDetails = fetchAdminMaterialOrderDetails;
 const initiateAdminOrderReturn = async (orderId, adminId, reason) => {

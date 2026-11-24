@@ -99,6 +99,7 @@ const OrderSchema = new mongoose_1.Schema({
     },
     deliveryDate: { type: Date },
     deliveredAt: { type: Date },
+    receivedAt: { type: Date },
     deliverySteps: { type: [DeliveryStepSchema], default: [] },
     cancelReason: { type: String, trim: true },
     cancelledAt: { type: Date },

@@ -20,13 +20,15 @@ test("order timeline includes reached dates and leaves future steps undated", ()
     }],
   });
 
-  assert.equal(steps.length, 3);
+  assert.equal(steps.length, 4);
   assert.equal(steps[0].status, OrderDeliveryStatus.orderConfirmed);
   assert.ok("activatedAt" in steps[0]);
   assert.equal(steps[1].updatedBy, "seller");
   assert.equal(steps[1].isCurrent, true);
   assert.equal(steps[2].isCompleted, false);
   assert.equal("activatedAt" in steps[2], false);
+  assert.equal(steps[3].status, OrderDeliveryStatus.received);
+  assert.equal(steps[3].isCompleted, false);
 });
 
 test("only a seller can dispatch a paid confirmed order", () => {
@@ -49,6 +51,32 @@ test("only the buyer can confirm delivery after dispatch", () => {
   };
   assert.deepEqual(availableOrderActions(order, buyerId), [OrderDeliveryStatus.delivered]);
   assert.deepEqual(availableOrderActions(order, sellerId), []);
+});
+
+test("only the buyer can confirm receipt after delivery", () => {
+  const order = {
+    userId: buyerId,
+    products: [{ merchantId: sellerId }],
+    paymentStatus: OrderPaymentStatus.paid,
+    deliveryStatus: OrderDeliveryStatus.delivered,
+  };
+  assert.deepEqual(availableOrderActions(order, buyerId), [OrderDeliveryStatus.received]);
+  assert.deepEqual(availableOrderActions(order, sellerId), []);
+});
+
+test("received order timeline records the receipt timestamp", () => {
+  const receivedAt = new Date("2026-11-21T08:30:00.000Z");
+  const steps = buildOrderSteps({
+    userId: buyerId,
+    createdAt: new Date("2026-11-20T09:00:00.000Z"),
+    deliveredAt: new Date("2026-11-20T15:00:00.000Z"),
+    receivedAt,
+    deliveryStatus: OrderDeliveryStatus.received,
+    deliverySteps: [{ status: OrderDeliveryStatus.received, timestamp: receivedAt, actorType: "buyer", actorId: buyerId }],
+  });
+  assert.equal(steps[3].status, OrderDeliveryStatus.received);
+  assert.equal(steps[3].isCurrent, true);
+  assert.equal(steps[3].activatedAt?.toISOString(), receivedAt.toISOString());
 });
 
 test("seller sales returns seller-owned line details and dispatch action", async () => {

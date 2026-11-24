@@ -22,13 +22,15 @@ const sellerId = "64e1a2b3c4d5e6f7a8b9c0d2";
                 actorId: sellerId,
             }],
     });
-    strict_1.default.equal(steps.length, 3);
+    strict_1.default.equal(steps.length, 4);
     strict_1.default.equal(steps[0].status, order_enum_1.OrderDeliveryStatus.orderConfirmed);
     strict_1.default.ok("activatedAt" in steps[0]);
     strict_1.default.equal(steps[1].updatedBy, "seller");
     strict_1.default.equal(steps[1].isCurrent, true);
     strict_1.default.equal(steps[2].isCompleted, false);
     strict_1.default.equal("activatedAt" in steps[2], false);
+    strict_1.default.equal(steps[3].status, order_enum_1.OrderDeliveryStatus.received);
+    strict_1.default.equal(steps[3].isCompleted, false);
 });
 (0, node_test_1.default)("only a seller can dispatch a paid confirmed order", () => {
     const order = {
@@ -49,6 +51,30 @@ const sellerId = "64e1a2b3c4d5e6f7a8b9c0d2";
     };
     strict_1.default.deepEqual((0, order_service_1.availableOrderActions)(order, buyerId), [order_enum_1.OrderDeliveryStatus.delivered]);
     strict_1.default.deepEqual((0, order_service_1.availableOrderActions)(order, sellerId), []);
+});
+(0, node_test_1.default)("only the buyer can confirm receipt after delivery", () => {
+    const order = {
+        userId: buyerId,
+        products: [{ merchantId: sellerId }],
+        paymentStatus: order_enum_1.OrderPaymentStatus.paid,
+        deliveryStatus: order_enum_1.OrderDeliveryStatus.delivered,
+    };
+    strict_1.default.deepEqual((0, order_service_1.availableOrderActions)(order, buyerId), [order_enum_1.OrderDeliveryStatus.received]);
+    strict_1.default.deepEqual((0, order_service_1.availableOrderActions)(order, sellerId), []);
+});
+(0, node_test_1.default)("received order timeline records the receipt timestamp", () => {
+    const receivedAt = new Date("2026-11-21T08:30:00.000Z");
+    const steps = (0, order_service_1.buildOrderSteps)({
+        userId: buyerId,
+        createdAt: new Date("2026-11-20T09:00:00.000Z"),
+        deliveredAt: new Date("2026-11-20T15:00:00.000Z"),
+        receivedAt,
+        deliveryStatus: order_enum_1.OrderDeliveryStatus.received,
+        deliverySteps: [{ status: order_enum_1.OrderDeliveryStatus.received, timestamp: receivedAt, actorType: "buyer", actorId: buyerId }],
+    });
+    strict_1.default.equal(steps[3].status, order_enum_1.OrderDeliveryStatus.received);
+    strict_1.default.equal(steps[3].isCurrent, true);
+    strict_1.default.equal(steps[3].activatedAt?.toISOString(), receivedAt.toISOString());
 });
 (0, node_test_1.default)("seller sales returns seller-owned line details and dispatch action", async () => {
     const originalAggregate = order_model_1.default.aggregate;

@@ -19,6 +19,7 @@ var OrderDeliveryStatus;
     OrderDeliveryStatus["orderConfirmed"] = "orderConfirmed";
     OrderDeliveryStatus["outForDelivery"] = "outForDelivery";
     OrderDeliveryStatus["delivered"] = "delivered";
+    OrderDeliveryStatus["received"] = "received";
     OrderDeliveryStatus["canceled"] = "canceled";
     OrderDeliveryStatus["returned"] = "returned";
 })(OrderDeliveryStatus || (exports.OrderDeliveryStatus = OrderDeliveryStatus = {}));

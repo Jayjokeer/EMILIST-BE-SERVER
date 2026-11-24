@@ -75,7 +75,7 @@ export const validateReason = (req: Request, res: Response, next: NextFunction) 
 export const validateUpdateDeliveryStatus = (req: Request, res: Response, next: NextFunction) => {
   const schema = Joi.object({
     status: Joi.string()
-      .valid(OrderDeliveryStatus.outForDelivery, OrderDeliveryStatus.delivered)
+      .valid(OrderDeliveryStatus.outForDelivery, OrderDeliveryStatus.delivered, OrderDeliveryStatus.received)
       .required(),
     note: Joi.string().trim().max(500).optional().allow(""),
   });

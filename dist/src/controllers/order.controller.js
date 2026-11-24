@@ -124,6 +124,7 @@ exports.trackOrderController = (0, error_handler_1.catchAsync)(async (req, res) 
         deliveryStatus: order.deliveryStatus,
         deliveryDate: order.deliveryDate,
         deliveredAt: order.deliveredAt,
+        receivedAt: order.receivedAt,
         viewerRole: details.viewerRole,
         allowedDeliveryStatusUpdates: details.allowedDeliveryStatusUpdates,
         orderSteps: details.orderSteps,

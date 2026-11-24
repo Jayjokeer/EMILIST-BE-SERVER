@@ -247,7 +247,12 @@ export const fetchAdminMaterialOrderDetails = async (orderId: string, query: any
   if (!selected) throw new NotFoundError("Product is not part of this order");
   const productId = selected.productId?._id || selected.productId;
   const ratings = productId ? await reviewData(productId, selected.merchantId?._id || selected.merchantId, query) : null;
-  return { ...order, selectedProduct: selected, ratings, canInitiateReturn: order.deliveryStatus === OrderDeliveryStatus.delivered };
+  return {
+    ...order,
+    selectedProduct: selected,
+    ratings,
+    canInitiateReturn: [OrderDeliveryStatus.delivered, OrderDeliveryStatus.received].includes(order.deliveryStatus),
+  };
 };
 
 export const initiateAdminOrderReturn = async (orderId: string, adminId: string, reason: string) => {

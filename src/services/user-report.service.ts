@@ -190,7 +190,7 @@ const financialSummary = async (userId: Types.ObjectId, range: ReportRange, curr
 const orderBucket = (order: any) => {
   if (order.deliveryStatus === OrderDeliveryStatus.returned || order.returnedAt) return "returned";
   if (order.status === OrderStatus.canceled || order.deliveryStatus === OrderDeliveryStatus.canceled) return "cancelled";
-  if (order.status === OrderStatus.completed || order.deliveryStatus === OrderDeliveryStatus.delivered) return "completed";
+  if (order.status === OrderStatus.completed || [OrderDeliveryStatus.delivered, OrderDeliveryStatus.received].includes(order.deliveryStatus)) return "completed";
   return "pending";
 };
 

@@ -54,6 +54,7 @@ export interface IOrder extends Document {
     deliveryStatus?: OrderDeliveryStatus;
     deliveryDate?: Date;
     deliveredAt?: Date;
+    receivedAt?: Date;
     deliverySteps?: IDeliveryStep[];
     cancelReason?: string;
     cancelledAt?: Date;

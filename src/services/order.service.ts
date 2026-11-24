@@ -15,12 +15,14 @@ const orderStepDefinitions = [
   { status: OrderDeliveryStatus.orderConfirmed, label: "Order confirmed", responsibleParty: "system" },
   { status: OrderDeliveryStatus.outForDelivery, label: "Out for delivery", responsibleParty: "seller" },
   { status: OrderDeliveryStatus.delivered, label: "Delivered", responsibleParty: "buyer" },
+  { status: OrderDeliveryStatus.received, label: "Received", responsibleParty: "buyer" },
 ] as const;
 
 const statusRank: Partial<Record<OrderDeliveryStatus, number>> = {
   [OrderDeliveryStatus.orderConfirmed]: 0,
   [OrderDeliveryStatus.outForDelivery]: 1,
   [OrderDeliveryStatus.delivered]: 2,
+  [OrderDeliveryStatus.received]: 3,
 };
 
 const dateValue = (value: unknown): Date | undefined => {
@@ -39,7 +41,8 @@ export const buildOrderSteps = (order: any) => {
     const saved = savedSteps.find((step: any) => step.status === definition.status);
     const activatedAt = dateValue(saved?.timestamp)
       || (definition.status === OrderDeliveryStatus.orderConfirmed ? dateValue(order.createdAt) : undefined)
-      || (definition.status === OrderDeliveryStatus.delivered ? dateValue(order.deliveredAt) : undefined);
+      || (definition.status === OrderDeliveryStatus.delivered ? dateValue(order.deliveredAt) : undefined)
+      || (definition.status === OrderDeliveryStatus.received ? dateValue(order.receivedAt) : undefined);
     const reached = Boolean(activatedAt) || (currentRank !== undefined && currentRank >= index);
     return {
       status: definition.status,
@@ -90,6 +93,9 @@ export const availableOrderActions = (order: any, userId: string) => {
   }
   if (role === "buyer" && order.deliveryStatus === OrderDeliveryStatus.outForDelivery) {
     return [OrderDeliveryStatus.delivered];
+  }
+  if (role === "buyer" && order.deliveryStatus === OrderDeliveryStatus.delivered) {
+    return [OrderDeliveryStatus.received];
   }
   return [];
 };
@@ -376,6 +382,9 @@ export const updateOrderDeliveryStatus = async (
     if (nextStatus === OrderDeliveryStatus.delivered && role !== "buyer") {
       throw new ForbiddenError("Only the buyer can confirm that this order was delivered");
     }
+    if (nextStatus === OrderDeliveryStatus.received && role !== "buyer") {
+      throw new ForbiddenError("Only the buyer can confirm that this order was received");
+    }
     if (nextStatus === OrderDeliveryStatus.outForDelivery && order.paymentStatus !== OrderPaymentStatus.paid) {
       throw new BadRequestError("An order must be paid before it can be sent for delivery");
     }
@@ -385,7 +394,9 @@ export const updateOrderDeliveryStatus = async (
   const now = new Date();
   const expectedStatus = nextStatus === OrderDeliveryStatus.outForDelivery
     ? OrderDeliveryStatus.orderConfirmed
-    : OrderDeliveryStatus.outForDelivery;
+    : nextStatus === OrderDeliveryStatus.delivered
+      ? OrderDeliveryStatus.outForDelivery
+      : OrderDeliveryStatus.delivered;
   const update: any = {
     $set: {
       deliveryStatus: nextStatus,
@@ -393,6 +404,7 @@ export const updateOrderDeliveryStatus = async (
         deliveredAt: now,
         status: OrderStatus.completed,
       }),
+      ...(nextStatus === OrderDeliveryStatus.received && { receivedAt: now }),
     },
     $push: {
       deliverySteps: {
@@ -491,8 +503,8 @@ export const returnOrder = async (orderId: string, userId: string, reason?: stri
   const order = await fetchOrderByIdAndUser(orderId, userId);
   if (!order) throw new BadRequestError("Order not found");
 
-  if (order.deliveryStatus !== OrderDeliveryStatus.delivered) {
-    throw new BadRequestError("Order can only be returned after delivery");
+  if (![OrderDeliveryStatus.delivered, OrderDeliveryStatus.received].includes(order.deliveryStatus as OrderDeliveryStatus)) {
+    throw new BadRequestError("Order can only be returned after delivery or receipt confirmation");
   }
 
   // 7-day return window from delivery
@@ -536,8 +548,8 @@ export const createReorderCart = async (orderId: string, userId: string) => {
   const order = await fetchOrderByIdAndUser(orderId, userId);
   if (!order) throw new BadRequestError("Order not found");
 
-  if (order.deliveryStatus !== OrderDeliveryStatus.delivered) {
-    throw new BadRequestError("Reorder is only available for delivered orders");
+  if (![OrderDeliveryStatus.delivered, OrderDeliveryStatus.received].includes(order.deliveryStatus as OrderDeliveryStatus)) {
+    throw new BadRequestError("Reorder is only available for delivered or received orders");
   }
 
   const products: any[] = [];

@@ -79,7 +79,7 @@ exports.validateReason = validateReason;
 const validateUpdateDeliveryStatus = (req, res, next) => {
     const schema = joi_1.default.object({
         status: joi_1.default.string()
-            .valid(order_enum_1.OrderDeliveryStatus.outForDelivery, order_enum_1.OrderDeliveryStatus.delivered)
+            .valid(order_enum_1.OrderDeliveryStatus.outForDelivery, order_enum_1.OrderDeliveryStatus.delivered, order_enum_1.OrderDeliveryStatus.received)
             .required(),
         note: joi_1.default.string().trim().max(500).optional().allow(""),
     });

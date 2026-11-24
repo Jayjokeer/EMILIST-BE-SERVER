@@ -155,7 +155,7 @@ const fetchAdminOverview = async (rangeValue) => {
             deliveriesInProgress: sumRows(orderRows, order_enum_1.OrderDeliveryStatus.outForDelivery),
             cancelledOrders: sumRows(orderRows, order_enum_1.OrderDeliveryStatus.canceled),
             returnedOrders: sumRows(orderRows, order_enum_1.OrderDeliveryStatus.returned),
-            completedOrders: sumRows(orderRows, order_enum_1.OrderDeliveryStatus.delivered),
+            completedOrders: sumRows(orderRows, order_enum_1.OrderDeliveryStatus.delivered) + sumRows(orderRows, order_enum_1.OrderDeliveryStatus.received),
             grossSalesVolume: grossSalesRows[0]?.total || 0,
         },
     };

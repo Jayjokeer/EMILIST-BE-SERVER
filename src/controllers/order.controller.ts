@@ -109,6 +109,7 @@ export const trackOrderController = catchAsync(async (req: JwtPayload, res: Resp
     deliveryStatus: order.deliveryStatus,
     deliveryDate: order.deliveryDate,
     deliveredAt: order.deliveredAt,
+    receivedAt: order.receivedAt,
     viewerRole: details.viewerRole,
     allowedDeliveryStatusUpdates: details.allowedDeliveryStatusUpdates,
     orderSteps: details.orderSteps,

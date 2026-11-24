@@ -13,6 +13,7 @@ export enum OrderDeliveryStatus{
     orderConfirmed = "orderConfirmed",
     outForDelivery = "outForDelivery",
     delivered = "delivered",
+    received = "received",
     canceled = "canceled",
     returned = "returned",
 }
