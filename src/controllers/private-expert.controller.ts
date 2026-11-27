@@ -14,11 +14,13 @@ export const createExpertController = catchAsync( async (req: Request, res: Resp
          phoneNumber,
          email, 
          typeOfExpert, 
+         level,
          details,
         location,
         availability
     } = expertData; 
-    const {time, date} = availability;
+    const firstAvailability = Array.isArray(availability) ? availability[0] : availability;
+    const { time, date } = firstAvailability || {};
 
          if(req.file){
             expertData.fileUrl = req.file.path;
@@ -29,6 +31,7 @@ export const createExpertController = catchAsync( async (req: Request, res: Resp
         phoneNumber,
         email, 
         typeOfExpert, 
+        level,
         details,
         location,
         time,

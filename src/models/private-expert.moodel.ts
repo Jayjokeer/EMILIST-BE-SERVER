@@ -1,5 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { IExpert } from '../interfaces/private-expert';
+import { JobExpertLevel } from '../enums/jobs.enum';
 
 
 
@@ -9,6 +10,7 @@ import { IExpert } from '../interfaces/private-expert';
       phoneNumber: {type: String},
       email: {type: String},
       typeOfExpert: {type: String},
+      level: { type: String, enum: JobExpertLevel, required: true },
       details: {type: String},
       fileUrl: {type: String},
       location: {type: String},

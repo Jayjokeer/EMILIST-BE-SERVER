@@ -237,7 +237,7 @@ const sendInviteMessage = (creatorName) => ({
     <p><a href="${emailUrl((0, frontend_url_1.buildFrontendUrl)(config_1.config.frontendUrl, { path: "/sign-up" }))}">Create your account</a></p>`,
 });
 exports.sendInviteMessage = sendInviteMessage;
-const sendPrivateExpertMessage = (fullName, phoneNumber, email, typeOfExpert, details, location, time, date) => ({
+const sendPrivateExpertMessage = (fullName, phoneNumber, email, typeOfExpert, level, details, location, time, date) => ({
     subject: "Private Expert Alert",
     html: `
     <p>${emailText(fullName, "A customer")} requested a private expert.</p>
@@ -245,6 +245,7 @@ const sendPrivateExpertMessage = (fullName, phoneNumber, email, typeOfExpert, de
     <p><strong>Mobile:</strong> ${emailText(phoneNumber, "Not provided")}</p>
     <p><strong>Email:</strong> ${emailText(email, "Not provided")}</p>
     <p><strong>Expert Needed:</strong> ${emailText(typeOfExpert, "Not provided")}</p>
+    <p><strong>Expert Level:</strong> ${emailText(level, "Not provided")}</p>
     <p><strong>Details:</strong> ${emailText(details, "Not provided")}</p>
     <p><strong>Location:</strong> ${emailText(location, "Not provided")}</p>
     <p><strong>Time:</strong> ${emailText(time, "Not provided")}</p>

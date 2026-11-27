@@ -29,6 +29,7 @@ export interface IUser {
     adminPasswordResetTokenHash?: string;
     adminPasswordResetExpiresAt?: Date;
     displayImage?: string;
+    googleId?: string;
     status?: string; 
     accessToken?: string;
     businesses?: any;

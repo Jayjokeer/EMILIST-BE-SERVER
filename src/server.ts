@@ -23,10 +23,16 @@ import "./jobs/subscription.job";
 import "./jobs/planned-maintenance.job";
 import "./jobs/invoice-payment-reminder.job";
 import "./jobs/contract-close-reminder.job";
+import { corsOptions } from "./utils/cors";
+import { AUTH_SESSION_MAX_AGE } from "./utils/auth-session";
+import { allowedFrontendOrigins } from "./utils/frontend-origin";
 
 const PORT = config.port || 7000;
 const app: Application = express();
 const server = http.createServer(app);
+
+// Required for secure cookies when TLS is terminated by the deployment proxy.
+app.set("trust proxy", 1);
 
 // Middleware
 app.use(cookieParser());
@@ -40,7 +46,11 @@ app.use(
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(helmet());
-app.use(cors());
+app.use((req, res, next) => {
+  res.vary("Origin");
+  next();
+});
+app.use(cors(corsOptions));
 app.use(morgan("combined"));
 // require('../src/utils/script')
 app.use(session({
@@ -51,11 +61,17 @@ app.use(session({
         mongoUrl: process.env.MONGO_URI,
         collectionName: 'sessions' 
     }),
-    cookie: { secure: false } 
+    cookie: {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: AUTH_SESSION_MAX_AGE,
+    }
 }));
 export const io = new Server(server, {
   cors: {
-    origin: "*", 
+    origin: Array.from(allowedFrontendOrigins),
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE","PATCH"],
   },
 });

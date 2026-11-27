@@ -36,8 +36,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.findRecurringJobsDue = exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.formatJobAnalyticsResponse = exports.summarizeJobAnalyticsPeriod = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.attachMilestonePaymentReferences = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.jobContractClosureSummary = exports.hasUnresolvedMilestoneDispute = exports.jobDisputeSummary = exports.areAllMilestonesCompletedAndPaid = exports.activateAcceptedApplication = exports.resolveJobLifecycleStatus = exports.calculateJobDueDate = exports.getJobLifecycleStartDate = exports.normalizeProjectStatus = exports.normalizeJobStatus = void 0;
-exports.fetchJobsByUserId = exports.jobCreatedAtSort = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = void 0;
+exports.createRecurringJob = exports.updateMilestone = exports.fetchJobLeads = exports.fetchAllLikedJobs = exports.fetchAllJobsAdmin = exports.fetchAllUserJobsAdmin = exports.fetchAllJobsForAdminDashboard = exports.projectAnalytics = exports.fetchProjectCounts = exports.fetchJobCount = exports.jobAnalytics = exports.formatJobAnalyticsResponse = exports.summarizeJobAnalyticsPeriod = exports.fetchUserApplications = exports.fetchUserJobApplications = exports.fetchJobByUserIdAndStatus = exports.setJobListing = exports.fetchJobApplicants = exports.deleteJobById = exports.deleteJobApplication = exports.unlikeJob = exports.fetchLikedJobs = exports.createJobLike = exports.ifLikedJob = exports.fetchJobByIdWithDetails = exports.fetchJobByIdWithUserId = exports.fetchJobById = exports.fetchAllJobs = exports.fetchAllUserJobs = exports.createJob = exports.buildListedLifecycleScope = exports.withJobsDisplayStatus = exports.withJobDisplayStatus = exports.resolveJobDisplayStatus = exports.milestonePaymentBreakdown = exports.attachMilestonePaymentReferences = exports.serializeMilestoneWithInvoiceDate = exports.rejectCompletedMilestone = exports.raiseMilestoneInvoice = exports.jobContractClosureSummary = exports.hasUnresolvedMilestoneDispute = exports.jobDisputeSummary = exports.areAllMilestonesCompletedAndPaid = exports.activateAcceptedApplication = exports.resolveJobLifecycleStatus = exports.calculateJobDueDate = exports.getJobLifecycleStartDate = exports.normalizeProjectStatus = exports.normalizeJobStatus = exports.resolveJobOwnerName = void 0;
+exports.fetchJobsByUserId = exports.jobCreatedAtSort = exports.buildVisibleJobsQuery = exports.fetchAllRecurringJobs = exports.activePendingJobs = exports.findRecurringJobsWithReminders = exports.findRecurringJobsDue = void 0;
 const jobs_model_1 = __importDefault(require("../models/jobs.model"));
 const joblike_model_1 = __importDefault(require("../models/joblike.model"));
 const project_model_1 = __importDefault(require("../models/project.model"));
@@ -54,6 +54,24 @@ const reviewService = __importStar(require("./review.service"));
 const jobAttentionService = __importStar(require("./job-attention.service"));
 const transaction_model_1 = __importDefault(require("../models/transaction.model"));
 const transaction_enum_1 = require("../enums/transaction.enum");
+const resolveJobOwnerName = (owner) => {
+    if (!owner)
+        return null;
+    const fullName = [owner.firstName, owner.lastName]
+        .filter((value) => typeof value === "string" && value.trim())
+        .map((value) => value.trim())
+        .join(" ");
+    if (fullName)
+        return fullName;
+    if (typeof owner.fullName === "string" && owner.fullName.trim())
+        return owner.fullName.trim();
+    if (typeof owner.userName === "string" && owner.userName.trim())
+        return owner.userName.trim();
+    if (typeof owner.email === "string" && owner.email.includes("@"))
+        return owner.email.split("@")[0];
+    return null;
+};
+exports.resolveJobOwnerName = resolveJobOwnerName;
 const normalizeJobStatus = (status) => {
     if (!status)
         return null;
@@ -627,7 +645,7 @@ const fetchJobByIdWithUserId = async (jobId) => {
 exports.fetchJobByIdWithUserId = fetchJobByIdWithUserId;
 const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5, viewerUserId) => {
     const job = await jobs_model_1.default.findById(jobId)
-        .populate('userId', 'fullName userName email location level profileImage uniqueId')
+        .populate('userId', 'firstName lastName fullName userName email location level displayImage profileImage uniqueId')
         .populate({
         path: 'applications',
         select: '_id user status',
@@ -635,6 +653,7 @@ const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5,
     if (!job)
         throw new error_1.NotFoundError("Job not found!");
     const viewerId = viewerUserId ? String(viewerUserId) : "";
+    const jobOwnerName = (0, exports.resolveJobOwnerName)(job.userId);
     const ownerId = String(job.userId?._id ?? job.userId);
     const acceptedProject = job.acceptedApplicationId
         ? await project_model_1.default.findById(job.acceptedApplicationId).select("user").lean()
@@ -693,6 +712,13 @@ const fetchJobByIdWithDetails = async (jobId, reviewsPage = 1, reviewsLimit = 5,
     const [jobWithAttention] = await withJobAttention([displayJob], viewerUserId);
     const publicJob = {
         ...jobWithAttention,
+        jobOwnerName,
+        userId: jobWithAttention.userId && typeof jobWithAttention.userId === "object"
+            ? {
+                ...jobWithAttention.userId,
+                fullName: jobOwnerName,
+            }
+            : jobWithAttention.userId,
         applicationId: jobWithAttention.applicationId ?? null,
         dueDate: jobDueDate,
         milestones,

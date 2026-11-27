@@ -29,9 +29,14 @@ require("./jobs/subscription.job");
 require("./jobs/planned-maintenance.job");
 require("./jobs/invoice-payment-reminder.job");
 require("./jobs/contract-close-reminder.job");
+const cors_2 = require("./utils/cors");
+const auth_session_1 = require("./utils/auth-session");
+const frontend_origin_1 = require("./utils/frontend-origin");
 const PORT = config_1.config.port || 7000;
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
+// Required for secure cookies when TLS is terminated by the deployment proxy.
+app.set("trust proxy", 1);
 // Middleware
 app.use((0, cookie_parser_1.default)());
 // Paystack webhook must receive the exact raw request body for HMAC-SHA512
@@ -40,7 +45,11 @@ app.use("/api/v1/webhooks", express_1.default.raw({ type: "application/json" }),
 app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
 app.use((0, helmet_1.default)());
-app.use((0, cors_1.default)());
+app.use((req, res, next) => {
+    res.vary("Origin");
+    next();
+});
+app.use((0, cors_1.default)(cors_2.corsOptions));
 app.use((0, morgan_1.default)("combined"));
 // require('../src/utils/script')
 app.use((0, express_session_1.default)({
@@ -51,11 +60,17 @@ app.use((0, express_session_1.default)({
         mongoUrl: process.env.MONGO_URI,
         collectionName: 'sessions'
     }),
-    cookie: { secure: false }
+    cookie: {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        maxAge: auth_session_1.AUTH_SESSION_MAX_AGE,
+    }
 }));
 exports.io = new socket_io_1.Server(server, {
     cors: {
-        origin: "*",
+        origin: Array.from(frontend_origin_1.allowedFrontendOrigins),
+        credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     },
 });

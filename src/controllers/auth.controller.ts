@@ -32,6 +32,12 @@ import Users from "../models/users.model";
 import * as adminCustomerService from "../services/admin-customer.service";
 import * as reportEventService from "../services/report-event.service";
 import { ReportEventType } from "../models/report-event.model";
+import {
+  AUTH_COOKIE_NAME,
+  authCookieClearOptions,
+  authCookieOptions,
+} from "../utils/auth-session";
+import { resolveFrontendOrigin } from "../utils/frontend-origin";
 
 export const registerUserController = catchAsync( async (req: Request, res: Response) => {
     const {
@@ -361,10 +367,15 @@ export const currentUserController = catchAsync(async (req: JwtPayload, res: Res
     email: foundUser.email,
     id: foundUser._id,
   });
+  const userData = {
+    ...foundUser.toObject(),
+    isEmailVerified: foundUser.isEmailVerified === true,
+    isProfileComplete: foundUser.isProfileComplete === true,
+  };
   const user = {
-  token,
-  userData: foundUser
-};
+    token,
+    userData,
+  };
   return successResponse(res, StatusCodes.OK, user);
 });
 export const uploadImage = catchAsync( async(req: Request, res: Response) => {
@@ -419,35 +430,46 @@ export const resendVerificationOtpController = catchAsync(async (req: Request, r
 
 export const googleRedirectController = catchAsync(async (req: Request, res: Response) => {
   const loggedIn = req.user as ISignUser;
-  console.log('redirect controller')
   const token =  generateJWTwithExpiryDate({
     email: loggedIn.email,
     id: loggedIn.id,
   });
-  const userData = await authService.findCurrentUserById(loggedIn.id);
+  res.cookie(AUTH_COOKIE_NAME, token, authCookieOptions);
 
-
-  res.cookie('sessionId', token, {
-  httpOnly: false,
-  secure: true,
-  sameSite: 'none',
-  domain: 'emilist.com',
-  path: '/',
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-});
-
- return res.redirect(buildFrontendUrl(config.frontendUrl));
+  return res.redirect(resolveFrontendOrigin(res.locals.oauthFrontendOrigin));
 });
 
 export const logoutController = catchAsync(async (req: JwtPayload, res: Response) => {
   const user = await authService.findUserById(req.user.id);
 
   if (user && user.accessToken) {
-    await axios.get(`https://accounts.google.com/o/oauth2/revoke?token=${user.accessToken}`);
-
+    try {
+      await axios.get(`https://accounts.google.com/o/oauth2/revoke?token=${user.accessToken}`);
+    } catch (error) {
+      // A stale/revoked Google token must not prevent local logout.
+      console.warn("Unable to revoke Google access token during logout");
+    }
     user.accessToken = undefined;
     await user.save();
-  }  return successResponse(res, StatusCodes.OK,  "Successfully logged out.");
+  }
+
+  res.clearCookie(AUTH_COOKIE_NAME, authCookieClearOptions);
+  // Clear the legacy domain-scoped cookie during migration as well.
+  res.clearCookie(AUTH_COOKIE_NAME, {
+    ...authCookieClearOptions,
+    domain: "emilist.com",
+  });
+
+  if (req.session) {
+    await new Promise<void>((resolve) => {
+      req.session.destroy((error: unknown) => {
+        if (error) console.warn("Unable to destroy server session during logout");
+        resolve();
+      });
+    });
+  }
+
+  return successResponse(res, StatusCodes.OK, "Successfully logged out.");
 });
 
 export const deactivateUserController = catchAsync(async (req: JwtPayload, res: Response) => {

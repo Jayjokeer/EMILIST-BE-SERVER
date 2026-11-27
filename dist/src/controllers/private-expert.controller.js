@@ -43,14 +43,15 @@ const templates_1 = require("../utils/templates");
 const config_1 = require("../utils/config");
 exports.createExpertController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const expertData = req.body;
-    const { fullName, phoneNumber, email, typeOfExpert, details, location, availability } = expertData;
-    const { time, date } = availability;
+    const { fullName, phoneNumber, email, typeOfExpert, level, details, location, availability } = expertData;
+    const firstAvailability = Array.isArray(availability) ? availability[0] : availability;
+    const { time, date } = firstAvailability || {};
     if (req.file) {
         expertData.fileUrl = req.file.path;
     }
     ;
     const data = await expertService.createPrivateExpert(expertData);
-    const { html, subject } = (0, templates_1.sendPrivateExpertMessage)(fullName, phoneNumber, email, typeOfExpert, details, location, time, date);
+    const { html, subject } = (0, templates_1.sendPrivateExpertMessage)(fullName, phoneNumber, email, typeOfExpert, level, details, location, time, date);
     await (0, send_email_1.sendEmail)(config_1.config.adminEmail, subject, html);
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.CREATED, data);
 });

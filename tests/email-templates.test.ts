@@ -47,7 +47,7 @@ test("all email templates replace missing values with readable fallbacks", () =>
     acceptJobApplicationMessage(missing, missing, missing, missing),
     acceptDirectJobApplicationMessage(missing, missing, missing),
     sendInviteMessage(missing),
-    sendPrivateExpertMessage(missing, missing, missing, missing, missing, missing, missing, missing),
+    sendPrivateExpertMessage(missing, missing, missing, missing, missing, missing, missing, missing, missing),
     generateReminderEmail(missing, missing),
   ];
 

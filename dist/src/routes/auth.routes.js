@@ -44,8 +44,7 @@ const image_upload_1 = require("../utils/image-upload");
 const passport_1 = __importDefault(require("passport"));
 const auth_validation_1 = require("../validations/auth.validation");
 const paymentController = __importStar(require("../controllers/payment.controller"));
-const config_1 = require("../utils/config");
-const frontend_url_1 = require("../utils/frontend-url");
+const frontend_origin_1 = require("../utils/frontend-origin");
 const router = (0, express_1.Router)();
 exports.AuthRoute = router;
 router.route("/").get((req, res) => {
@@ -63,16 +62,25 @@ router.route("/admin-triggered-password-reset").post(auth_validation_1.validateA
 router.route("/upload-image").post(image_upload_1.singleUpload, authController.uploadImage);
 router.route("/upload-files").post(image_upload_1.multipleUpload, authController.uploadMultipleFiles);
 router.route("/resend-otp").post(authController.resendVerificationOtpController);
-router.route('/google').get(passport_1.default.authenticate('google', {
-    scope: ['profile', 'email'],
-    session: false,
-}));
+router.get('/google', (req, res, next) => {
+    const frontendOrigin = (0, frontend_origin_1.resolveFrontendOrigin)(req.query.origin || req.query.returnOrigin || req.get('origin'));
+    req.session.oauthFrontendOrigin = frontendOrigin;
+    passport_1.default.authenticate('google', {
+        scope: ['profile', 'email'],
+        session: false,
+    })(req, res, next);
+});
 router.get('/google/callback', (req, res, next) => {
+    const oauthSession = req.session;
+    const frontendOrigin = (0, frontend_origin_1.resolveFrontendOrigin)(oauthSession.oauthFrontendOrigin);
     passport_1.default.authenticate('google', { session: false }, (err, user) => {
         if (err || !user) {
-            return res.redirect((0, frontend_url_1.buildFrontendUrl)(config_1.config.frontendUrl, { path: "/login" }));
+            delete oauthSession.oauthFrontendOrigin;
+            return res.redirect(`${frontendOrigin}/login`);
         }
         req.user = user;
+        res.locals.oauthFrontendOrigin = frontendOrigin;
+        delete oauthSession.oauthFrontendOrigin;
         next();
     })(req, res, next);
 }, authController.googleRedirectController);
@@ -80,7 +88,8 @@ router.route("/add-click").patch(current_user_1.optionalUserAuth, authController
 router.route("/subscribe-newsletter").post(authController.subscribeNewsLetterController);
 router.route("/user-details/:userId").get(authController.getUserDetailsController);
 //Protected routes
-router.route("/log-out").get(current_user_1.userAuth, authController.logoutController);
+router.get("/log-out", current_user_1.userAuth, authController.logoutController);
+router.post("/log-out", current_user_1.userAuth, authController.logoutController);
 router.route("/update-profile").patch(current_user_1.userAuth, auth_validation_1.validateUpdateUser, image_upload_1.singleUpload, authController.updateUserController);
 router.route("/change-password").patch(current_user_1.userAuth, auth_validation_1.validateChangePassword, authController.changePasswordController);
 router.route("/current-user").get(current_user_1.userAuth, authController.currentUserController);

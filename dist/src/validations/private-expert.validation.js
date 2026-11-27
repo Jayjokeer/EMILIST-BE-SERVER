@@ -3,8 +3,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateExpert = void 0;
+exports.validateExpert = exports.parsePrivateExpertPayload = void 0;
 const joi_1 = __importDefault(require("joi"));
+const jobs_enum_1 = require("../enums/jobs.enum");
+const parsePrivateExpertPayload = (req, _res, next) => {
+    if (typeof req.body.availability === 'string') {
+        try {
+            req.body.availability = JSON.parse(req.body.availability);
+        }
+        catch {
+            // Keep the original value so Joi returns the standard availability error.
+        }
+    }
+    next();
+};
+exports.parsePrivateExpertPayload = parsePrivateExpertPayload;
 const validateExpert = (req, res, next) => {
     const expertValidationSchema = joi_1.default.object({
         fullName: joi_1.default.string()
@@ -31,6 +44,14 @@ const validateExpert = (req, res, next) => {
             .optional()
             .messages({
             'string.base': 'Type of Expert must be a string',
+        }),
+        level: joi_1.default.string()
+            .valid(...Object.values(jobs_enum_1.JobExpertLevel))
+            .required()
+            .messages({
+            'string.base': 'Expert level must be a string',
+            'any.only': `Expert level must be one of: ${Object.values(jobs_enum_1.JobExpertLevel).join(', ')}`,
+            'any.required': 'Expert level is required',
         }),
         details: joi_1.default.string()
             .optional()

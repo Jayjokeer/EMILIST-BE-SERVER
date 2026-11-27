@@ -40,4 +40,4 @@ const private_expert_validation_1 = require("../validations/private-expert.valid
 const image_upload_1 = require("../utils/image-upload");
 const router = (0, express_1.Router)();
 exports.ExpertRoute = router;
-router.route("/create-private-expert").post(image_upload_1.singleUpload, private_expert_validation_1.validateExpert, expertController.createExpertController);
+router.route("/create-private-expert").post(image_upload_1.singleUpload, private_expert_validation_1.parsePrivateExpertPayload, private_expert_validation_1.validateExpert, expertController.createExpertController);

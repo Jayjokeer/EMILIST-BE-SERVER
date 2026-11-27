@@ -21,30 +21,40 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
     clientID: config_1.config.googleClientId,
     clientSecret: config_1.config.googleClientSecret,
     callbackURL: `${config_1.config.baseUrl}/api/v1/auth/google/callback`,
+    state: true,
 }, async (accessToken, refreshToken, profile, done) => {
-    const existingUserByGoogleId = await users_model_1.default.findOne({ googleId: profile.id });
-    console.log(existingUserByGoogleId);
-    if (existingUserByGoogleId) {
-        existingUserByGoogleId.accessToken = accessToken;
-        await existingUserByGoogleId.save();
-        return done(null, existingUserByGoogleId);
+    try {
+        const googleEmail = profile.emails?.[0]?.value?.toLowerCase();
+        if (!googleEmail)
+            return done(new Error('Google account did not provide an email address'));
+        const existingUserByGoogleId = await users_model_1.default.findOne({ googleId: profile.id });
+        if (existingUserByGoogleId) {
+            existingUserByGoogleId.accessToken = accessToken;
+            existingUserByGoogleId.isEmailVerified = true;
+            await existingUserByGoogleId.save();
+            return done(null, existingUserByGoogleId);
+        }
+        const existingUserByEmail = await users_model_1.default.findOne({ email: googleEmail });
+        if (existingUserByEmail) {
+            existingUserByEmail.googleId = profile.id;
+            existingUserByEmail.accessToken = accessToken;
+            existingUserByEmail.isEmailVerified = true;
+            await existingUserByEmail.save();
+            return done(null, existingUserByEmail);
+        }
+        const newUser = await new users_model_1.default({
+            googleId: profile.id,
+            userName: profile.displayName,
+            email: googleEmail,
+            uniqueId: (0, utility_1.generateShortUUID)(),
+            isEmailVerified: true,
+            accessToken: accessToken
+        }).save();
+        return done(null, newUser);
     }
-    const existingUserByEmail = await users_model_1.default.findOne({ email: profile.emails[0].value });
-    console.log(existingUserByEmail);
-    if (existingUserByEmail) {
-        existingUserByEmail.accessToken = accessToken;
-        await existingUserByEmail.save();
-        return done(null, existingUserByEmail);
+    catch (error) {
+        return done(error);
     }
-    const newUser = await new users_model_1.default({
-        googleId: profile.id,
-        userName: profile.displayName,
-        email: profile.emails[0].value,
-        uniqueId: (0, utility_1.generateShortUUID)(),
-        isEmailVerified: true,
-        accessToken: accessToken
-    }).save();
-    return done(null, newUser);
 }));
 // passport.serializeUser((user: Express.User, done) => {
 //   done(null, user);

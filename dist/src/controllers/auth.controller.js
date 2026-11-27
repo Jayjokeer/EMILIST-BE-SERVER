@@ -46,9 +46,7 @@ const utility_1 = require("../utils/utility");
 const jwt_1 = require("../utils/jwt");
 const error_handler_1 = require("../errors/error-handler");
 const templates_1 = require("../utils/templates");
-const frontend_url_1 = require("../utils/frontend-url");
 const send_email_1 = require("../utils/send_email");
-const config_1 = require("../utils/config");
 const user_enums_1 = require("../enums/user.enums");
 const axios_1 = __importDefault(require("axios"));
 const notificationService = __importStar(require("../services/notification.service"));
@@ -66,6 +64,8 @@ const validation_helper_1 = require("../helpers/validation.helper");
 const adminCustomerService = __importStar(require("../services/admin-customer.service"));
 const reportEventService = __importStar(require("../services/report-event.service"));
 const report_event_model_1 = require("../models/report-event.model");
+const auth_session_1 = require("../utils/auth-session");
+const frontend_origin_1 = require("../utils/frontend-origin");
 exports.registerUserController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const { email, password, referralCode, } = req.body;
     const isEmailExists = await authService.findUserByEmail(email.toLowerCase());
@@ -344,9 +344,14 @@ exports.currentUserController = (0, error_handler_1.catchAsync)(async (req, res)
         email: foundUser.email,
         id: foundUser._id,
     });
+    const userData = {
+        ...foundUser.toObject(),
+        isEmailVerified: foundUser.isEmailVerified === true,
+        isProfileComplete: foundUser.isProfileComplete === true,
+    };
     const user = {
         token,
-        userData: foundUser
+        userData,
     };
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, user);
 });
@@ -388,28 +393,40 @@ exports.resendVerificationOtpController = (0, error_handler_1.catchAsync)(async 
 });
 exports.googleRedirectController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const loggedIn = req.user;
-    console.log('redirect controller');
     const token = (0, jwt_1.generateJWTwithExpiryDate)({
         email: loggedIn.email,
         id: loggedIn.id,
     });
-    const userData = await authService.findCurrentUserById(loggedIn.id);
-    res.cookie('sessionId', token, {
-        httpOnly: false,
-        secure: true,
-        sameSite: 'none',
-        domain: 'emilist.com',
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-    return res.redirect((0, frontend_url_1.buildFrontendUrl)(config_1.config.frontendUrl));
+    res.cookie(auth_session_1.AUTH_COOKIE_NAME, token, auth_session_1.authCookieOptions);
+    return res.redirect((0, frontend_origin_1.resolveFrontendOrigin)(res.locals.oauthFrontendOrigin));
 });
 exports.logoutController = (0, error_handler_1.catchAsync)(async (req, res) => {
     const user = await authService.findUserById(req.user.id);
     if (user && user.accessToken) {
-        await axios_1.default.get(`https://accounts.google.com/o/oauth2/revoke?token=${user.accessToken}`);
+        try {
+            await axios_1.default.get(`https://accounts.google.com/o/oauth2/revoke?token=${user.accessToken}`);
+        }
+        catch (error) {
+            // A stale/revoked Google token must not prevent local logout.
+            console.warn("Unable to revoke Google access token during logout");
+        }
         user.accessToken = undefined;
         await user.save();
+    }
+    res.clearCookie(auth_session_1.AUTH_COOKIE_NAME, auth_session_1.authCookieClearOptions);
+    // Clear the legacy domain-scoped cookie during migration as well.
+    res.clearCookie(auth_session_1.AUTH_COOKIE_NAME, {
+        ...auth_session_1.authCookieClearOptions,
+        domain: "emilist.com",
+    });
+    if (req.session) {
+        await new Promise((resolve) => {
+            req.session.destroy((error) => {
+                if (error)
+                    console.warn("Unable to destroy server session during logout");
+                resolve();
+            });
+        });
     }
     return (0, success_response_1.successResponse)(res, http_status_codes_1.StatusCodes.OK, "Successfully logged out.");
 });

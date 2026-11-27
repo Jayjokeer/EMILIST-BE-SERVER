@@ -16,6 +16,21 @@ import * as jobAttentionService from './job-attention.service';
 import Transaction from "../models/transaction.model";
 import { PaymentMethodEnum, ServiceEnum, TransactionEnum } from "../enums/transaction.enum";
 
+export const resolveJobOwnerName = (owner: any): string | null => {
+  if (!owner) return null;
+
+  const fullName = [owner.firstName, owner.lastName]
+    .filter((value) => typeof value === "string" && value.trim())
+    .map((value) => value.trim())
+    .join(" ");
+
+  if (fullName) return fullName;
+  if (typeof owner.fullName === "string" && owner.fullName.trim()) return owner.fullName.trim();
+  if (typeof owner.userName === "string" && owner.userName.trim()) return owner.userName.trim();
+  if (typeof owner.email === "string" && owner.email.includes("@")) return owner.email.split("@")[0];
+  return null;
+};
+
 export const normalizeJobStatus = (status?: string | null): string | null => {
   if (!status) return null;
   const value = String(status).toLowerCase().trim();
@@ -667,7 +682,7 @@ export const fetchJobByIdWithDetails = async (
   viewerUserId?: string,
 ) => {
   const job = await Jobs.findById(jobId)
-    .populate('userId', 'fullName userName email location level profileImage uniqueId')
+    .populate('userId', 'firstName lastName fullName userName email location level displayImage profileImage uniqueId')
     .populate({
       path: 'applications',
       select: '_id user status',
@@ -676,6 +691,7 @@ export const fetchJobByIdWithDetails = async (
   if (!job) throw new NotFoundError("Job not found!");
 
   const viewerId = viewerUserId ? String(viewerUserId) : "";
+  const jobOwnerName = resolveJobOwnerName(job.userId);
   const ownerId = String((job.userId as any)?._id ?? job.userId);
   const acceptedProject: any = job.acceptedApplicationId
     ? await Project.findById(job.acceptedApplicationId).select("user").lean()
@@ -741,6 +757,13 @@ export const fetchJobByIdWithDetails = async (
   const [jobWithAttention] = await withJobAttention([displayJob], viewerUserId);
   const publicJob = {
     ...jobWithAttention,
+    jobOwnerName,
+    userId: jobWithAttention.userId && typeof jobWithAttention.userId === "object"
+      ? {
+          ...jobWithAttention.userId,
+          fullName: jobOwnerName,
+        }
+      : jobWithAttention.userId,
     applicationId: jobWithAttention.applicationId ?? null,
     dueDate: jobDueDate,
     milestones,

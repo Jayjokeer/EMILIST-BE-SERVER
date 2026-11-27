@@ -29,7 +29,7 @@ const missing = undefined;
         (0, templates_1.acceptJobApplicationMessage)(missing, missing, missing, missing),
         (0, templates_1.acceptDirectJobApplicationMessage)(missing, missing, missing),
         (0, templates_1.sendInviteMessage)(missing),
-        (0, templates_1.sendPrivateExpertMessage)(missing, missing, missing, missing, missing, missing, missing, missing),
+        (0, templates_1.sendPrivateExpertMessage)(missing, missing, missing, missing, missing, missing, missing, missing, missing),
         (0, templates_1.generateReminderEmail)(missing, missing),
     ];
     for (const email of emails) {

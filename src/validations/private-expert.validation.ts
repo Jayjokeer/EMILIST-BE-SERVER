@@ -1,5 +1,17 @@
 import Joi from 'joi';
 import { NextFunction, Request, Response } from "express";
+import { JobExpertLevel } from '../enums/jobs.enum';
+
+export const parsePrivateExpertPayload = (req: Request, _res: Response, next: NextFunction) => {
+  if (typeof req.body.availability === 'string') {
+    try {
+      req.body.availability = JSON.parse(req.body.availability);
+    } catch {
+      // Keep the original value so Joi returns the standard availability error.
+    }
+  }
+  next();
+};
 
 export const validateExpert = (req: Request, res: Response, next: NextFunction) => {
   const expertValidationSchema = Joi.object({
@@ -27,6 +39,14 @@ export const validateExpert = (req: Request, res: Response, next: NextFunction) 
       .optional()
       .messages({
         'string.base': 'Type of Expert must be a string',
+      }),
+    level: Joi.string()
+      .valid(...Object.values(JobExpertLevel))
+      .required()
+      .messages({
+        'string.base': 'Expert level must be a string',
+        'any.only': `Expert level must be one of: ${Object.values(JobExpertLevel).join(', ')}`,
+        'any.required': 'Expert level is required',
       }),
     details: Joi.string()
       .optional()

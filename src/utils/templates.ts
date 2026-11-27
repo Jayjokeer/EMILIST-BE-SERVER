@@ -272,6 +272,7 @@ export const sendPrivateExpertMessage = (
   phoneNumber: string,
   email: string,
   typeOfExpert: string,
+  level: string,
   details: string,
   location: string,
   time: string,
@@ -284,6 +285,7 @@ export const sendPrivateExpertMessage = (
     <p><strong>Mobile:</strong> ${emailText(phoneNumber, "Not provided")}</p>
     <p><strong>Email:</strong> ${emailText(email, "Not provided")}</p>
     <p><strong>Expert Needed:</strong> ${emailText(typeOfExpert, "Not provided")}</p>
+    <p><strong>Expert Level:</strong> ${emailText(level, "Not provided")}</p>
     <p><strong>Details:</strong> ${emailText(details, "Not provided")}</p>
     <p><strong>Location:</strong> ${emailText(location, "Not provided")}</p>
     <p><strong>Time:</strong> ${emailText(time, "Not provided")}</p>
